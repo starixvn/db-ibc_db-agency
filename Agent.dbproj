@@ -1,0 +1,634 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <PostUpgradeAddToSCC>;D:\WORK\PROJECT\IBC\6.Implementation\DB\Agent\Agent.dbproj;D:\WORK\PROJECT\IBC\6.Implementation\DB\Agent\Connections.txt;D:\WORK\PROJECT\IBC\6.Implementation\DB\Agent\Scripts\Post-Deployment\Script.PostDeployment.sql;D:\WORK\PROJECT\IBC\6.Implementation\DB\Agent\Scripts\Pre-Deployment\Script.PreDeployment.sql</PostUpgradeAddToSCC>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProjectName>SAK</SccProjectName>
+    <PreviousProjectVersion>4.0</PreviousProjectVersion>
+    <UpgradedFromDBP>True</UpgradedFromDBP>
+    <Name>dbpProjectName</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.0</ProjectVersion>
+    <ProjectGuid>{544c2a26-7df0-4a20-bebf-b2bd75b4e4e9}</ProjectGuid>
+    <DSP>Microsoft.Data.Schema.Sql.Sql100DatabaseSchemaProvider</DSP>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <ShowWizard>False</ShowWizard>
+    <OutputType>Database</OutputType>
+    <RootPath>
+    </RootPath>
+    <IncludeSchemaNameInFileName>False</IncludeSchemaNameInFileName>
+    <ModelCollation>1033, CI</ModelCollation>
+    <DefaultFileStructure>BySchema</DefaultFileStructure>
+    <DeployToDatabaseAddToServerExplorer>True</DeployToDatabaseAddToServerExplorer>
+    <DeployToScript>True</DeployToScript>
+    <CatalogPropertiesFile>Properties\Database.sqlsettings</CatalogPropertiesFile>
+    <LoadSqlClrTypes>True</LoadSqlClrTypes>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>.\sql\release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TargetConnectionString>
+    </TargetConnectionString>
+    <TargetDatabase>
+    </TargetDatabase>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <SuppressWarnings>
+    </SuppressWarnings>
+    <DeploymentConfigFile>Properties\Database.sqldeployment</DeploymentConfigFile>
+    <SqlCommandVariablesFile>Properties\Database.sqlcmdvars</SqlCommandVariablesFile>
+    <DeployToDatabase>False</DeployToDatabase>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>.\sql\debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TargetConnectionString>
+    </TargetConnectionString>
+    <TargetDatabase>
+    </TargetDatabase>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <SuppressWarnings>
+    </SuppressWarnings>
+    <DeploymentConfigFile>Properties\Database.sqldeployment</DeploymentConfigFile>
+    <SqlCommandVariablesFile>Properties\Database.sqlcmdvars</SqlCommandVariablesFile>
+    <DeployToDatabase>False</DeployToDatabase>
+  </PropertyGroup>
+  <!--Import the settings-->
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v10.0\TeamData\Microsoft.Data.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Scripts" />
+    <Folder Include="Scripts\Pre-Deployment" />
+    <Folder Include="Scripts\Post-Deployment" />
+    <Folder Include="Data Generation Plans" />
+    <Folder Include="Schema Comparisons" />
+  </ItemGroup>
+  <ItemGroup>
+    <PropertiesFile Include="Properties\Database.sqlsettings">
+    </PropertiesFile>
+    <PropertiesFile Include="Properties\Database.sqldeployment">
+    </PropertiesFile>
+    <PropertiesFile Include="Properties\Database.sqlcmdvars">
+    </PropertiesFile>
+    <Build Include="Properties\Database.sqlpermissions">
+      <ModelBuilderType>Permissions</ModelBuilderType>
+    </Build>
+    <PreDeploy Include="Scripts\Pre-Deployment\Script.PreDeployment.sql">
+      <SubType>Code</SubType>
+    </PreDeploy>
+    <PostDeploy Include="Scripts\Post-Deployment\Script.PostDeployment.sql">
+      <SubType>Code</SubType>
+    </PostDeploy>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Schema Objects" />
+    <Folder Include="Schema Objects\Schemas" />
+    <Folder Include="Schema Objects\Schemas\dbo" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Defaults" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Functions" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Rules" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Stored Procedures" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Types" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Types\User Defined Data Types" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Types\User Defined Types CLR" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Types\User Defined Table Types" />
+    <Folder Include="Schema Objects\Schemas\dbo\Programmability\Types\XML Schema Collections" />
+    <Folder Include="Schema Objects\Schemas\dbo\Service Broker" />
+    <Folder Include="Schema Objects\Schemas\dbo\Service Broker\Queues" />
+    <Folder Include="Schema Objects\Schemas\dbo\Synonyms" />
+    <Folder Include="Schema Objects\Schemas\dbo\Tables" />
+    <Folder Include="Schema Objects\Schemas\dbo\Tables\Constraints" />
+    <Folder Include="Schema Objects\Schemas\dbo\Tables\Indexes" />
+    <Folder Include="Schema Objects\Schemas\dbo\Tables\Keys" />
+    <Folder Include="Schema Objects\Schemas\dbo\Tables\Triggers" />
+    <Folder Include="Schema Objects\Schemas\dbo\Tables\Statistics" />
+    <Folder Include="Schema Objects\Schemas\dbo\Views" />
+    <Folder Include="Schema Objects\Schemas\dbo\Views\Indexes" />
+    <Folder Include="Schema Objects\Schemas\dbo\Views\Triggers" />
+    <Folder Include="Schema Objects\Schemas\dbo\Views\Statistics" />
+    <Folder Include="Schema Objects\Database Level Objects" />
+    <Folder Include="Schema Objects\Database Level Objects\Assemblies" />
+    <Folder Include="Schema Objects\Database Level Objects\Database Triggers" />
+    <Folder Include="Schema Objects\Database Level Objects\Security" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Schemas" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Users" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Certificates" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Asymmetric Keys" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Master Keys" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Signatures" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Symmetric Keys" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Database Encryption Keys" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Database Audit Specification" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Roles" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Roles\Application Roles" />
+    <Folder Include="Schema Objects\Database Level Objects\Security\Roles\Database Roles" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker\Broker Priorities" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker\Contracts" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker\Event Notifications" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker\Message Types" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker\Remote Service Binding" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker\Routes" />
+    <Folder Include="Schema Objects\Database Level Objects\Service Broker\Services" />
+    <Folder Include="Schema Objects\Database Level Objects\Storage" />
+    <Folder Include="Schema Objects\Database Level Objects\Storage\Full Text Stoplists" />
+    <Folder Include="Schema Objects\Database Level Objects\Storage\Filegroups" />
+    <Folder Include="Schema Objects\Database Level Objects\Storage\Files" />
+    <Folder Include="Schema Objects\Database Level Objects\Storage\Full Text Catalogs" />
+    <Folder Include="Schema Objects\Database Level Objects\Storage\Partition Functions" />
+    <Folder Include="Schema Objects\Database Level Objects\Storage\Partition Schemes" />
+    <Folder Include="AccountSetting" />
+    <Folder Include="BetList" />
+    <Folder Include="Casino" />
+    <Folder Include="Customer" />
+    <Folder Include="Customer\Credit" />
+    <Folder Include="Forecast" />
+    <Folder Include="Login-On_User" />
+    <Folder Include="Message" />
+    <Folder Include="ReportWinlost" />
+    <Folder Include="Statements" />
+    <Folder Include="SubAccount" />
+    <Folder Include="TotalBets" />
+    <Folder Include="Transfer" />
+    <Folder Include="ViewLog" />
+    <Folder Include="ViewLog\Script Update Old Data" />
+    <Folder Include="ViewLog\SPs version viewlog" />
+    <Folder Include="ViewLog\SPs version viewlog\Account" />
+    <Folder Include="ViewLog\SPs version viewlog\Account\CreditTerm" />
+    <Folder Include="ViewLog\SPs version viewlog\Account\Customer" />
+    <Folder Include="ViewLog\SPs version viewlog\Account\Customer\Batch Update VirtualRate" />
+    <Folder Include="ViewLog\SPs version viewlog\Account\Login-OnUser" />
+    <Folder Include="ViewLog\SPs version viewlog\Account\Transactions" />
+    <Folder Include="ViewLog\SPs version viewlog\Account\Transactions\SpecialDelete" />
+    <Folder Include="ViewLog\SPs version viewlog\Account\Transfer" />
+    <Folder Include="ViewLog\SPs version viewlog\AccountSetting" />
+    <Folder Include="ViewLog\SPs version viewlog\Affiliate" />
+    <Folder Include="ViewLog\SPs version viewlog\Affiliate\_DepositeSite" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustOverride" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustOverride\FI" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustOverride\HR" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Ins" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI" />
+    <Folder Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR" />
+    <Folder Include="ViewLog\SPs version viewlog\Casino" />
+    <Folder Include="ViewLog\SPs version viewlog\Customer" />
+    <Folder Include="ViewLog\SPs version viewlog\DBA" />
+    <Folder Include="ViewLog\SPs version viewlog\DBA\ArchivingUnusedAccounts" />
+    <Folder Include="ViewLog\SPs version viewlog\DBA\Currency" />
+    <Folder Include="ViewLog\SPs version viewlog\DBA\CustomerSetting" />
+    <Folder Include="ViewLog\SPs version viewlog\DBA\Sub-Account" />
+    <Folder Include="ViewLog\SPs version viewlog\Login-On_User" />
+    <Folder Include="ViewLog\SPs version viewlog\SubAccount" />
+    <Folder Include="zzzDeleted" />
+    <Folder Include="zzzMisc" />
+    <Folder Include="Properties" />
+  </ItemGroup>
+  <ItemGroup>
+    <NotInBuild Include="Connections.txt" />
+    <NotInBuild Include="AccountSetting\dbo.Age_CustomerPwdUpd2.StoredProcedure.sql" />
+    <NotInBuild Include="AccountSetting\dbo.Age_CustomerSelBalance_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="AccountSetting\dbo.Age_CustomerSelBalance_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="AccountSetting\dbo.Age_CustomerSelBalance_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="AccountSetting\dbo.Age_CustSubPwdUpd2.StoredProcedure.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelAllByDate_Mem.proc.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelAllByDateHR_Ag.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelAllByDateHR_MAg.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelAllByDateHR_SAg.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelMatchResult.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelMatchResultFinance.proc.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelMatchResultParlay.proc.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelParlayDetail.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelParlayDetail_Old.proc.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelRunningByBettype_Ag.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelRunningByBettype_MAg.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelRunningByBettype_Sag.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelRunningBybettypeMatch_Ag.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelRunningByBettypeMatch_MAg.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelRunningByBettypeMatch_SAg.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelRunningByDate_Mem.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinlossByBettypeMatch_Ag.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinlossByBettypeMatch_MAg.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinlossByBettypeMatch_SAg.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinLossByDate_Mem.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinLossByDate_Mem_Old.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinlossOutright_Ag.proc.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinlossOutright_MAg.proc.sql" />
+    <NotInBuild Include="BetList\Age_BetList_SelWinlossOutright_SAg.proc.sql" />
+    <NotInBuild Include="BetList\Age_BettransSelBetSlip.sql" />
+    <NotInBuild Include="BetList\Age_BettransSelBetSlip_Old.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelByDayAll_Mem.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelByDayAll_Mem_Old.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelWinlossHR_Ag.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelWinlossHR_MAg.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelWinlossHR_SAg.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelWinlossParlay_Ag.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelWinlossParlay_MAg.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BetList_SelWinlossParlay_SAg.proc.sql" />
+    <NotInBuild Include="BetList\dbo.Age_BettransSelBetSlip_DB06.proc.sql" />
+    <NotInBuild Include="Casino\dbo.Acc_UpdCSStatus.sql" />
+    <NotInBuild Include="Casino\dbo.Age_CustomerSelAgentList_Cas.sql" />
+    <NotInBuild Include="Casino\dbo.Age_CustomerSelMAgentList_Cas.sql" />
+    <NotInBuild Include="Casino\dbo.GetCasinoStatus.sql" />
+    <NotInBuild Include="Casino\Dot_Casino_Customer_GetTransferOption.sql" />
+    <NotInBuild Include="Customer\Age_CustomerSelMinMaxLimit.sql" />
+    <NotInBuild Include="Customer\Credit\Age_CustomerUpdClearCredit.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Acc_SelCustomerGivenCredit.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerSelCredit.StoredProcedure.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_Ag.proc.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_MAg.proc.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_SAg.proc.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerUpdCredit_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerUpdCredit_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerUpdCredit_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Age_CustomerUpdMaxCredit.proc.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Agw_SelCustomerGivenCreditByAg.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Agw_SelCustomerGivenCreditByMAg.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Agw_SelCustomerGivenCreditBySAg.sql" />
+    <NotInBuild Include="Customer\Credit\dbo.Agw_SelMaxMemberCredit.sql" />
+    <NotInBuild Include="Customer\dbo.Acc_CustomerSelStatus.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Acc_CustomerUpdUserSearch.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelAgentList.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelAllInfo.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelBetSetting.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelComm.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelComm_Ag.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelComm_MAg.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelEditSuspend_Ag.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelEditSuspend_MAg.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelEditSuspend_SAg.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelMAgentList.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelMaxTransDate.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelPositionTakingByAg.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelPositionTakingByMAg.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelPositionTakingBySAg.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelUserInfo.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerSelUserSearch.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerUpdAgentComm.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerUpdMasterComm.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerUpdMemBetSetting.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerUpdPwd.proc.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerUpdUserComm.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerUpdUserInfo.sql" />
+    <NotInBuild Include="Customer\dbo.Age_CustomerUpdUserSearch.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_CheckExistedUserName.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_CustomerSelByAg.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_CustomerSelByMAg.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_CustomerSelBySAg.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_CustomerSelEditBetSetting_Ag.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_CustomerSelInfo.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_CustomerSelMinMaxBetHR.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_SelCommValues_Ag.sql" />
+    <NotInBuild Include="Customer\dbo.Agw_SelSuitablePTRange_Ag.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_HR_FOdds_Ag.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_HR_FOdds_MAg.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_HR_FOdds_SAg.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_OddsSelTopByMatch.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_Sel1X2.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_Sel22.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_SelByLeague_Ag.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_SelByLeague_MAg.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_SelByLeague_SAg.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_SelHDP.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast_SelOU.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast1x2_SelByLeague_Ag.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast1x2_SelByLeague_MAg.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_Forecast1x2_SelByLeague_SAg.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_LeagueSelRunning_Ag.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_LeagueSelRunning_MAg.proc.sql" />
+    <NotInBuild Include="Forecast\dbo.Age_LeagueSelRunning_SAg.proc.sql" />
+    <NotInBuild Include="Login-On_User\Age_LoginDownLine.sql" />
+    <NotInBuild Include="Login-On_User\Age_LoginDownLine_Admin.sql" />
+    <NotInBuild Include="Login-On_User\Age_LoginDownLine_CheckSubUsername.sql" />
+    <NotInBuild Include="Login-On_User\Age_LoginDownLine_Sub.sql" />
+    <NotInBuild Include="Login-On_User\dbo.Age_LoginAdminVerifyTicket.sql" />
+    <NotInBuild Include="Login-On_User\dbo.Age_LoginClaimDownline.proc.sql" />
+    <NotInBuild Include="Login-On_User\dbo.Age_LoginVerifyDownline.proc.sql" />
+    <NotInBuild Include="Login-On_User\dbo.Age_UpdPageVisit.proc.sql" />
+    <NotInBuild Include="Login-On_User\f_CheckAgentLoginDomain.sql" />
+    <NotInBuild Include="Message\dbo.Age_MessageNoticeSelByCustID.proc.sql" />
+    <NotInBuild Include="Message\dbo.Age_MessageNoticeUpd.proc.sql" />
+    <NotInBuild Include="Message\dbo.Age_MessageNoticeUpdStatus.proc.sql" />
+    <NotInBuild Include="Message\dbo.Age_MessageSelAll.proc.sql" />
+    <NotInBuild Include="Message\dbo.Age_MessageSelByType.proc.sql" />
+    <NotInBuild Include="Message\dbo.Age_MessageSelOne.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_BetList_SelDeleted.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_BetList_SelDeleted_UserList_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_BetList_SelDeleted_UserList_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_BetList_SelDeleted_UserList_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_LeagueSelByDate.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_MatchSelByLeague.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_MatchSelGoalHistory.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_Outright.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_RaceSelByMeeting.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_RaceSelHRSCR.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_SelAvaiDate.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_SportSelByDate.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByBettype_Ag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByBettype_HR_Ag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByBettype_HR_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByBettype_HR_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByBettype_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByBettype_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByFinance_Ag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByFinance_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_CommByFinance_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_MatchSelResultEntered.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_MatchWinLoss_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_MatchWinLossDetail_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_MatchWinLossDetail_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_MatchWinlossDetail_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_Outstanding_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_Outstanding_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_Outstanding_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLoss_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLoss_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLoss_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossByBettype_Ag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossByBettype_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossByBettype_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossDetail_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossDetail_Ag_ByUserName.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossDetail_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossDetail_MAg_New.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Rpt_WinLossDetail_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_SelBalanceUpDay.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_AgentWinlossDetail_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_AgentWinlossDetail_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_MasterWinlossDetail_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_MemberWinlossDetail_Ag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_MemberWinlossDetail_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_MemberWinlossDetail_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_ResultSelDate.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_ResultSelMatch.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_WinlossDetail_Ag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_WinlossDetail_Mag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_WinlossDetail_SAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_WinlossTotal_Ag.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_WinlossTotal_MAg.proc.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Agw_Rpt_WinlossTotal_SAg.proc.sql" />
+    <NotInBuild Include="Statements\dbo.Age_Statement_Mem.StoredProcedure.sql" />
+    <NotInBuild Include="Statements\dbo.Age_Statement_Mem_BetSummary.StoredProcedure.sql" />
+    <NotInBuild Include="Statements\dbo.Age_Statement_Rpt_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="Statements\dbo.Age_Statement_Rpt_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="Statements\dbo.Age_Statement_Rpt_Sag.StoredProcedure.sql" />
+    <NotInBuild Include="SubAccount\dbo.Age_CustSubCheckPageAccess.proc.sql" />
+    <NotInBuild Include="SubAccount\dbo.Age_CustSubIns.proc.sql" />
+    <NotInBuild Include="SubAccount\dbo.Age_CustSubPwdUpd.proc.sql" />
+    <NotInBuild Include="SubAccount\dbo.Age_CustSubSel.proc.sql" />
+    <NotInBuild Include="SubAccount\dbo.Age_CustSubSelInfo.proc.sql" />
+    <NotInBuild Include="SubAccount\dbo.Age_CustSubUpdInfo.proc.sql" />
+    <NotInBuild Include="SubAccount\dbo.Age_CustSubUpdPageAccess.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel10_Ag.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel10_MAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel10_SAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel1378_Ag.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel1378_MAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel1378_SAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel14_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel14_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel14_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel16_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel16_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel16_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel20_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel20_Mag.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel20_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel201_Ag.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel201_MAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel201_SAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel22_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel22_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel22_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel25_Ag.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel25_MAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel25_SAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel6_Ag.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel6_MAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_Sel6_SAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_SelHR_Ag.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_SelHR_MAg.proc.sql" />
+    <NotInBuild Include="TotalBets\dbo.Age_TotalBets_SelHR_SAg.proc.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_CheckExisting.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_CheckTotalBalanceTransfer.proc.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_CheckTransferOption.proc.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_Ins_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_Ins_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_Ins_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_InsClearBalance_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_SelBalanceList_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_SelBalanceList_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_SelBalanceList_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_SelList_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_SelList_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_SelList_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="Transfer\dbo.Age_Transfer_SelMemberInfo_Yesterday.proc.sql" />
+    <NotInBuild Include="Transfer\dbo.Agw_Transfer_SelList_Ag.proc.sql" />
+    <NotInBuild Include="Transfer\dbo.Agw_Transfer_SelList_MAg.proc.sql" />
+    <NotInBuild Include="Transfer\dbo.Agw_Transfer_SelList_SAg.proc.sql" />
+    <NotInBuild Include="Transfer\dbo.Agw_Transfer_SelMemberInfo_Yesterday.proc.sql" />
+    <NotInBuild Include="ViewLog\ConvertToXML.sql" />
+    <NotInBuild Include="ViewLog\DeployIBCViewLogCLR.sql" />
+    <NotInBuild Include="ViewLog\EndsWith.sql" />
+    <NotInBuild Include="ViewLog\f_EncodeXMLValue.sql" />
+    <NotInBuild Include="ViewLog\GenerateXML.sql" />
+    <NotInBuild Include="ViewLog\IsValidXML.sql" />
+    <NotInBuild Include="ViewLog\RegExReplace.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CreditTermUpdCustomer_kiwi.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdAutoSuspend_UpdateData.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdClearCredit.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdClosed.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdDangercust.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdDisableFI.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdDisableHR.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdImportant.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdInternal.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMatchLimit.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMember_CommissionHR.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMember_Master.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMemberFI_MAg.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMemberHR_MAg.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMoveAgent.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMoveMaster.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMoveMember.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdMoveSite.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdPwdReset.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdResetMemberCredit.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdSuspended.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdTransferOption.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdUserGroup.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdUserInfo.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdUserName.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustomerUpdVirtualMultiplier.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustOverrideUpd.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustOverrideUpdFI.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_CustOverrideUpdHR.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_LoginAdmin.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_VirtualRateMulUpd.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Acc_VirtualRateMulUpd_Sum.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_CustomerPwdUpd2.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_CustomerUpdPwd.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_CustomerUpdUserInfo.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_CustSubIns.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_CustSubPwdUpd.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_CustSubPwdUpd2.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_CustSubUpdPageAccess.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_LoginDownline.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_LoginDownline_Sub.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Age_LoginVerifyDownline.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\ConvertToXML Format.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\CustAccountUpdCreditAmt.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\CustAccountUpdCreditAmt_MAg.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\DBA_ArchiveAccount.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\DBA_ChangeCurrency.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\DBA_ChangeCurrencyAndMoveAgent.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\DBA_CustomerUpdMoveMaster.sql" />
+    <NotInBuild Include="ViewLog\Script Update Old Data\Dot_Dep_CustomerInsMember_Ag.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\CreditTerm\Acc_CreditTermUpdAddToGroup.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\CreditTerm\Acc_CreditTermUpdRemark.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\CreditTerm\Acc_CreditTermUpdRemoveFromGroup.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\CreditTerm\Acc_CreditTermUpdSetGroupHeadline.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\CreditTerm\dbo.Acc_CreditTermUpdCustomer.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\Batch Update VirtualRate\dbo.Acc_VirtualRateMulUpd.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUdpMoveSite.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdAutoSuspend.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdClearCredit.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdDangerCust.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdImportant.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdInternal.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdMatchLimit.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdMoveAgent.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdMoveMaster.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdMoveMember.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdPwdReset.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdResetMemberCredit.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdUserGroup.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdUserName.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Customer\dbo.Acc_CustomerUpdVirtualMultiplier.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Login-OnUser\Acc_LoginAdmin.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Account\Transfer\dbo.Acc_CustomerUpdTransferOption.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AccountSetting\dbo.Age_CustomerPwdUpd2.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AccountSetting\dbo.Age_CustomerUpdPwd.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AccountSetting\dbo.Age_CustomerUpdUserInfo.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AccountSetting\dbo.Age_CustSubIns.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AccountSetting\dbo.Age_CustSubPwdUpd2.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Affiliate\_DepositeSite\Dot_Dep_CustomerInsMember_Ag.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Affiliate\_DepositeSite\Dot_Dep_CustomerUpdMemBetSetting.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustOverride\dbo.Acc_CustOverrideUpd.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustOverride\FI\dbo.Acc_CustOverrideUpdFI.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustOverride\HR\dbo.Acc_CustOverrideUpdHR.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Ins\dbo.Acc_CustomerInsMember_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Ins\dbo.Acc_CustomerInsMember_Com.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Ins\dbo.Acc_CustomerInsMember_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Ins\dbo.Acc_CustomerInsMember_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdAgent_Commission.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdAgent_MinMaxBet.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdAgent_PositionTaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdClosed.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdCredit.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdDisableOutright.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMaster_Commission.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMaster_DisableAutoMPT.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMaster_MinMaxBet.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMaster_PositionTaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMember_Commission.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMember_Master.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMember_MinMaxBet.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMember_PositionTaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdMember_Super.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdSuper_Commission.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdSuper_MinMaxBet.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdSuper_PositionTaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdSuspended.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\dbo.Acc_CustomerUpdUserInfo.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdAgentFI_PositionTaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdCommissionFI.proc..sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdCommissionFI.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdDisableFI.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdMasterFI_PositionTaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdMemberFI_MAg.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdMemberFI_Positiontaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdMemberFI_SAg.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdMinMaxBetFI.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\FI\dbo.Acc_CustomerUpdSuperFI_Positiontaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdAgent_CommissionHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdAgent_MinMaxBetHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdAgentHR_PositionTaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdDisableHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMaster_CommissionHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMaster_MinMaxBetHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMasterHR_Positiontaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMember_CommissionHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMember_MinMaxBetHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMemberHR_All.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMemberHR_MAg.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMemberHR_MinMaxPositiontaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMemberHR_Positiontaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdMemberHR_SAg.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdSuper_CommissionHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdSuper_MinMaxBetHR.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\AgentPT\Customer-PositionTaking\CustSetting\Upd_New\HR\dbo.Acc_CustomerUpdSuperHR_Positiontaking.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Casino\Acc_UpdCSStatus.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Customer\dbo.Age_CustomerUpdCredit_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Customer\dbo.Age_CustomerUpdCredit_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Customer\dbo.Age_CustomerUpdCredit_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Customer\dbo.Age_CustomerUpdMaxCredit.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Customer\dbo.Age_CustomerUpdMemBetSetting.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Customer\dbo.Age_CustomerUpdUserComm.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\ArchivingUnusedAccounts\DBA_ArchiveAccount0_CloseAgent.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\ArchivingUnusedAccounts\DBA_ArchiveAccount1_Rollback.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\ArchivingUnusedAccounts\DBA_ArchiveAccount1_UpdateMove.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\ArchivingUnusedAccounts\DBA_ArchiveAccount2_ClearBalance.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\ArchivingUnusedAccounts\DBA_ArchiveAccount2_Rollback.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\ArchivingUnusedAccounts\DBA_ArchiveAccount2_UpdateMove.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\Currency\DBA_ChangeCurrency.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\Currency\DBA_ChangeCurrencyAndMoveAgent.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\CustomerSetting\DBA_CustomerUpdMoveMaster.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\DBA\Sub-Account\DBA_CustSubIns.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Login-On_User\Age_LoginDownline.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Login-On_User\Age_LoginDownline_Sub.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\Login-On_User\Age_LoginVerifyDownline.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\SubAccount\dbo.Age_CustSubIns.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\SubAccount\dbo.Age_CustSubPwdUpd.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\SubAccount\dbo.Age_CustSubUpdInfo.proc.sql" />
+    <NotInBuild Include="ViewLog\SPs version viewlog\SubAccount\dbo.Age_CustSubUpdPageAccess.proc.sql" />
+    <NotInBuild Include="ViewLog\StartsWith.sql" />
+    <NotInBuild Include="ViewLog\Trim.sql" />
+    <NotInBuild Include="ViewLog\TrimEnd.sql" />
+    <NotInBuild Include="ViewLog\TrimStart.sql" />
+    <NotInBuild Include="ViewLog\UserLog_CreditSel.sql" />
+    <NotInBuild Include="ViewLog\UserLog_CreditSelTotalRecords.sql" />
+    <NotInBuild Include="ViewLog\UserLog_LoginSel.sql" />
+    <NotInBuild Include="ViewLog\UserLog_LoginSelTotalRecords.sql" />
+    <NotInBuild Include="ViewLog\UserLog_RunSPSel.sql" />
+    <NotInBuild Include="ViewLog\UserLog_RunSPSelTotalRecords.sql" />
+    <NotInBuild Include="ViewLog\WriteLog_UserLog_Credit_New.sql" />
+    <NotInBuild Include="ViewLog\WriteLog_UserLog_RunSPNew.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_CustaccountSelTransactionByDate.StoredProcedure.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_CustomerSelByAg.proc.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_CustomerSelByMAg.proc.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_CustomerSelBySAg.proc.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_Rpt_WinLoss_Old_Ag.StoredProcedure.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_Rpt_WinLoss_Old_MAg.StoredProcedure.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_Rpt_WinLoss_Old_SAg.StoredProcedure.sql" />
+    <NotInBuild Include="zzzDeleted\dbo.Age_Statement_Mem_BetSummaryDaily.StoredProcedure.sql" />
+    <NotInBuild Include="zzzMisc\dbo.Age_SelIsShownCasinoAd.proc.sql" />
+    <NotInBuild Include="zzzMisc\dbo.Agw_UpdFunctionUsage.sql" />
+    <NotInBuild Include="ReportWinlost\dbo.Age_Result_MatchSelNumberGameByLeague.sql">
+      <SubType>NotInBuild</SubType>
+    </NotInBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <BuildContributorArgument Include="OutDir=$(OutDir)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="BetList\Age_BetList_SelMatchResultNumberGame.proc.sql">
+      <SubType>Code</SubType>
+    </Build>
+  </ItemGroup>
+</Project>

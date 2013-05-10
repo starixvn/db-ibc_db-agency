@@ -1,0 +1,58 @@
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_MAg]
+	@CustID int
+AS
+
+/*
+Created: 
+Task : Report Outstanding
+DB: DB053.bodb02
+Revisions:
+    - 20090227@Hiep: Get more result for Casino Integration	
+    - 20090422@Tuan: Two more columns ("CasinoTransfer" & "CasinoOustanding") for Casino
+    - 20090716@Kiwi: Calculate data first then inner join with custinfo later.
+    - 20100901@Kiwi: Retrieve data for Bingo (BingoTransfer & BingoOutstanding)
+    - 20100907@Jacob: Retrieve data for Bingo (BingoTransfer & BingoOutstanding)
+    - 20101224@Johnson: Apply new arrange of bettype
+    - 20110822@Sophia: Count Negative stake as positive turnover 
+	- 20110927@Tom: 1. Add Report for P2P Games (Bettype: 23101)	
+					2. Remove parameter @ABSDate ('2011-09-01')
+					3. Remove betype 23101 in CasinoOutstanding    
+*/
+SET NOCOUNT ON
+/*
+DECLARE @ABSDate DATETIME
+SET @ABSDate = '2011-09-01'
+*/
+SELECT	username, b.recommend as custid, 
+		isnull(Outstanding, 0) Outstanding,
+		isnull(positiontaking,0) positiontaking,
+		isnull(CasinoTransfer,0) CasinoTransfer,
+		isnull(CasinoOutstanding,0) CasinoOutstanding,
+		isnull(P2PTransfer,0) P2PTransfer,
+		isnull(P2POutstanding,0) P2POutstanding,		
+		isnull(BingoOutstanding,0) BingoOutstanding,
+		isnull(BingoTransfer,0) BingoTransfer
+FROM custinfo AS c with (nolock)
+INNER JOIN (SELECT	recommend,  
+					--SUM(case when bettype<=19000 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END end) Outstanding,  
+					SUM(CASE when bettype <=19000 then ABS(actual_stake) END) Outstanding,  
+					SUM(case when bettype <=19000 then actual_stake * mpositiontaking end) positiontaking,
+					SUM(case when bettype = 23001 then actual_stake end) CasinoTransfer,
+					SUM(case when bettype = 23002 then actual_stake end) CasinoOutstanding,
+					SUM(CASE when bettype = 23101 then actual_stake END) P2PTransfer,
+					SUM(CASE when bettype = 23102 then actual_stake END) P2POutstanding,
+					SUM(case when bettype = 23201 then actual_stake end) BingoTransfer,
+					SUM(case when bettype = 23202 then actual_stake end) BingoOutstanding
+			FROM bettrans with (nolock) 
+			WHERE	ruben=0
+					AND mrecommend =  @CustID
+			GROUP BY recommend
+			) b ON c.custid = b.recommend
+ORDER BY username
+
+GO
+GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_MAg] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_MAg] TO [bodbDownlineNetView]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_Outstanding_MAg] TO [vnteam]

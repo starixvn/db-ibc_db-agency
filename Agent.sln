@@ -1,0 +1,63 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "Agent", "Agent.dbp", "{D7547193-972B-4619-B3D3-F1A14BDDC3BA}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "AgentPT", "..\AgentPT\AgentPT.dbp", "{50958834-8D1E-4F4A-BB19-55B5CCB092CC}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "Account", "..\Account\Account.dbp", "{BDA10952-807B-4800-8D72-1424DF55D680}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "Affiliate", "..\Affiliate\Affiliate.dbp", "{5408ACED-4E3A-4F4C-A625-FCD205AD25D2}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "DBA", "..\DBA\DBA.dbp", "{5AC47298-4C6D-42B8-B0BA-372DC5458EBD}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "Member", "..\Member\Member.dbp", "{6DA8E0E1-4E85-4196-855C-80A6452C57DF}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "Integration", "..\Integration\Integration.dbp", "{76C83F27-ED98-475D-9E57-E245D56BC72B}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "Licensee", "..\Licensee\Licensee.dbp", "{3CE7A4D9-88A5-4A82-9F9A-C5516045C6D3}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "DWH", "..\DWH\DWH.dbp", "{4F89DA46-B5E0-4897-B3AA-DDB940725C8D}"
+EndProject
+Project("{4F174C21-8C12-11D0-8340-0000F80270F8}") = "IBC_Maintenance", "..\IBC_Maintenance\IBC_Maintenance.dbp", "{EB01C5A0-1ED2-48A8-9388-0992B9F831B6}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 11
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://10.18.200.207:8080/
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = Agent.dbp
+		SccLocalPath1 = .
+		SccProjectUniqueName2 = ..\\AgentPT\\AgentPT.dbp
+		SccProjectName2 = ../AgentPT
+		SccLocalPath2 = ..\\AgentPT
+		SccProjectUniqueName3 = ..\\Account\\Account.dbp
+		SccProjectName3 = ../Account
+		SccLocalPath3 = ..\\Account
+		SccProjectUniqueName4 = ..\\Affiliate\\Affiliate.dbp
+		SccProjectName4 = ../Affiliate
+		SccLocalPath4 = ..\\Affiliate
+		SccProjectUniqueName5 = ..\\DBA\\DBA.dbp
+		SccProjectName5 = ../DBA
+		SccLocalPath5 = ..\\DBA
+		SccProjectUniqueName6 = ..\\Member\\Member.dbp
+		SccProjectName6 = ../Member
+		SccLocalPath6 = ..\\Member
+		SccProjectUniqueName7 = ..\\Integration\\Integration.dbp
+		SccProjectName7 = ../Integration
+		SccLocalPath7 = ..\\Integration
+		SccProjectUniqueName8 = ..\\Licensee\\Licensee.dbp
+		SccProjectName8 = ../Licensee
+		SccLocalPath8 = ..\\Licensee
+		SccProjectUniqueName9 = ..\\DWH\\DWH.dbp
+		SccProjectName9 = ../DWH
+		SccLocalPath9 = ..\\DWH
+		SccProjectUniqueName10 = ..\\IBC_Maintenance\\IBC_Maintenance.dbp
+		SccProjectName10 = ../IBC_Maintenance
+		SccLocalPath10 = ..\\IBC_Maintenance
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,65 @@
+﻿ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_OU]
+ @custid	INT, 
+ @transid BIGINT = 0,
+ @LimitRowCount int = 20 
+WITH RECOMPILE
+AS
+BEGIN
+/*	
+	Created	: Johnson
+	Task: Monitor lastest bets list( all bettypes and bettype over/under)
+	Date: 28/06/2011
+	DB: DB053.BODB02
+	Revision:
+	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
+	
+	Parameter's Explanation:
+		- @custid : agent's ID
+		- @transid: lastest transid 
+		- @LimitRowCount: max record return.
+*/ 
+	SET NOCOUNT ON
+	SELECT TOP(@LimitRowCount)
+		0 AS sporttype,
+		b.matchid,	
+		0 AS leagueid,			
+		b.Username,				
+		b.bettype,
+		b.transid,
+		b.refno,
+		b.transdate,
+		'' AS matchcode,
+		0 AS homeid,
+		0 AS awayid,
+		'' AS race,				
+		b.betid,
+		b.livehomescore,
+		b.liveawayscore,
+		b.liveindicator,
+		b.hdp1,
+		b.hdp2,
+		b.odds,
+		b.stake,
+		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+				 ELSE b.status 
+				 END as status,
+		b.betteam,				
+		b.IP,
+		CONVERT(BIT,0) AS isNeutral,			
+		b.oddstype
+	FROM dbo.bettrans b WITH(NOLOCK)				
+	WHERE b.recommend = @custid 
+		AND b.statusID BETWEEN 0 AND 1	
+		AND b.transid > @transid
+		AND bettype IN (3,8)			
+	ORDER BY b.transid DESC
+END
+
+
+
+GO
+GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_OU] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_OU] TO [bodbDownlineNetView]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_Monitor_BetlistSel_Ag_OU] TO [vnteam] 
