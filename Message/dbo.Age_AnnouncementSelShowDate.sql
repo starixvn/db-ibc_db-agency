@@ -1,7 +1,8 @@
 ﻿ALTER PROCEDURE [dbo].[Age_AnnouncementSelShowDate]
 	@custid	INT,
 	@aID	INT,
-	@showDate DATETIME = NULL OUTPUT
+	@showDate DATETIME = NULL OUTPUT,
+	@viewcount INT = 0 OUTPUT
 AS
 	/*
 		Created: Johnson
@@ -16,7 +17,7 @@ AS
 			- @showDate: the date which announcement will show			
 	*/ 
 SET NOCOUNT ON
-	SELECT @showDate = showDate
+	SELECT @showDate = showDate, @viewcount = ISNULL(viewcount,0)
 	FROM Age_Announcement WITH(NOLOCK)
 	WHERE custid = @custid AND aID = @aID
 	

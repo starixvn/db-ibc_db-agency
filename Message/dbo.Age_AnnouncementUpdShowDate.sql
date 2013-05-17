@@ -20,13 +20,13 @@ SET NOCOUNT ON
 	IF EXISTS (SELECT 1 FROM Age_Announcement WITH(NOLOCK) WHERE custid = @custid and aID = @aID)
 	BEGIN
 		UPDATE Age_Announcement WITH(UPDLOCK,ROWLOCK)
-		SET showDate = @showDate
+		SET showDate = @showDate, viewcount = 0
 		WHERE custid = @custid AND aID = @aID
 	END
 	ELSE
 	BEGIN
-		INSERT INTO Age_Announcement(custid,aID,showDate)
-		VALUES(@custid,@aID,@showDate)
+		INSERT INTO Age_Announcement(custid,aID,showDate,viewcount)
+		VALUES(@custid,@aID,@showDate,0)
 	END
 
 
