@@ -4,6 +4,7 @@
 	@username varchar(20) OUTPUT,--member 
 	@syncCasino BIT = 0 OUTPUT ,
 	@DisableCasino BIT = 0 OUTPUT,
+	@DisableP2P BIT = 0 OUTPUT,
 	@CashBalance money OUTPUT,
 	@Oustanding money OUTPUT,
 	@GivenCredit money OUTPUT,
@@ -12,7 +13,8 @@
 	@Balance money OUTPUT,
 	@MaxTransDate datetime OUTPUT,
 	@FutureBetCredit money OUTPUT,
-	@AmtTransferred money = 0 OUTPUT
+	@AmtTransferred money = 0 OUTPUT,
+	@PokerHeldFunds money = 0 OUTPUT
 AS
 /*
 Created: ???
@@ -27,6 +29,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday_1
 		- 20110123@Thien: fix the FutureBetCredit formula
 		- 20111108@Lukas: Get more column syncCasino
 		- 20120403@Lukas: Get more column DisableCasino
+		- 20130522@Johnson: add poker held funds and Poker option	
 */
 SET NOCOUNT ON
 DECLARE @currentDate datetime 
@@ -42,6 +45,7 @@ IF (@IsAllowTotalBalance = 0)
 	     @Username = customer.username,  
 		 @syncCasino = ci.syncCasino,
 		 @DisableCasino = ci.DisableCasino,
+		 @DisableP2P = ci.DisableP2P,
 	     @GivenCredit = ci.credit,
 	     @CashBalance = isnull(b.CashBalance,0)
     from   
@@ -64,6 +68,7 @@ ELSE
 	     @Username = customer.username, 
 		 @syncCasino = ci.syncCasino, 
 		 @DisableCasino = ci.DisableCasino,
+		 @DisableP2P = ci.DisableP2P,
 	     @GivenCredit = ci.credit,
 	     @CashBalance = isnull(b.CashBalance,0)
     from   
@@ -98,6 +103,35 @@ BEGIN
 	WHERE custid = @CustID
 
 	SELECT @BetCredit = @GivenCredit + @TotalCash - @Oustanding
+	
+	IF @DisableP2P = 0
+	BEGIN
+		DECLARE @PokerHeldFundsTime DATETIME
+		
+		SELECT @PokerHeldFundsTime = GETDATE() - 3
+
+		SELECT @PokerHeldFunds = ISNULL(SUM(winlost),0)
+		FROM		
+			(
+			SELECT custid,winlost - actual_stake + playercomm as winlost
+			FROM bettrans WITH(NOLOCK) 
+			WHERE custid = @custid 
+				AND matchid = 1000 
+				AND bettype = 1000 
+				AND statusid IN (112,113)
+				AND transdate >= @PokerHeldFundsTime
+			UNION 
+			SELECT custid,winlost - actual_stake + playercomm as winlost
+			FROM bettrans14 WITH(NOLOCK) 
+			WHERE custid = @custid 
+				AND matchid = 1000 
+				AND bettype = 1000 
+				AND statusid IN (112,113)
+				AND transdate >= @PokerHeldFundsTime  
+			)b 
+		
+		SELECT @PokerHeldFunds = CASE WHEN @PokerHeldFunds < 0 THEN 0 ELSE @PokerHeldFunds END
+	END
 END
 --End - nqminh - 19Feb09	
 
