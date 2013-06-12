@@ -1,26 +1,25 @@
-﻿ 
-CREATE  PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup_isShownMenu]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup_isShownMenu_xpre]
 	@CustID INT,
 	@isShownMenu BIT OUTPUT
 AS 
 /*	
-	Created: Sophia
-	Date: 2011-07-14
+	Created: Elodie
+	Date: 20130612
 	Task : Show/Hide menu Consolidated Report in Agency Site
-	DB: DBAGE/bodb_AGE
+	DB: DBAGE/bodb02
 	Original:  
-	Revisions: 
-		- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE
+	
+	Revisions: 		
 
 */
 SET NOCOUNT ON
 
 IF EXISTS (	SELECT	1
-			FROM	Age_CustGroup WITH (NOLOCK)
-			WHERE	CustID = @CustID AND isHeader = 1)
-SET @isShownMenu = 1
+			FROM	custAccount WITH (NOLOCK)
+			WHERE	CustID = @CustID AND IsGroupHeadLine = 1 AND IsViewReport = 1)
+	SET @isShownMenu = 1
 ELSE 
-SET @isShownMenu = 0
+	SET @isShownMenu = 0
 
 
 GO
