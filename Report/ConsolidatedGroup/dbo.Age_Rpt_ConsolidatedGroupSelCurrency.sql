@@ -22,7 +22,7 @@ INSERT INTO @TmpCustID
 SELECT	B.CustID
 FROM	custAccount A WITH (NOLOCK) 
 INNER JOIN custAccount B WITH (NOLOCK)ON A.GroupID = B.GroupID
-WHERE	A.CustID = @CustID AND A.IsGroupHeadLine = 1 and A.IsViewReport = 1
+WHERE	A.CustID = @CustID AND A.IsGroupHeadLine = 1 and A.IsRptConsol = 1
 
 SELECT	DISTINCT C.Currency, E.currency as CurrencyName, E.actualrate as RMRate, E.US$Rate as USRate
 FROM	Customer C WITH (NOLOCK)

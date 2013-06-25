@@ -16,7 +16,7 @@ SET NOCOUNT ON
 
 IF EXISTS (	SELECT	1
 			FROM	custAccount WITH (NOLOCK)
-			WHERE	CustID = @CustID AND IsGroupHeadLine = 1 AND IsViewReport = 1)
+			WHERE	CustID = @CustID AND IsGroupHeadLine = 1 AND IsRptConsol = 1)
 	SET @isShownMenu = 1
 ELSE 
 	SET @isShownMenu = 0
