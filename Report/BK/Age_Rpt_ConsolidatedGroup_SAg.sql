@@ -1,5 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup_SAg]
-	@CustID			INT, 	
+	@CustID			INT, 
+	@RoleID			INT,
 	@FromDate		SMALLDATETIME,  
 	@ToDate			SMALLDATETIME,   
 	@showSB			BIT = 1,  
@@ -142,8 +143,11 @@ IF @tdate >= @BalanceUpDate
 BEGIN	
 	INSERT INTO @AgencyWinloss
 	SELECT b.winlostdate
-		,b.mrecommend			
-		,t.sporttype, 3
+		,CASE	WHEN @RoleID = 4 THEN b.mrecommend
+				WHEN @RoleID = 3 THEN b.recommend
+				WHEN @RoleID = 2 THEN b.custid 
+		END
+		,t.sporttype, @RoleID - 1
 		,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
 		,SUM(winlost-actual_stake) winlost
 		,SUM(playercomm) playercomm
@@ -157,9 +161,13 @@ BEGIN
 			INNER JOIN @TmpCond t ON b.bettype = t.bettype
 	WHERE	winlostdate BETWEEN @fdate AND @tdate
 			AND StatusID NOT IN (0,1,101,102,103) 
-			AND @CustID = b.srecommend									 
+			AND @CustID = CASE  WHEN @RoleID = 4 THEN b.srecommend
+								WHEN @RoleID = 3 THEN b.mrecommend
+								WHEN @RoleID = 2 THEN b.recommend END			 
 	GROUP BY 
-			b.mrecommend					
+			CASE	WHEN @RoleID = 4 THEN b.mrecommend
+					WHEN @RoleID = 3 THEN b.recommend
+					WHEN @RoleID = 2 THEN b.custid END
 			,b.winlostdate, t.sporttype
 
 	--**** get data from sum_winloss
@@ -181,8 +189,10 @@ BEGIN
 	FROM	sum_winloss b WITH(NOLOCK) 		
 			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 	WHERE	winlostdate BETWEEN @fdate AND @tdate
-			AND @CustID = b.srecommend								
-			AND roleid = 3
+			AND @CustID = CASE  WHEN @RoleID = 4 THEN b.srecommend
+								WHEN @RoleID = 3 THEN b.mrecommend
+								WHEN @RoleID = 2 THEN b.recommend END	
+			AND roleid = @RoleID - 1
 
 	INSERT INTO @AgencyWinloss
 	SELECT b.winlostdate, b.custid, b.sporttype, b.RoleID
@@ -224,8 +234,10 @@ BEGIN
 	FROM	DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
 			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 	WHERE	winlostdate BETWEEN @fdate AND @tdate
-			AND @CustID = b.srecommend								
-			AND roleid = 3
+			AND @CustID = CASE  WHEN @RoleID = 4 THEN b.srecommend
+								WHEN @RoleID = 3 THEN b.mrecommend
+								WHEN @RoleID = 2 THEN b.recommend END	
+			AND roleid = @RoleID - 1
 	
 	INSERT INTO @AgencyWinloss
 	SELECT b.winlostdate, b.custid, b.sporttype,b.RoleID
