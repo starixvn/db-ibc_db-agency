@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup_isShownMenu_xpre]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup_isShownMenu]
 	@CustID INT,
 	@isShownMenu BIT OUTPUT
 AS 

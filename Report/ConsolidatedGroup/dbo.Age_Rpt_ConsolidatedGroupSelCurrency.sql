@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupSelCurrency_xpre]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupSelCurrency]
 	@CustID INT
 AS
 /*
