@@ -24,7 +24,7 @@ FROM	custAccount A WITH (NOLOCK)
 INNER JOIN custAccount B WITH (NOLOCK)ON A.GroupID = B.GroupID
 WHERE	A.CustID = @CustID AND A.IsGroupHeadLine = 1 and A.IsRptConsol = 1
 
-SELECT	DISTINCT C.Currency, E.currency as CurrencyName, E.actualrate as RMRate, E.US$Rate as USRate
+SELECT	DISTINCT C.Currency, E.currency as CurrencyName
 FROM	Customer C WITH (NOLOCK)
 INNER JOIN @TmpCustID T 
 		ON T.CustID = C.CustID
