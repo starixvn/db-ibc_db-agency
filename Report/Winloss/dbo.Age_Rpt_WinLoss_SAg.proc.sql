@@ -11,6 +11,7 @@
  @showBI BIT=0,  
  @showLiveCasino BIT = 0,
  @showVS BIT = 0,
+ @showProgressiveBonus BIT =0,
  @BalanceUpDay SMALLDATETIME  
   
 WITH RECOMPILE  
@@ -48,6 +49,7 @@ AS
 							.Remove Financial product
   - 20121024@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
   - 20130121@Dan: add linked server DBSUM for bodb_Summary
+  - 20130716@Kathy: Apply Progressive Bonus
   
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -107,6 +109,12 @@ BEGIN
  INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
  VALUES(180,0) 
 END
+IF @showProgressiveBonus = 1
+BEGIN
+ --Sum_winloss  
+ INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+ VALUES(251,72) 
+END
   
 IF @Todate >= @BalanceUpDay   
 BEGIN   
@@ -134,6 +142,7 @@ BEGIN
      OR bettype = (CASE WHEN @showBI =1 THEN 73 ELSE 0 END)  
 	 OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino =1 THEN 1199 ELSE 0 END)  
 	 OR bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
+	 OR bettype = CASE WHEN @showProgressiveBonus =1 then 72 else 0 end
     ) AND   
     SRecommend=@CustID 
 		AND  winlostdate BETWEEN @FromDate AND @ToDate 
@@ -205,7 +214,6 @@ SELECT
 FROM @SAgWinLoss w INNER JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID   
 GROUP BY w.CustID, c.UserName  
 ORDER BY c.Username
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinLoss_SAg] TO [bodbDownlineNet]
