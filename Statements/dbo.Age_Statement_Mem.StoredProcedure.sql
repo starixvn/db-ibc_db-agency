@@ -27,6 +27,7 @@ Revisions:
 	- 20110822@Sophia: Count Negative stake as positive turnover
 	- 20120405@Hurri: Add bettype 23102 (P2P Pending) into condition
 	- 20130121@Dan: change linked server DB06 to DBRPT
+	- 20130715@Johnson: fix report in case of @fromdate > BUDate (should get from @fromdate not BUDate)	
 Param's Explanation:	
 • @ErrCode:
     = 0: add new member successfully.
@@ -54,9 +55,15 @@ DECLARE @Data TABLE (
 	Commission	MONEY
 )  
 
+DECLARE @f_date DATETIME,
+		@t_date DATETIME
+
+SELECT @f_date = @fromdate,
+		@t_date = @todate
+		
 IF @ToDate >= @BalanceUpDay
 BEGIN 
-	IF @FromDate > @BalanceUpDay SELECT @FromDate = @BalanceUpDay 
+	IF @FromDate > @BalanceUpDay SELECT @f_Date = @BalanceUpDay 
 
 	INSERT INTO @bet  
 	SELECT winlostdate, bettype,  
@@ -81,7 +88,7 @@ BEGIN
 		SUM(actual_stake), SUM(winlost), SUM(playercomm)  
 	FROM bettrans (NOLOCK)  
 	WHERE custid = @custid
-		AND winlostdate BETWEEN @fromDate AND @toDate 
+		AND winlostdate BETWEEN @f_Date AND @t_Date 
 		--AND status not in ('Refund') 
 		--AND statusID <> 103
 	GROUP BY winlostdate, bettype,  
@@ -110,7 +117,7 @@ BEGIN
 		from zzzbettrans with (nolock)
 		where bettype between 1 and 19999 
 			and custid=@CustID 
-			and winlostdate between @FromDate and @MoveBetDay 	
+			and winlostdate between @f_Date and @MoveBetDay 	
 		 
 
 	INSERT INTO @Data  
@@ -154,17 +161,19 @@ BEGIN
 	WHERE bettype > 20000 AND bettype NOT IN (23001,23002,23101,23102) AND (winlost-actual_stake) <> 0	--20120405@Hurri
 	  
 END 
+
 IF @FromDate < @BalanceUpDay
 BEGIN 
 	DECLARE	@PreBalanceUpDay DATETIME
 	IF @ToDate >= DATEADD(dd,-1,@BalanceUpDay)
-		SELECT @ToDate = DATEADD(dd,-1,@BalanceUpDay) + ' 23:59:59'
+		SELECT @t_Date = DATEADD(dd,-1,@BalanceUpDay) + ' 23:59:59'
+		
 	SELECT	TOP 1 @PreBalanceUpDay = accdate  
 	FROM	DBRPT.bodb_Report.dbo.Statement with (NOLOCK)
-	WHERE	custid = @custid AND transdesc = 'OPENING BALANCE' AND accdate <= @fromdate
+	WHERE	custid = @custid AND transdesc = 'OPENING BALANCE' AND accdate <= @f_date
 	ORDER BY accdate DESC
 	
-	SELECT @FromDate = ISNULL(@PreBalanceUpDay,@FromDate)
+	SELECT @f_Date = ISNULL(@PreBalanceUpDay,@f_Date)
 
 	INSERT INTO @Data 
 	SELECT	1, AccDate, 'BET', 'Betting Statement', 0,
@@ -172,7 +181,7 @@ BEGIN
 			SUM(CASE transtype WHEN 'COM' THEN totalamt ELSE 0 END)	
 	FROM	DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK)
 	WHERE	custid = @custid
-			AND accdate BETWEEN @FromDate AND @ToDate	
+			AND accdate BETWEEN @f_Date AND @t_Date	
 			AND transtype IN ('BET','COM')
 	GROUP BY AccDate	
 
@@ -182,9 +191,24 @@ BEGIN
 			0, totalAmt, 0			
 	FROM	DBRPT.bodb_Report.dbo.Statement WITH (NOLOCK)
 	WHERE	custid = @custid
-			AND accdate BETWEEN @FromDate AND @ToDate
+			AND accdate BETWEEN @f_Date AND @t_Date
 			AND transtype NOT IN ('BET','COM')
 END 
+
+
+DECLARE @AccBal money
+
+if (@fromdate <> @BalanceUpDay)
+BEGIN
+	--get acc bal from current (bettrans)
+	SELECT @AccBal = isnull(SUM(totalamt),0)
+	FROM @Data
+	where winlostdate < @fromdate
+	
+	IF EXISTS(select 1 from @Data where winlostdate >= @fromdate AND @AccBal <>0) 
+		INSERT INTO @Data
+		SELECT 0,'', 'BAL', 'ACCUMULATED BALANCE',0, @AccBal,0
+END
 
 SELECT	winlostdate, 
 		transtype, 
@@ -193,6 +217,7 @@ SELECT	winlostdate,
 		totalAmt, 
 		commission
 FROM	@Data  
+WHERE winlostdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE'
 ORDER BY winlostdate, OrderKey
 
 
