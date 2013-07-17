@@ -49,7 +49,7 @@ AS
 							.Remove Financial product
   - 20121024@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
   - 20130121@Dan: add linked server DBSUM for bodb_Summary
-  - 20130716@Kathy: Apply Progressive Bonus
+  - 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
   
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
