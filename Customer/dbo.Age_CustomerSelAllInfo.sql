@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
 	@isInternalAgent BIT = 0
@@ -30,6 +29,8 @@ Revisions:
 	- 20120926@Sophia: Get DoubleCommLosing
 	- 20121110@viet: get custinfo data base on uplineid instead of username only, to reduce scan
 	- 20130522@Johnson: get Poker held funds on member level and disableP2P status
+	- 20130719@Elodie: Get DisableCasinoBonus field
+	
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
 • @uplineId: the ID of the upline.
@@ -74,7 +75,7 @@ IF (@recommend <> @uplineid AND @mrecommend <> @uplineid AND @srecommend <> @upl
 DECLARE @upLineDisableFI BIT, 
 		@upLineDisableCS BIT, @uplineDisableBingo BIT, @uplineDisabledNumber BIT,
 		@upLineDisableOutright BIT, @upLineClosed BIT, @upLineSuspend BIT, @upLineEnabled BIT, @upLineEnabledMa BIT, 
-		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT
+		@uplineDisableVirtualSports BIT, @uplineDisableCasinoBonus BIT, @uplineDoubleCommLosing BIT
 DECLARE @DisableAutoMPT BIT
 		
 DECLARE 
@@ -102,6 +103,7 @@ BEGIN
 		   @uplineDisableBingo = ISNULL(DisableBingo,0),
 		   @uplineDisabledNumber = ISNULL(DisableNumber,0),
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
+		   @uplineDisableCasinoBonus = ISNULL(DisableCasinoBonus,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @Credit_Ag = ISNULL(credit, 0)		   
 	FROM custinfo WITH (NOLOCK)
@@ -137,6 +139,7 @@ BEGIN
 		   @uplineDisableBingo = ISNULL(DisableBingo,0),
 		   @uplineDisabledNumber = ISNULL(DisableNumber,0),
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
+		   @uplineDisableCasinoBonus = ISNULL(DisableCasinoBonus,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @Credit_MAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
@@ -170,6 +173,7 @@ BEGIN
 		   @uplineDisableBingo = ISNULL(DisableBingo,0),
 		   @uplineDisabledNumber = ISNULL(DisableNumber,0),
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
+		   @uplineDisableCasinoBonus = ISNULL(DisableCasinoBonus,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @Credit_SAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
@@ -241,6 +245,7 @@ SELECT c.custid, ci.roleid,
 	ISNULL(@uplineDisableBingo,0) AS [uplineDisableBingo],	
 	ISNULL(@uplineDisabledNumber,0) AS [uplineDisableNumber],	
 	ISNULL(@uplineDisableVirtualSports,0) AS [uplineDisableVirtualSports],	
+	ISNULL(@uplineDisableCasinoBonus,0) AS [uplineDisableCasinoBonus],	
 	ISNULL(@uplineDoubleCommLosing,0) as [uplineDoubleCommLosing],
 	
 	@Credit_MAg_Min AS [MasterCredit_Min],
@@ -266,6 +271,7 @@ SELECT c.custid, ci.roleid,
 	ci.SyncLiveCasino,
 	ci.DisableVirtualSports,
 	ci.HideVirtualSports,
+	ISNULL(ci.DisableCasinoBonus,0) DisableCasinoBonus,
 	ci.DoubleCommLosing,
 	ci.DisableP2P
 FROM customer c WITH (NOLOCK)
@@ -460,7 +466,6 @@ BEGIN
 	)Balance 
 	
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNet]
