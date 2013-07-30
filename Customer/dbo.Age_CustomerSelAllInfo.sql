@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
 	@isInternalAgent BIT = 0
@@ -30,6 +29,7 @@ Revisions:
 	- 20120926@Sophia: Get DoubleCommLosing
 	- 20121110@viet: get custinfo data base on uplineid instead of username only, to reduce scan
 	- 20130522@Johnson: get Poker held funds on member level and disableP2P status
+	
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
 • @uplineId: the ID of the upline.
@@ -460,7 +460,6 @@ BEGIN
 	)Balance 
 	
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNet]
