@@ -1,5 +1,5 @@
-﻿/* OddsSelTopByMatch */
-Alter PROCEDURE [dbo].Age_Forecast_OddsSelTopByMatch
+﻿
+ALTER PROCEDURE [dbo].[Age_Forecast_OddsSelTopByMatch]
 	@matchid INT,
 	@Language NVARCHAR(2) = 'E',
 	@bettype INT = 1  
@@ -10,7 +10,8 @@ AS
 	Original:OddsSelTopByMatch
 	
 	Revisions: 
-		- 20100721@Jacob: Add param @bettype 		
+		- 20100721@Jacob: Add param @bettype 
+		- 20130730@Lukas: get live score from match instead odds		
 		
 */
 SET NOCOUNT ON
@@ -19,8 +20,8 @@ SELECT
 	hdp2, 
 	odds1a, 
 	odds2a,
-	odds.livehomescore, 
-	odds.liveawayscore, 
+	ISNULL(m.livehomescore,0) livehomescore,
+	ISNULL(m.liveawayscore,0) liveawayscore, 
 	switch, 
 	oddsstatus,
 	m.homeid,
