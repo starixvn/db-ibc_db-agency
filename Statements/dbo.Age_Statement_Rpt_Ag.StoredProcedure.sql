@@ -20,6 +20,7 @@ Revisions:
     - Don@20100915: Add @SumOfTotalAmt to sum of total amount through begin to current page index
 	- 20101224@Johnson: Apply new arrange of bettype
 	- 20130121@Dan: change linked server DB06 to DBRPT
+	- 20130715@Johnson: fix report in case of @fromdate > BUDate (should get from @fromdate not BUDate)	
 Param's Explanation:
 
 */
@@ -37,14 +38,18 @@ DECLARE @StatementTable TABLE(
 	transdesc nvarchar(300),
 	totalamt money
 )
+DECLARE @f_date DATETIME,
+		@t_date DATETIME
 
+SELECT @f_date = @fromdate,
+		@t_date = @todate	
 
 if @custid is null
 	select @custid = custid from customer with (nolock) where username = @username
 
 IF @todate >= @BalanceUpDay
 BEGIN
-	IF @FromDate > @BalanceUpDay SELECT @FromDate = @BalanceUpDay 
+	IF @FromDate > @BalanceUpDay SELECT @f_Date = @BalanceUpDay 
 	
 	insert into @StatementTable
 	select 
@@ -58,7 +63,7 @@ BEGIN
 		ON bettype.typeid=bettrans.bettype 
 	where 
 		bettype >= 20000  
-		and winlostdate between @fromdate and @todate
+		and winlostdate between @f_date and @t_date
 		and custid=@custid 
 	group by
 		typenamee,transdesc,transdate,transid
@@ -75,7 +80,7 @@ BEGIN
 	where 
 		bettype <= 19999
 		and recommend=@custid  
-		and winlostdate between @fromdate and @todate
+		and winlostdate between @f_date and @t_date
 	group by 
 		winlostdate 
 	having 
@@ -93,7 +98,7 @@ BEGIN
 	where 
 		bettype <= 19999
 		and recommend=@custid  
-		and winlostdate between @fromdate and @todate
+		and winlostdate between @f_date and @t_date
 	--and playercomm<>0 
 	group by 
 		winlostdate 
@@ -106,7 +111,7 @@ IF @fromdate < @BalanceUpDay
 BEGIN	
 	DECLARE	@PreBalanceUpDay DATETIME
 	IF @ToDate >= DATEADD(dd,-1,@BalanceUpDay)
-		SELECT @ToDate = DATEADD(dd,-1,@BalanceUpDay) + ' 23:59:59'
+		SELECT @t_Date = DATEADD(dd,-1,@BalanceUpDay) + ' 23:59:59'
 		
 	SELECT	
 		TOP 1 @PreBalanceUpDay = accdate  
@@ -115,10 +120,10 @@ BEGIN
 	WHERE	
 		custid = @custid 
 		AND transdesc = 'OPENING BALANCE' 
-		AND accdate <= @fromdate
+		AND accdate <= @f_date
 	ORDER BY accdate DESC
 	
-	SELECT @FromDate = ISNULL(@PreBalanceUpDay,@FromDate)	
+	SELECT @f_Date = ISNULL(@PreBalanceUpDay,@f_Date)	
 	
 	insert into @StatementTable
 	select 
@@ -127,8 +132,22 @@ BEGIN
 		transdesc, 
 		totalamt
 	from DBRPT.bodb_Report.dbo.Statement with (nolock) 
-	WHERE custid = @custid AND accdate between @fromdate and @todate
+	WHERE custid = @custid AND accdate between @f_date and @t_date
 	
+END
+
+DECLARE @AccBal money
+
+if (@fromdate <> @BalanceUpDay)
+BEGIN
+	--get acc bal from current (bettrans)
+	SELECT @AccBal = isnull(SUM(totalamt),0)
+	FROM @StatementTable
+	where accdate < @fromdate
+	
+	IF EXISTS(select 1 from @StatementTable where accdate >= @fromdate AND @AccBal <>0) 
+		INSERT INTO @StatementTable(accdate,transtype,transdesc,totalamt)
+		SELECT '', 'BAL', 'ACCUMULATED BALANCE', @AccBal
 END
 
 IF ((@PageSize <= 0) AND (@PageIndex <= 0))
@@ -137,6 +156,7 @@ BEGIN
 		*,
 		ROW_NUMBER() over (order by accdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
 	FROM @StatementTable
+	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 	
 	RETURN
 END
@@ -144,6 +164,7 @@ END
 IF @TotalRows = 0  
 BEGIN
 	SELECT @TotalRows = count(accdate) FROM @StatementTable
+	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 END
 
 Declare @Temp money
@@ -154,6 +175,7 @@ FROM
 		*,
 		ROW_NUMBER() over (order by accdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
 	FROM @StatementTable
+	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 ) A
 WHERE A.RowNum < @RowStart and A.transdesc not like '%opening balance%'
 ---
@@ -171,6 +193,7 @@ FROM
 		*,
 		ROW_NUMBER() over (order by accdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
 	FROM @StatementTable
+	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 ) A
 WHERE A.RowNum between @RowStart and @RowEnd
 

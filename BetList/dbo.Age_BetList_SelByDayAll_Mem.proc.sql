@@ -54,6 +54,7 @@ Revisions:
 	- 20120927@Sophia: Get comstatus
 	- 20130225@Elodie: Add bet list of Virtual Horse Racing
 	- 20130401@Lukas: fix bugs - wrong selected table
+	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 Param's Explanation: 
 	+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet 
 */
@@ -318,7 +319,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate 
 		AND b.bettype in (71,23002)	--20120405@Hurri
-		AND b.matchID = 0
+		AND b.matchID in (0, 71)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		
 		-- P2P -- 20120405@Hurri
@@ -438,7 +439,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate 
 		AND b.bettype in (73,23202)
-		AND b.matchID = 0
+		AND b.matchID in (0, 73)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 	
 	-- mix parlay
@@ -742,7 +743,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate 
 		AND b.bettype in (71,23002)	--20120405@Hurri
-		AND b.matchID = 0
+		AND b.matchID in (0, 71)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		
 		-- P2P -- 20120405@Hurri
@@ -862,7 +863,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate 
 		AND b.bettype in (73,23202)
-		AND b.matchID = 0
+		AND b.matchID in (0, 73)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 			
 	-- mixed parlay
