@@ -33,7 +33,7 @@ DECLARE @RowStart int, @RowEnd int
 SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
 
 DECLARE @StatementTable TABLE(
-	accdate datetime,
+	matchdate datetime,
 	transtype nvarchar(100),
 	transdesc nvarchar(300),
 	totalamt money
@@ -53,7 +53,7 @@ BEGIN
 	
 	insert into @StatementTable
 	select 
-		transdate AS accdate, 
+		transdate AS matchdate, 
 		typenamee AS transtype, 
 		transdesc, 
 		sum(winlost-actual_stake)  AS totalamt  
@@ -71,7 +71,7 @@ BEGIN
 	union all
 	
 	select 
-		winlostdate AS accdate,
+		winlostdate AS matchdate,
 		'POS' AS transtype, 
 		'Position' AS transdesc,  
 		sum(awinlost) AS totalamt 
@@ -89,7 +89,7 @@ BEGIN
 	union all 
 
 	select  
-		winlostdate AS accdate,
+		winlostdate AS matchdate,
 		'COM' AS transtype, 
 		'Commission' AS transdesc,
 		sum(comm-playercomm) AS totalamt  
@@ -143,10 +143,10 @@ BEGIN
 	--get acc bal from current (bettrans)
 	SELECT @AccBal = isnull(SUM(totalamt),0)
 	FROM @StatementTable
-	where accdate < @fromdate
+	where matchdate < @fromdate
 	
-	IF EXISTS(select 1 from @StatementTable where accdate >= @fromdate AND @AccBal <>0) 
-		INSERT INTO @StatementTable(accdate,transtype,transdesc,totalamt)
+	IF EXISTS(select 1 from @StatementTable where matchdate >= @fromdate AND @AccBal <>0) 
+		INSERT INTO @StatementTable(matchdate,transtype,transdesc,totalamt)
 		SELECT '', 'BAL', 'ACCUMULATED BALANCE', @AccBal
 END
 
@@ -154,17 +154,17 @@ IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 BEGIN
 	SELECT  
 		*,
-		ROW_NUMBER() over (order by accdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
+		ROW_NUMBER() over (order by matchdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
 	FROM @StatementTable
-	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
+	where (matchdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 	
 	RETURN
 END
 
 IF @TotalRows = 0  
 BEGIN
-	SELECT @TotalRows = count(accdate) FROM @StatementTable
-	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
+	SELECT @TotalRows = count(matchdate) FROM @StatementTable
+	where (matchdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 END
 
 Declare @Temp money
@@ -173,16 +173,16 @@ FROM
 (
 	SELECT 
 		*,
-		ROW_NUMBER() over (order by accdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
+		ROW_NUMBER() over (order by matchdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
 	FROM @StatementTable
-	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
+	where (matchdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 ) A
 WHERE A.RowNum < @RowStart and A.transdesc not like '%opening balance%'
 ---
 Select TOP 1 @Temp = totalamt
 From @StatementTable
 Where transdesc like '%opening balance%'
-Order by accdate
+Order by matchdate
 ---
 Set @SumOfTotalAmt = @SumOfTotalAmt + @Temp
 
@@ -191,9 +191,9 @@ FROM
 (
 	SELECT 
 		*,
-		ROW_NUMBER() over (order by accdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
+		ROW_NUMBER() over (order by matchdate, case when transdesc like '%opening balance%' then 1 else case when transdesc like '%Position%' then 2 else 3 end end, transdesc)  as RowNum	
 	FROM @StatementTable
-	where (accdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
+	where (matchdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 ) A
 WHERE A.RowNum between @RowStart and @RowEnd
 
