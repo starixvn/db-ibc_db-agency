@@ -48,7 +48,7 @@ BEGIN
 			 and l.sporttype = case when @sporttype = 0 then l.sporttype else @sporttype end 
 			and o.leagueid = case when @leagueid =0 then o.leagueid 
 							 else @leagueid end 
-			AND (o.oddsstatus IN ('completed','refund') OR o.FOddsStatus = 'completed')
+			AND (o.oddsstatus = 'completed' OR o.oddsstatus = 'refund' OR o.Foddsstatus = 'completed' )  
 			and l.isTest = isnull(@isShowAll, l.isTest)
 	ORDER BY o.oddsstatus, o.leagueid, CAST(o.groupmatch AS INT), o.placing
 END 
