@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Age_Result_SportSelByDate]  
+﻿
+ALTER PROCEDURE [dbo].[Age_Result_SportSelByDate]  
  @EventDate DATETIME,
  @isshowall BIT = 0
 AS  
@@ -12,6 +13,7 @@ Revision:
  - 20110908@Sophia: Add Condition Where : OR (eventstatus = 'running' AND (mr.ishtcal=1 OR mr.calculate=1))   
  - 20111003@Sophia: Edit condition OR to show the row which have eventstatus IN ('running','closed')   
  - 20130712@Kathy: Hide sporttype in the "Sport" dropdown list since these sports have not launched yet.
+ - 20130805@Lukas: hide live casino game
 
 */  
   
@@ -39,7 +41,7 @@ WHERE
 		OR ( mr.IsPending=1 AND match.eventstatus IN ('running','closed') )  
 		OR ( mr.IsHTCal = 1 AND match.eventstatus ='running')  
 		)  
-		AND sports.sporttype <> 201 
+		AND sports.sporttype NOT IN (201,162)
 		AND l.isTest= CASE WHEN @isshowall = 1 THEN l.isTest ELSE @isshowall END 
    
 UNION ALL  
@@ -81,3 +83,10 @@ WHERE t.RowNumber < 2
 	AND t.isTest= CASE WHEN @isshowall = 1 THEN t.isTest ELSE @isshowall END 
 order by sports.sporttype, sports.sportname
  
+ 
+GO
+GRANT EXECUTE ON [dbo].[Age_Result_SportSelByDate] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Age_Result_SportSelByDate] TO [bodbDownlineNetView] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_Result_SportSelByDate] TO [vnteam] AS [dbo]

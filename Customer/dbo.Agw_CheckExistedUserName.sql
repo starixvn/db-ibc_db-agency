@@ -1,19 +1,20 @@
-﻿ALTER PROCEDURE [dbo].[Agw_CheckExistedUserName]
+﻿USE [bodb02]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE  [dbo].[Agw_CheckExistedUserName]
 	@custid int,
 	@username nvarchar(30)=null,
 	@subfix nvarchar(3) output,
 	@isExisted bit output
 AS
 /*
-
-	Created: 20090114@QuiNV
-	Task: Check a member username is existed or not, if it is existed, output max subfix username
-	DB: DBAGE/bodb02
-	Original:
-
-	Revisions:
-		- 20120803@Johnson: get subfix from Age_CustomerSelSuggestUsername
-		- 20130121@Dan: call to DBAGE/bodb_AGE for Age_CustomerSelSuggestUsername sp because moving this SP to bodb_AGE 
+DBAGE.bodb02
+Creator: QuiNV
+Date: 08/01/2009
+Task: Check a member username is existed or not, if it is existed, output max subfix username
 */
 SET NOCOUNT ON
 
@@ -30,13 +31,13 @@ SELECT @agentUserName = username
 FROM customer with (nolock)
 WHERE custid=@custid and roleid=2
 
-EXEC bodb_AGE.dbo.Age_CustomerSelSuggestUsername @prefix = @agentUserName, @custid = @custid, @roleid = 2,@seqname = @subfix output
+SELECT @subfix = isnull(right(max(username),3), '000')  
+FROM customer with (nolock)  
+WHERE recommend = @custid and roleid = 1  
+ and charindex(@agentUserName, username) = 1  
+ and len(username) = len(@agentUserName) + 3
 
-
 GO
-GRANT EXECUTE ON [dbo].[Agw_CheckExistedUserName] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_CheckExistedUserName] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Agw_CheckExistedUserName] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_CheckExistedUserName] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_CheckExistedUserName] TO [vnteam] AS [dbo]
