@@ -9,6 +9,7 @@ AS
 	DB: DBAGE/BODB02
 
 	Revisions:		
+		- 20130808@Kathy: Amend to show refund game for virtual horse racing
 						
 */
 BEGIN
@@ -26,23 +27,24 @@ BEGIN
 			o.RacerID Horseid, 
 			WinOdds,
 			o.placeodds,		
-			o.IsFavor		
+			o.IsFavor, 
+			CASE WHEN o.BetStatus = 'refund' THEN 'Refund' ELSE o.EventStatus END EventStatus
 	FROM 
-		(	SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM VSOutright o  with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
+		(	SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus, r.BetStatus, WinOdds, PlaceOdds, IsFavor, RacerNum
+		 	  FROM VSOutright o  with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
 			UNION ALL
-			SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM VSOutright14 o with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
+			SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus,r.BetStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM VSOutright14 o with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
 			UNION ALL
-			SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM DB06.bodb_Archive.dbo.VSOutright_bk o with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
+			SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus,r.BetStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM DB06.bodb_Archive.dbo.VSOutright_bk o with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
 		 ) o 
 		INNER JOIN league l WITH (NOLOCK) ON o.leagueid = l.leagueid 
 	WHERE	o.EventDate = @FromDate 
 			and l.sporttype = case when @sporttype = 0 then l.sporttype else @sporttype end 
-			and o.leagueid = case when @leagueid =0 then o.leagueid 
-							 else @leagueid end 
-			and Eventstatus ='completed'
+			and o.leagueid = case when @LeagueID =0 then o.leagueid else @LeagueID end 
+			and o.Eventstatus  = 'completed'
 			and l.isTest = isnull(@isShowAll, l.isTest)
-			and isnull(Placing, 0) <> 0
-	ORDER BY o.leagueid, EventTime, o.placing
+	--		and isnull(Placing, 0) <> 0
+	ORDER BY o.EventStatus, o.leagueid, EventTime, o.placing
 END 
 
 GO

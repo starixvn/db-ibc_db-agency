@@ -16,7 +16,7 @@ AS
 		- 20100524@Jamie: Only show Tote HR 
 		- 20101229@Simon: Show All League or only show Live belong to @isShowAll.  
 		- 20110304@Lukas: include Greyhound, Harness racing sports (152,153) - add param @sporttype
-						
+		- 20130808@Kathy: Amend to show refund game for horse racing				
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -35,6 +35,7 @@ BEGIN
 			o.IsFavor,
 			o.IsSCR,
 			o.FOddsStatus
+			
 	FROM 
 		(	SELECT	leagueid, teamid, eventdate, kickofftime, groupmatch, matchcode, placing, oddsstatus, odds, placeodds, IsFavor, IsSCR, FOddsStatus FROM outright o with (nolock)
 			UNION ALL
@@ -44,15 +45,13 @@ BEGIN
 		 ) o 
 		INNER JOIN league l WITH (NOLOCK) ON o.leagueid = l.leagueid 
 	WHERE	o.eventdate = @FromDate 
-			and l.sporttype = case when @sporttype = 0 then l.sporttype else @sporttype end 
+			 and l.sporttype = case when @sporttype = 0 then l.sporttype else @sporttype end 
 			and o.leagueid = case when @leagueid =0 then o.leagueid 
 							 else @leagueid end 
-			and (oddsstatus ='completed' OR FoddsStatus='completed')
+			AND (o.oddsstatus IN ('completed','refund') OR o.FOddsStatus = 'completed')
 			and l.isTest = isnull(@isShowAll, l.isTest)
-	ORDER BY o.leagueid, CAST(o.groupmatch AS INT), o.placing
+	ORDER BY o.oddsstatus, o.leagueid, CAST(o.groupmatch AS INT), o.placing
 END 
-
-
 
 
 GO
