@@ -32,6 +32,7 @@ Revisions:
 	- 20130226@Lukas: move SP to bodb_archive
 	- 20130225@Elodie: Add bet list of Virtual Horse Racing
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
 Param's Explanation: 
 */
 
@@ -263,7 +264,7 @@ SELECT
 	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 FROM	#bettrans_temp b	
 WHERE	b.bettype = 71		-- not include transfer			--20120405@Hurri
-		AND b.matchID in(0, 71)
+		AND b.matchID in(0, 71, 72)
 		--AND b.status <>'REFUND'
 		
 -- P2P -- 20120405@Hurri

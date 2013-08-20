@@ -55,6 +55,7 @@ Revisions:
 	- 20130225@Elodie: Add bet list of Virtual Horse Racing
 	- 20130401@Lukas: fix bugs - wrong selected table
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
+	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
 Param's Explanation: 
 	+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet 
 */
@@ -318,7 +319,7 @@ BEGIN
 	where
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate 
-		AND b.bettype in (71,23002)	--20120405@Hurri
+		AND b.bettype in (71, 72, 23002)	--20120405@Hurri
 		AND b.matchID in (0, 71)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		
@@ -742,7 +743,7 @@ BEGIN
 	where
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate 
-		AND b.bettype in (71,23002)	--20120405@Hurri
+		AND b.bettype in (71, 72, 23002)	--20120405@Hurri
 		AND b.matchID in (0, 71)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		
