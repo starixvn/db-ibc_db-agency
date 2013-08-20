@@ -107,3 +107,8 @@ drop table #GameBalance
 drop table #tmp_customer
 
 GO
+GRANT EXECUTE ON [dbo].[Age_CustomerSelWinLimitList_Ag] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerSelWinLimitList_Ag] TO [bodbDownlineNetView] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelWinLimitList_Ag] TO [vnteam] AS [dbo]
