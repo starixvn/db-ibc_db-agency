@@ -201,7 +201,7 @@ DECLARE @AccBal money
 if (@fromdate <> @BalanceUpDay)
 BEGIN
 	--get acc bal from current (bettrans)
-	SELECT @AccBal = isnull(SUM(totalamt),0)
+	SELECT @AccBal = isnull(SUM(totalamt),0) + isnull(SUM(Commission),0)
 	FROM @Data
 	where winlostdate < @fromdate
 	
