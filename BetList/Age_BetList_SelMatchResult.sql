@@ -23,6 +23,7 @@ Revisions:
 	- 20120119@Sophia: Add Showtime for Table - hand - Shoe of Live Casino
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20130226@Elodie: Show the results of Virtual HR
+	- 20130826@Kathy: change Status column name
 */
 
 SET NOCOUNT ON
@@ -150,7 +151,7 @@ SET NOCOUNT ON
 					o.odds,
 					o.placeodds,
 					o.leagueid AS meetingid,
-					o.oddsstatus status,
+					o.oddsstatus eventstatus,
 					o.IsFavor,
 					o.IsSCR,
 					o.FOddsStatus
@@ -176,7 +177,7 @@ SET NOCOUNT ON
 					o.odds,
 					o.placeodds,
 					o.leagueid AS meetingid,
-					o.oddsstatus status,
+					o.oddsstatus eventstatus,
 					o.IsFavor,
 					o.IsSCR,
 					o.FOddsStatus
@@ -202,7 +203,7 @@ SET NOCOUNT ON
 					bk.odds,
 					bk.placeodds,
 					bk.leagueid AS meetingid,
-					bk.oddsstatus status,
+					bk.oddsstatus eventstatus,
 					bk.IsFavor,
 					bk.IsSCR,
 					bk.FOddsStatus
@@ -225,7 +226,7 @@ SET NOCOUNT ON
 					o.WinOdds odds,
 					o.placeodds,
 					'' AS meetingid,
-					o.EventStatus status,
+					o.EventStatus eventstatus,
 					o.IsFavor,
 					'' IsSCR,
 					'' FOddsStatus
@@ -246,7 +247,7 @@ SET NOCOUNT ON
 					o.WinOdds odds,
 					o.placeodds,
 					'' AS meetingid,
-					o.EventStatus status,
+					o.EventStatus eventstatus,
 					o.IsFavor,
 					'' IsSCR,
 					'' FOddsStatus
@@ -267,7 +268,7 @@ SET NOCOUNT ON
 					o.WinOdds odds,
 					o.placeodds,
 					'' AS meetingid,
-					o.EventStatus status,
+					o.EventStatus eventstatus,
 					o.IsFavor,
 					'' IsSCR,
 					'' FOddsStatus
