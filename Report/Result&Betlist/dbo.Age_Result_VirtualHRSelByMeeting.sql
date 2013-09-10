@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Age_Result_VirtualHRSelByMeeting]
+﻿ALTER PROCEDURE [dbo].[Age_Result_VirtualHRSelByMeeting]
 	@FromDate DATETIME,
 	@LeagueID INT = 0,
 	@sporttype SMALLINT = 0,
@@ -10,6 +10,7 @@ AS
 
 	Revisions:		
 		- 20130808@Kathy: Amend to show refund game for virtual horse racing
+		- 20130910@Elodie: Use alias server DBARC instead of DB06
 						
 */
 BEGIN
@@ -35,7 +36,7 @@ BEGIN
 			UNION ALL
 			SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus,r.BetStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM VSOutright14 o with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
 			UNION ALL
-			SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus,r.BetStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM DB06.bodb_Archive.dbo.VSOutright_bk o with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
+			SELECT	leagueid, RacerID, EventTime, EventDate, placing, r.EventStatus,r.BetStatus, WinOdds, PlaceOdds, IsFavor, RacerNum FROM DBARC.bodb_Archive.dbo.VSOutright_bk o with (nolock) INNER JOIN VSRaceInfo r  with (nolock) on o.EventID = r.EventID
 		 ) o 
 		INNER JOIN league l WITH (NOLOCK) ON o.leagueid = l.leagueid 
 	WHERE	o.EventDate = @FromDate 
@@ -47,9 +48,10 @@ BEGIN
 	ORDER BY o.EventStatus, o.leagueid, EventTime, o.placing
 END 
 
+
 GO
-GRANT EXECUTE ON [dbo].[Age_Result_VirtualHRSelByMeeting] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_Result_VirtualHRSelByMeeting] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Result_VirtualHRSelByMeeting] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_Result_VirtualHRSelByMeeting] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Result_VirtualHRSelByMeeting] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Age_Result_VirtualHRSelByMeeting] TO [vnteam] AS [dbo]
