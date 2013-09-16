@@ -51,7 +51,7 @@ Revisions:
 	- 20130328@Jamie: Get LastChangedPwdDate in case login via OldUserPwd
 	- 20130405@Thien: REMOVE "Prevent hacking from INDONESIA"
 	- 20130420@Thien: Prevent hacking from Viettel IPs
-
+	- 20130916@Elodie: Correct writting log on DBTXN server in case of actionID = 908
 	
 Param's Explanation:
 • @IsNickname: is use Nickname or not
@@ -108,11 +108,6 @@ DECLARE @isExisted BIT,
 	
 SELECT @isAllowed = 0
 
---20110314@thien: put hard-code to stop abusing on logins with wrong password.
-IF @LoginIP IN ('118.100.111.51', '115.132.65.22')
-BEGIN
-	RETURN
-END
 
 -------------------------------------------------------------------
 ------- START: Thien@20130420: Prevent hacking from Viettel IPs ---
@@ -120,11 +115,16 @@ END
 IF @LoginIP IN ('210.211.126.116', '115.84.183.21', '115.78.129.42', '117.7.123.40', '210.211.126.71', '210.211.125.25', '101.99.3.227', '210.211.126.81',
 				'117.7.97.115', '115.84.182.37', '115.78.129.42', '210.211.126.117', '115.84.183.11', '115.84.182.241', '210.211.126.199', '210.211.105.232',
 				'210.211.120.18', '210.211.120.22', '210.211.120.23', '210.211.125.45', '117.7.109.98', '117.7.113.19', '117.7.119.52', '115.84.182.36',
-				'117.7.112.247', '117.7.99.153', '117.2.217.87', '210.211.122.27', '117.3.169.84', '210.211.126.242', '210.211.125.215', '115.77.201.21', '171.237.114.124')
-	OR (@LoginIP like '210.211%' or @LoginIP like '117.7%' or @LoginIP like '115.84%' or @LoginIP like '115.77%')
+				'117.7.112.247', '117.7.99.153', '117.2.217.87', '210.211.122.27', '117.3.169.84', '210.211.126.242', '210.211.125.215', '115.77.201.21',
+				'171.237.114.124', '42.119.12.181', '210.211.122.6', '210.211.125.212', '117.3.169.84', '27.73.28.214')
+	OR (@LoginIP like '210.211%'
+	--or @LoginIP like '117.7%'
+	--or @LoginIP like '115.84%'
+	--or @LoginIP like '115.77%'
+	)
 	OR (@LoginDomain like '%ibc88.com%')
 BEGIN
-	SELECT @LogData = 'Unauthorized login (' + @UserName + ')'
+	SELECT @LogData = 'Unauthorized login (' + @UserName +' - ' + @UserPwd + ')'
 	
 	SET	@End = GETDATE() 
 	SET @Duration = DATEDIFF(millisecond,@Begin,@End)	
@@ -143,7 +143,7 @@ BEGIN
 		 @CountryCode = @CountryCode,
 		 @Duration = @Duration
 	
-	SELECT @ErrMsg =   'Error!!' , @ErrCode=106 
+	SELECT @ErrMsg =   'System error!!' , @ErrCode=106 
 
 	RETURN
 END
@@ -655,7 +655,7 @@ BEGIN
 									+'SubAccount="'  + @SubUserName +'" ' +
 									+'ErrMsg='+error_message() +'" ' + 
 									' />'	
-				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_RunSP
+				EXEC bodb_customerlog.dbo.WriteLog_UserLog_RunSP
 					@UserID = @CustID,
 					@CustID = @CustID,
 					@ActionID = 908,
@@ -1507,7 +1507,7 @@ BEGIN
 										'ErrMsg="' + ERROR_MESSAGE() +'" ' + 
 								
 								' />'
-			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_RunSP
+			EXEC bodb_customerlog.dbo.WriteLog_UserLog_RunSP
 				@UserID = @db_custid,
 				@CustID = @CustID,
 				@ActionID = 908,
@@ -1624,8 +1624,6 @@ BEGIN CATCH
 			 @CountryCode = @CountryCode,
 			 @Duration = @Duration 
 END CATCH
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_LoginVerifyDownline] TO [bodbDownlineNet] AS [dbo]
