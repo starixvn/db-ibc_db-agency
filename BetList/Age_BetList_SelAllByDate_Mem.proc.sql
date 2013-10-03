@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
+﻿
+ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
 	@custid int=null,
 	@AgID int=0,
 	@FromDate datetime,
@@ -63,6 +64,7 @@ Revisions:
 						. Remove Financial product
 	- 20120926@Sophia: Get comstatus
 	- 20130225@Elodie: Add bet list of Virtual HR
+	- 20131003@Lukas: sort tickets by transid
 */
 
 
@@ -836,7 +838,9 @@ BEGIN
 		AND b.bettype in (1231, 1232, 1233, 1237, 1238)
 END
 
-SELECT * FROM @BetListSelAllByDateMem
+SELECT * 
+FROM @BetListSelAllByDateMem
+ORDER BY TransID DESC 
 
 if @ShowRB = 1
 begin
@@ -898,7 +902,7 @@ begin
 end
 
 SELECT * FROM @BettransDetail
-
+GO
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNet]
 GO

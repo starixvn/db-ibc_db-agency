@@ -46,23 +46,28 @@ BEGIN
 END
 ELSE
 BEGIN
+	
+	declare @targetTable table (TargetID int)
+	insert into @targetTable (TargetID)
+	SELECT val from dbo.strSplit(@targetid2,',')
+	UNION ALL SELECT @TargetID
+	
 	SELECT DISTINCT m.MessageId, m.Content_en, m.Content_cs, m.Content_ch,
 			m.Content_jp, m.Content_th, m.Content_it, m.Content_ko,	m.Content_es, m.PostTime, 
 			m.MsgType, m.IsSticky, m.LastUpdateTime, mt.bettransid, mt.isRead	
 	FROM dbo.Msg m with (NOLOCK)
 		inner join MsgTarget mt with (NOLOCK) ON m.MessageId=mt.MessageId AND m.Posttime<@lastPostTime
+		inner join @targetTable tt ON mt.TargetID = tt.TargetID
 	WHERE	m.Posttime >= @startdate --20120114: fix by Sylvia 
-			AND mt.TargetID IN (
-				SELECT val from dbo.strSplit(@targetid2,',')
-				UNION ALL SELECT @TargetID
-			)
 			AND m.isTest = 0
 			AND mt.isDeleted = 0
 			AND m.isDeleted = 0
+			AND m.MessageId > 376259 --20130809@vivi (372773), 20130928@Sylvia (376259)
 	ORDER BY m.Posttime	DESC
 END
 
 SET ROWCOUNT 0
+
 
 
 

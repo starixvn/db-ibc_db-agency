@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResult]
+﻿
+ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResult]
 	@MatchID int,
 	@RaceNo varchar(50)=NULL	
 AS
@@ -24,6 +25,7 @@ Revisions:
 	- 20130121@Dan: change linked server DB06 to DBARC
 	- 20130226@Elodie: Show the results of Virtual HR
 	- 20130826@Kathy: change Status column name
+	- 20130925@Lukas: revert column alias eventstatus -> status for horse racing product
 */
 
 SET NOCOUNT ON
@@ -151,7 +153,7 @@ SET NOCOUNT ON
 					o.odds,
 					o.placeodds,
 					o.leagueid AS meetingid,
-					o.oddsstatus eventstatus,
+					o.oddsstatus status,
 					o.IsFavor,
 					o.IsSCR,
 					o.FOddsStatus
@@ -177,7 +179,7 @@ SET NOCOUNT ON
 					o.odds,
 					o.placeodds,
 					o.leagueid AS meetingid,
-					o.oddsstatus eventstatus,
+					o.oddsstatus status,
 					o.IsFavor,
 					o.IsSCR,
 					o.FOddsStatus
@@ -203,7 +205,7 @@ SET NOCOUNT ON
 					bk.odds,
 					bk.placeodds,
 					bk.leagueid AS meetingid,
-					bk.oddsstatus eventstatus,
+					bk.oddsstatus status,
 					bk.IsFavor,
 					bk.IsSCR,
 					bk.FOddsStatus
@@ -279,6 +281,7 @@ SET NOCOUNT ON
 			ORDER BY placing
 		END
 	END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelMatchResult] TO [bodbDownlineNet]
