@@ -263,7 +263,7 @@ SELECT
 	'' as betcheck,
 	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 FROM	#bettrans_temp b	
-WHERE	b.bettype IN(71, 72)		-- not include transfer			--20120405@Hurri
+WHERE	b.bettype IN (71, 72)		-- not include transfer			--20120405@Hurri
 		AND b.matchID in(0, 71)
 		--AND b.status <>'REFUND'
 		
