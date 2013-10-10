@@ -10,6 +10,7 @@ Revisions:
 	- 20110721@Johnson: get column kickofftime, leagueid
 	- 20110831@Johnson: correct event status when refund ticket
 	- 20130121@Dan: change linked server DB06 to DBARC
+	- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */  
   
 SET NOCOUNT ON  
@@ -20,7 +21,7 @@ BEGIN
 			b.Seq,   
 			b.number,
 			b.updatetime,
-			m.kickofftime,
+			m.GlobalShowTime AS kickofftime, -- 20131010@Kathy: Turn to use GlobalShowTime
 			m.leagueid,  
 			m.eventdate,
 			case when m.betstatus like 'Refund FT%' then 'Refund FT' 
@@ -39,7 +40,7 @@ BEGIN
 			b.Seq,   
 			b.number,
 			b.updatetime,
-			m.kickofftime,
+			m.globalshowtime AS kickofftime,  -- 20131010@Kathy: Turn to use GlobalShowTime
 			m.leagueid,  
 			m.eventdate,
 			case when m.betstatus like 'Refund FT%' then 'Refund FT' 
@@ -58,7 +59,7 @@ BEGIN
 			b.Seq,   
 			b.number,
 			b.updatetime,
-			m.kickofftime,
+			m.globalshowtime AS kickofftime,
 			m.leagueid,  
 			m.eventdate,
 			case when m.betstatus like 'Refund FT%' then 'Refund FT' 
@@ -70,7 +71,7 @@ BEGIN
 	FROM DBARC.bodb_archive.dbo.bingoBall_bk b WITH(NOLOCK) INNER JOIN DB06.bodb_archive.dbo.match_bk m WITH(NOLOCK)  ON b.matchid=m.matchid
 	WHERE m.matchid = @matchid 
 	ORDER BY b.Seq 
-END  
+END   
   
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelMatchResultNumberGame] TO [bodbDownlineNet]

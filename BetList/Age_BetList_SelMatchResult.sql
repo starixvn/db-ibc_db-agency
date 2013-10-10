@@ -26,6 +26,7 @@ Revisions:
 	- 20130226@Elodie: Show the results of Virtual HR
 	- 20130826@Kathy: change Status column name
 	- 20130925@Lukas: revert column alias eventstatus -> status for horse racing product
+	- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */
 
 SET NOCOUNT ON
@@ -38,13 +39,13 @@ SET NOCOUNT ON
 				m.betstatus, 
 				hthomescore,
 				htawayscore,
-				datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,
+				datediff(minute, m.GlobalShowTime ,CURRENT_TIMESTAMP) playtime,
 				m.LeagueID,
 				m.matchid, 
 				m.homeID,
 				m.awayID,
 				m.matchcode,
-				m.kickofftime,
+				m.GlobalShowTime AS kickofftime, -- 20131010@Kathy: Turn to use GlobalShowTime 
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
@@ -73,13 +74,13 @@ SET NOCOUNT ON
 				m.betstatus, 
 				hthomescore,
 				htawayscore,
-				datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,
+				datediff(minute, m.globalshowtime ,CURRENT_TIMESTAMP) playtime,
 				m.LeagueID,
 				m.matchid, 
 				m.homeID,
 				m.awayID,
 				m.matchcode,
-				m.kickofftime,
+				m.globalshowtime AS kickofftime,
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
@@ -108,14 +109,14 @@ SET NOCOUNT ON
 				m.betstatus, 
 				hthomescore,
 				htawayscore,
-				datediff(minute,kickofftime,CURRENT_TIMESTAMP) playtime,
+				datediff(minute, globalshowtime ,CURRENT_TIMESTAMP) playtime,
 				m.LeagueID,
 				m.matchid, 
 				m.homeID,
 				m.awayID,
 				m.matchcode,
 				m.eventdate,
-				m.kickofftime,
+				m.globalshowtime AS kickofftime,
 				m.finalhomescore,
 				m.finalawayscore,
 				case when m.betstatus like 'Refund FT%' then 'Refund FT' 

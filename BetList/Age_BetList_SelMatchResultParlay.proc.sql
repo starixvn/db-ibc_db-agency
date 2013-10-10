@@ -15,6 +15,7 @@ Revisions:
 	- 20110907@Sophia: Add column IsHTCal, calculate for Pending Status.
 	- 20111003@Sophia: Add column IsPending Pending Status.
 	- 20130121@Dan: change linked server DB06 to DBARC
+	- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -75,7 +76,7 @@ BEGIN
 						htawayscore,		
 						m.finalhomescore,
 						m.finalawayscore,
-						m.kickofftime,
+						m.GlobalShowTime, --kickofftime,
 						m.eventdate,
 						m.isNeutral,
 						m.betstatus, 	
@@ -129,7 +130,7 @@ BEGIN
 				htawayscore,		
 				m.finalhomescore,
 				m.finalawayscore,
-				m.kickofftime,
+				m.globalshowtime, -- kickofftime,
 				m.eventdate,
 				m.isNeutral,
 				m.betstatus, 	
@@ -182,7 +183,7 @@ BEGIN
 				htawayscore,		
 				m.finalhomescore,
 				m.finalawayscore,
-				m.kickofftime,
+				m.globalshowtime, -- kickofftime
 				m.eventdate,
 				m.isNeutral,
 				m.betstatus, 	
@@ -204,6 +205,7 @@ BEGIN
 	SELECT * FROM @tmpParlay
 	ORDER BY LeagueID, eventdate, matchcode	
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelMatchResultParlay] TO [bodbDownlineNet]
 GO

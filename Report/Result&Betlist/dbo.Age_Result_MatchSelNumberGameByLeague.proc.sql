@@ -16,6 +16,7 @@ Revisions:
  20101217@Viet: change the condition back (remove never-open-game) for agentsite to use.
  20101229@Simon: Show All League or only show Live belong to @isShowAll.  
  20110901@Jamie: Get Refund Result
+ 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
 */  
   
 SET NOCOUNT ON  
@@ -32,7 +33,7 @@ SELECT
 	m.matchid,
 	m.matchcode,  
 	m.eventdate,   
-	m.kickofftime,
+	m.GlobalShowTime,
 	m.homeid,
 	CASE WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'   
 		 WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'  
@@ -43,13 +44,13 @@ SELECT
 	b.seq,
 	b.number
 FROM  
-   (SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime, homeid  
+   (SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, GlobalShowTime, homeid  
 	FROM MATCH (NOLOCK)  
     WHERE	eventdate BETWEEN  @FromDate  AND  @ToDate 
 			AND sporttype=161
 			AND (@LeagueID = 0 OR leagueid = @LeagueID)
 	UNION ALL  
-	SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, kickofftime,homeid   
+	SELECT sporttype, betstatus, matchid, matchcode, leagueid, eventdate, eventstatus, globalshowtime ,homeid   
 	FROM match14 (NOLOCK)  
 	WHERE	eventdate BETWEEN  @FromDate  AND  @ToDate 
 			AND sporttype=161
