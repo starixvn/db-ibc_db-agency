@@ -33,7 +33,7 @@ SELECT
 	m.matchid,
 	m.matchcode,  
 	m.eventdate,   
-	m.GlobalShowTime,
+	m.GlobalShowTime kickofftime,
 	m.homeid,
 	CASE WHEN m.betstatus LIKE 'Refund FT%' THEN 'Refund FT'   
 		 WHEN m.betstatus LIKE 'Refund HT%' THEN 'Refund HT'  
