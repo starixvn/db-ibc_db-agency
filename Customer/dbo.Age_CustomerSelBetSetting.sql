@@ -1,11 +1,11 @@
-﻿ALTER PROC  [dbo].[Age_CustomerSelBetSetting]
+﻿ALTER PROCEDURE  [dbo].[Age_CustomerSelBetSetting]
 	@custid int,
 	@userid int
 AS
 /*
 Created: 20090211@nqminh
 Task : Select customer bet settings
-DB: DB05.bodb02
+DB: DBAGE/bodb02
 Original:
 
 Revisions:
@@ -30,16 +30,16 @@ Declare @MinBet_Max money, @MaxBet_Min money, @MaxPerMatch_Min money, @MaxPerMat
 
 --SELECT LIMIT
 EXEC Age_CustomerSelMinMaxLimit @custid, @userid, 
-		@MinBet_Max output, @MaxBet_Min output, @MaxPerMatch_Min output, @MaxPerMatch_Max output,
-		@MinBetv2_Max output, @MaxBetv2_Min output, @MaxPerMatchv2_Min output, @MaxPerMatchv2_Max output,
-		@MinBetv3_Max output, @MaxBetv3_Min output, @MaxPerMatchv3_Min output, @MaxPerMatchv3_Max output,
-		@MinBetv5_Max output, @MaxBetv5_Min output, @MaxPerMatchv5_Min output, @MaxPerMatchv5_Max output,
-		@MinBetv8_Max output, @MaxBetv8_Min output, @MaxPerMatchv8_Min output, @MaxPerMatchv8_Max output,
-		@MinBetv10_Max output, @MaxBetv10_Min output, @MaxPerMatchv10_Min output, @MaxPerMatchv10_Max output,
-		@MinBetv11_Max output, @MaxBetv11_Min output, @MaxPerMatchv11_Min output, @MaxPerMatchv11_Max output,
-		@MinBetv99_Max output, @MaxBetv99_Min output, @MaxPerMatchv99_Min output, @MaxPerMatchv99_Max output,		
-		@MinBetv99MP_Max output, @MaxBetv99MP_Min output, @MaxPerMatchv99MP_Min output, @MaxPerMatchv99MP_Max output,
-		@MinBetv161_Max output, @MaxBetv161_Min output, @MaxPerMatchv161_Min output, @MaxPerMatchv161_Max output, @MaxPerBallv161_Min output, @MaxPerBallv161_Max output
+		@MinBet_Max = @MinBet_Max output, @MaxBet_Min = @MaxBet_Min output, @MaxPerMatch_Min = @MaxPerMatch_Min output, @MaxPerMatch_Max = @MaxPerMatch_Max output,
+		@MinBetv2_Max = @MinBetv2_Max output, @MaxBetv2_Min = @MaxBetv2_Min output, @MaxPerMatchv2_Min = @MaxPerMatchv2_Min output, @MaxPerMatchv2_Max = @MaxPerMatchv2_Max output,
+		@MinBetv3_Max = @MinBetv3_Max output, @MaxBetv3_Min = @MaxBetv3_Min output, @MaxPerMatchv3_Min = @MaxPerMatchv3_Min output, @MaxPerMatchv3_Max = @MaxPerMatchv3_Max output,
+		@MinBetv5_Max = @MinBetv5_Max output, @MaxBetv5_Min = @MaxBetv5_Min output, @MaxPerMatchv5_Min = @MaxPerMatchv5_Min output, @MaxPerMatchv5_Max = @MaxPerMatchv5_Max output,
+		@MinBetv8_Max = @MinBetv8_Max output, @MaxBetv8_Min = @MaxBetv8_Min output, @MaxPerMatchv8_Min = @MaxPerMatchv8_Min output, @MaxPerMatchv8_Max = @MaxPerMatchv8_Max output,
+		@MinBetv10_Max = @MinBetv10_Max output, @MaxBetv10_Min = @MaxBetv10_Min output, @MaxPerMatchv10_Min = @MaxPerMatchv10_Min output, @MaxPerMatchv10_Max = @MaxPerMatchv10_Max output,
+		@MinBetv11_Max = @MinBetv11_Max output, @MaxBetv11_Min = @MaxBetv11_Min output, @MaxPerMatchv11_Min = @MaxPerMatchv11_Min output, @MaxPerMatchv11_Max = @MaxPerMatchv11_Max output,
+		@MinBetv99_Max = @MinBetv99_Max output, @MaxBetv99_Min = @MaxBetv99_Min output, @MaxPerMatchv99_Min = @MaxPerMatchv99_Min output, @MaxPerMatchv99_Max = @MaxPerMatchv99_Max output,		
+		@MinBetv99MP_Max = @MinBetv99MP_Max output, @MaxBetv99MP_Min = @MaxBetv99MP_Min output, @MaxPerMatchv99MP_Min = @MaxPerMatchv99MP_Min output, @MaxPerMatchv99MP_Max = @MaxPerMatchv99MP_Max output,
+		@MinBetv161_Max = @MinBetv161_Max output, @MaxBetv161_Min = @MaxBetv161_Min output, @MaxPerMatchv161_Min = @MaxPerMatchv161_Min output, @MaxPerMatchv161_Max = @MaxPerMatchv161_Max output, @MaxPerBallv161_Min = @MaxPerBallv161_Min output, @MaxPerBallv161_Max = @MaxPerBallv161_Max output
 		 
 
 --MIN,MAX BET
