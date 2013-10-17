@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResult]
+﻿ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResult]
 	@MatchID int,
 	@RaceNo varchar(50)=NULL	
 AS
@@ -26,7 +25,7 @@ Revisions:
 	- 20130226@Elodie: Show the results of Virtual HR
 	- 20130826@Kathy: change Status column name
 	- 20130925@Lukas: revert column alias eventstatus -> status for horse racing product
-	- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076]
+	- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076] (exclusive LiveCasino)
 */
 
 SET NOCOUNT ON
@@ -39,13 +38,19 @@ SET NOCOUNT ON
 				m.betstatus, 
 				hthomescore,
 				htawayscore,
-				datediff(minute, m.GlobalShowTime ,CURRENT_TIMESTAMP) playtime,
+				case when m.sporttype = 162
+					 then datediff(minute, m.kickofftime ,CURRENT_TIMESTAMP) 
+					 else datediff(minute, m.GlobalShowTime ,CURRENT_TIMESTAMP) 
+				end playtime,
 				m.LeagueID,
 				m.matchid, 
 				m.homeID,
 				m.awayID,
 				m.matchcode,
-				m.GlobalShowTime AS kickofftime, -- 20131010@Kathy: Turn to use GlobalShowTime 
+				case when m.sporttype = 162 
+					 then m.kickofftime
+					 else m.GlobalShowTime
+				end kickofftime,
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
@@ -74,13 +79,19 @@ SET NOCOUNT ON
 				m.betstatus, 
 				hthomescore,
 				htawayscore,
-				datediff(minute, m.globalshowtime ,CURRENT_TIMESTAMP) playtime,
+				case when m.sporttype = 162
+					 then datediff(minute, m.kickofftime ,CURRENT_TIMESTAMP) 
+					 else datediff(minute, m.GlobalShowTime ,CURRENT_TIMESTAMP) 
+				end playtime,
 				m.LeagueID,
 				m.matchid, 
 				m.homeID,
 				m.awayID,
 				m.matchcode,
-				m.globalshowtime AS kickofftime,
+				case when m.sporttype = 162 
+					 then m.kickofftime
+					 else m.GlobalShowTime
+				end kickofftime,
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
@@ -109,14 +120,20 @@ SET NOCOUNT ON
 				m.betstatus, 
 				hthomescore,
 				htawayscore,
-				datediff(minute, globalshowtime ,CURRENT_TIMESTAMP) playtime,
+				case when m.sporttype = 162
+					 then datediff(minute, m.kickofftime ,CURRENT_TIMESTAMP) 
+					 else datediff(minute, m.GlobalShowTime ,CURRENT_TIMESTAMP) 
+				end playtime,
 				m.LeagueID,
 				m.matchid, 
 				m.homeID,
 				m.awayID,
 				m.matchcode,
 				m.eventdate,
-				m.globalshowtime AS kickofftime,
+				case when m.sporttype = 162 
+					 then m.kickofftime
+					 else m.GlobalShowTime
+				end kickofftime,
 				m.finalhomescore,
 				m.finalawayscore,
 				case when m.betstatus like 'Refund FT%' then 'Refund FT' 
@@ -282,7 +299,6 @@ SET NOCOUNT ON
 			ORDER BY placing
 		END
 	END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelMatchResult] TO [bodbDownlineNet]
