@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]	
+﻿ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]	
 	@CustId int,	
 	@UpdateMinMaxBet BIT = 1,	
 	@UpdateMinMaxBetv2 BIT = 1,	
@@ -10,6 +9,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]
 	@UpdateMinMaxBetv11 BIT = 1,	
 	@UpdateMinMaxBetv99 BIT = 1,
 	@UpdateMinMaxBetv99MP BIT = 1,
+	@UpdateMinMaxBetv154 BIT = 1,
 	@UpdateMinMaxBetv161 BIT = 1,
 	 
 	@MinBet MONEY,
@@ -47,6 +47,10 @@ ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]
 	@MinBetv99MP MONEY,
 	@MaxBetv99MP MONEY,
 	@MaxPerMatchv99MP MONEY,
+	
+	@MinBetv154 MONEY = 0,
+	@MaxBetv154 MONEY = 0,
+	@MaxPerMatchv154 MONEY = 0,
 	
 	@MinBetv161 MONEY,
 	@MaxBetv161 MONEY,
@@ -88,6 +92,8 @@ Revisions:
     - 20110907@Sophia: Change Linked Server from DB052 to DB053	
     - 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
     - 20130311@Dan: Change linked server DB053 to DBAGE, DB03 to DBONUSER; Write more log on DBTXN server in case of DBLOG server failure
+    - 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
+    
 Param's Explanation:
 • @custid: custid that need to be viewed.   
 • @UpdateMinMaxBet: is update min max bet?
@@ -126,6 +132,8 @@ Declare @MinMinBet money, @MaxMaxBet money,	@MaxMaxPerMatch money,
 	
 	@MinMinBetv99 money, @MaxMaxBetv99 money, @MaxMaxPerMatchv99 money,
 	@MinMinBetv99MP money, @MaxMaxBetv99MP money, @MaxMaxPerMatchv99MP money,
+	@MinMinBetv154 money, @MaxMaxBetv154 money, @MaxMaxPerMatchv154 money,
+	
 	@MinMinBetv161 money, @MaxMaxBetv161 money, @MaxMaxPerMatchv161 money, @MaxMaxPerBallv161 money
 	
 declare @ErrAcc varchar(4000), @ErrType varchar(4000),
@@ -156,18 +164,21 @@ WHERE custid = @CustID
 		@old_MinBetv11 MONEY, @old_MaxBetv11 MONEY, @old_MaxPerMatchv11 MONEY,	
 		@old_MinBetv99 MONEY, @old_MaxBetv99 MONEY, @old_MaxPerMatchv99 MONEY,
 		@old_MinBetv99MP MONEY, @old_MaxBetv99MP MONEY, @old_MaxPerMatchv99MP MONEY,
+		@old_MinBetv154 MONEY, @old_MaxBetv154 MONEY, @old_MaxPerMatchv154 MONEY,
 		@old_MinBetv161 MONEY, @old_MaxBetv161 MONEY, @old_MaxPerMatchv161 MONEY, @old_MaxPerBallv161 MONEY
+		
 	EXEC Acc_CustomerSelMinMax @custid,
-			@old_MinBet OUTPUT, @old_MaxBet OUTPUT, @old_MaxPerMatch OUTPUT,
-			@old_MinBetv2 OUTPUT, @old_MaxBetv2 OUTPUT, @old_MaxPerMatchv2 OUTPUT,
-			@old_MinBetv3 OUTPUT, @old_MaxBetv3 OUTPUT, @old_MaxPerMatchv3 OUTPUT,
-			@old_MinBetv5 OUTPUT, @old_MaxBetv5 OUTPUT, @old_MaxPerMatchv5 OUTPUT,
-			@old_MinBetv8 OUTPUT, @old_MaxBetv8 OUTPUT, @old_MaxPerMatchv8 OUTPUT,
-			@old_MinBetv10 OUTPUT, @old_MaxBetv10 OUTPUT, @old_MaxPerMatchv10 OUTPUT,
-			@old_MinBetv11 OUTPUT, @old_MaxBetv11 OUTPUT, @old_MaxPerMatchv11 OUTPUT,
-			@old_MinBetv99 OUTPUT, @old_MaxBetv99 OUTPUT, @old_MaxPerMatchv99 OUTPUT,
-			@old_MinBetv99MP OUTPUT, @old_MaxBetv99MP OUTPUT, @old_MaxPerMatchv99MP OUTPUT,
-			@old_MinBetv161 OUTPUT, @old_MaxBetv161 OUTPUT, @old_MaxPerMatchv161 OUTPUT, @old_MaxPerBallv161 OUTPUT
+		@MinBet = @old_MinBet output, @MaxBet = @old_MaxBet output, @MaxPerMatch =@old_MaxPerMatch output,
+		@MinBetv2 = @old_MinBetv2 output, @MaxBetv2 =@old_MaxBetv2 output, @MaxPerMatchv2 =@old_MaxPerMatchv2 output,
+		@MinBetv3 = @old_MinBetv3 output, @MaxBetv3 =@old_MaxBetv3 output, @MaxPerMatchv3 =@old_MaxPerMatchv3 output,
+		@MinBetv5 = @old_MinBetv5 output, @MaxBetv5 =@old_MaxBetv5 output, @MaxPerMatchv5 =@old_MaxPerMatchv5 output,
+		@MinBetv8 = @old_MinBetv8 output, @MaxBetv8 =@old_MaxBetv8 output, @MaxPerMatchv8 =@old_MaxPerMatchv8 output,
+		@MinBetv10 = @old_MinBetv10 output, @MaxBetv10 =@old_MaxBetv10 output, @MaxPerMatchv10 =@old_MaxPerMatchv10 output,
+		@MinBetv11 = @old_MinBetv11 output, @MaxBetv11 =@old_MaxBetv11 output, @MaxPerMatchv11 =@old_MaxPerMatchv11 output,
+		@MinBetv99 = @old_MinBetv99 output, @MaxBetv99 =@old_MaxBetv99 output, @MaxPerMatchv99 =@old_MaxPerMatchv99 output,
+		@MinBetv99MP = @old_MinBetv99MP output, @MaxBetv99MP =@old_MaxBetv99MP output, @MaxPerMatchv99MP =@old_MaxPerMatchv99MP output,
+		@MinBetv154 = @old_MinBetv154 output, @MaxBetv154 = @old_MinBetv154 output, @MaxPerMatchv154 =@old_MinBetv154 output,    
+		@MinBetv161 = @old_MinBetv161 output, @MaxBetv161 =@old_MaxBetv161 output, @MaxPerMatchv161 =@old_MaxPerMatchv161 output, @MaxPerBallv161 =@old_MaxPerBallv161 output
 
 ---------------------------------------------------------------
 --Check Param
@@ -380,21 +391,42 @@ ELSE
 BEGIN
 	SELECT @MinBetv99MP = @Old_MinBetv99MP, @MaxBetv99MP = @Old_MaxBetv99MP, @MaxPerMatchv99MP = @Old_MaxPerMatchv99MP
 END
----------------------------------------------------------------
 
-EXEC DBAGE.BODB02.DBO.Age_CustomerSelMinMaxLimit @custid, @userid, 
-		@MinMinBet output, @MaxMaxBet output, 0, @MaxMaxperMatch output,
-		@MinMinBetv2 output, @MaxMaxBetv2 output, 0, @MaxMaxPerMatchv2 output,
-		@MinMinBetv3 output, @MaxMaxBetv3 output, 0, @MaxMaxPerMatchv3 output,
-		@MinMinBetv5 output, @MaxMaxBetv5 output, 0, @MaxMaxPerMatchv5 output,
-		@MinMinBetv8 output, @MaxMaxBetv8 output, 0, @MaxMaxPerMatchv8 output,
-		@MinMinBetv10 output, @MaxMaxBetv10 output, 0, @MaxMaxPerMatchv10 output,
-		@MinMinBetv11 output, @MaxMaxBetv11 output, 0, @MaxMaxPerMatchv11 output,
-		@MinMinBetv99 output, @MaxMaxBetv99 output, 0, @MaxMaxPerMatchv99 output,
-		 @MinMinBetv99MP output, @MaxMaxBetv99MP output, 0, @MaxMaxPerMatchv99MP output,
-		 @MinMinBetv161 output, @MaxMaxBetv161 output, 0, @MaxMaxPerMatchv161 output, 0, @MaxMaxPerBallv161 output
+if @UpdateMinMaxBetv154 = 1 
+BEGIN
+	if 
+		@MinBetv154 <0
+		or @MaxBetv154 <0
+		or @MaxPerMatchv154 <0		
+	BEGIN
+		select @ErrCode = 3
+		Select @ErrMsg = 	case @Language 
+							when 'E' then 'Wrong Min bet/ Max bet/ Max per match (for HR Fixed Odds).'
+							ELSE [dbo].[f_Get_MsgNamebyMsgID](10003,@Language) + ' (' + [dbo].[f_Get_SportNameBySporttype](154,@Language) + ')'
+					end
+		return
+	END
+END
+ELSE
+BEGIN
+	SELECT @MinBetv154 = @Old_MinBetv154, @MaxBetv154 = @Old_MaxBetv154, @MaxPerMatchv154 = @Old_MaxPerMatchv154
+END
+--------------------------------------------------------------
 
-
+	EXEC DBAGE.BODB02.DBO.Age_CustomerSelMinMaxLimit @custid, @userid, 
+		@MinBet_Max = @MinMinBet output, @MaxBet_Min = @MaxMaxBet output, @MaxPerMatch_Max = @MaxMaxperMatch output,
+		@MinBetv2_Max = @MinMinBetv2 output, @MaxBetv2_Min = @MaxMaxBetv2 output, @MaxPerMatchv2_Max = @MaxMaxPerMatchv2 output,
+		@MinBetv3_Max = @MinMinBetv3 output, @MaxBetv3_Min = @MaxMaxBetv3 output, @MaxPerMatchv3_Max = @MaxMaxPerMatchv3 output,
+		@MinBetv5_Max = @MinMinBetv5 output, @MaxBetv5_Min = @MaxMaxBetv5 output, @MaxPerMatchv5_Max = @MaxMaxPerMatchv5 output, 
+		@MinBetv8_Max = @MinMinBetv8 output, @MaxBetv8_Min = @MaxMaxBetv8 output, @MaxPerMatchv8_Max = @MaxMaxPerMatchv8 output,
+		@MinBetv10_Max = @MinMinBetv10 output, @MaxBetv10_Min = @MaxMaxBetv10 output, @MaxPerMatchv10_Max = @MaxMaxPerMatchv10 output,
+		@MinBetv11_Max = @MinMinBetv11 output, @MaxBetv11_Min = @MaxMaxBetv11 output, @MaxPerMatchv11_Max = @MaxMaxPerMatchv11 output,
+		@MinBetv99_Max = @MinMinBetv99 output, @MaxBetv99_Min = @MaxMaxBetv99 output, @MaxPerMatchv99_Max = @MaxMaxPerMatchv99 output,		
+		@MinBetv99MP_Max = @MinMinBetv99MP output, @MaxBetv99MP_Min = @MaxMaxBetv99MP output, @MaxPerMatchv99MP_Max = @MaxMaxPerMatchv99MP output,
+		@MinBetv161_Max = @MinMinBetv161 output, @MaxBetv161_Min = @MaxMaxBetv161 output, @MaxPerMatchv161_Max = @MaxMaxPerMatchv161 output, @MaxPerBallv161_Max = @MaxMaxPerBallv161 output
+	
+	
+	
 IF @UpdateMinMaxBet = 1
 BEGIN
 	if (@MinBet<>0 and @MaxBet <> 0 and  @MinBet>@MaxBet) or (@MaxBet<> 0 and @MaxPerMatch <> 0 and @MaxBet>@MaxPerMatch) 
