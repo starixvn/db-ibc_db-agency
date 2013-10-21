@@ -44,6 +44,7 @@ Param's Explanation:
 • @playerdiscount: Player discount for group			(sportype = 1 and bettype = 1)
 • @playerdiscountcs: Player discount for other types.	(sportype = 1 and bettype = 4)
 • @playerdiscount1x2: Player discount for 1x2 bettype   (sportype = 1 and bettype = 5)
+• @@playerdiscountHRFixedOdds: Player discount for HR Fixed Odds bettype   (sportype = 154 and bettype = 20)
 
 • @userid: updater id
 • @subaccid: subaccId if any
@@ -113,7 +114,7 @@ END
 
 ---------------------------------------
 DECLARE @username VARCHAR(40), @recommend INT,
-		@discount DECIMAL(9,8), @discountcs DECIMAL(9,8), @ugroup VARCHAR(10),@discount1x2_max DECIMAL(9,8),@discountnumber_max DECIMAL(9,8), @discountHRFixedOdds_max DECIMAL(9,8), @discountHRFixedOdds DECIMAL(9,8)
+		@discount DECIMAL(9,8), @discountcs DECIMAL(9,8), @ugroup VARCHAR(10),@discount1x2_max DECIMAL(9,8),@discountnumber_max DECIMAL(9,8), @discountHRFixedOdds_max DECIMAL(9,8)
 SELECT @UserName  = username,
 		@recommend = recommend,
 		@ugroup = c.ugroup
@@ -129,29 +130,23 @@ BEGIN
 						 WHEN @ugroup IN ('d','hkd','ded') THEN groupd ELSE groupa END
 	FROM custsetting WITH (NOLOCK)
 	WHERE custid = @recommend AND bettype=1 AND sporttype=1
+	
 	--Get a2
 	SELECT @discountcs = discount
 	FROM custsetting WITH (NOLOCK)
 	WHERE custid = @recommend AND sporttype = 1 AND bettype = 4
-
-	--Get a2
-	SELECT @discountHRFixedOdds = discount
-	FROM custsetting WITH (NOLOCK)
-	WHERE custid = @recommend AND sporttype = 154 AND bettype = 20
 	
 	--@playerdiscount>g2?g2:@playerdiscount 
 	--@playerdiscountcs>a2?a2:@playerdiscountcs
 	SELECT 
 		@playerdiscount = CASE WHEN @playerdiscount>@discount THEN @discount ELSE @playerdiscount END,
 		@playerdiscountcs = CASE WHEN @playerdiscountcs>@discountcs THEN @discountcs ELSE @playerdiscountcs END
-		@playerdiscountHRFixedOdds = CASE WHEN @playerdiscountHRFixedOdds>@discountHRFixedOdds THEN @discountHRFixedOdds ELSE @playerdiscountHRFixedOdds END
 		
 	---------------------------------------
 	UPDATE custsetting WITH (ROWLOCK, UPDLOCK)
 	SET	
 		playerdiscount = CASE WHEN bettype IN (1,2,3,7,8) THEN @playerdiscount 
 							  WHEN bettype IN (4,5,6,9,10,20,21,22) and sporttype <> 154 THEN @playerdiscountcs ELSE playerdiscount END  
-							  WHEN bettype IN (20) and sporttype = 154 THEN @playerdiscountHRFixedOdds ELSE playerdiscount END  
 	WHERE custid=@custid
 		AND @recommend <> 52466
 	
