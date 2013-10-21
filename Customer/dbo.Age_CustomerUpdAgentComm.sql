@@ -6,6 +6,7 @@
 	@groupd decimal(9,8),
 	@discount1x2 decimal(9,8),
 	@discountcs decimal(9,8),
+	@discountHRFixedOdds decimal(9,8) = 0,	
 	@discountnumber decimal(9,8),
 	
 	@userid int, --updater Id	
@@ -28,6 +29,8 @@ Revisions:
 	- 20100918@Terry: Add Number Game
 	- 20110907@Sophia: Change Linked Server from DB052 to DB053	
 	- 20130311@Dan: Change linked server DB053 to DBAGE
+	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
+	
 Param's Explanation:
 • @custid: custid that need to be viewed.   
 • @groupa: groupa's discount value
@@ -60,6 +63,7 @@ Declare @groupa_old decimal(9,8),
 	@groupd_old decimal(9,8),
 	@discountcs_old decimal(9,8),
 	@discount1x2_old decimal(9,8),
+	@discountHRFixedOdds_old decimal(9,8),
 	@discountnumber_old decimal(9,8)
 	
 
@@ -73,11 +77,14 @@ from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype =
 select @discount1x2_old = discount
 from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype = 5
 
+select @discountHRFixedOdds_old = discount
+from custsetting (nolock) where custid = @custid and sporttype = 154 and bettype = 20
+
 select @discountnumber_old = discount
 from custsetting3rd (nolock) where custid = @custid and sporttype = 161 and bettype = 81
 
 if (@groupa_old <> @groupa) or (@groupb_old <> @groupb) or (@groupc_old <> @groupc) or (@groupd_old <> @groupd)
-	or (@discountcs_old <> @discountcs) or (@discount1x2_old <> @discount1x2) or (@discountnumber_old <> @discountnumber)
+	or (@discountcs_old <> @discountcs) or (@discount1x2_old <> @discount1x2) or (@discountnumber_old <> @discountnumber) or (@discountHRFixedOdds_old <> @discountHRFixedOdds)
 	set @updatecomm_old = 1
 else 
 	set @updatecomm_old = 0
@@ -92,6 +99,7 @@ begin
 		@discountcs = @discountcs, --other comm
 		@discount1x2 = @discount1x2, --1x2
 		@discountnumber = @discountnumber, 
+		@discountHRFixedOdds = @discountHRFixedOdds, --1x2
 		@updatecomm_old = @updatecomm_old,
 		@SubAccID = @SubAccID,
 		@UserID = @UserID,
@@ -101,8 +109,8 @@ begin
 		@ErrMsg = @ErrMsg OUTPUT
 end	
 
+
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdAgentComm] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdAgentComm] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdAgentComm] TO vnteam
- 
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdAgentComm] TO [vnteam] AS [dbo]
