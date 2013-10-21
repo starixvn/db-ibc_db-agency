@@ -15,6 +15,7 @@ Revisions:
 	- 20100904@Kiwi: Get NumberGame Commission.
 	- 20110323@Lukas: Remove horse racing
 	- 20120928@Sophia: Get DoubleCommLosing
+	- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 */
 
 SET NOCOUNT ON
@@ -24,6 +25,7 @@ SELECT
 	max(case when cs.bettype = 1 and cs.sporttype=1 then cs.adiscount else 0 end)*100 as adiscount,
 	max(case when cs.bettype = 1 and cs.sporttype=1 then cs.discount else 0 end)*100 as discount,
 	max(case when cs.bettype = 1 and cs.sporttype=1 then cs.playerdiscount else 0 end)*100 as playerdiscount,
+
 	max(case when cs.bettype = 4 and cs.sporttype=1 then cs.adiscount else 0 end)*100 as adiscountcs,
 	max(case when cs.bettype = 4 and cs.sporttype=1 then cs.discount else 0 end)*100 as discountcs,
 	max(case when cs.bettype = 4 and cs.sporttype=1 then cs.playerdiscount else 0 end)*100 as playerdiscountcs,
@@ -47,6 +49,11 @@ SELECT
 --	max(case when cs3rd.bettype = 3 and cs3rd.sporttype=201 then cs3rd.discount else 0 end)*100 discount_financial,
 --	max(case when cs3rd.bettype = 3 and cs3rd.sporttype=201 then cs3rd.playerdiscount else 0 end)*100 playerdiscount_financial,
 	
+	-- HR Fixed Odds
+	max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.adiscount else 0 end) * 100 as adiscountHRFixedOdds,
+	max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.discount else 0 end) * 100 as discountHRFixedOdds,
+	max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.playerdiscount else 0 end) * 100 as playerdiscountHRFixedOdds,
+
 	--Get NumberGame commission 	
 	max(case when cs3rd.bettype = 81 and cs3rd.sporttype=161 then cs3rd.adiscount else 0 end)*100 adiscount_numbergame,
 	max(case when cs3rd.bettype = 81 and cs3rd.sporttype=161 then cs3rd.discount else 0 end)*100 discount_numbergame,
