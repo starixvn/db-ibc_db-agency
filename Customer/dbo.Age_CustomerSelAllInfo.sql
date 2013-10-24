@@ -29,6 +29,7 @@ Revisions:
 	- 20120926@Sophia: Get DoubleCommLosing
 	- 20121110@viet: get custinfo data base on uplineid instead of username only, to reduce scan
 	- 20130522@Johnson: get Poker held funds on member level and disableP2P status
+	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -74,7 +75,7 @@ IF (@recommend <> @uplineid AND @mrecommend <> @uplineid AND @srecommend <> @upl
 DECLARE @upLineDisableFI BIT, 
 		@upLineDisableCS BIT, @uplineDisableBingo BIT, @uplineDisabledNumber BIT,
 		@upLineDisableOutright BIT, @upLineClosed BIT, @upLineSuspend BIT, @upLineEnabled BIT, @upLineEnabledMa BIT, 
-		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT
+		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT, @uplineDisableHRFixedOdds BIT
 DECLARE @DisableAutoMPT BIT
 		
 DECLARE 
@@ -103,6 +104,7 @@ BEGIN
 		   @uplineDisabledNumber = ISNULL(DisableNumber,0),
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
+		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
 		   @Credit_Ag = ISNULL(credit, 0)		   
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @recommend	
@@ -138,6 +140,7 @@ BEGIN
 		   @uplineDisabledNumber = ISNULL(DisableNumber,0),
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
+		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
 		   @Credit_MAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @mrecommend		
@@ -171,6 +174,7 @@ BEGIN
 		   @uplineDisabledNumber = ISNULL(DisableNumber,0),
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
+		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
 		   @Credit_SAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @srecommend		
@@ -211,6 +215,7 @@ SELECT closed, reject AS suspended, DisableOutright,
 	DisableCasino,
 	DisableBingo,
 	DisableNumber,
+	DisableHRFixedOdds,
 	@TransferOption AS [TransferOption]
 FROM custinfo WITH (NOLOCK) 	
 WHERE custid = @uplineId
@@ -242,6 +247,7 @@ SELECT c.custid, ci.roleid,
 	ISNULL(@uplineDisabledNumber,0) AS [uplineDisableNumber],	
 	ISNULL(@uplineDisableVirtualSports,0) AS [uplineDisableVirtualSports],	
 	ISNULL(@uplineDoubleCommLosing,0) as [uplineDoubleCommLosing],
+	ISNULL(@uplineDisableHRFixedOdds,0) AS [uplineDisableHRFixedOdds],	
 	
 	@Credit_MAg_Min AS [MasterCredit_Min],
 	@Credit_MAg_Max AS [MasterCredit_Max],

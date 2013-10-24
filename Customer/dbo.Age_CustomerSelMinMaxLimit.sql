@@ -11,7 +11,7 @@
 	@MinBetv99_Max money output, @MaxBetv99_Min money output, @MaxPerMatchv99_Min money = 0  output, @MaxPerMatchv99_Max money output,	
 	@MinBetv99MP_Max money output, @MaxBetv99MP_Min money output, @MaxPerMatchv99MP_Min money = 0  output, @MaxPerMatchv99MP_Max money output,
 	@MinBetv154_Max money  = 0  output, @MaxBetv154_Min money   = 0 output, @MaxPerMatchv154_Min money  = 0  output, @MaxPerMatchv154_Max money = 0 output,	
-	@MinBetv161_Max money output, @MaxBetv161_Min money output, @MaxPerMatchv161_Min money = 0  output, @MaxPerMatchv161_Max money output, @MaxPerBallv161_Min money = 0 output, @MaxPerBallv161_Max money output
+	@MinBetv161_Max money output, @MaxBetv161_Min money output, @MaxPerMatchv161_Min money = 0  output, @MaxPerMatchv161_Max money = 0 output, @MaxPerBallv161_Min money = 0 output, @MaxPerBallv161_Max money = 0 output
 AS
 /*
 Created: 20090714@nqminh
