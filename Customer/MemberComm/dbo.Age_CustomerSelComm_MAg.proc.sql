@@ -1,13 +1,11 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Age_CustomerSelComm_MAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelComm_MAg]
 	@MRecommend int
 AS
 
 /*
 Created: 
 Task : Select member commission information
-DB: DB053.bodb02
+DB: DBAGE/bodb02, DBTXN/bodb02
 Original: CustomerSelCommByMAg
 Revisions:
 	- 20091204@Kiwi: Retrieve data from CustSetting3rd for Financials.

@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByAg]  
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByAg]  
 (
 	@Recommend INT,
 	@PageIndex	INT = 1,
@@ -10,7 +8,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByAg]
 AS
 /*  
 	Task : Select Member PT List  
-	DB: DB053.bodb02  
+	DB: DBAGE/bodb02, DBTXN/bodb02
 
 	Revisions:  
 		- UPDATED 02/22/2006: remove refno  
@@ -302,10 +300,6 @@ BEGIN
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize	
 
 END
-
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelPositionTakingByAg] TO [bodbDownlineNet]

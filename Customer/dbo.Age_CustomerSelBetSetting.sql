@@ -5,7 +5,7 @@ AS
 /*
 Created: 20090211@nqminh
 Task : Select customer bet settings
-DB: DBAGE/bodb02
+DB: DBAGE/bodb02, DBTXN/bodb02
 Original:
 
 Revisions:

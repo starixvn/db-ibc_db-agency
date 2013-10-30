@@ -1,10 +1,4 @@
-﻿/****** Object:  StoredProcedure [dbo].[Age_CustomerSelBySAg]    Script Date: 11/05/2007 11:35:27 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingBySAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingBySAg]
 (
 	@SRecommend INT,
 	@PageIndex	INT = 1,
@@ -14,7 +8,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingBySAg]
 AS
 /*
 	Task : Select Master Agent PT List
-	DB: DB053.bodb02
+	DB: DBAGE/bodb02, DBTXN/bodb02
 
 	Revisions:
 		- 20090331@Kiwi: Improve Reads by removing inner join customer

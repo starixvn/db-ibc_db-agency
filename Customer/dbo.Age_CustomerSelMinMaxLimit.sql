@@ -16,7 +16,7 @@ AS
 /*
 Created: 20090714@nqminh
 Task : Select customer minbet_max, maxbet_min, maxpermatch_min, maxpermatch_max 
-DB: DBAGE/bodb02
+DB: DBAGE/bodb02, DBTXN/bodb02
 Original:
 
 Revisions:
