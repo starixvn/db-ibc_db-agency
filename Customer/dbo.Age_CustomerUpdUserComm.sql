@@ -37,6 +37,8 @@ Revisions:
 					   . Update setting for all bettype of Number game, not only for bettype = 81
 	- 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
 	- 20130311@Dan: Change linked server DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
+	- 20131029@Kathy: Apply exec rep to update commission [Redmine:#3244]
+
 Param's Explanation:
 • @custid: custid that need to be viewed.   
 • @playerdiscount: Player discount for group			(sportype = 1 and bettype = 1)
@@ -131,24 +133,6 @@ BEGIN
 	SELECT 
 		@playerdiscount = CASE WHEN @playerdiscount>@discount THEN @discount ELSE @playerdiscount END,
 		@playerdiscountcs = CASE WHEN @playerdiscountcs>@discountcs THEN @discountcs ELSE @playerdiscountcs END
-		
-	---------------------------------------
-	UPDATE custsetting WITH (ROWLOCK, UPDLOCK)
-	SET	
-		playerdiscount = CASE WHEN bettype IN (1,2,3,7,8) THEN @playerdiscount 
-							  WHEN bettype IN (4,5,6,9,10,20,21,22) THEN @playerdiscountcs ELSE playerdiscount END  
-	WHERE custid=@custid
-		AND @recommend <> 52466
-	
-	IF (@@ERROR <> 0)
-	BEGIN
-		SELECT @ErrMsg = @UserName + ': '+
-						CASE @Language 
-							WHEN 'E' THEN 'Update process is unsuccessful !'
-							ELSE [dbo].[f_Get_MsgNamebyMsgID](90001,@Language)
-						END	, @ErrCode = 102
-		RETURN
-	END
 	
 ---- Update 1x2 commision ---------------------------------------------------------------------
 	--Get a2
@@ -163,40 +147,21 @@ BEGIN
 	SELECT @playerdiscount1x2 = CASE WHEN @playerdiscount1x2 > @discount1x2_max THEN @discount1x2_max ELSE @playerdiscount1x2 END
 	
 	SELECT @playerdiscountnumber = CASE WHEN @playerdiscountnumber > @discountnumber_max THEN @discountnumber_max ELSE @playerdiscountnumber END			
-	
-	UPDATE custsetting WITH (ROWLOCK, UPDLOCK)
-	SET	
-		playerdiscount = @playerdiscount1x2
-	WHERE custid=@custid 
-		AND @recommend <> 52466
-		AND sporttype = 1 AND bettype = 5
-	IF (@@ERROR <> 0)
-	BEGIN
 		
-		SELECT @ErrMsg = @UserName + ': '+
-						CASE @Language 
-							WHEN 'E' THEN 'Update process is unsuccessful !'
-							ELSE [dbo].[f_Get_MsgNamebyMsgID](90001,@Language)
-						END	, @ErrCode = 102
-		RETURN
-	END
+	EXEC dbo.Acc_CustomerUpdMember_Commission 
+		@custid = @custid,
+		@playerdiscount = @playerdiscount,
+		@playerdiscountcs = @playerdiscountcs , 
+		@playerdiscount1x2 = @playerdiscount1x2 ,
+		@playerdiscountnumber =  @playerdiscountnumber, 
+		@updatecomm_old = @updatecomm_old,
+		@SubAccID = @SubAccID,
+		@UserID = @UserID,
+		@Language = @Language,
+		@IP = @IP,
+		@ErrCode = @ErrCode OUTPUT,
+		@ErrMsg = @ErrMsg OUTPUT
 	
-	UPDATE custsetting3rd WITH (ROWLOCK, UPDLOCK)
-	SET	
-		playerdiscount = @playerdiscountnumber
-	WHERE custid=@custid 
-		AND @recommend <> 52466
-		AND sporttype = 161 --- AND bettype = 81  -----20120522@Sophia: Update setting for all bettype of Number game, not only for bettype = 81
-	IF (@@ERROR <> 0)
-	BEGIN
-		
-		SELECT @ErrMsg = @UserName + ': '+
-						CASE @Language 
-							WHEN 'E' THEN 'Update process is unsuccessful !'
-							ELSE [dbo].[f_Get_MsgNamebyMsgID](90001,@Language)
-						END	, @ErrCode = 102
-		RETURN
-	END
 END
 
 	
