@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByMAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByMAg]
 (
 	@MRecommend INT,
 	@PageIndex	INT = 1,
@@ -10,7 +9,7 @@ AS
 
 /*
 	Task : Select Agent PT List
-	DB: DB053.bodb02
+	DB: DBAGE/bodb02, DBTXN/bodb02
 	Revisions:
 		- 20090331@Kiwi: Improve Reads by removing inner join customer
 		- 20091204@Kiwi: Retrieve data from CustSetting3rd.
