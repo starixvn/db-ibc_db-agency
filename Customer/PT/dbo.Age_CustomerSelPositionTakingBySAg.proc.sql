@@ -2,7 +2,7 @@
 (
 	@SRecommend INT,
 	@PageIndex	INT = 1,
-	@PageSize	INT = 10000,
+	@PageSize	INT = 100,
 	@TotalPages	INT = 0 OUTPUT
 )
 AS
@@ -18,6 +18,7 @@ AS
 		- 20100917@Kaden: Remove Mix Parlay of Basketball (field v2spositiontaking_9).
 		- 20110323@Lukas: Remove horse racing & FI
 		- 20111128@Lukas: Add paging
+		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
@@ -115,7 +116,10 @@ BEGIN
 			MAX(CASE WHEN cs.bettype = 20 AND cs.sporttype=99 THEN cs.spositiontaking ELSE 0 END) AS v99spositiontaking_20,
 			
 			-- Mix Parlay of Mixed Sports
-			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.spositiontaking ELSE 0 END) AS v99spositiontaking_9
+			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.spositiontaking ELSE 0 END) AS v99spositiontaking_9,
+
+			-- HR Fixed Odds
+			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20
 
 		FROM 
 			custinfo AS ci WITH (NOLOCK)

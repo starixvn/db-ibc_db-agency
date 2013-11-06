@@ -18,6 +18,7 @@ AS
 		- 20100917@Kaden: Remove Mix Parlay of Basketball (field v2mpositiontaking_9, v2apositiontaking_9).).
 		- 20110323@Lukas: Remove horse racing & FI
 		- 20111128@Lukas: Add paging
+		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
@@ -39,7 +40,7 @@ BEGIN
 		SELECT 
 			ROW_NUMBER() OVER(ORDER BY CASE WHEN ISNULL(ci.enabled,0) = 0 THEN 3 
 											WHEN ISNULL(ci.closed,0) = 1 THEN 2 
-											WHEN ISNULL(ci.reject,0) = 1 THEN 1 
+								 			WHEN ISNULL(ci.reject,0) = 1 THEN 1 
 											ELSE 0 
 										END, ci.username) AS RowNumber,
 			ci.closed, ci.enabled, 
@@ -174,7 +175,10 @@ BEGIN
 			
 			--Mix Parlay of Mixed Sports
 			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.apositiontaking ELSE 0 END) AS v99apositiontaking_9,
-			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.mpositiontaking ELSE 0 END) AS v99mpositiontaking_9
+			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.mpositiontaking ELSE 0 END) AS v99mpositiontaking_9,
+
+			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.apositiontaking else 0 end) as v154apositiontaking_20,
+			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.mpositiontaking else 0 end) as v154mpositiontaking_20
 		FROM 
 			custinfo AS ci WITH (NOLOCK)
 			INNER JOIN CustSetting AS cs WITH (NOLOCK) ON ci.custid = cs.custid

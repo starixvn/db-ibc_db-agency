@@ -21,6 +21,7 @@ AS
 		- 20110122@Daniel: Remove constraint in temp table #setting3rd to avoid constraint name conficts caused by concurrent calls
 		- 20110323@Lukas: Remove horse racing & FI
 		- 20111128@Lukas: Add paging
+		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 	Param's Explanation:  
 	• @Recommend: AgentID  
 */  
@@ -255,7 +256,12 @@ BEGIN
 		 -- MixParlay of Mixed Sports  
 		 MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.apositiontaking ELSE 0 END) AS v99apositiontaking_9,  
 		 MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.mpositiontaking ELSE 0 END) AS v99mpositiontaking_9,  
-		 MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.spositiontaking ELSE 0 END) AS v99spositiontaking_9  
+		 MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.spositiontaking ELSE 0 END) AS v99spositiontaking_9 ,
+		 
+		 -- HR Fixed Odds
+		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.apositiontaking else 0 end) as v154apositiontaking_20,
+		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.mpositiontaking else 0 end) as v154mpositiontaking_20,
+		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20
 		   
 		 -- Finance
 		-- MAX(cs3rd.v201apt_3) as v201apositiontaking_3,	
