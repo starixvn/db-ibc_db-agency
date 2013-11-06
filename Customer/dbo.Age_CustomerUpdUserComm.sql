@@ -161,7 +161,9 @@ BEGIN
 	SELECT @playerdiscount1x2 = CASE WHEN @playerdiscount1x2 > @discount1x2_max THEN @discount1x2_max ELSE @playerdiscount1x2 END
 	
 	SELECT @playerdiscountnumber = CASE WHEN @playerdiscountnumber > @discountnumber_max THEN @discountnumber_max ELSE @playerdiscountnumber END			
-		
+	
+	SELECT @playerdiscountHRFixedOdds = CASE WHEN @playerdiscountHRFixedOdds > @discountHRFixedOdds_max THEN @discountHRFixedOdds_max ELSE @playerdiscountHRFixedOdds END		
+	
 	EXEC dbo.Acc_CustomerUpdMember_Commission 
 		@custid = @custid,
 		@playerdiscount = @playerdiscount,
