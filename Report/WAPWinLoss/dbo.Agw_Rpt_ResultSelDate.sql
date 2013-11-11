@@ -10,6 +10,7 @@ Original:
 
 Revisions:
 	- 20111005@Sophia: Edit the condition of evenstatus
+	- 20131111@Elodie: select distinct eventdate
     
 Param's Explanation:
  
@@ -19,7 +20,7 @@ Param's Explanation:
 SET NOCOUNT ON
 BEGIN
 
-SELECT TOP 10 *
+SELECT DISTINCT TOP 10 evtdt
 FROM (
 
 	  SELECT DISTINCT	CONVERT ( VARCHAR(10), eventdate, 101 ) AS evtdt
