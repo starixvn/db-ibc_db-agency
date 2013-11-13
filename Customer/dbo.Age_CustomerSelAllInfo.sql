@@ -28,7 +28,7 @@ Revisions:
 	- 20120815@Sophia: Get DisableVirtualSports, HideVirtualSports
 	- 20120926@Sophia: Get DoubleCommLosing
 	- 20121110@viet: get custinfo data base on uplineid instead of username only, to reduce scan
-	- 20130522@Johnson: get Poker held funds on member level and disableP2P status
+	- 20130522@Johnson: get Poker held funds on member level and disableP2P status (pending)
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	
 Param's Explanation:
@@ -39,7 +39,7 @@ Param's Explanation:
 
 SET NOCOUNT ON
 DECLARE @custid INT, @roleid TINYINT, @srecommend INT, @mrecommend INT, @recommend INT, @UsedCredit MONEY, @Mem_MaxCredit MONEY
-DECLARE @todaySuperCash MONEY,@todayMasterCash MONEY, @todayAgentCash MONEY, @todayCustCash MONEY, @PokerHeldFunds MONEY
+DECLARE @todaySuperCash MONEY,@todayMasterCash MONEY, @todayAgentCash MONEY, @todayCustCash MONEY--, @PokerHeldFunds MONEY
 DECLARE @currentDate DATETIME 
 
 /*DECLARE @ABSDate DATETIME
@@ -210,12 +210,13 @@ END
 --Updater Info
 DECLARE @TransferOption VARCHAR(8)
 EXEC Acc_CustomerSelTransferOption @uplineid, @TransferOption OUTPUT
-SELECT closed, reject AS suspended, DisableOutright,
-	DisableFinancial,
-	DisableCasino,
-	DisableBingo,
-	DisableNumber,
-	DisableHRFixedOdds,
+SELECT closed, -- redundant value
+	reject AS suspended, -- redundant value
+	DisableOutright, -- redundant value
+	DisableFinancial, -- redundant value
+	DisableCasino, -- redundant value
+	DisableBingo, -- redundant value
+	DisableNumber, -- redundant value 
 	@TransferOption AS [TransferOption]
 FROM custinfo WITH (NOLOCK) 	
 WHERE custid = @uplineId
@@ -273,7 +274,8 @@ SELECT c.custid, ci.roleid,
 	ci.DisableVirtualSports,
 	ci.HideVirtualSports,
 	ci.DoubleCommLosing,
-	ci.DisableP2P
+	--ci.DisableP2P, 
+	ci.DisableHRFixedOdds
 FROM customer c WITH (NOLOCK)
 	INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
 WHERE c.custid = @custid
@@ -297,35 +299,35 @@ WHERE
 --Balance Info
 IF @roleid = 1
 BEGIN
-	-- get poker held funds
-	IF EXISTS (SELECT 1 FROM custinfo WITH(NOLOCK) WHERE custid = @custid AND disableP2P = 0)
-	BEGIN
-		DECLARE @PokerHeldFundsTime DATETIME
+	---- get poker held funds
+	--IF EXISTS (SELECT 1 FROM custinfo WITH(NOLOCK) WHERE custid = @custid AND disableP2P = 0)
+	--BEGIN
+	--	DECLARE @PokerHeldFundsTime DATETIME
 		
-		SELECT @PokerHeldFundsTime = GETDATE() - 3
+	--	SELECT @PokerHeldFundsTime = GETDATE() - 3
 		
-		SELECT @PokerHeldFunds = ISNULL(SUM(winlost),0)
-		FROM 
-		(
-			SELECT winlost - actual_stake + playercomm as winlost
-			FROM bettrans WITH(NOLOCK) 
-			WHERE custid = @custid 
-				AND matchid = 1000 
-				AND bettype = 1000 
-				AND statusid IN (112,113)
-				AND transdate >= @PokerHeldFundsTime
-			UNION 
-			SELECT winlost - actual_stake + playercomm as winlost
-			FROM bettrans14 WITH(NOLOCK) 
-			WHERE custid = @custid 
-				AND matchid = 1000 
-				AND bettype = 1000 
-				AND statusid IN (112,113)
-				AND transdate >= @PokerHeldFundsTime	
-		) b
+	--	SELECT @PokerHeldFunds = ISNULL(SUM(winlost),0)
+	--	FROM 
+	--	(
+	--		SELECT winlost - actual_stake + playercomm as winlost
+	--		FROM bettrans WITH(NOLOCK) 
+	--		WHERE custid = @custid 
+	--			AND matchid = 1000 
+	--			AND bettype = 1000 
+	--			AND statusid IN (112,113)
+	--			AND transdate >= @PokerHeldFundsTime
+	--		UNION 
+	--		SELECT winlost - actual_stake + playercomm as winlost
+	--		FROM bettrans14 WITH(NOLOCK) 
+	--		WHERE custid = @custid 
+	--			AND matchid = 1000 
+	--			AND bettype = 1000 
+	--			AND statusid IN (112,113)
+	--			AND transdate >= @PokerHeldFundsTime	
+	--	) b
 		
-		SELECT @PokerHeldFunds = CASE WHEN @PokerHeldFunds < 0 THEN 0 ELSE @PokerHeldFunds END
-	END
+	--	SELECT @PokerHeldFunds = CASE WHEN @PokerHeldFunds < 0 THEN 0 ELSE @PokerHeldFunds END
+	--END
 	
 	--  Balance calculated with the correct date @Phuong20080925	
 	SELECT @todayCustCash = ISNULL(SUM(winlost-actual_stake + playercomm) ,0)
@@ -342,8 +344,8 @@ BEGIN
 			ISNULL(Balance.csTransfer,0) csTransfer,
 			ISNULL(Balance.BingoTransfer,0) BingoTransfer,
 			ISNULL(Balance.P2PTransfer,0) P2PTransfer,
-			Balance.lastTxn lastTxn,
-			ISNULL(@PokerHeldFunds,0) as PokerHeldFunds
+			Balance.lastTxn lastTxn--,
+			--ISNULL(@PokerHeldFunds,0) as PokerHeldFunds
 	FROM(		
 		SELECT 
 			ISNULL(SUM(CASE WHEN ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0) Cash,
@@ -467,9 +469,10 @@ BEGIN
 	
 END
 
+
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelAllInfo] TO vnteam
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelAllInfo] TO [vnteam] AS [dbo]
