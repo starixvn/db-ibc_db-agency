@@ -12,13 +12,14 @@ AS
 Created By: Dan
 Created Date: 2012-09-27 
 Task : Win Limit of members
-DB: DBTRANS.bodb02
+DB: DBTXN/CustDB
 Original: [Age_CustomerSelCreditBalanceList_Ag]
 
 Revisions:	
 	- 20121026@Jamie: Set WinLimit = 0 in case Credit = 0 
 	- 20130708@Viet: create new param @_username to resolve parameter sniffing's issue.
-	
+	- 20131108@Elodie: Splitting bodb02 into CustDB (Call BalanceCreditGame, BalanceDebitGame by link database)
+					   
 Param's Explanation:
 • @CustID: AgentID
 */
@@ -55,7 +56,7 @@ FROM
 	SELECT
 		ci.custid,  SUM(b.balance) as Balance		
 	FROM custinfo ci WITH (NOLOCK) 
-		LEFT JOIN BalanceCreditGame b WITH (NOLOCK) ON b.custid=ci.custid	
+		LEFT JOIN bodb02.dbo.BalanceCreditGame b WITH (NOLOCK) ON b.custid=ci.custid	
 	WHERE recommend=@CustID and roleid=1
 	GROUP BY ci.custid
 ) credit 
@@ -64,7 +65,7 @@ JOIN
 	SELECT
 		ci.custid,  SUM(b.balance) as Balance		
 	FROM custinfo ci WITH (NOLOCK) 
-		LEFT JOIN BalanceDebitGame b WITH (NOLOCK) ON b.custid=ci.custid
+		LEFT JOIN bodb02.dbo.BalanceDebitGame b WITH (NOLOCK) ON b.custid=ci.custid
 	WHERE recommend=@CustID and roleid=1
 	GROUP BY ci.custid
 ) Debit ON credit.custid=debit.custid
@@ -105,6 +106,8 @@ WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 
 drop table #GameBalance
 drop table #tmp_customer
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelWinLimitList_Ag] TO [bodbDownlineNet] AS [dbo]

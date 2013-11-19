@@ -7,7 +7,7 @@ AS
 
 /*
 Created by: []
-DB: DBTRANS.BODB02
+DB: DBTXN/CustDB
 Revisions:
 	- 20100413@Kiwi: Get transferoption from CustSuper/CustMaster/CustAgent
 	- 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
@@ -74,9 +74,11 @@ BEGIN
 	return
 END
 
+
+
 GO
-GRANT EXECUTE ON [Age_Transfer_CheckTransferOption] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTransferOption] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [Age_Transfer_CheckTransferOption] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTransferOption] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_CheckTransferOption] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_CheckTransferOption] TO [vnteam] AS [dbo]
