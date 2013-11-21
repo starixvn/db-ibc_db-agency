@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_Result_SportSelByDate]  
+﻿ALTER PROCEDURE [dbo].[Age_Result_SportSelByDate]  
  @EventDate DATETIME,
  @isshowall BIT = 0
 AS  
@@ -14,7 +13,7 @@ Revision:
  - 20111003@Sophia: Edit condition OR to show the row which have eventstatus IN ('running','closed')   
  - 20130712@Kathy: Hide sporttype in the "Sport" dropdown list since these sports have not launched yet.
  - 20130805@Lukas: hide live casino game
-
+ - 20131121@Kathy: Add Virtual Greyhounds (182), Virtual Motor Racing (184) [Redmine:#7234]
 */  
   
 SET NOCOUNT ON  
@@ -70,19 +69,28 @@ FROM (
 		SELECT ROW_NUMBER() OVER (PARTITION BY sporttype ORDER BY l.leagueid) AS RowNumber, l.sporttype, l.leagueid , l.isTest
 		FROM league l with (nolock)   
 			INNER JOIN  
-			( SELECT leagueid, r.eventstatus, eventdate FROM VSOutright o WITH (nolock) INNER JOIN VSRaceInfo r WITH (NOLOCK) ON o.EventID = r.EventID  
-				WHERE eventdate >= @EventDate and eventdate <= @toDate  
-				UNION ALL  
-				SELECT leagueid, r.eventstatus, eventdate FROM VSOutright14 o WITH (nolock) INNER JOIN VSRaceInfo r WITH (NOLOCK) ON o.EventID = r.EventID  
-				WHERE eventdate >= @EventDate and eventdate <= @toDate  
-				) o ON o.leagueid = l.leagueid   
-		WHERE l.sporttype = 181 AND o.eventstatus='completed'  
+			( SELECT leagueid, r.eventstatus, eventdate 
+			  FROM VSOutright o WITH (nolock) 
+				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON o.EventID = r.EventID  
+			  WHERE eventdate >= @EventDate 
+				and eventdate <= @toDate  
+
+			  UNION ALL  
+			  SELECT leagueid, r.eventstatus, eventdate 
+			  FROM VSOutright14 o WITH (nolock) 
+				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON o.EventID = r.EventID  
+			  WHERE eventdate >= @EventDate 
+				and eventdate <= @toDate  
+			) o ON o.leagueid = l.leagueid   
+		WHERE l.sporttype IN ( 181, 182, 184)
+			AND o.eventstatus='completed'  
 		) t 
 		INNER JOIN sports s WITH(NOLOCK) ON t.sporttype = s.sporttype  
 WHERE t.RowNumber < 2  
 	AND t.isTest= CASE WHEN @isshowall = 1 THEN t.isTest ELSE @isshowall END 
 order by sports.sporttype, sports.sportname
- 
+
+
  
 GO
 GRANT EXECUTE ON [dbo].[Age_Result_SportSelByDate] TO [bodbDownlineNet] AS [dbo]
