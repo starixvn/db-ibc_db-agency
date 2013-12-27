@@ -5,13 +5,14 @@ AS
 /*
 Created: 20090211@nqminh
 Task : Select customer commission
-DB: DBAGE/bodb02, DBTXN/bodb02
+DB: DBAGE/bodb02, DBTXN/custDB
 Original:
 
 Revisions:
     - 20090122@[Reviewer]: [Description of revision]   
     - 20100924@Terry: Get discount for number game 
 	- 20131018@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
+	- 20131227@Kathy: Correct column name discountHRFixedOdds_max
 Param's Explanation:
 • @custid: custid that need to be viewed.   
 */
@@ -127,7 +128,7 @@ BEGIN
 		@dis1x2 AS discount1x2_max,
 		@dis AS discountcs_max,
 		@disnumber AS discountnumber_max,
-		@disHRFixedOdds as discountHRFixedOdds
+		@disHRFixedOdds as discountHRFixedOdds_max
 	FROM 
 		custsetting AS cs WITH (NOLOCK)
 		INNER JOIN CustSetting3rd as cs3 WITH (NOLOCK) ON cs.custid = cs3.custid
