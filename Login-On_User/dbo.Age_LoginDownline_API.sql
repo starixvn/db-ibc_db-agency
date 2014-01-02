@@ -40,7 +40,7 @@ declare @LogData nvarchar(200),
 
 -- 20121203@Thien: hard-code to exclude agent MSE06 from using this API.
 -- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
-IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN ('SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04'))
+IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN ('SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04','MSE14Sub00'))
  BEGIN
 	select @ErrMsg = N'Login Failed.'
 	raiserror (@ErrMsg, 16, 1)
@@ -51,14 +51,14 @@ declare @rowcount bit
 Declare @db_custid int, @db_userpwd nvarchar(50), @db_roleid tinyint, @failedcount int, @role nvarchar(20)
 Declare @db_currency tinyint, @closed bit,@isSubAcc bit
 
-SELECT @db_custid = custid, 	@db_userpwd = userpwd, 			@failedcount = 	isnull(logincount,0),
+SELECT @db_custid = custid, 	@db_userpwd = userpwd, 			@failedcount = 	isnull(logincount,0),
 	@closed = closed,
 	@subaccid = subaccid	
 FROM custSub with(nolock) WHERE username = @UserName
 
 IF @@ROWCOUNT = 1
 BEGIN
-	SELECT @db_roleid = roleid, 		@db_currency = currency, 		@site = site
+	SELECT @db_roleid = roleid, 		@db_currency = currency, 		@site = site
 	FROM customer with (nolock) WHERE custid = @db_custid
 	
 	select @rowcount = 0, @isSubAcc = 1
@@ -91,7 +91,7 @@ end
 -- user not found
 IF @rowcount=1
 BEGIN
-	SELECT @LogData = 'Agent:' + @UserName + ' IP:' + @LoginIP + ' Result:Failed(User_Not_Found) ServerID:' + 
+	SELECT @LogData = 'Agent:' + @UserName + ' IP:' + @LoginIP + ' Result:Failed(User_Not_Found) ServerID:' + 
 CAST(@ServerID as nvarchar(20))
 	EXEC bodb02.dbo.WriteLog_UserLog @UserID = 0, @Doing = @LogData
 
@@ -100,12 +100,12 @@ CAST(@ServerID as nvarchar(20))
 	return
 END
 
-SELECT @role = CASE @db_roleid WHEN 1 THEN 'Customer:' WHEN 2 THEN 'Agent:' WHEN 3 THEN 'Master:' WHEN 4 THEN 
+SELECT @role = CASE @db_roleid WHEN 1 THEN 'Customer:' WHEN 2 THEN 'Agent:' WHEN 3 THEN 'Master:' WHEN 4 THEN 
 'Super:' ELSE 'Admin:' END
 -- check condition
 IF @db_roleid not in (2,3,4)
 	BEGIN
-		SELECT @LogData = @role + @UserName + ' IP:' + @LoginIP + ' Result:Failed(Not_Agent) ServerID:' + 
+		SELECT @LogData = @role + @UserName + ' IP:' + @LoginIP + ' Result:Failed(Not_Agent) ServerID:' + 
 CAST(@ServerID as nvarchar(20))
 		EXEC bodb02.dbo.WriteLog_UserLog @UserID = 0, @Doing = @LogData
 	
@@ -180,7 +180,6 @@ if @SubAccID > 0
 	SET @LogData = 'SubAccountID:' +  convert(varchar(20), @SubAccID) + ' - ' + @LogData
 ---------------------------
 EXEC bodb02.dbo.WriteLog_UserLog @UserID = @db_custid, @Doing = @LogData
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_LoginDownline_API] TO [bodbDownlineNet] AS [dbo]
