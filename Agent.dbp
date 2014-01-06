@@ -280,6 +280,10 @@ Begin DataProject = "Agent"
       Script = "dbo.Age_CustomerSelTopWinningMembers_SAg.sql"
       Script = "dbo.Age_CustomerUpdMessagesRead.sql"
    End
+   Begin Folder = "Profile Picture"
+      Script = "dbo.Age_CustomerSelProfilePicture.sql"
+      Script = "dbo.Age_CustomerUpdProfilePicture.sql"
+   End
    Begin Folder = "Report"
       Begin Folder = "BK"
          Script = "Age_Rpt_ConsolidatedGroup_Ag.sql"
@@ -308,6 +312,10 @@ Begin DataProject = "Agent"
          Script = "dbo.Age_Rpt_ConsolidatedGroupSelCurrency.sql"
       End
       Script = "dbo.Age_SelBalanceUpDay.proc.sql"
+      Begin Folder = "Foobet"
+         Script = "dbo.Age_Rpt_DailyWLFoobet.sql"
+         Script = "dbo.Task_InsDailyWinlossSummaryFB.sql"
+      End
       Begin Folder = "MatchWinloss"
          Script = "dbo.Age_Rpt_MatchSelResultEntered.StoredProcedure.sql"
          Script = "dbo.Age_Rpt_MatchWinLoss_Ag.StoredProcedure.sql"
