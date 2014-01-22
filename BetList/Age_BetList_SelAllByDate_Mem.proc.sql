@@ -76,7 +76,7 @@ Declare @Recommend int
 
 
 DECLARE @BetListSelAllByDateMem TABLE(
-	Username nvarchar(20), 
+	Username nvarchar(30), 
 	Sporttype smallint,
 	Bettype smallint,
 	refno nvarchar(20),
