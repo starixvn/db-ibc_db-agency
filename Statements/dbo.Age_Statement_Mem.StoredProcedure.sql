@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_Statement_Mem]
+﻿ALTER PROCEDURE [dbo].[Age_Statement_Mem]
 	@CustID 		INT,
 	@FromDate		DATETIME,
 	@ToDate			DATETIME,
@@ -28,6 +27,7 @@ Revisions:
 	- 20120405@Hurri: Add bettype 23102 (P2P Pending) into condition
 	- 20130121@Dan: change linked server DB06 to DBRPT
 	- 20130715@Johnson: fix report in case of @fromdate > BUDate (should get from @fromdate not BUDate)	
+	- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
 Param's Explanation:	
 • @ErrCode:
     = 0: add new member successfully.
@@ -152,13 +152,14 @@ BEGIN
 	WHERE	
 			--status = 'running'  
 			statusID = 0
+			AND bettype NOT IN (23001,23002,23101,23102,23201,23202)
 	GROUP BY winlostdate  
 	  
 	INSERT INTO @Data  
 	SELECT	2, transdate, UPPER(typenamee), TransDesc,  
 			0, (winlost -actual_stake), 0 
 	FROM @bet AS B INNER JOIN dbo.bettype (NOLOCK) ON B.bettype = bettype.typeid  
-	WHERE bettype > 20000 AND bettype NOT IN (23001,23002,23101,23102) AND (winlost-actual_stake) <> 0	--20120405@Hurri
+	WHERE bettype > 20000 AND bettype NOT IN (23001,23002,23101,23102,23201,23202) AND (winlost-actual_stake) <> 0	--20120405@Hurri
 	  
 END 
 
@@ -220,8 +221,6 @@ FROM	@Data
 WHERE winlostdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE'
 ORDER BY winlostdate, OrderKey
 
-
-
 GO
 GRANT EXECUTE ON [dbo].[Age_Statement_Mem] TO [bodbDownlineNet]
 GO
@@ -229,5 +228,3 @@ GRANT EXECUTE ON [dbo].[Age_Statement_Mem] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_Statement_Mem] TO [VNTeam]
 GO
-
-
