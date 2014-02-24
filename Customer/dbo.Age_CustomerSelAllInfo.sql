@@ -30,6 +30,7 @@ Revisions:
 	- 20121110@viet: get custinfo data base on uplineid instead of username only, to reduce scan
 	- 20130522@Johnson: get Poker held funds on member level and disableP2P status (pending)
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
+	- 20140221@Johnson: Add opus casino
 	
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -75,7 +76,7 @@ IF (@recommend <> @uplineid AND @mrecommend <> @uplineid AND @srecommend <> @upl
 DECLARE @upLineDisableFI BIT, 
 		@upLineDisableCS BIT, @uplineDisableBingo BIT, @uplineDisabledNumber BIT,
 		@upLineDisableOutright BIT, @upLineClosed BIT, @upLineSuspend BIT, @upLineEnabled BIT, @upLineEnabledMa BIT, 
-		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT, @uplineDisableHRFixedOdds BIT
+		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT, @uplineDisableHRFixedOdds BIT, @uplineDisableOpusCasino BIT
 DECLARE @DisableAutoMPT BIT
 		
 DECLARE 
@@ -105,6 +106,7 @@ BEGIN
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
+		   @uplineDisableOpusCasino = ISNULL(DisableOpusCasino,0),
 		   @Credit_Ag = ISNULL(credit, 0)		   
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @recommend	
@@ -141,6 +143,7 @@ BEGIN
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
+		   @uplineDisableOpusCasino = ISNULL(DisableOpusCasino,0),
 		   @Credit_MAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @mrecommend		
@@ -175,6 +178,7 @@ BEGIN
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
+		   @uplineDisableOpusCasino = ISNULL(DisableOpusCasino,0),
 		   @Credit_SAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @srecommend		
@@ -249,6 +253,7 @@ SELECT c.custid, ci.roleid,
 	ISNULL(@uplineDisableVirtualSports,0) AS [uplineDisableVirtualSports],	
 	ISNULL(@uplineDoubleCommLosing,0) as [uplineDoubleCommLosing],
 	ISNULL(@uplineDisableHRFixedOdds,0) AS [uplineDisableHRFixedOdds],	
+	ISNULL(@uplineDisableOpusCasino,0) as [uplineDisableOpusCasino],
 	
 	@Credit_MAg_Min AS [MasterCredit_Min],
 	@Credit_MAg_Max AS [MasterCredit_Max],
@@ -271,6 +276,8 @@ SELECT c.custid, ci.roleid,
 	c.creatdate AS createdate,
 	ci.DisableLiveCasino,
 	ci.SyncLiveCasino,
+	ci.DisableOpusCasino,
+	ci.SyncOpusCasino,
 	ci.DisableVirtualSports,
 	ci.HideVirtualSports,
 	ci.DoubleCommLosing,
