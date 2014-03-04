@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
+﻿ALTER PROCEDURE [Age_Rpt_WinLossByBettype_MAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,	
@@ -166,6 +166,8 @@ SELECT
 FROM @MAgWinLoss 
 Group by bettype, liveindicator
 ORDER BY bettype, liveindicator
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_MAg] TO [bodbDownlineNet]

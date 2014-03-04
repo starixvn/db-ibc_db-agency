@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
+﻿ALTER PROCEDURE [Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
 	@isInternalAgent BIT = 0
@@ -31,6 +31,7 @@ Revisions:
 	- 20130522@Johnson: get Poker held funds on member level and disableP2P status (pending)
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20140221@Johnson: Add opus casino
+	- 20140303@Kathy: get HideKeno column [Redmine:#12691]
 	
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -52,7 +53,6 @@ SELECT @custid = custid , @roleid = roleid, @srecommend = srecommend, @mrecommen
 FROM custinfo WITH (NOLOCK)
 WHERE username = @username 
 	AND (srecommend = @uplineid or mrecommend = @uplineid or recommend = @uplineid)
-
 
 ------20110623: Do not allow search by nickname
 ------20110721: If @isInternal = 1 then searching by nickname, else do not allow
@@ -77,6 +77,7 @@ DECLARE @upLineDisableFI BIT,
 		@upLineDisableCS BIT, @uplineDisableBingo BIT, @uplineDisabledNumber BIT,
 		@upLineDisableOutright BIT, @upLineClosed BIT, @upLineSuspend BIT, @upLineEnabled BIT, @upLineEnabledMa BIT, 
 		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT, @uplineDisableHRFixedOdds BIT, @uplineDisableOpusCasino BIT
+
 DECLARE @DisableAutoMPT BIT
 		
 DECLARE 
@@ -282,7 +283,8 @@ SELECT c.custid, ci.roleid,
 	ci.HideVirtualSports,
 	ci.DoubleCommLosing,
 	--ci.DisableP2P, 
-	ci.DisableHRFixedOdds
+	ci.DisableHRFixedOdds,
+	ci.HideKeno
 FROM customer c WITH (NOLOCK)
 	INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
 WHERE c.custid = @custid
@@ -475,6 +477,9 @@ BEGIN
 	)Balance 
 	
 END
+
+
+
 
 
 GO

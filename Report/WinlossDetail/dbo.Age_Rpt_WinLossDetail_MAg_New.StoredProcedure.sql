@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
+﻿ALTER PROCEDURE [Age_Rpt_WinLossDetail_MAg_New]
 	@custid int = NULL,--mrecommend
 	@FromDate smalldatetime,
 	@ToDate smalldatetime,
@@ -282,6 +281,11 @@ FROM
     ) wl
     
 WHERE wl.RowNum between @RowStart and @RowEnd
+
+
+
+
+
 
 
 GO

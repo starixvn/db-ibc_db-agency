@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Agw_Rpt_MemberWinlossDetail_SAg]
+﻿ALTER PROCEDURE [Agw_Rpt_MemberWinlossDetail_SAg]
 	@SRecommend int,
 	@FromDate smalldatetime,
 	@ToDate smalldatetime,
@@ -11,6 +11,7 @@
 	@showBI bit = 0,-- Bingo
 	@showLiveCasino BIT = 0,
 	@showVS BIT = 0,
+	@showKeno bit = 0,
 	@BalanceUpDay SMALLDATETIME,	
 	@PageSize int=50,
 	@PageIndex int=0,
@@ -50,6 +51,7 @@ Revisions:
 						.Remove Financial product
 	- 20121108@Johnson: Add new range bettype for tennis: 1301 -> 1334
 	- 20130121@Dan: add linked server DBSUM for bodb_Summary
+	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 						
 + Note: Review index=IX_srecommend when modifying this SP 
 */
@@ -108,6 +110,13 @@ BEGIN
  VALUES(180,0) 
 END
 
+IF @showKeno = 1
+BEGIN
+ --Sum_winloss  
+ INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+ VALUES(202,0) 
+END
+
 IF @Todate >= @BalanceUpDay
 BEGIN 
 	INSERT INTO @SAgWinLossDetails
@@ -131,6 +140,7 @@ BEGIN
 				OR bettype = case when @showBI = 1 then 73 else 0 end
 				OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino =1 THEN 1199 ELSE 0 END)  
 				OR bettype BETWEEN 1201 AND (CASE WHEN @showVS =1 THEN 1299 ELSE 0 END)  
+				OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 THEN 1599 ELSE 0 END 
 			) AND
 			winlostdate between @FromDate and @todate 
 			and srecommend=@SRecommend 
@@ -219,6 +229,8 @@ Group by w.CustID, c.UserName
 )as c
 
 WHERE RowNum between @RowStart and @RowEnd
+
+
 
 
 GO
