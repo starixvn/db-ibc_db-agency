@@ -121,7 +121,7 @@ END
 IF @showKeno = 1
 BEGIN
 	INSERT INTO @TmpCondSumWL (sporttype, bettype)
-	VALUES(202, 1501)
+	VALUES(202, 0)
 END 
 IF @Todate >= @BalanceUpDay   
 BEGIN   
