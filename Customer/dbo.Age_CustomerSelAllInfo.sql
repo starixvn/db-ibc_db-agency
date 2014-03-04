@@ -1,4 +1,9 @@
-﻿/*
+﻿ALTER PROCEDURE [Age_CustomerSelAllInfo]
+	@username VARCHAR(50),
+	@uplineid INT = -1,
+	@isInternalAgent BIT = 0
+AS
+/*
 Created: 20090122@nqminh
 Task : Select all customer information for agent account!
 DB: DBAGE/bodb02
@@ -25,7 +30,8 @@ Revisions:
 	- 20121110@viet: get custinfo data base on uplineid instead of username only, to reduce scan
 	- 20130522@Johnson: get Poker held funds on member level and disableP2P status (pending)
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
-	- 20140303@Kathy: get HideKeno column [Redmine:#12691]
+	- 20140303@Kathy: - get HideKeno column [Redmine:#12691]
+					  - modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 	
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -332,18 +338,9 @@ BEGIN
 	WHERE custid = @custid AND ruben = 1 AND bettype <= 19000
 		AND winlostdate >= @currentDate
 	
-	SELECT	ISNULL(Balance.Cash,0) Cash,
-			ISNULL(Balance.Cash,0) - @todayCustCash yesterday_Cash,
-			ISNULL(Balance.outstanding,0) outstanding,
-			ISNULL(Balance.csOutstanding,0) csOutstanding,
-			ISNULL(Balance.BingoOutstanding,0) BingoOutstanding,
-			ISNULL(Balance.P2POutstanding,0) P2POutstanding,
-			ISNULL(Balance.csTransfer,0) csTransfer,
-			ISNULL(Balance.BingoTransfer,0) BingoTransfer,
-			ISNULL(Balance.P2PTransfer,0) P2PTransfer,
-			Balance.lastTxn lastTxn--,
-			--ISNULL(@PokerHeldFunds,0) as PokerHeldFunds
-	FROM(		
+	;with Balance
+	AS (
+				
 		SELECT 
 			ISNULL(SUM(CASE WHEN ruben=1 THEN winlost-actual_stake+playercomm ELSE 0 END),0) Cash,
 			--SUM(CASE WHEN ruben=0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END ELSE 0 END) outstanding, 
@@ -357,7 +354,33 @@ BEGIN
 			MAX(transdate) lastTxn 
 		FROM bettrans WITH(NOLOCK) 
 		WHERE custid = @custid
-	) Balance 
+
+		UNION ALL
+		SELECT 0,
+			SUM(ABS(actual_stake)) outstanding, 
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			MAX(transdate) lastTxn
+		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		where statusid = 0
+		AND custid = @custid 
+	)
+	SELECT	SUM(ISNULL(Balance.Cash,0)) Cash,
+			SUM(ISNULL(Balance.Cash,0)) - @todayCustCash yesterday_Cash,
+			SUM(ISNULL(Balance.outstanding,0)) outstanding,
+			SUM(ISNULL(Balance.csOutstanding,0)) csOutstanding,
+			SUM(ISNULL(Balance.BingoOutstanding,0)) BingoOutstanding,
+			SUM(ISNULL(Balance.P2POutstanding,0)) P2POutstanding,
+			SUM(ISNULL(Balance.csTransfer,0)) csTransfer,
+			SUM(ISNULL(Balance.BingoTransfer,0)) BingoTransfer,
+			SUM(ISNULL(Balance.P2PTransfer,0)) P2PTransfer,
+			max(Balance.lastTxn) lastTxn--,
+			--ISNULL(@PokerHeldFunds,0) as PokerHeldFunds
+	FROM Balance 
 
 END 
 ELSE IF @roleid = 2
@@ -377,22 +400,8 @@ BEGIN
 	WHERE  recommend = @custid AND ruben = 1 AND bettype <= 19000
 		AND winlostdate >= @currentDate
 		
-	SELECT	ISNULL(Balance.agentCash,0) agentCash,
-			ISNULL(Balance.agentCash,0) - @todayAgentCash yesterday_agentCash,	
-			ISNULL(Balance.agentPositionTaking,0) agentPositionTaking,
-			ISNULL(Balance.customerCash,0) customerCash,
-			ISNULL(Balance.customerCash,0) - @todayCustCash yesterday_customerCash,
-			ISNULL(Balance.customerOutstanding,0) customerOutstanding,
-			ISNULL(Balance.csOutstanding,0) csOutstanding,
-			ISNULL(Balance.bingoOutstanding,0) BingoOutstanding,
-			ISNULL(Balance.P2POutstanding,0) P2POutstanding,
-			ISNULL(Balance.csTransfer,0) csTransfer,
-			ISNULL(Balance.BingoTransfer,0) BingoTransfer,
-			ISNULL(Balance.P2PTransfer,0) P2PTransfer,
-			Balance.lastTxn lastTxn,
-			@UsedCredit AS agentUsedCredit,
-			@Mem_MaxCredit AS memberMaxCredit
-	FROM (	
+	;with Balance
+	AS (	
 		SELECT 
 			SUM(CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
 			--sum(case when ruben=0 then actual_stake * apositiontaking else 0 end) agentPositionTaking, 
@@ -410,7 +419,39 @@ BEGIN
 			MAX(transdate) lastTxn
 		FROM bettrans WITH(NOLOCK) 
 		WHERE recommend = @custid
-	)Balance 
+		UNION ALL
+		SELECT 0,
+			SUM(actual_stake*apositiontaking) agentPositionTaking, 
+			0,
+			SUM(ABS(actual_stake)) customerOutstanding,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			MAX(transdate) lastTxn
+		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		where statusid = 0
+		AND recommend = @custid 
+
+	)
+	SELECT	SUM(ISNULL(Balance.agentCash,0)) agentCash,
+			SUM(ISNULL(Balance.agentCash,0)) - @todayAgentCash yesterday_agentCash,	
+			SUM(ISNULL(Balance.agentPositionTaking,0)) agentPositionTaking,
+			SUM(ISNULL(Balance.customerCash,0)) customerCash,
+			SUM(ISNULL(Balance.customerCash,0)) - @todayCustCash yesterday_customerCash,
+			SUM(ISNULL(Balance.customerOutstanding,0)) customerOutstanding,
+			SUM(ISNULL(Balance.csOutstanding,0)) csOutstanding,
+			SUM(ISNULL(Balance.bingoOutstanding,0)) BingoOutstanding,
+			SUM(ISNULL(Balance.P2POutstanding,0)) P2POutstanding,
+			SUM(ISNULL(Balance.csTransfer,0)) csTransfer,
+			SUM(ISNULL(Balance.BingoTransfer,0)) BingoTransfer,
+			SUM(ISNULL(Balance.P2PTransfer,0)) P2PTransfer,
+			MAX(Balance.lastTxn) lastTxn,
+			@UsedCredit AS agentUsedCredit,
+			@Mem_MaxCredit AS memberMaxCredit
+	FROM Balance 
 
 END
 ELSE IF @roleid = 3
@@ -427,24 +468,8 @@ BEGIN
 	WHERE mrecommend = @custid AND ruben = 1 AND bettype <= 19000 
 		AND winlostdate >= @currentDate
 	
-	SELECT	ISNULL(Balance.masterCash,0) masterCash,
-			ISNULL(Balance.masterCash,0) - @todayMasterCash yesterday_masterCash,
-			ISNULL(Balance.masterPositionTaking,0) masterPositionTaking,
-			ISNULL(Balance.agentCash,0) agentCash,
-			ISNULL(Balance.agentCash,0)- @todayAgentCash yesterday_agentCash,
-			ISNULL(Balance.customerCash,0) customerCash,
-			ISNULL(Balance.customerCash,0) - @todayCustCash yesterday_customerCash, 
-			ISNULL(Balance.customerOutstanding,0) customerOutstanding,
-			ISNULL(Balance.csOutstanding,0) csOutstanding,
-			ISNULL(Balance.BingoOutstanding,0) BingoOutstanding,
-			ISNULL(Balance.P2POutstanding,0) P2POutstanding,
-			ISNULL(Balance.csTransfer,0) csTransfer,
-			ISNULL(Balance.bingoTransfer,0) BingoTransfer,
-			ISNULL(Balance.P2PTransfer,0) P2PTransfer,
-			Balance.lastTxn lastTxn,
-			@UsedCredit AS masterUsedCredit
-	
-	FROM (	
+	;with Balance
+	AS (	
 		SELECT	SUM(CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END) masterCash,
 --				sum (case when ruben=0 then actual_stake * mpositiontaking else 0 end) masterPositionTaking, 
 				SUM(CASE WHEN bettype NOT IN (23001,23002) AND ruben=0 THEN actual_stake * mpositiontaking ELSE 0 END) masterPositionTaking, 
@@ -462,7 +487,41 @@ BEGIN
 				MAX(transdate) lastTxn
 		FROM bettrans WITH(NOLOCK) 
 		WHERE mrecommend = @custid	
-	)Balance 
+
+		UNION ALL
+		SELECT	0,
+				SUM(actual_stake * mpositiontaking) masterPositionTaking, 
+				0,
+				0,
+				SUM(CASE WHEN custid <> mrecommend THEN ABS(actual_stake) ELSE 0 END) customerOutstanding, 
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				MAX(transdate) lastTxn
+		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		where statusid = 0
+		AND mrecommend = @custid 
+	)
+	SELECT	SUM(ISNULL(Balance.masterCash,0)) masterCash,
+			SUM(ISNULL(Balance.masterCash,0)) - @todayMasterCash yesterday_masterCash,
+			SUM(ISNULL(Balance.masterPositionTaking,0)) masterPositionTaking,
+			SUM(ISNULL(Balance.agentCash,0)) agentCash,
+			SUM(ISNULL(Balance.agentCash,0))- @todayAgentCash yesterday_agentCash,
+			SUM(ISNULL(Balance.customerCash,0)) customerCash,
+			SUM(ISNULL(Balance.customerCash,0)) - @todayCustCash yesterday_customerCash, 
+			SUM(ISNULL(Balance.customerOutstanding,0)) customerOutstanding,
+			SUM(ISNULL(Balance.csOutstanding,0)) csOutstanding,
+			SUM(ISNULL(Balance.BingoOutstanding,0)) BingoOutstanding,
+			SUM(ISNULL(Balance.P2POutstanding,0)) P2POutstanding,
+			SUM(ISNULL(Balance.csTransfer,0)) csTransfer,
+			SUM(ISNULL(Balance.bingoTransfer,0)) BingoTransfer,
+			SUM(ISNULL(Balance.P2PTransfer,0)) P2PTransfer,
+			MAX(Balance.lastTxn) lastTxn,
+			@UsedCredit AS masterUsedCredit	
+	FROM Balance 
 	
 END
 
