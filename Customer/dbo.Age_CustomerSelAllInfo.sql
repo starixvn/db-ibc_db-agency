@@ -1,9 +1,4 @@
-﻿ALTER PROCEDURE [Age_CustomerSelAllInfo]
-	@username VARCHAR(50),
-	@uplineid INT = -1,
-	@isInternalAgent BIT = 0
-AS
-/*
+﻿/*
 Created: 20090122@nqminh
 Task : Select all customer information for agent account!
 DB: DBAGE/bodb02
@@ -30,7 +25,6 @@ Revisions:
 	- 20121110@viet: get custinfo data base on uplineid instead of username only, to reduce scan
 	- 20130522@Johnson: get Poker held funds on member level and disableP2P status (pending)
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
-	- 20140221@Johnson: Add opus casino
 	- 20140303@Kathy: get HideKeno column [Redmine:#12691]
 	
 Param's Explanation:
@@ -54,6 +48,7 @@ FROM custinfo WITH (NOLOCK)
 WHERE username = @username 
 	AND (srecommend = @uplineid or mrecommend = @uplineid or recommend = @uplineid)
 
+
 ------20110623: Do not allow search by nickname
 ------20110721: If @isInternal = 1 then searching by nickname, else do not allow
 IF (@custid IS NULL) AND @isInternalAgent = 1
@@ -76,8 +71,7 @@ IF (@recommend <> @uplineid AND @mrecommend <> @uplineid AND @srecommend <> @upl
 DECLARE @upLineDisableFI BIT, 
 		@upLineDisableCS BIT, @uplineDisableBingo BIT, @uplineDisabledNumber BIT,
 		@upLineDisableOutright BIT, @upLineClosed BIT, @upLineSuspend BIT, @upLineEnabled BIT, @upLineEnabledMa BIT, 
-		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT, @uplineDisableHRFixedOdds BIT, @uplineDisableOpusCasino BIT
-
+		@uplineDisableVirtualSports BIT, @uplineDoubleCommLosing BIT, @uplineDisableHRFixedOdds BIT
 DECLARE @DisableAutoMPT BIT
 		
 DECLARE 
@@ -107,7 +101,6 @@ BEGIN
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
-		   @uplineDisableOpusCasino = ISNULL(DisableOpusCasino,0),
 		   @Credit_Ag = ISNULL(credit, 0)		   
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @recommend	
@@ -144,7 +137,6 @@ BEGIN
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
-		   @uplineDisableOpusCasino = ISNULL(DisableOpusCasino,0),
 		   @Credit_MAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @mrecommend		
@@ -179,7 +171,6 @@ BEGIN
 		   @uplineDisableVirtualSports = ISNULL(DisableVirtualSports,0),
 		   @uplineDoubleCommLosing = ISNULL(DoubleCommLosing,0),
 		   @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds,0),
-		   @uplineDisableOpusCasino = ISNULL(DisableOpusCasino,0),
 		   @Credit_SAg = ISNULL(credit, 0)
 	FROM custinfo WITH (NOLOCK)
 	WHERE custID = @srecommend		
@@ -254,7 +245,6 @@ SELECT c.custid, ci.roleid,
 	ISNULL(@uplineDisableVirtualSports,0) AS [uplineDisableVirtualSports],	
 	ISNULL(@uplineDoubleCommLosing,0) as [uplineDoubleCommLosing],
 	ISNULL(@uplineDisableHRFixedOdds,0) AS [uplineDisableHRFixedOdds],	
-	ISNULL(@uplineDisableOpusCasino,0) as [uplineDisableOpusCasino],
 	
 	@Credit_MAg_Min AS [MasterCredit_Min],
 	@Credit_MAg_Max AS [MasterCredit_Max],
@@ -277,8 +267,6 @@ SELECT c.custid, ci.roleid,
 	c.creatdate AS createdate,
 	ci.DisableLiveCasino,
 	ci.SyncLiveCasino,
-	ci.DisableOpusCasino,
-	ci.SyncOpusCasino,
 	ci.DisableVirtualSports,
 	ci.HideVirtualSports,
 	ci.DoubleCommLosing,
