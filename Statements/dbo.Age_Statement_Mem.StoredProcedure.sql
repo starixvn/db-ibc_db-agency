@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Statement_Mem]
+﻿ALTER PROCEDURE [Age_Statement_Mem]
 	@CustID 		INT,
 	@FromDate		DATETIME,
 	@ToDate			DATETIME,
@@ -28,6 +28,8 @@ Revisions:
 	- 20130121@Dan: change linked server DB06 to DBRPT
 	- 20130715@Johnson: fix report in case of @fromdate > BUDate (should get from @fromdate not BUDate)	
 	- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
+	- 20140305@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
+
 Param's Explanation:	
 • @ErrCode:
     = 0: add new member successfully.
@@ -64,44 +66,74 @@ SELECT @f_date = @fromdate,
 IF @ToDate >= @BalanceUpDay
 BEGIN 
 	IF @FromDate > @BalanceUpDay SELECT @f_Date = @BalanceUpDay 
-
-	INSERT INTO @bet  
-	SELECT winlostdate, bettype,  
-		CASE   
-			--WHEN status IN ('VOID','REJECT') THEN 'VOID'  
-			WHEN statusID IN (102,101) THEN 102
-			--WHEN status IN ('running', 'waiting') THEN 'running'  
-			WHEN statusID IN (0,1) THEN 0
-		--ELSE '' END,  
-		ELSE 131 END,
-	  
-		CASE WHEN bettype <= 19999 THEN NULL ELSE transdate END,  
-		CASE WHEN bettype <= 19999 THEN '' ELSE transdesc END,  
-	  
-		--SUM(CASE WHEN bettrans.bettype IN(33,43) AND bettrans.liveawayscore = 0 AND bettrans.livehomescore <> 0 AND ruben = 1
-		--	THEN bettrans.stake/2 ELSE bettrans.stake END),
-		SUM(CASE WHEN bettrans.winlostdate >= @ABSDate 
-				THEN case when bettrans.liveawayscore = 0 and bettrans.bettype IN(33,43) AND bettrans.livehomescore <> 0 AND ruben = 1 then ABS(bettrans.stake/2) else ABS(bettrans.stake) end
-				ELSE case when bettrans.liveawayscore = 0 and bettrans.bettype IN(33,43) AND bettrans.livehomescore <> 0 AND ruben = 1 then bettrans.stake/2 else bettrans.stake end 
-				END
-				) as TurnOver,			
-		SUM(actual_stake), SUM(winlost), SUM(playercomm)  
-	FROM bettrans (NOLOCK)  
-	WHERE custid = @custid
+ 
+	;WITH rt
+	AS(
+		SELECT winlostdate, 
+			bettype,  
+			CASE   
+				WHEN statusID IN (102,101) THEN 102 
+				WHEN statusID IN (0,1) THEN 0
+			ELSE 131 END as StatusId,	  
+			CASE WHEN bettype <= 19999 THEN NULL ELSE transdate END as transdate,  
+			CASE WHEN bettype <= 19999 THEN '' ELSE transdesc END as transdesc,  
+			SUM(CASE WHEN bettrans.winlostdate >= @ABSDate 
+					THEN case when bettrans.liveawayscore = 0 and bettrans.bettype IN(33,43) AND bettrans.livehomescore <> 0 AND ruben = 1 then ABS(bettrans.stake/2) else ABS(bettrans.stake) end
+					ELSE case when bettrans.liveawayscore = 0 and bettrans.bettype IN(33,43) AND bettrans.livehomescore <> 0 AND ruben = 1 then bettrans.stake/2 else bettrans.stake end 
+					END
+					) as stake, --TurnOver,			
+			SUM(actual_stake) as actual_stake, 
+			SUM(winlost)	  as winlost, 
+			SUM(playercomm)   as playercomm
+		FROM bettrans (NOLOCK)  
+		WHERE custid = @custid
+			AND winlostdate BETWEEN @f_Date AND @t_Date 
+		GROUP BY winlostdate, bettype,  
+			CASE   
+				WHEN statusID IN (102,101) THEN 102
+				WHEN statusID IN (0,1) THEN 0
+			ELSE 131 END,
+			CASE WHEN bettype <= 19999 THEN NULL ELSE transdate END,  
+			CASE WHEN bettype <= 19999 THEN '' ELSE transdesc END 
+	
+		UNION ALL
+		SELECT winlostdate, 
+				gameid as bettype,  
+				0 as StatusId,
+				NULL as transdate,
+				'' transdesc,
+				SUM(CASE WHEN winlostdate >= @ABSDate 
+						THEN ABS(stake)
+						ELSE stake  
+					END
+					) as stake, --TurnOver,			
+				SUM(actual_stake) as actual_stake, 
+				0 as winlost, 
+				0  as playercomm
+		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		WHERE statusid = 0
+		AND custid = @custid
 		AND winlostdate BETWEEN @f_Date AND @t_Date 
-		--AND status not in ('Refund') 
-		--AND statusID <> 103
-	GROUP BY winlostdate, bettype,  
-		CASE   
-			--WHEN status IN ('VOID','REJECT') THEN 'VOID'  
-			WHEN statusID IN (102,101) THEN 102
-			--WHEN status IN ('running', 'waiting') THEN 'running'  
-			WHEN statusID IN (0,1) THEN 0
-		--ELSE '' END,  
-		ELSE 131 END,
-		CASE WHEN bettype <= 19999 THEN NULL ELSE transdate END,  
-		CASE WHEN bettype <= 19999 THEN '' ELSE transdesc END 
-		
+		GROUP BY winlostdate, gameid
+	)
+
+	INSERT INTO @bet 
+	SELECT winlostdate, 
+		   bettype,
+		   statusID,
+		   transdate, 
+		   transdesc ,  
+		   sum(stake) turnover , 
+		   sum(actual_stake) , 
+		   sum(winlost) , 
+		   sum(playercomm) 
+	FROM rt
+	group BY winlostdate,
+			bettype,
+			statusId,
+			transdate,
+			transdesc
+
 	IF @fromDate <= @MoveBetDay
 		INSERT INTO @bet
 		select distinct 
