@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelBalance_MAg]
+﻿ALTER PROCEDURE [Age_CustomerSelBalance_MAg]
 	@CustID int,
 	@UserName varchar(20) = '' OUTPUT ,
 	@CashBalance money = 0 OUTPUT,
@@ -39,10 +39,13 @@ Revisions:
 	- 20120227@Elodie: Add 2 params @TotalP2PTransfer, @TotalP2POutstanding to view P2P transfer/outstanding
                        Delete @ABSDate = 2011-9-1 param and condition to check WinLossDate > @ABSDate
 					   Remove bettype = 23101 in total Casino Outstanding
+	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 
 */
 SET NOCOUNT ON
 
+DECLARE @translog_masterOutstanding money,
+		@translog_totalOutstanding money 
 Select 
 	@UserName = UserName,
 	@MasterCredit = isnull(Credit, 0)
@@ -64,10 +67,16 @@ Select
 From Custinfo with (NOLOCK)
 Where MRecommend = @CustID
 
+SELECT @translog_masterOutstanding = ISNULL(SUM(ABS(actual_stake)*mpositiontaking),0),
+		@translog_totalOutstanding = ISNULL(SUM(ABS(actual_stake)),0)
+FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+WHERE mrecommend = @custid 
+and statusid = 0
+
 SELECT 
 	@CashBalance=IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0),  	
-	@MasterOutstanding=IsNull(sum(case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0), 
-	@TotalOutstanding=IsNull(sum(case when  ruben=0 then ABS(actual_stake) else 0 end),0),
+	@MasterOutstanding=IsNull(sum(case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) + @translog_masterOutstanding, 
+	@TotalOutstanding=IsNull(sum(case when  ruben=0 then ABS(actual_stake) else 0 end),0) + @translog_totalOutstanding,
 	@TotalCSTransfer=IsNull(sum(case when bettype=23001 and ruben=0 then actual_stake else 0 end),0),
 	@TotalCSOutstanding=IsNull(sum(case when bettype=23002 and ruben=0 then actual_stake else 0 end),0),
 	@TotalBITransfer=IsNull(sum(case when bettype=23201 and ruben=0 then actual_stake else 0 end),0),
@@ -109,6 +118,8 @@ FROM
 			and bettrans.winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)
 	
 	 )today_balance 
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_MAg] TO [bodbDownlineNet]
