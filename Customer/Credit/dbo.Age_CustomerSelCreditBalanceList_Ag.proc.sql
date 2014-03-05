@@ -114,10 +114,7 @@ AS (
 					ELSE actual_stake
 					END), 0) outstanding
 		,0 AS balance
-		,IsNull(sum(CASE 
-					WHEN winlostdate >= @ABSDate THEN ABS(actual_stake)
-					ELSE actual_stake
-					END), 0) AS turnover
+		,0 AS turnover
 	FROM DBTXN.bodb02.dbo.translog WITH (NOLOCK)
 	WHERE statusid = 0 AND recommend = @custid
 	GROUP BY custid

@@ -74,8 +74,8 @@ as (
 	UNION ALL
 	SELECT mrecommend as custid,
 		ISNULL(SUM(CASE WHEN winlostdate >=@ABSDate THEN ABS(actual_stake) ELSE actual_stake end * mpositiontaking),0) AS outstanding,
-		IsNull(sum(case when custid=mrecommend then 0-actual_stake else 0 end),0) AS balance, 
-		IsNull(sum(CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END), 0) as turnover
+		0 AS balance, 
+		0 as turnover
 	from DBTXN.bodb02.dbo.translog with(NOLOCK)
 	WHERE statusid = 0
 	and srecommend = @CustID
