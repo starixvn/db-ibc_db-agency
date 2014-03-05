@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg]
+﻿ALTER PROCEDURE [Age_CustomerSelCreditBalanceList_MAg]
 	@CustID int,
 	@PageSize int=500,
 	@PageIndex int=1,
@@ -24,6 +24,7 @@ Revisions:
 	- 20110516@Johnson: Apply new arrange bettype
 	- 20110617@Amy: modify to convert NULL for lastlogged
 	- 20110823@Sophia: Count Negative stake as positive turnover
+	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 Param's Explanation:
 • @CustID: MAgentID
 */
@@ -57,15 +58,34 @@ CREATE TABLE #balance
 	balance money,
 	turnover money
 )
+;WITH rt
+as (
+	SELECT
+		recommend as custid,
+		IsNull(sum (case when ruben=0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking else 0 end),0) AS outstanding, 
+		IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance,
+		IsNull(sum(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover 
+	FROM bettrans with (NOLOCK)
+	WHERE mrecommend=@CustID
+	GROUP BY recommend
+	UNION ALL
+	SELECT recommend as custid,
+		IsNull(sum (CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking),0) AS outstanding, 
+		IsNull(sum(case when custid=recommend then 0-actual_stake else 0 end),0) AS balance,
+		IsNull(sum(CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END), 0) as turnover 
+	from DBTXN.bodb02.dbo.translog with(NOLOCK)
+	WHERE statusid = 0
+	and mrecommend=@CustID
+	GROUP BY recommend
+)
 INSERT INTO #balance
-SELECT
-	recommend as custid,
-	IsNull(sum (case when ruben=0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking else 0 end),0) AS outstanding, 
-	IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance,
-	IsNull(sum(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover 
-FROM bettrans with (NOLOCK)
-WHERE mrecommend=@CustID
-GROUP BY recommend
+SELECT custid,
+	sum(outstanding),
+	sum(balance),
+	sum(turnover)
+FROM rt
+GROUP BY custid
+
 
 CREATE TABLE #today_balance
 (
@@ -141,6 +161,7 @@ WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 drop table #balance
 drop table #today_balance
 drop table #tmp_customer
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_MAg] TO [bodbDownlineNet]
