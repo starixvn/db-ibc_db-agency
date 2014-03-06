@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
+﻿ALTER PROCEDURE [Age_Rpt_WinLossDetail_MAg_New]
 	@custid int = NULL,--mrecommend
 	@FromDate smalldatetime,
 	@ToDate smalldatetime,
@@ -12,6 +11,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	@showBI BIT=0,
 	@showLiveCasino BIT = 0,
 	@showVS BIT = 0,
+	@showKeno BIT = 0,
 	@BalanceUpDay SMALLDATETIME,
 	@PageSize int=0,
 	@PageIndex int=0,
@@ -57,6 +57,7 @@ Revisions:
 							.Remove Financial product
 	- 20121024@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
 	- 20130121@Dan: add linked server DBSUM for bodb_Summary
+	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 */
 
 SET NOCOUNT ON
@@ -120,6 +121,13 @@ BEGIN
  VALUES(180,0) 
 END
 
+IF @showKeno = 1
+BEGIN
+ --Sum_winloss  
+ INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+ VALUES(202,0) 
+END
+
 IF @Todate >= @BalanceUpDay
 BEGIN 
     INSERT INTO @MAgWinLossDetails
@@ -153,6 +161,7 @@ BEGIN
 				OR bettype = (CASE WHEN @showBI =1 THEN 73 ELSE 0 END)
 				OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino =1 THEN 1199 ELSE 0 END) 
 				OR bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END) 
+				OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END 
 			) AND 
 		    winlostdate between @FromDate and @todate and
 		    --status not in ('running','waiting','VOID', 'REJECT', 'Refund') and
@@ -282,6 +291,10 @@ FROM
     ) wl
     
 WHERE wl.RowNum between @RowStart and @RowEnd
+
+
+
+
 
 
 GO

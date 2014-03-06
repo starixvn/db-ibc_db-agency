@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
+﻿ALTER PROCEDURE [Age_Rpt_WinLoss_SAg]  
  @CustID INT,--srecommend  
  @FromDate SMALLDATETIME,  
  @ToDate SMALLDATETIME,   
@@ -12,6 +12,7 @@
  @showLiveCasino BIT = 0,
  @showVS BIT = 0,
  @showProgressiveBonus BIT =0,
+ @showKeno BIT = 0,
  @BalanceUpDay SMALLDATETIME  
   
 WITH RECOMPILE  
@@ -50,6 +51,7 @@ AS
   - 20121024@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
   - 20130121@Dan: add linked server DBSUM for bodb_Summary
   - 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
+  - 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
   
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -115,7 +117,12 @@ BEGIN
  INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
  VALUES(251,72) 
 END
-  
+--Sum_winloss 
+IF @showKeno = 1
+BEGIN
+	INSERT INTO @TmpCondSumWL (sporttype, bettype)
+	VALUES(202, 0)
+END 
 IF @Todate >= @BalanceUpDay   
 BEGIN   
      INSERT INTO @SAgWinLoss  
@@ -143,6 +150,7 @@ BEGIN
 	 OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino =1 THEN 1199 ELSE 0 END)  
 	 OR bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
 	 OR bettype = CASE WHEN @showProgressiveBonus =1 then 72 else 0 end
+	 OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END 
     ) AND   
     SRecommend=@CustID 
 		AND  winlostdate BETWEEN @FromDate AND @ToDate 
@@ -214,6 +222,9 @@ SELECT
 FROM @SAgWinLoss w INNER JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID   
 GROUP BY w.CustID, c.UserName  
 ORDER BY c.Username
+
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinLoss_SAg] TO [bodbDownlineNet]
