@@ -115,7 +115,7 @@ AS (
 					END), 0) outstanding
 		,0 AS balance
 		,0 AS turnover
-	FROM DBTXN.bodb02.dbo.translog WITH (NOLOCK)
+	FROM translog WITH (NOLOCK)
 	WHERE statusid = 0 AND recommend = @custid
 	GROUP BY custid
 	)

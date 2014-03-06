@@ -50,7 +50,7 @@ AS (
 			0,					
 			0,
 			0	
-	FROM DBTXN.bodb02.dbo.translog with (nolock) 
+	FROM translog with (nolock) 
 	WHERE	statusid=0
 			AND srecommend =  @CustID
 	GROUP BY mrecommend

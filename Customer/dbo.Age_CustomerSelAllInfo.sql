@@ -365,7 +365,7 @@ BEGIN
 			0,
 			0,
 			MAX(transdate) lastTxn
-		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		FROM translog with(NOLOCK)
 		where statusid = 0
 		AND custid = @custid 
 	)
@@ -431,7 +431,7 @@ BEGIN
 			0,
 			0,
 			MAX(transdate) lastTxn
-		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		FROM translog with(NOLOCK)
 		where statusid = 0
 		AND recommend = @custid 
 
@@ -501,7 +501,7 @@ BEGIN
 				0,
 				0,
 				MAX(transdate) lastTxn
-		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		FROM translog with(NOLOCK)
 		where statusid = 0
 		AND mrecommend = @custid 
 	)

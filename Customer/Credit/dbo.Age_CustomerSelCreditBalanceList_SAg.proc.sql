@@ -76,7 +76,7 @@ as (
 		ISNULL(SUM(CASE WHEN winlostdate >=@ABSDate THEN ABS(actual_stake) ELSE actual_stake end * mpositiontaking),0) AS outstanding,
 		0 AS balance, 
 		0 as turnover
-	from DBTXN.bodb02.dbo.translog with(NOLOCK)
+	from translog with(NOLOCK)
 	WHERE statusid = 0
 	and srecommend = @CustID
 	GROUP BY mrecommend

@@ -110,7 +110,7 @@ BEGIN
 				SUM(actual_stake) as actual_stake, 
 				0 as winlost, 
 				0  as playercomm
-		FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+		FROM translog with(NOLOCK)
 		WHERE statusid = 0
 		AND custid = @custid
 		AND winlostdate BETWEEN @f_Date AND @t_Date 

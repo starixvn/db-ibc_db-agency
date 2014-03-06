@@ -38,7 +38,7 @@ SET @ABSDate = '2011-09-01'*/
 DECLARE @translog_outstanding money, @translog_totalOutstanding money
 SELECT @translog_outstanding = ISNULL(SUM(mpositiontaking* ABS(actual_stake)),0),
 	@translog_totalOutstanding = ISNULL(SUM(ABS(actual_stake)),0)
-FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+FROM translog with(NOLOCK)
 WHERE mrecommend = @custid AND statusid = 0
 
 SELECT /*@OutStanding = ISNULL(SUM(mpositiontaking* CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END),0),

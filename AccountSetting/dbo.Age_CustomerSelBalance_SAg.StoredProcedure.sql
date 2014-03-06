@@ -80,7 +80,7 @@ Where SRecommend = @CustID
 
 SELECT @translog_superOutstanding = ISNULL(SUM(ABS(actual_stake)*spositiontaking),0),
 		@translog_totalOutstanding = ISNULL(SUM(ABS(actual_stake)),0)
-FROM DBTXN.bodb02.dbo.translog with(NOLOCK)
+FROM translog with(NOLOCK)
 WHERE srecommend = @custid 
 and statusid = 0
 
