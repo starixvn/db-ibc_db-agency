@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelByDayAll_Mem]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_BetList_SelByDayAll_Mem]    Script Date: 3/10/2014 4:28:31 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Age_BetList_SelByDayAll_Mem]
 	@custid		int,
 	@fromdate	smalldatetime,
 	@transtype	int = 0, --VinhTrinh Add new parameter.
@@ -204,6 +211,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate AND b.bettype<= 19000 
 		and b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
 	-- Virtual HR
@@ -688,6 +696,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate AND b.bettype<= 19000 
 		and b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
 	-- Virtual HR
@@ -1261,6 +1270,8 @@ BEGIN
 	WHERE B.Bettype  BETWEEN 1101 AND 1199
 
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelByDayAll_Mem] TO [bodbDownlineNet]
