@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_BetList_SelAllByDate_Mem]    Script Date: 3/7/2014 2:40:01 PM ******/
+/****** Object:  StoredProcedure [dbo].[Age_BetList_SelAllByDate_Mem]    Script Date: 3/10/2014 3:45:21 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -74,6 +74,7 @@ Revisions:
 	- 20130225@Elodie: Add bet list of Virtual HR
 	- 20131003@Lukas: sort tickets by transid
 	- 20140306@Patrick:	Add more Keno product
+	- 20140310@Patrick:	Exclude keno from Sportbook
 */
 
 
@@ -213,6 +214,7 @@ BEGIN
 		AND b.bettype NOT BETWEEN 81 AND 120  --- Change arrange of Numbergame from 81 to 120
 		AND b.bettype NOT BETWEEN 1101 AND 1199  --- Change arrange of Numbergame from 1101 to 1199
 		AND b.bettype NOT BETWEEN 1201 AND 1299		
+		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
 				
 	-- OutRight tickets
 	INSERT INTO @BetListSelAllByDateMem
@@ -1038,7 +1040,8 @@ end
 
 SELECT * FROM @BettransDetail
 
-GO
+
+
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNet]
 GO
