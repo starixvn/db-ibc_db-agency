@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_BetList_SelAllByDate_Mem]    Script Date: 3/10/2014 3:45:21 PM ******/
+/****** Object:  StoredProcedure [dbo].[Age_BetList_SelAllByDate_Mem]    Script Date: 3/13/2014 9:51:53 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -907,7 +907,7 @@ BEGIN
 		dbo.bettrans AS b WITH (NOLOCK)
 		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype) fnc
 	WHERE
-		b.winlostdate BETWEEN @fromdate AND @todate AND
+		b.transdate BETWEEN @fromdate AND @todate AND
 		b.recommend = @Recommend AND  
 		b.custid = @CustID AND
 		b.bettype BETWEEN 1501 AND 1599 AND
@@ -968,7 +968,7 @@ BEGIN
 		dbo.translog AS b WITH (NOLOCK)
 		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.gameid) fnc
 	WHERE
-		b.winlostdate BETWEEN @fromdate AND @todate AND
+		b.transdate BETWEEN @fromdate AND @todate AND
 		b.recommend = @Recommend AND  
 		b.custid = @CustID AND
 		b.gameID BETWEEN 1501 AND 1599 AND
@@ -1039,8 +1039,6 @@ begin
 end
 
 SELECT * FROM @BettransDetail
-
-
 
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNet]
