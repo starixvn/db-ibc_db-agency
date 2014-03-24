@@ -1,6 +1,6 @@
 ﻿USE [bodb_archive]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_BetList_SelByDayAll_Mem_Old]    Script Date: 3/7/2014 2:39:16 PM ******/
+/****** Object:  StoredProcedure [dbo].[Age_BetList_SelByDayAll_Mem_Old]    Script Date: 3/10/2014 3:43:04 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -41,6 +41,7 @@ Revisions:
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
 	- 20140306@Patrick:	Add more Keno product
+	- 20140310@Patrick:	Exclude keno from Sportbook
 
 Param's Explanation: 
 */
@@ -163,6 +164,7 @@ INSERT INTO @Data SELECT
 FROM #bettrans_temp b
 	INNER JOIN dbo.match_bk m with(nolock) ON b.matchid = m.matchid		
 WHERE b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+	AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
 		--AND b.status <>'REFUND'		
 
 -- Virtual HR
