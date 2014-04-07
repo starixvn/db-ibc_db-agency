@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Agw_CustomerSelEditBetSetting_Ag]
+﻿ALTER PROCEDURE [dbo].[Agw_CustomerSelEditBetSetting_Ag]
  @CustID int    
 AS    
     
@@ -16,28 +15,91 @@ Revisions:
 	- 20120817@Sophia: Get setting for Virtual Sports (180)
 	- 20121204@Tom: Add  virtual tennis setting (sporttype : 186 , bettype : 1220)
 	- 20130305@Johnson: Add virtual horse racing setting (sporttype: 181)
+	- 20140402@Dom: Add Virtual Speedway/ Cycling setting (sporttype: 183,185)
 */
     
 SET NOCOUNT ON
-Declare @MinBet_Max money, @MaxBet_Min money, @MaxPerMatch_Min money, @MaxPerMatch_Max money,    
-  @MinBetv2_Max money, @MaxBetv2_Min money, @MaxPerMatchv2_Min money, @MaxPerMatchv2_Max money,    
-  @MinBetv3_Max money, @MaxBetv3_Min money, @MaxPerMatchv3_Min money, @MaxPerMatchv3_Max money,    
-  @MinBetv5_Max money, @MaxBetv5_Min money, @MaxPerMatchv5_Min money, @MaxPerMatchv5_Max money,    
-  @MinBetv8_Max money, @MaxBetv8_Min money, @MaxPerMatchv8_Min money, @MaxPerMatchv8_Max money,    
-  @MinBetv10_Max money, @MaxBetv10_Min money, @MaxPerMatchv10_Min money, @MaxPerMatchv10_Max money,    
-  @MinBetv11_Max money, @MaxBetv11_Min money, @MaxPerMatchv11_Min money, @MaxPerMatchv11_Max money,    
-  @MinBetv201_Max money, @MaxBetv201_Min money, @MaxPerMatchv201_Min money, @MaxPerMatchv201_Max money,     
-  @MinBetv99_Max money, @MaxBetv99_Min money, @MaxPerMatchv99_Min money, @MaxPerMatchv99_Max money,
-  @MinBetv99MP_Max money, @MaxBetv99MP_Min money, @MaxPerMatchv99MP_Min money, @MaxPerMatchv99MP_Max money,
-  @MinBetv161_Max money, @MaxBetv161_Min money, @MaxPerMatchv161_Min money, @MaxPerMatchv161_Max money,		
-  @MinBet201 money, @MaxBet201 money,
-  @MinBet161 money, @MaxBet161 money, @MaxPerBallv161_Max money,
-  @MinBetv180_Max money, @MaxBetv180_Min money, @MaxPerMatchv180_Min money, @MaxPerMatchv180_Max money,
-  @MinBet180 money, @MaxBet180 money,
-  @MinBetv181_Max money, @MaxBetv181_Min money, @MaxPerMatchv181_Min money, @MaxPerMatchv181_Max money,
-  @MinBet181 money, @MaxBet181 money,
-  @MinBetv186_Max money, @MaxBetv186_Min money, @MaxPerMatchv186_Min money, @MaxPerMatchv186_Max money,
-  @MinBet186 money, @MaxBet186 money
+Declare @MinBet_Max money, 
+		@MaxBet_Min money, 
+		@MaxPerMatch_Min money, 
+		@MaxPerMatch_Max money,    
+		@MinBetv2_Max money, 
+		@MaxBetv2_Min money, 
+		@MaxPerMatchv2_Min money, 
+		@MaxPerMatchv2_Max money,    
+		@MinBetv3_Max money, 
+		@MaxBetv3_Min money, 
+		@MaxPerMatchv3_Min money, 
+		@MaxPerMatchv3_Max money,    
+		@MinBetv5_Max money, 
+		@MaxBetv5_Min money, 
+		@MaxPerMatchv5_Min money, 
+		@MaxPerMatchv5_Max money,    
+		@MinBetv8_Max money, 
+		@MaxBetv8_Min money, 
+		@MaxPerMatchv8_Min money, 
+		@MaxPerMatchv8_Max money,    
+		@MinBetv10_Max money, 
+		@MaxBetv10_Min money, 
+		@MaxPerMatchv10_Min money, 
+		@MaxPerMatchv10_Max money,    
+		@MinBetv11_Max money, 
+		@MaxBetv11_Min money, 
+		@MaxPerMatchv11_Min money, 
+		@MaxPerMatchv11_Max money,    
+		@MinBetv201_Max money, 
+		@MaxBetv201_Min money, 
+		@MaxPerMatchv201_Min money, 
+		@MaxPerMatchv201_Max money,     
+		@MinBetv99_Max money, 
+		@MaxBetv99_Min money, 
+		@MaxPerMatchv99_Min money, 
+		@MaxPerMatchv99_Max money,
+		@MinBetv99MP_Max money, 
+		@MaxBetv99MP_Min money, 
+		@MaxPerMatchv99MP_Min money, 
+		@MaxPerMatchv99MP_Max money,
+		@MinBetv161_Max money, 
+		@MaxBetv161_Min money, 
+		@MaxPerMatchv161_Min money, 
+		@MaxPerMatchv161_Max money,		
+		@MinBet201 money, 
+		@MaxBet201 money,
+		@MinBet161 money, 
+		@MaxBet161 money, 
+		@MaxPerBallv161_Max money,
+		@MinBetv180_Max money, 
+		@MaxBetv180_Min money, 
+		@MaxPerMatchv180_Min money, 
+		@MaxPerMatchv180_Max money,
+		@MinBet180 money, 
+		@MaxBet180 money,
+		@MinBetv181_Max money, 
+		@MaxBetv181_Min money, 
+		@MaxPerMatchv181_Min money, 
+		@MaxPerMatchv181_Max money,
+		@MinBet181 money, 
+		@MaxBet181 money,
+		---Dom----
+		@MinBet183 money, 
+		@MaxBet183 money,
+		@MinBet185 money, 
+		@MaxBet185 money,
+		@MinBetv186_Max money, 
+		@MaxBetv186_Min money, 
+		@MaxPerMatchv186_Min money, 
+		@MaxPerMatchv186_Max money,
+		@MinBet186 money, 
+		@MaxBet186 money,
+		----Dom--------------
+		@MinBetv183_Max money, 
+		@MaxBetv183_Min money, 
+		@MaxPerMatchv183_Min money, 
+		@MaxPerMatchv183_Max money,
+		@MinBetv185_Max money, 
+		@MaxBetv185_Min money, 
+		@MaxPerMatchv185_Min money, 
+		@MaxPerMatchv185_Max money
       
 ------------------------------------------------------------------------------------------------------------------------------------------
   
@@ -158,6 +220,24 @@ from
  INNER JOIN custinfo as ci WITH (NOLOCK) on (cs.CustID = ci.Recommend or cs.CustID = ci.MRecommend or cs.CustID = ci.SRecommend)    
  and cs.bettype = 1231 and cs.sporttype=181    
 where ci.custid = @CustID 
+
+Select    
+ @MinBetv183_Max = Max(case when MinBet = 0 then NULL else MinBet end),     
+ @MaxBetv183_Min = Min(case when MaxBet = 0 then NULL else MaxBet end)    
+from     
+ custsetting as cs WITH (NOLOCK)    
+ INNER JOIN custinfo as ci WITH (NOLOCK) on (cs.CustID = ci.Recommend or cs.CustID = ci.MRecommend or cs.CustID = ci.SRecommend)    
+ and cs.bettype = 1231 and cs.sporttype=183    
+where ci.custid = @CustID
+
+Select    
+ @MinBetv185_Max = Max(case when MinBet = 0 then NULL else MinBet end),     
+ @MaxBetv185_Min = Min(case when MaxBet = 0 then NULL else MaxBet end)    
+from     
+ custsetting as cs WITH (NOLOCK)    
+ INNER JOIN custinfo as ci WITH (NOLOCK) on (cs.CustID = ci.Recommend or cs.CustID = ci.MRecommend or cs.CustID = ci.SRecommend)    
+ and cs.bettype = 1231 and cs.sporttype=185    
+where ci.custid = @CustID
     
 Select    
  @MinBetv186_Max = Max(case when MinBet = 0 then NULL else MinBet end),     
@@ -196,6 +276,10 @@ Select
  @MaxperMatchv180_Max = Min(case when cs.maxpermatch180 = 0 then NULL else cs.maxpermatch180 end),
  @MaxPerMatchv181_Min = 0,     
  @MaxperMatchv181_Max = Min(case when cs.maxpermatch181 = 0 then NULL else cs.maxpermatch181 end), 
+ @MaxPerMatchv183_Min = 0,     
+ @MaxperMatchv183_Max = Min(case when cs.maxpermatch183 = 0 then NULL else cs.maxpermatch183 end), 
+ @MaxPerMatchv185_Min = 0,     
+ @MaxperMatchv185_Max = Min(case when cs.maxpermatch185 = 0 then NULL else cs.maxpermatch185 end), 
  @MaxPerMatchv186_Min = 0,     
  @MaxperMatchv186_Max = Min(case when cs.maxpermatch186 = 0 then NULL else cs.maxpermatch186 end) 
 from     
@@ -211,7 +295,11 @@ select	@MinBet201 = isnull(max(case when bettype = 3 and sporttype=201 then minb
 		@MinBet180 = isnull(max(case when sporttype = 180 then minbet else 0 end),0),
 		@MaxBet180 = isnull(max(case when sporttype = 180 then maxbet else 0 end),0),
 		@MinBet181 = isnull(max(case when sporttype = 181 then minbet else 0 end),0),
-		@MaxBet181 = isnull(max(case when sporttype = 181 then maxbet else 0 end),0),		
+		@MaxBet181 = isnull(max(case when sporttype = 181 then maxbet else 0 end),0),
+		@MinBet183 = isnull(max(case when sporttype = 183 then minbet else 0 end),0),--Dom
+		@MaxBet183 = isnull(max(case when sporttype = 183 then maxbet else 0 end),0),--Dom
+		@MinBet185 = isnull(max(case when sporttype = 185 then minbet else 0 end),0),--Dom
+		@MaxBet185 = isnull(max(case when sporttype = 185 then maxbet else 0 end),0),--Dom		
 		@MinBet186 = isnull(max(case when sporttype = 186 then minbet else 0 end),0),
 		@MaxBet186 = isnull(max(case when sporttype = 186 then maxbet else 0 end),0)
 from custsetting3rd with (nolock)
@@ -234,6 +322,8 @@ select
  isnull(ci.maxperball161,0) as maxperballv161,
  isnull(ci.maxpermatch180, 0) as maxpermatch180, 
  isnull(ci.maxpermatch181, 0) as maxpermatch181,  
+ isnull(ci.maxpermatch183, 0) as maxpermatch183,  
+ isnull(ci.maxpermatch185, 0) as maxpermatch185,  
  isnull(ci.maxpermatch186, 0) as maxpermatch186,  
           
  isnull(max(case when cs.bettype = 1 and cs.sporttype=1 then cs.minbet else 0 end), 0) as minbet,    
@@ -268,6 +358,12 @@ select
  
  isnull(@MinBet181,0) as MinBetv181,
  isnull(@MaxBet181,0) as MaxBetv181,
+
+ isnull(@MinBet183,0) as MinBetv183,
+ isnull(@MaxBet183,0) as MaxBetv183,
+
+ isnull(@MinBet185,0) as MinBetv185,
+ isnull(@MaxBet185,0) as MaxBetv185,
  
  isnull(@MinBet186,0) as MinBetv186,
  isnull(@MaxBet186,0) as MaxBetv186,
@@ -343,6 +439,16 @@ select
  IsNull(@MaxBetv181_Min, 0) as MaxBet181_Min,    
  IsNull(@MaxPerMatchv181_Min, 0) as MaxPerMatch181_Min,    
  IsNull(@MaxPerMatchv181_Max, 0) as MaxPerMatch181_Max,
+
+ IsNull(@MinBetv183_Max, 0) as MinBet183_Max,    
+ IsNull(@MaxBetv183_Min, 0) as MaxBet183_Min,    
+ IsNull(@MaxPerMatchv183_Min, 0) as MaxPerMatch183_Min,    
+ IsNull(@MaxPerMatchv183_Max, 0) as MaxPerMatch183_Max,
+
+ IsNull(@MinBetv185_Max, 0) as MinBet185_Max,    
+ IsNull(@MaxBetv185_Min, 0) as MaxBet185_Min,    
+ IsNull(@MaxPerMatchv185_Min, 0) as MaxPerMatch185_Min,    
+ IsNull(@MaxPerMatchv185_Max, 0) as MaxPerMatch185_Max,
  	
  IsNull(@MinBetv186_Max, 0) as MinBet186_Max,
  IsNull(@MaxBetv186_Min, 0) as MaxBet186_Min,
@@ -369,6 +475,8 @@ group by
  ci.maxperball161,
  ci.maxpermatch180,
  ci.maxpermatch181,
+ ci.maxpermatch183,
+ ci.maxpermatch185,
  ci.maxpermatch186,
  ci.currency
    

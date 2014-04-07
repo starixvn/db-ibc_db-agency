@@ -12,7 +12,7 @@ AS
 		- 20130808@Kathy: Amend to show refund game for virtual horse racing
 		- 20130910@Elodie: Use alias server DBARC instead of DB06
 		- 20131121@Kathy: Add Virtual Greyhounds (182), Virtual Motor Racing (184) [Redmine:#7234]
-						
+		- 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185) 				
 */
 BEGIN
 	SET NOCOUNT ON 
@@ -20,7 +20,7 @@ BEGIN
 	SELECT @isShowAll = CASE @isShowAll WHEN 1 THEN NULL ELSE 0 END
 				
 	-- Virtual HR	
-	IF @sporttype in(181, 182, 184)
+	IF @sporttype in(181, 182, 184, 183, 185)
 	SELECT  o.leagueid,
 			EventTime, 
 			l.lcolor,

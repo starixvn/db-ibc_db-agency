@@ -16,6 +16,8 @@ AS
 	Revisions: 
 		- 20121204@Tom: Add  virtual tennis setting (sporttype : 186 , bettype : 1220)
 		- 20130305@Johnson: add virtual horse racing setting (sporttype : 181)
+		- 20131126@Kathy: Add Virtual Greyhounds/Motor Racing (182, 184) [Redmine:#7234]
+		- 20140402@Dom: Add Virtual Speedway/ Cycling setting (sporttype: 183,185)
 	Param's Explanation:
 	• @Recommend: Agent ID
 */
@@ -51,6 +53,22 @@ BEGIN
 			MAX(CASE WHEN cg.sporttype=181 THEN cg.spositiontaking ELSE 0 END) v181spositiontaking,
 			MAX(CASE WHEN cg.sporttype=181 THEN cg.mpositiontaking ELSE 0 END) v181mpositiontaking,
 			MAX(CASE WHEN cg.sporttype=181 THEN cg.apositiontaking ELSE 0 END) v181apositiontaking,
+
+			MAX(CASE WHEN cg.sporttype=182 THEN cg.spositiontaking ELSE 0 END) v182spositiontaking,
+			MAX(CASE WHEN cg.sporttype=182 THEN cg.mpositiontaking ELSE 0 END) v182mpositiontaking,
+			MAX(CASE WHEN cg.sporttype=182 THEN cg.apositiontaking ELSE 0 END) v182apositiontaking,
+
+			MAX(CASE WHEN cg.sporttype=184 THEN cg.spositiontaking ELSE 0 END) v184spositiontaking,
+			MAX(CASE WHEN cg.sporttype=184 THEN cg.mpositiontaking ELSE 0 END) v184mpositiontaking,
+			MAX(CASE WHEN cg.sporttype=184 THEN cg.apositiontaking ELSE 0 END) v184apositiontaking,
+
+			MAX(CASE WHEN cg.sporttype=183 THEN cg.spositiontaking ELSE 0 END) v183spositiontaking,
+			MAX(CASE WHEN cg.sporttype=183 THEN cg.mpositiontaking ELSE 0 END) v183mpositiontaking,
+			MAX(CASE WHEN cg.sporttype=183 THEN cg.apositiontaking ELSE 0 END) v183apositiontaking,
+
+			MAX(CASE WHEN cg.sporttype=185 THEN cg.spositiontaking ELSE 0 END) v185spositiontaking,
+			MAX(CASE WHEN cg.sporttype=185 THEN cg.mpositiontaking ELSE 0 END) v185mpositiontaking,
+			MAX(CASE WHEN cg.sporttype=185 THEN cg.apositiontaking ELSE 0 END) v185apositiontaking,
 						
 			MAX(CASE WHEN cg.sporttype=186 THEN cg.spositiontaking ELSE 0 END) v186spositiontaking,
 			MAX(CASE WHEN cg.sporttype=186 THEN cg.mpositiontaking ELSE 0 END) v186mpositiontaking,
@@ -58,7 +76,7 @@ BEGIN
 		FROM																									   
 			custinfo AS ci WITH (NOLOCK)
 			INNER JOIN CustSetting3rd AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
-		WHERE ci.Recommend = @Recommend AND ci.roleid=1 AND cg.sporttype in ( 180, 181, 186)
+		WHERE ci.Recommend = @Recommend AND ci.roleid=1 AND cg.sporttype in ( 180, 181, 182,184, 183, 185, 186)
 		GROUP BY
 			ci.enabled, ci.closed, ci.DisableVirtualSports, ci.HideVirtualSports, ci.reject, ci.username, ci.custid
 	) t 

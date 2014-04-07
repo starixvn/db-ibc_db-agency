@@ -13,10 +13,10 @@ AS
 
 Created: 20110223@Kaden
 Task: Get all member's given credit of agent custid=@Recommend. It's only use for IPhone
-DB: DB052.bodb02
+DB: DBAGE.bodb02
 
 Original:
-
+	-20140403@Dom: Add Betcredit field
 */
 
 SET NOCOUNT ON
@@ -42,6 +42,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
+		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -49,7 +50,26 @@ BEGIN
 		FROM custinfo with(nolock) 
 		WHERE recommend=@Recommend and roleid=1
 	) as c
-
+	LEFT JOIN 
+	(
+		SELECT
+			custid as custid,
+			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+		FROM bettrans with (NOLOCK)
+		WHERE recommend = @Recommend
+		GROUP BY custid
+	) as t ON t.custid = c.custid
+	LEFT JOIN 
+	(
+		SELECT
+			custid as custid,
+			IsNull(sum(ABS(actual_stake) * mpositiontaking),0) AS outstanding
+		FROM translog with (NOLOCK)
+		WHERE recommend = @Recommend
+		and statusID = 0
+		GROUP BY custid
+	) translog ON translog.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
 
@@ -73,6 +93,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
+		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -83,7 +104,26 @@ BEGIN
 			AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end			
 			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end			
 	) as c
-
+	LEFT JOIN 
+	(
+		SELECT
+			custid as custid,
+			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+		FROM bettrans with (NOLOCK)
+		WHERE recommend = @Recommend
+		GROUP BY custid
+	) as t ON t.custid = c.custid
+	LEFT JOIN 
+	(
+		SELECT
+			custid as custid,
+			IsNull(sum(ABS(actual_stake) * mpositiontaking),0) AS outstanding
+		FROM translog with (NOLOCK)
+		WHERE recommend = @Recommend
+		and statusID = 0
+		GROUP BY custid
+	) translog ON translog.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
 ELSE
@@ -107,6 +147,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
+		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -118,7 +159,26 @@ BEGIN
 			AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
 			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end			
 	) as c
-
+	LEFT JOIN 
+	(
+		SELECT
+			custid as custid,
+			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+		FROM bettrans with (NOLOCK)
+		WHERE recommend = @Recommend
+		GROUP BY custid
+	) as t ON t.custid = c.custid
+	LEFT JOIN 
+	(
+		SELECT
+			custid as custid,
+			IsNull(sum(ABS(actual_stake) * mpositiontaking),0) AS outstanding
+		FROM translog with (NOLOCK)
+		WHERE recommend = @Recommend
+		and statusID = 0
+		GROUP BY custid
+	) translog ON translog.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
 

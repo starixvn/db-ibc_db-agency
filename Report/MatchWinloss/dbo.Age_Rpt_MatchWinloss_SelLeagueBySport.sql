@@ -24,6 +24,8 @@ AS
 		- 20120810@Elodie: add @IsShowAll parameter 
 		- 20130221@Elodie: Add range sport type for Virtual sports (180 -> 186)
 		- 20130228@Elodie: Add Virtual HR product
+		- 20131126@Kathy: Add Virtual Greyhounds (182), Motor Racing (184) [Redmine:#7234]
+		- 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185) 		
 	Parameter's Explanation
 		- @custid : Agent's ID	
 		- @IsShowAll: indicate whether to show test leagues or not
@@ -49,7 +51,7 @@ BEGIN
 					 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
 					 WHEN @showP2P = 1 AND l.sporttype = 253 THEN 1 
 					 WHEN @showLiveCasino = 1 AND l.sporttype = 162 THEN 1
-					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype <> 181 THEN 1
+					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT in (181, 182, 184,183,185) THEN 1
 					 ELSE 0 END
 		AND l.isTest = isnull(@IsShowAll, l.isTest) 
 
@@ -61,7 +63,7 @@ BEGIN
 	WHERE o.EventDate >= @fromdate 
 		AND o.EventDate <= @todate
 		AND o.eventstatus = 'completed'
-		AND @showVS = 1 AND r.sporttype = 181
+		AND @showVS = 1 AND r.sporttype in (181, 182, 184,183,185)
 		AND l.isTest = isnull(@IsShowAll, l.isTest) 
 		
 	INSERT INTO @tmpLeagues					 
@@ -90,7 +92,7 @@ BEGIN
 					 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
 					 WHEN @showP2P = 1 AND l.sporttype = 253 THEN 1 
 					 WHEN @showLiveCasino = 1 AND l.sporttype = 162 THEN 1
-					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype <> 181 THEN 1 
+					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT IN (181, 182, 184,183,185) THEN 1 
 					 ELSE 0 END
 		AND l.isTest = isnull(@IsShowAll, l.isTest)
 	
@@ -102,7 +104,7 @@ BEGIN
 	WHERE o.EventDate >= @fromdate 
 		AND o.EventDate <= @todate
 		AND o.eventstatus = 'completed'
-		AND @showVS = 1 AND r.sporttype = 181
+		AND @showVS = 1 AND r.sporttype IN(181, 182, 184,183,185)
 		AND l.isTest = isnull(@IsShowAll, l.isTest) 
 		
 	INSERT INTO @tmpLeagues					 
@@ -130,7 +132,7 @@ SELECT DISTINCT l1.leagueid , l1.sporttype,
 	END	 as leaguename
 FROM @tmpLeagues l
 	INNER JOIN league l1 WITH(NOLOCK)  ON l.leagueid = l1.leagueid
-ORDER BY l1.sporttype 
+ORDER BY l1.sporttype  
 	
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_SelLeagueBySport] TO [bodbDownlineNet]

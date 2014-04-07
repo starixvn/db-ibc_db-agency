@@ -14,6 +14,7 @@ Revision:
  - 20130712@Kathy: Hide sporttype in the "Sport" dropdown list since these sports have not launched yet.
  - 20130805@Lukas: hide live casino game
  - 20131121@Kathy: Add Virtual Greyhounds (182), Virtual Motor Racing (184) [Redmine:#7234]
+ - 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185) 
 */  
   
 SET NOCOUNT ON  
@@ -82,7 +83,7 @@ FROM (
 			  WHERE eventdate >= @EventDate 
 				and eventdate <= @toDate  
 			) o ON o.leagueid = l.leagueid   
-		WHERE l.sporttype IN ( 181, 182, 184)
+		WHERE l.sporttype IN ( 181, 182, 183, 185, 184)
 			AND o.eventstatus='completed'  
 		) t 
 		INNER JOIN sports s WITH(NOLOCK) ON t.sporttype = s.sporttype  
