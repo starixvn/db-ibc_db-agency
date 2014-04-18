@@ -1,5 +1,4 @@
-
-ALTER PROCEDURE [dbo].[Agw_CustomerSelInfo]
+ALTER PROCEDURE [Agw_CustomerSelInfo]
 @CustID int
 
 AS
@@ -7,7 +6,7 @@ AS
 /*
 Created: 20080909@QuiNV
 Task: Get basic information of a customer (belonging have been checked on web already)
-DB: DB053.bodb02
+DB: DB05.bodb02
 Original:
 
 
@@ -21,6 +20,8 @@ Revisions:
 	- 20110307@Lukas: get DisableAutoMPT
 	- 20120817@Sophia: get DisableVirtualSports, HideVirtualSports
 	- 20120926@Sophia: Get DoubleCommLosing
+	- 20140303@Kathy: Get HideKeno [Redmine:#12691]
+
 */
 
 SET NOCOUNT ON
@@ -75,7 +76,8 @@ SELECT c.username,
 		ci.HideVirtualSports,
 		ci.currency,
 		ci.credit,
-		ci.DoubleCommLosing
+		ci.DoubleCommLosing,
+		ci.HideKeno
 FROM Customer c with(nolock) 
 INNER JOIN Custinfo ci with(nolock) ON c.CustID = ci.CustID
 WHERE c.CustID = @CustID

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_Ag]
+﻿ALTER PROCEDURE [Age_Rpt_CommByBettype_Ag]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,
@@ -31,6 +31,8 @@ Revisions:
 	- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
 	- 20121010@Johnson: Add other bettypes for tennis (from 1301 to 1334)
 	- 20130404@Lukas: remove HT.1x2 & FT.1x2 out from commission group 2
+	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
+
 */
 
 SET NOCOUNT ON
@@ -54,7 +56,16 @@ BEGIN
 	WHERE b.recommend = @CustID and ruben = 1 and
 		winlostdate between @FDate and @ToDate 
 		and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
+		AND b.bettype NOT BETWEEN 1501 AND 1599
 	GROUP BY b.custid, bettype
+
+	INSERT INTO #tmp
+	SELECT sum(isnull(comm,0) - isnull(playercomm,0)) as a_comm, 1501, custid
+	FROM dbo.bettrans b with(nolock) 
+	WHERE b.recommend = @CustID and ruben = 1 and
+		winlostdate between @FDate and @ToDate 
+		AND b.bettype BETWEEN 1501 AND 1599
+	GROUP BY b.custid
 END
 	
 IF @Fromdate <= @MoveBetsDay		
@@ -70,14 +81,23 @@ BEGIN
 	WHERE b.recommend = @CustID and ruben = 1 and
 		winlostdate between @FromDate and @TDate 
 		and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
+		AND b.bettype NOT BETWEEN 1501 AND 1599
 	GROUP BY custid, bettype
+
+	INSERT INTO #tmp
+	SELECT sum(isnull(comm,0) - isnull(playercomm,0)) as a_comm, 1501, custid
+	FROM dbo.bettrans14 b with(nolock,index=bettrans143) 
+	WHERE b.recommend = @CustID and ruben = 1 and
+		winlostdate between @FromDate and @TDate 
+		AND b.bettype BETWEEN 1501 AND 1599
+	GROUP BY custid
 END
 
 
 SELECT pvt.custid, c.username, 
-	isnull([1],0) as hdp_comm,
+	isnull([1],0) + isnull([124],0) as hdp_comm,
 	isnull([3],0) as ou_comm,
-	isnull([7],0) as hdp1st_comm,
+	isnull([7],0) + isnull([125],0) as hdp1st_comm,
 	isnull([8],0) as ou1st_comm,
 	isnull([2],0) as oe_comm,
 	isnull([12],0) as oe1st_comm,
@@ -92,15 +112,15 @@ SELECT pvt.custid, c.username,
 	isnull([122],0) as ANB_comm,
 	isnull([123],0) as DND_comm,
 	--isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([22],0) + isnull([13],0) + isnull([24],0) + isnull([25],0) + isnull([26],0) + isnull([27],0) + isnull([28],0) as totalcomm_1,
-	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([24],0) + isnull([25],0) + isnull([26],0) + isnull([27],0) + isnull([28],0) + isnull([121],0) + isnull([122],0) + isnull([123],0) as totalcomm_1,
+	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([24],0) + isnull([25],0) + isnull([26],0) + isnull([27],0) + isnull([28],0) + isnull([121],0) + isnull([122],0) + isnull([123],0) + isnull([124],0) + isnull([125],0) as totalcomm_1,
 
 	isnull([4],0) as cs_comm,
 	isnull([30],0) as f_cs_comm,
 	
-	isnull([5],0) + isnull([124],0) as x12_comm,
-	isnull([15],0) + isnull([125],0) as [f_x12_comm],
+	isnull([5],0) as x12_comm,
+	isnull([15],0) as [f_x12_comm],
 	
-	isnull([5],0) + isnull([124],0) + isnull([15],0) + isnull([125],0) as [totalcomm_2],
+	isnull([5],0) + isnull([15],0) as [totalcomm_2],
 	
 	isnull([6],0) as tg_comm,
 	isnull([9],0) as mp_comm,
@@ -130,7 +150,8 @@ SELECT pvt.custid, c.username,
 	isnull([101],0) + isnull([102],0) + isnull([103],0) + isnull([104],0) + isnull([105],0) + isnull([106],0) + isnull([107],0) + isnull([108],0) + isnull([109],0) + isnull([110],0)+ 
 	isnull([111],0) + isnull([112],0) + isnull([113],0) + isnull([114],0) + isnull([115],0) + isnull([116],0) + isnull([117],0) + isnull([118],0) + isnull([119],0) + isnull([120],0)
 	as NumberGame_comm,
-	isnull([73],0) as Bingo_comm
+	isnull([73],0) as Bingo_comm,
+	ISNULL([1501],0) as Keno_comm
 		
 FROM #tmp AS p
 PIVOT
@@ -143,7 +164,8 @@ PIVOT
 					[1113],[1114],[1115],[1116],[1117],[1118],[1119],[1120],[1121],[1122],[1123],[1124],[1125],[1126],[1127],[1128],[1129],[1130],
 					[1131],[1132],[1133],[1134],[1135],[1136],[1137],[1138],[1139],[1140],[1141],[1142],[1143],[1144],[1145],[1146],[1147],[1148],[1149],[1150],
 					[1301],[1302],[1303],[1304],[1305],[1306],[1307],[1308],[1309],[1310],[1311],[1312],[1313],[1314],[1315],[1316],[1317],[1318],[1319],[1320],
-					[1321],[1322],[1323],[1324],[1325],[1326],[1327],[1328],[1329],[1330],[1331],[1332],[1333],[1334]					
+					[1321],[1322],[1323],[1324],[1325],[1326],[1327],[1328],[1329],[1330],[1331],[1332],[1333],[1334],
+					[1501]					
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.custid 

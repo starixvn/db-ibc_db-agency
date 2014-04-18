@@ -1,4 +1,4 @@
-﻿  ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_SAg]
+﻿  ALTER PROCEDURE [Age_Chart_WinlossAnalysis_SAg]
 	@agentID		INT,	
 	@fromdate		DATETIME,
 	@todate			DATETIME,	
@@ -10,6 +10,7 @@
 	@showP2P		BIT = 0,
 	@showLiveCasino BIT = 0,
 	@showVS			BIT = 0,
+	@showKeno		BIT = 0,
 	@BalanceUpDate	DATETIME
 AS	
 /*
@@ -24,6 +25,8 @@ AS
 		- 20120801@Sophia: Add Virtual Sports (sporttype = 180 for representing), bettype : 1201 -> 1299
 		- 20121010@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
 		- 20130121@Dan: add linked server DBSUM for bodb_Summary
+		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
+
 	Parameters Explanation:
 */
 SET NOCOUNT ON
@@ -122,6 +125,17 @@ SET NOCOUNT ON
 		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		 VALUES(180,0)
 	END
+
+	IF @ShowKeno = 1
+	BEGIN
+	-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype)  
+		SELECT 202 AS sporttype, typeid FROM bettype WITH(NOLOCK)
+		WHERE typeid between 1501 and 1599
+	 --Sum_winloss  
+		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+		 VALUES(202,0)
+	END
 	
 	IF @ToDate >= @BalanceUpDate
 	BEGIN
@@ -179,6 +193,8 @@ SET NOCOUNT ON
 	GROUP BY CONVERT(VARCHAR(6),winlostdate,112)
 	ORDER BY CONVERT(VARCHAR(6),winlostdate,112) ASC
 			 
+	
+		 
 	
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_Chart_WinlossAnalysis_SAg] TO [vnteam]

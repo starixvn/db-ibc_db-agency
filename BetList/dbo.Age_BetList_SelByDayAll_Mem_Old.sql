@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelByDayAll_Mem_Old]
+﻿USE [bodb_archive]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_BetList_SelByDayAll_Mem_Old]    Script Date: 3/10/2014 3:43:04 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Age_BetList_SelByDayAll_Mem_Old]
 	@custid		int,
 	@fromdate	smalldatetime,
 	@language	nvarchar(2) = 'en'
@@ -33,6 +40,9 @@ Revisions:
 	- 20130225@Elodie: Add bet list of Virtual Horse Racing
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
+	- 20140306@Patrick:	Add more Keno product
+	- 20140310@Patrick:	Exclude keno from Sportbook
+
 Param's Explanation: 
 */
 
@@ -154,6 +164,7 @@ INSERT INTO @Data SELECT
 FROM #bettrans_temp b
 	INNER JOIN dbo.match_bk m with(nolock) ON b.matchid = m.matchid		
 WHERE b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+	AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
 		--AND b.status <>'REFUND'		
 
 -- Virtual HR
@@ -487,6 +498,61 @@ from #bettrans_temp b
 	inner join bodb02.dbo.league l with (nolock) on m.leagueid = l.leagueid
 where b.bettype in (10,31,32,33,41,42,43)	
 	--AND b.status <>'REFUND'
+
+--Keno
+INSERT INTO @Data 
+SELECT
+	202, --m.sporttype, 
+	0, --leagueid,
+	0, --homeID,
+	0, --awayID,
+	b.bettype,
+	'', --matchcode,
+	'' as race,
+	fnc.GameId AS matchId, --matchid, 
+	b.betid, 
+	b.transdate, 
+	b.winlostdate,
+	b.refno, 
+	b.betid, 
+	b.oddsid, 
+	b.hdp1, 
+	b.hdp2,
+	0 as modds,
+	0 as OddsType, 
+	b.odds, 
+	fnc.ChoiceId AS betteam,
+	b.status, 
+	'', --m.betstatus, 
+	b.stake, 
+	b.actual_stake,
+	(b.winlost-b.actual_stake) as winlost, 
+	b.awinlost,
+	b.mwinlost,
+	b.swinlost,
+	
+	b.playercomm,
+	(b.comm - b.playercomm) as comm,
+	(b.acomm - b.comm) as acomm ,
+	(b.scomm - b.acomm) as scomm,
+	
+	b.livehomescore, 
+	b.liveawayscore, 
+	b.liveindicator, 
+	0, --m.finalhomescore, 
+	0, --m.finalawayscore,
+	0, --m.hthomescore, 
+	0, --m.htawayscore,
+	--b.username, 
+	b.IP as IP,
+	@Username,
+	0 as IsNeutral,
+	'' as showtime,
+	'' as betcheck,
+	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+FROM	#bettrans_temp b
+		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype) AS fnc
+WHERE	b.bettype BETWEEN 1501 AND 1599
 
 SELECT * FROM @Data 
 ORDER BY transid, refno

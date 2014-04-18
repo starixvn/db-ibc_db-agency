@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
+﻿ALTER PROCEDURE [Age_Rpt_ConsolidatedGroup]
 	@CustID			INT, 
 	@Currency		INT,
 	@FromDate		SMALLDATETIME,  
@@ -11,6 +11,7 @@
 	@showP2P		BIT = 0,
 	@showLiveCasino BIT = 0,
 	@showVS			BIT = 0,
+	@showKeno		BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 WITH RECOMPILE
@@ -22,7 +23,8 @@ AS
 	DB: DBAGE/bodb02
 	Original:  
 
-	Revisions:    
+	Revisions:   
+		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -164,6 +166,17 @@ IF @ShowVS = 1
 	 --Sum_winloss  
 		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		 VALUES(180,0)
+	END
+	
+IF @ShowKeno = 1
+	BEGIN
+	-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype)  
+		SELECT 202 AS sporttype, typeid FROM bettype WITH(NOLOCK)
+		WHERE typeid between 1501 and 1599
+	 --Sum_winloss  
+		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+		 VALUES(202,0)
 	END
 		
 IF @tdate >= @BalanceUpDate
