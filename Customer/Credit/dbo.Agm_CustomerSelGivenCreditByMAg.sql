@@ -44,7 +44,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -56,8 +56,8 @@ BEGIN
 	(
 		SELECT
 			recommend as custid,
-			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+			IsNull(sum (case when ruben=0 then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
+			IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE mrecommend = @MRecommend
 		GROUP BY recommend
@@ -66,7 +66,7 @@ BEGIN
 	(
 		SELECT
 			recommend as custid,
-			IsNull(sum(ABS(actual_stake) * mpositiontaking),0) AS outstanding
+			IsNull(sum(ABS(actual_stake)  * apositiontaking),0) AS outstanding
 		FROM translog with (NOLOCK)
 		WHERE mrecommend = @MRecommend
 		and statusID = 0
@@ -95,7 +95,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -110,8 +110,8 @@ BEGIN
 	(
 		SELECT
 			recommend as custid,
-			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+			IsNull(sum (case when ruben=0 then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
+			IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE mrecommend = @MRecommend
 		GROUP BY recommend
@@ -120,7 +120,7 @@ BEGIN
 	(
 		SELECT
 			recommend as custid,
-			IsNull(sum(ABS(actual_stake) * mpositiontaking),0) AS outstanding
+			IsNull(sum(ABS(actual_stake) * apositiontaking),0) AS outstanding
 		FROM translog with (NOLOCK)
 		WHERE mrecommend = @MRecommend
 		and statusID = 0
@@ -149,7 +149,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -165,8 +165,8 @@ BEGIN
 	(
 		SELECT
 			recommend as custid,
-			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+			IsNull(sum (case when ruben=0 then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
+			IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE mrecommend = @MRecommend
 		GROUP BY recommend
@@ -175,7 +175,7 @@ BEGIN
 	(
 		SELECT
 			recommend as custid,
-			IsNull(sum(ABS(actual_stake) * mpositiontaking),0) AS outstanding
+			IsNull(sum(ABS(actual_stake) * apositiontaking),0) AS outstanding
 		FROM translog with (NOLOCK)
 		WHERE mrecommend = @MRecommend
 		and statusID = 0

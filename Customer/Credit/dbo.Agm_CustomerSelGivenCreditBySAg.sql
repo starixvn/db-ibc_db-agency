@@ -43,7 +43,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -96,7 +96,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -151,7 +151,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+t.balance-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -192,3 +192,4 @@ GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [bodbDownlineNet]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [vnteam]
 GO
+
