@@ -10,7 +10,7 @@ AS
 	Revisions:
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
 		- 20130311@Elodie: Get matchs which have eventstatus <> 'completed'
-	
+		- 20140417@Dom: Add new bettype 126
 	Parameter's Explanations:
 		
 */
@@ -29,7 +29,7 @@ AS
 							WHERE srecommend = @agentid
 								AND statusid IN (0,1)
 								AND ruben = 0 
-								AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123)							
+								AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126)--Dom							
 						)
 	END
 	ELSE IF @roleid = 3
@@ -43,7 +43,7 @@ AS
 							WHERE mrecommend = @agentid
 								AND statusid IN (0,1)
 								AND ruben = 0 
-								AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123)							
+								AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126)--Dom							
 						)
 	END
 	IF @roleid = 2
@@ -57,7 +57,7 @@ AS
 							WHERE recommend = @agentid
 								AND statusid IN (0,1)
 								AND ruben = 0 
-								AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123)							
+								AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126)--Dom							
 						)
 	END
 GO
