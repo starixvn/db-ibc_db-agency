@@ -25,7 +25,7 @@ SELECT
 
 	sum((Case when betteam = '0-1' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.spositiontaking)) AS [126_total01],
 	sum((Case when betteam = '2-3' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.spositiontaking)) AS [126_total23],
-	sum((Case when betteam = '4-over' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.spositiontaking)) AS [126_total7over],
+	sum((Case when betteam = '4-over' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.spositiontaking)) AS [126_total4over],
 	
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 
