@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag]    Script Date: 04/18/2011 06:21:08 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Age_BetList_SelRunningByBettypeMatch_Ag    Script Date: 4/15/2011 12:46:38 PM ******/
-ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag]
+﻿ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag]
 	@MatchID int,
 	@CustID int,
 	@Bettype int,
@@ -45,6 +37,7 @@ Revisions:
 						Add Sub table for Live Casino
 	- 20120705@Sophia: Get sporttype for outright
 	- 20120926@Sophia: Get Comstatus
+	- 20140425@Dom: Group TB and FGLG
 */
 
 SET NOCOUNT ON
@@ -87,11 +80,11 @@ BEGIN
 		INNER JOIN outright m with (nolock) on b.matchid=m.orid
 		INNER JOIN league l with (nolock) on m.leagueid = l.leagueid		
 	WHERE
-		b.Recommend=@custid  and 
-		b.matchid=@matchid and 
-		b.bettype=@bettype and
+		b.Recommend=@custid  
+		and b.matchid=@matchid 
+		and b.bettype=@bettype 
 		--b.status='running'  
-		b.statusID = 0		
+		and b.statusID = 0		
 	ORDER BY
 		b.status, b.transid
 	RETURN
@@ -136,12 +129,12 @@ BEGIN
 		Bettrans b with (nolock) 
 		inner join Match m with (nolock) on b.matchid=m.matchid 	
 	WHERE
-		b.Recommend=@custid  and 
-		b.matchid=@matchid and 
-		b.bettype=@bettype and
+		b.Recommend=@custid  
+		and b.matchid=@matchid 
+		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype )
 		--b.status in ('waiting','running') and
-		b.statusID in (0,1) and 
-		b.Liveindicator= CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END AND
+		 and b.statusID in (0,1) 
+		 and b.Liveindicator= CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END AND
 		ISNULL(b.betteam,'') = CASE WHEN m.sporttype = 161 AND ISNULL(@Betteam, '') <> '' THEN @betteam ELSE ISNULL(b.betteam,'') END
 		
 	ORDER BY

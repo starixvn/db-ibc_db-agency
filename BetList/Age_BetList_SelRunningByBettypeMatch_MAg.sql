@@ -36,6 +36,7 @@ Revisions:
 						Add Sub table for Live Casino
 	- 20120705@Sophia: Get sporttype for outright
 	- 20120926@Sophia: Get Comstatus
+	- 20140425@Dom: Group TB and FGLG
 */
 
 SET NOCOUNT ON
@@ -82,6 +83,7 @@ BEGIN
 	WHERE
 		b.matchid=@matchid and 
 		b.MRecommend=@custid  and 
+		
 		b.bettype=@bettype and
 		--b.status='running'  
 		b.statusID=0 
@@ -133,7 +135,8 @@ BEGIN
 	WHERE
 		b.matchid=@matchid and 
 		b.MRecommend=@custid  and 
-		b.bettype=@bettype and
+		( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype ) and 
+		--b.bettype=@bettype and
 		--b.status in ('waiting','running')  
 		b.statusID in (0,1) and 
 		b.Liveindicator= CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END and 

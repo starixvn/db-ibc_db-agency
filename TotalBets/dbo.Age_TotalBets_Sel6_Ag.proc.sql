@@ -12,6 +12,7 @@ Revisions:
 					 + Remove unnecessary condition: bettrans.liveindicator=0
 	- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
+	- 20140416@Dom: Add First Half Total Goal (1H Total Goal) (126)
 */					 
 SET NOCOUNT ON
 SELECT   
@@ -20,10 +21,14 @@ SELECT
 	m.awayid,
 	matchcode,
 	
-	sum((Case betteam when '0-1'  then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS total01,
-	sum((Case betteam when '2-3'  then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS total23,
-	sum((Case betteam when '4-6'  then (stake*odds)-stake else -stake end )*( bettrans.apositiontaking)) AS total46,
-	sum((Case betteam when '7-over'  then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS total7over,
+	sum((Case when  betteam = '0-1' and bettype = 6 then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS [6_total01],
+	sum((Case when  betteam = '2-3' and bettype = 6  then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS [6_total23],
+	sum((Case when  betteam = '4-6' and bettype = 6 then (stake*odds)-stake else -stake end )*( bettrans.apositiontaking)) AS [6_total46],
+	sum((Case when  betteam = '7-over'  and bettype = 6 then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS [6_total7over],
+
+	sum((Case when betteam = '0-1' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS [126_total01],
+	sum((Case when betteam = '2-3' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS [126_total23],
+	sum((Case when betteam = '4-over' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.apositiontaking)) AS [126_total4over],
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 	
 FROM  bettrans with (nolock)
@@ -31,7 +36,7 @@ FROM  bettrans with (nolock)
 
 WHERE    
 	bettrans.recommend=@custid 
-	AND bettrans.bettype =6 
+	AND bettrans.bettype IN (6,126) 
 	AND m.eventstatus = 'running'
 	--AND bettrans.status = 'running'
 	AND bettrans.statusID = 0  
