@@ -37,6 +37,7 @@ Revisions:
 	- 20120424@Lukas: Get more column custid
 	- 20120705@Sophia: Get sporttype for outright
 	- 20120926@Sophia: Get Comstatus
+	- 20140425@Dom: Group TB and FGLG
 */
 
 SET NOCOUNT ON
@@ -188,7 +189,8 @@ BEGIN
 		inner join match m with (nolock) on  b.matchid=m.matchid 
 	where 
 		b.SRecommend=@custid
-		and b.bettype=@bettype
+		--and b.bettype=@bettype
+		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype )
 		--and b.status in ('waiting','running')
 		and b.statusID in (0,1)
 		

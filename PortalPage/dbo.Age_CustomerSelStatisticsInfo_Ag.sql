@@ -1,16 +1,16 @@
-﻿  
-ALTER PROCEDURE [dbo].[Age_CustomerSelStatisticsInfo_Ag]
+﻿ALTER PROCEDURE [Age_CustomerSelStatisticsInfo_Ag]
 	 @custid INT
 AS
 /*
 	Created: Johnson
 	Date: 2011-05-31
-	DB: DB053.BODB02
+	DB: DB052.BODB02
 	Task: Get Agent Statictis Info 
 	Revisions:
 	- 20110819@Sophia: Count Negative stake as positive turnover
 	- 20111017@Tom: 1. Add P2P Transfer (23101)/Outstanding (23102)
 					2. Remove variable @ABSDate ('2011-09-01')	
+	- 20140305@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 */
 SET NOCOUNT ON
 
@@ -35,11 +35,16 @@ SET @ABSDate = '2011-09-01'	*/
 SELECT @currentMonth = convert(varchar(10),current_timestamp,120)
 SELECT @currentMonth = dateadd(day,- datepart(day,@currentMonth)+ 1,@currentMonth)
 
+DECLARE @translog_outstanding money, @translog_totalOutstanding money
+SELECT @translog_outstanding = ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
+	@translog_totalOutstanding = ISNULL(SUM(ABS(actual_stake)),0)
+FROM translog with(NOLOCK)
+WHERE recommend = @custid AND statusid = 0
 
 SELECT --@OutStanding = ISNULL(SUM(apositiontaking* CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END),0),
-		@OutStanding = ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
+		@OutStanding = ISNULL(SUM(apositiontaking* ABS(actual_stake)),0) + @translog_outstanding,
 		--@total_outstanding = ISNULL(SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END),0),
-		@total_outstanding = ISNULL(SUM(ABS(actual_stake)),0),
+		@total_outstanding = ISNULL(SUM(ABS(actual_stake)),0) + @translog_totalOutstanding,
 		@total_csTransfer = ISNULL(SUM(CASE WHEN bettype = 23001 THEN actual_stake ELSE 0 END),0),
 		@total_csOutstanding = ISNULL(SUM(CASE WHEN bettype = 23002 THEN actual_stake ELSE 0 END),0),
 		@total_BITransfer = ISNULL(SUM(CASE WHEN bettype = 23201 THEN actual_stake ELSE 0 END),0),

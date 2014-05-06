@@ -1,6 +1,4 @@
-﻿
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_Ag]
+﻿ALTER PROCEDURE [Age_Rpt_WinlossAnalysis_Ag]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,  
 	@ToDate			SMALLDATETIME,   
@@ -12,6 +10,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_Ag]
 	@showP2P		BIT = 0,
 	@showLiveCasino BIT = 0,
 	@showVS BIT = 0,
+	@showKeno bit = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -31,6 +30,7 @@ AS
     - 20120801@Sophia: Add Virtual Sports (sporttype = 180 for representing), bettype : 1201 -> 1299
     - 20121010@Johnson: Add new range bettype for tennis (from 1301 to 1334)
     - 20130121@Dan: add linked server DBSUM for bodb_Summary
+	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599) [Redmine:#12691]
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
 		+ @CustID agentID	
@@ -140,6 +140,15 @@ BEGIN
 		 VALUES(180,0)
 	END
 	
+	if @showKeno = 1
+	begin
+		insert INTO @TmpCond(sporttype, bettype)
+		SELECT 202 as sporttype, typeid from bettype with(NOLOCK)
+		WHERE typeid BETWEEN 1501 AND 1599
+
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(202, 0)
+	END 
 	
 	IF @ToDate >= @BalanceUpDate
 	BEGIN
@@ -223,6 +232,9 @@ BEGIN
 				ELSE '0'
 			END 
 END
+
+
+
 
 
 GO

@@ -1,4 +1,11 @@
-﻿
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_BetList_SelAllByDate_Mem]    Script Date: 3/13/2014 9:51:53 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
 	@custid int=null,
 	@AgID int=0,
@@ -14,7 +21,8 @@ ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
 	@ShowNG bit = 0,
 	@ShowBI bit = 0,	
 	@ShowLiveCasino BIT = 0,
-	@ShowVS BIT = 0
+	@ShowVS BIT = 0,
+	@ShowKeno BIT = 0
 AS
 SET NOCOUNT ON
 
@@ -65,6 +73,8 @@ Revisions:
 	- 20120926@Sophia: Get comstatus
 	- 20130225@Elodie: Add bet list of Virtual HR
 	- 20131003@Lukas: sort tickets by transid
+	- 20140306@Patrick:	Add more Keno product
+	- 20140310@Patrick:	Exclude keno from Sportbook
 */
 
 
@@ -204,6 +214,7 @@ BEGIN
 		AND b.bettype NOT BETWEEN 81 AND 120  --- Change arrange of Numbergame from 81 to 120
 		AND b.bettype NOT BETWEEN 1101 AND 1199  --- Change arrange of Numbergame from 1101 to 1199
 		AND b.bettype NOT BETWEEN 1201 AND 1299		
+		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
 				
 	-- OutRight tickets
 	INSERT INTO @BetListSelAllByDateMem
@@ -838,9 +849,135 @@ BEGIN
 		AND b.bettype in (1231, 1232, 1233, 1237, 1238)
 END
 
+--Keno
+IF @ShowKeno = 1
+BEGIN
+	--Tickets doesnt Waiting & Runing status
+	INSERT INTO @BetListSelAllByDateMem
+	SELECT
+		@UserName as UserName,
+		202 AS sporttype,
+		b.bettype,
+		b.refno,		
+		b.transid,
+		isnull(b.BetID, 0),
+		'' AS matchcode, 
+		fnc.GameId AS matchid,
+		'' as Race, 
+		0 AS homeID,
+		0 AS awayID,
+		0 as hdp1, 
+		0 as hdp2, 
+		b.odds,
+		b.modds,
+		b.[status],
+		b.stake,
+		b.actual_stake,
+		(winlost-actual_stake) winlost,
+		b.awinlost,
+		b.mwinlost,
+		b.swinlost,
+		
+		(playercomm) AS playercomm,
+		(b.comm - b.playercomm) as comm,
+		(b.acomm - b.comm) as acomm,
+		(b.scomm - b.acomm) as scomm,
+		
+		b.transdate,
+		b.winlostdate,
+		fnc.ChoiceId AS betteam,
+		b.apositiontaking,
+		b.mpositiontaking,
+		b.spositiontaking,
+		b.discount as adiscount,
+		b.adiscount as mdiscount,
+		b.sdiscount as sdiscount,
+		0 AS leagueID,
+		b.liveindicator, 
+		b.livehomescore, 
+		b.liveawayscore,
+		b.IP as IP,
+		0 AS betstatus,
+		CONVERT(BIT,0) as IsNeutral,
+		b.OddsType as OddsType,
+		'' AS showtime,
+		'' as betcheck,
+		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+	FROM
+		dbo.bettrans AS b WITH (NOLOCK)
+		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype) fnc
+	WHERE
+		b.transdate BETWEEN @fromdate AND @todate AND
+		b.recommend = @Recommend AND  
+		b.custid = @CustID AND
+		b.bettype BETWEEN 1501 AND 1599 AND
+		b.statusID NOT IN (0,1)	
+		
+	--Tickets only Waiting & Runing status
+	INSERT INTO @BetListSelAllByDateMem
+	SELECT
+		@UserName as UserName,
+		202 AS sporttype,
+		b.GameId AS bettype,
+		b.TransLogId AS refno,	
+		b.TransLogId AS transid,
+		0 AS BetID,
+		'' AS matchcode, 
+		fnc.GameId AS matchid,
+		'' as Race, 
+		0 AS homeID,
+		0 AS awayID,
+		0 as hdp1, 
+		0 as hdp2, 
+		b.odds,
+		0 AS modds,
+		b.[status],
+		b.stake,
+		b.actual_stake,
+		0 AS winlost,
+		0 AS awinlost,
+		0 AS mwinlost,
+		0 AS swinlost,
+		
+		0 AS playercomm,
+		0 AS comm,
+		0 AS acomm,
+		0 AS scomm,
+		
+		b.transdate,
+		b.winlostdate,
+		fnc.ChoiceId AS betteam,
+		b.apositiontaking,
+		b.mpositiontaking,
+		b.spositiontaking,
+		b.discount as adiscount,
+		b.adiscount as mdiscount,
+		b.sdiscount as sdiscount,
+		0 AS leagueID,
+		0 AS liveindicator, 
+		0 AS livehomescore, 
+		0 AS liveawayscore,
+		b.IP as IP,
+		0 AS betstatus,
+		CONVERT(BIT, 0) as IsNeutral,
+		0 AS OddsType,
+		'' AS showtime,
+		'' as betcheck,
+		0 AS comstatus
+	FROM
+		dbo.translog AS b WITH (NOLOCK)
+		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.gameid) fnc
+	WHERE
+		b.transdate BETWEEN @fromdate AND @todate AND
+		b.recommend = @Recommend AND  
+		b.custid = @CustID AND
+		b.gameID BETWEEN 1501 AND 1599 AND
+		b.statusID IN (0,1)					
+END
+
 SELECT * 
 FROM @BetListSelAllByDateMem
-ORDER BY TransID DESC 
+ORDER BY TransID ASC 
 
 if @ShowRB = 1
 begin
@@ -902,12 +1039,11 @@ begin
 end
 
 SELECT * FROM @BettransDetail
-GO
+
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNet]
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelAllByDate_Mem] TO [vnteam]
-
 

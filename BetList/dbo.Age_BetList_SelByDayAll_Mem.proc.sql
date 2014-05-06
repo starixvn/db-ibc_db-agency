@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelByDayAll_Mem]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_BetList_SelByDayAll_Mem]    Script Date: 3/10/2014 4:28:31 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Age_BetList_SelByDayAll_Mem]
 	@custid		int,
 	@fromdate	smalldatetime,
 	@transtype	int = 0, --VinhTrinh Add new parameter.
@@ -8,7 +15,7 @@ AS
 /*
 Created: 
 Task : Bet List for Daily Statement
-DB: DB053.bodb02
+DB: DBAGE/bodb02
 Original:Acc_BetListByDayAll_1
 Revisions:
     - 20081030@QuangVinh: Add more result for Horseracing,TransType: 0: all bets, 1: bets settled, 2: void and cancelled, 3: running and waiting
@@ -56,6 +63,8 @@ Revisions:
 	- 20130401@Lukas: fix bugs - wrong selected table
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
+	- 20140303@Elodie: Add Keno sport [Redmine:#12756]
+
 Param's Explanation: 
 	+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet 
 */
@@ -202,6 +211,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate AND b.bettype<= 19000 
 		and b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
 	-- Virtual HR
@@ -563,6 +573,66 @@ BEGIN
 		AND b.winlostdate = @fromdate
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
+	-- Keno
+	IF(@transtype = 1 or @transtype = 2)
+		INSERT INTO @Data 
+		SELECT
+			202, --m.sporttype, 
+			0, --m.leagueid,
+			0, --m.homeID,
+			0, --m.awayID,
+			b.bettype,
+			'', --m.matchcode,
+			'' as race,
+			t.GameId, --m.matchid, 
+			b.transid, 
+			b.transdate, 
+			b.winlostdate,
+			b.refno, 
+			0,
+			0, 
+			0, 
+			0,
+			b.modds,
+			0, 
+			b.odds, 
+			t.ChoiceId, 
+			b.status, 
+			'', --m.betstatus, 
+			b.stake, 
+			b.actual_stake,
+			(b.winlost-b.actual_stake) as winlost, 
+			b.awinlost,
+			b.mwinlost,
+			b.swinlost,
+		
+			b.playercomm,
+			(b.comm - b.playercomm) as comm,
+			(b.acomm - b.comm) as acomm ,
+			(b.scomm - b.acomm) as scomm,
+		
+			0,--livehomescore, 
+			0,--liveawayscore, 
+			0,--liveindicator, 
+			0, --m.finalhomescore, 
+			0, --m.finalawayscore,
+			0, --m.hthomescore, 
+			0, --m.htawayscore,
+			--b.username, 
+			b.IP as IP,
+			b.Username,
+			0 as IsNeutral,
+			'' as showtime,
+			'' as betcheck,
+			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+		from 
+			dbo.bettrans14 b with (nolock, index=IX_bettrans14)
+			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) t
+		where
+			b.custid=@custid 		
+			AND b.winlostdate=@fromdate 
+			AND b.bettype BETWEEN 1501 AND 1599
+			AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 END
 ELSE
 BEGIN
@@ -626,6 +696,7 @@ BEGIN
 		b.custid=@custid 		
 		AND b.winlostdate=@fromdate AND b.bettype<= 19000 
 		and b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
 	-- Virtual HR
@@ -986,8 +1057,127 @@ BEGIN
 		b.custid=@custid AND b.bettype in (10,31,32,33,41,42,43)
 		AND b.winlostdate = @fromdate
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
-
-END
+	
+	-- Keno
+	IF(@transtype = 1 or @transtype = 2)
+		INSERT INTO @Data 
+		SELECT
+			202, --m.sporttype, 
+			0, --m.leagueid,
+			0, --m.homeID,
+			0, --m.awayID,
+			b.bettype,
+			'', --m.matchcode,
+			'' as race,
+			t.GameId, --m.matchid, 
+			b.transid, 
+			b.transdate, 
+			b.winlostdate,
+			b.refno, 
+			0,
+			0, 
+			0, 
+			0,
+			b.modds,
+			0, 
+			b.odds, 
+			t.ChoiceId, 
+			b.status, 			
+			'', --m.betstatus, 
+			b.stake, 
+			b.actual_stake,
+			(b.winlost-b.actual_stake) as winlost, 
+			b.awinlost,
+			b.mwinlost,
+			b.swinlost,
+		
+			b.playercomm,
+			(b.comm - b.playercomm) as comm,
+			(b.acomm - b.comm) as acomm ,
+			(b.scomm - b.acomm) as scomm,
+		
+			0,--livehomescore, 
+			0,--liveawayscore, 
+			0,--liveindicator, 
+			0, --m.finalhomescore, 
+			0, --m.finalawayscore,
+			0, --m.hthomescore, 
+			0, --m.htawayscore,
+			--b.username, 
+			b.IP as IP,
+			b.Username,
+			0 as IsNeutral,
+			'' as showtime,
+			'' as betcheck,
+			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+		from 
+			dbo.bettrans b with (nolock, index=IX_custid_matchid_bettype)
+			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) t
+		where
+			b.custid=@custid 		
+			AND b.winlostdate=@fromdate 
+			AND b.bettype BETWEEN 1501 AND 1599
+			AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+	ELSE 
+		INSERT INTO @Data 
+		SELECT
+			202, --m.sporttype, 
+			0, --m.leagueid,
+			0, --m.homeID,
+			0, --m.awayID,
+			b.GameID,
+			'', --m.matchcode,
+			'' as race,
+			t.GameId, --m.matchid, 
+			b.translogid, 
+			b.transdate, 
+			b.winlostdate,
+			b.translogid, 
+			0,
+			0, 
+			0, 
+			0,
+			0,
+			0, 
+			b.odds, 
+			t.ChoiceId, 
+			b.status, 
+			'', --m.betstatus, 			
+			b.stake, 
+			b.actual_stake,
+			0 as winlost, 
+			0,
+			0,
+			0,
+		
+			0,
+			0 as comm,
+			0 as acomm ,
+			0 as scomm,
+		
+			0, 
+			0, 
+			0, 
+			0, --m.finalhomescore, 
+			0, --m.finalawayscore,
+			0, --m.hthomescore, 
+			0, --m.htawayscore,
+			--b.username, 
+			b.IP as IP,
+			b.Username,
+			0 as IsNeutral,
+			'' as showtime,
+			'' as betcheck,
+			0 AS comstatus
+		from 
+			dbo.translog b with (nolock)
+			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.gameID) t
+		where
+			b.custid=@custid 		
+			AND b.winlostdate=@fromdate 
+			AND b.gameID BETWEEN 1501 AND 1599
+			AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
+END	
 
 SELECT * FROM @Data 
 ORDER BY transid, refno
@@ -1080,6 +1270,8 @@ BEGIN
 	WHERE B.Bettype  BETWEEN 1101 AND 1199
 
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelByDayAll_Mem] TO [bodbDownlineNet]
