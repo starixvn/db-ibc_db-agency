@@ -1,4 +1,4 @@
-﻿  ALTER PROCEDURE [dbo].[Age_CustomerUpdSecurityCode]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerUpdSecurityCode]
 	@custid		INT,
 	@userid		INT,
 	@subaccID	INT = 0,
@@ -12,10 +12,11 @@
 	/*
 		Created: Johnson
 		Date: 2013-04-09
-		DB: DBTXN/bodb02
+		DB: DBTXN/CustDB
 		Task: upline/admin update Security code of customer
 		
 		Revisions:
+			- 20140514@viet: also check sub-account's security code
 		
 		Parameter's Explanation:
 	*/
@@ -26,6 +27,7 @@ SET NOCOUNT ON
 			,@uplineID INT
 			,@uplineSecurityCode VARCHAR(50)
 			,@roleid INT
+			,@uplineSecurityCode_sub VARCHAR(50)
 		
 	SET @startRun = GETDATE()
 	
@@ -51,18 +53,35 @@ SET NOCOUNT ON
 		END
 	
 		IF @roleid <> 4
-		BEGIN
-			SELECT @uplineSecurityCode = SecurityCode
-			FROM dbo.CustLoginInfo WITH(NOLOCK) 
-			WHERE custid = @uplineID
-			
-			IF @uplineSecurityCode IS NULL AND @custid <> @userid
+		BEGIN 
+			IF @subaccID <> 0
 			BEGIN
-				SELECT @ErrMsg = CASE WHEN @Language = 'E' THEN 'The upline is not enabled this function.'
-												ELSE [dbo].[f_Get_MsgNamebyMsgID](40027,@Language) END,
-						@ErrCode = 100
-				RETURN
+				SELECT @uplineSecurityCode_sub = SecurityCode
+				FROM dbo.CustLoginInfoSub WITH(NOLOCK) 
+				WHERE SubAccID = @subaccID
+				
+				IF @uplineSecurityCode_sub IS NULL --AND @custid <> @userid
+				BEGIN
+					SELECT @ErrMsg = CASE WHEN @Language = 'E' THEN 'The upline is not enabled this function.'
+													ELSE [dbo].[f_Get_MsgNamebyMsgID](40027,@Language) END,
+							@ErrCode = 100
+					RETURN
+				END
 			END
+			ELSE
+			BEGIN										
+				SELECT @uplineSecurityCode = SecurityCode
+				FROM dbo.CustLoginInfo WITH(NOLOCK) 
+				WHERE custid = @uplineID
+				
+				IF @uplineSecurityCode IS NULL AND @custid <> @userid
+				BEGIN
+					SELECT @ErrMsg = CASE WHEN @Language = 'E' THEN 'The upline is not enabled this function.'
+													ELSE [dbo].[f_Get_MsgNamebyMsgID](40027,@Language) END,
+							@ErrCode = 100
+					RETURN
+				END			
+			END			
 		END
 		
 		IF @custid = @userid -- reset isForcedChangeSecurityCode = 0 if customer reset his SC
@@ -144,10 +163,7 @@ SET NOCOUNT ON
 				@duration = @duration 
 		END CATCH
 	END
-	
-	
-	
-		
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerUpdSecurityCode] TO [bodbDownlineNet]
 GO
