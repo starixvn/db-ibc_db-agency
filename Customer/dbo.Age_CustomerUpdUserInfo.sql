@@ -7,7 +7,7 @@
     @email          nvarchar(50),
     @fax            nvarchar(50),
     @discasino      bit = 0,
-    @remark         nvarchar(300)='',
+    @remark         nvarchar(300) = NULL,
     @IP             as nvarchar(15) = '',
     @userid         int ,       --updater Id
     @subaccid       int = 0 ,   --Sub-AccountID
@@ -112,7 +112,7 @@ IF @Old_firstname = @firstname AND
    @Old_mobilephone = @mobilephone AND
    @Old_email = @email AND
    @Old_fax = @fax AND
-   @Old_remark = @remark
+   (@Old_remark = @remark OR @remark IS NULL)
     RETURN
 
 --Do update
@@ -124,7 +124,7 @@ UPDATE Customer WITH(ROWLOCK)
        email = @email,
        fax = @fax
  WHERE custid = @custid
-
+ 
 if @roleid = 1
 begin
     update customer with(rowlock, updlock)
