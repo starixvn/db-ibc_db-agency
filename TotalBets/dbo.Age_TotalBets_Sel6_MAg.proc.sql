@@ -18,14 +18,18 @@ SELECT
 	m.homeid,
 	m.awayid,
 	matchcode,
-	sum((Case when  betteam = '0-1' and bettype = 6 then (stake*odds)-stake else -stake end )*(bettrans.mpositiontaking)) AS [6_total01],
-	sum((Case when  betteam = '2-3' and bettype = 6  then (stake*odds)-stake else -stake end )*(bettrans.mpositiontaking)) AS [6_total23],
-	sum((Case when  betteam = '4-6' and bettype = 6 then (stake*odds)-stake else -stake end )*( bettrans.mpositiontaking)) AS [6_total46],
-	sum((Case when  betteam = '7-over'  and bettype = 6 then (stake*odds)-stake else -stake end )*(bettrans.mpositiontaking)) AS [6_total7over],
+	sum((Case when  betteam = '0-1' and bettype = 6 then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*(bettrans.mpositiontaking)) AS [6_total01],
+	sum((Case when  betteam = '2-3' and bettype = 6  then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*(bettrans.mpositiontaking)) AS [6_total23],
+	sum((Case when  betteam = '4-6' and bettype = 6 then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*( bettrans.mpositiontaking)) AS [6_total46],
+	sum((Case when  betteam = '7-over'  and bettype = 6 then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*(bettrans.mpositiontaking)) AS [6_total7over],
 
-	sum((Case when betteam = '0-1' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.mpositiontaking)) AS [126_total01],
-	sum((Case when betteam = '2-3' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.mpositiontaking)) AS [126_total23],
-	sum((Case when betteam = '4-over' and bettype = 126 then (stake*odds)-stake else -stake end )*(bettrans.mpositiontaking)) AS [126_total4over],
+	sum((Case when betteam = '0-1' and bettype = 126 then (stake*odds)-stake else case when bettype = 6 then 0 else -stake end end )*(bettrans.mpositiontaking)) AS [126_total01],
+	sum((Case when betteam = '2-3' and bettype = 126 then (stake*odds)-stake else case when bettype = 6 then 0 else -stake end end )*(bettrans.mpositiontaking)) AS [126_total23],
+	sum((Case when betteam = '4-over' and bettype = 126 then (stake*odds)-stake else case when bettype = 6 then 0 else -stake end end )*(bettrans.mpositiontaking)) AS [126_total4over],
+
+	sum(case when bettype=6 then 1 else 0 end) [betcount_6],
+	sum(case when bettype=126 then 1 else 0 end) [betcount_126],
+
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 
 FROM  bettrans with (nolock)
