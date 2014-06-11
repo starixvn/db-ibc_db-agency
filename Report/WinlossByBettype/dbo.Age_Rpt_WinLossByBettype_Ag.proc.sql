@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_Rpt_WinLossByBettype_Ag]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Ag]
 	@CustID 	INT,
 	@FromDate 	SMALLDATETIME,
 	@ToDate 	SMALLDATETIME,	
@@ -27,7 +27,8 @@ Revisions:
 	- 20110802@Sophia: Add new column liveindicator to separate Fulltime or Deadball, but only for Number Game, if not Number Game not group by liveindicator and return 0 for liveindicator
 	- 20110819@Sophia: Count Negative stake as positive turnover
 	- 20120608@Elodie: Change the gross commission for P2P
-					   Change DB053 server instead of DB052 server	
+					   Change DB053 server instead of DB052 server
+	- 20140509@Logan:	Add counting for number of tickets
 */
 SET NOCOUNT ON
 DECLARE @AgWinLoss TABLE
@@ -42,7 +43,8 @@ DECLARE @AgWinLoss TABLE
 	AgComm money, 
 	MemberTotal money, 
 	AgTotal money, 
-	Company money
+	Company money,
+	NoOfTicket int
 )
 
 DECLARE @ABSDate DATETIME
@@ -51,132 +53,135 @@ SET @ABSDate = '2011-09-01'
 IF @Todate >= @BalanceUpDay
 BEGIN 
 	INSERT INTO @AgWinLoss
-		SELECT 
-			bettype, 
-			liveindicator,
-		    sum(comm/(1 - apositiontaking)) as GrossComm,
-			SUM( CASE WHEN winlostdate >= @ABSDate  
-				THEN CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-				ELSE CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
+		SELECT bettype,
+			   liveindicator,
+			   SUM(comm/(1 - apositiontaking)) as GrossComm,
+			   SUM(CASE WHEN winlostdate >= @ABSDate  
+				THEN CASE WHEN bettype in (33, 43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
+				ELSE CASE WHEN bettype in (33, 43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
 				END
 				) as TurnOver,
-			sum(winlost-actual_stake),
-			sum(awinlost),	
-			sum(playercomm),
-			sum(comm-playercomm),
-			isnull(sum(winlost-actual_stake), 0) + isnull(sum(playercomm), 0) as MemberTotal,
-			isnull(sum(awinlost), 0) + isnull(sum(comm-playercomm), 0) as AgTotal,
-			-sum(winlost-actual_stake+awinlost+comm)
-		FROM Bettrans WITH(NOLOCK)
-		WHERE 
-			winlostdate between @FromDate and @ToDate and
-			ruben=1 and 
+			   SUM(winlost - actual_stake),
+			   SUM(awinlost),
+			   SUM(playercomm),
+			   SUM(comm - playercomm),
+			   isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
+		       -SUM(winlost - actual_stake + awinlost + comm),
+			   COUNT(transid) as NoOfTicket
+          FROM Bettrans WITH(NOLOCK)
+		 WHERE 1 = 1
+		   and winlostdate between @FromDate and @ToDate
+		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
-			statusID not in (101, 102, 103) and
-			recommend=@custid 
-			and bettype < 19001
-			AND bettype BETWEEN 81 AND 120
-		group by bettype, liveindicator
-		UNION ALL --- Not number Game not group by liveindicator
-		SELECT 
-			bettype, 
-			0 as liveindicator,
-		    sum(case when bettype = 1000 then oddsspread else comm/(1 - apositiontaking) end) as GrossComm,
-			SUM( CASE WHEN winlostdate >= @ABSDate  
-				THEN CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-				ELSE CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
+		   and statusID not in (101, 102, 103)
+		   and recommend = @custid
+		   and bettype < 19001
+		   AND bettype BETWEEN 81 AND 120
+	  group by bettype, liveindicator
+
+	     UNION ALL --- Not number Game not group by liveindicator
+
+		SELECT bettype,
+		       0 as liveindicator,
+		       SUM(case when bettype = 1000 then oddsspread else comm/(1 - apositiontaking) end) as GrossComm,
+		       SUM( CASE WHEN winlostdate >= @ABSDate
+				THEN CASE WHEN  bettype in (33, 43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
+				ELSE CASE WHEN  bettype in (33, 43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
 				END
 				) as TurnOver,
-			sum(winlost-actual_stake),
-			sum(awinlost),	
-			sum(playercomm),
-			sum(comm-playercomm),
-			isnull(sum(winlost-actual_stake), 0) + isnull(sum(playercomm), 0) as MemberTotal,
-			isnull(sum(awinlost), 0) + isnull(sum(comm-playercomm), 0) as AgTotal,
-			-sum(winlost-actual_stake+awinlost+comm)
-		FROM Bettrans WITH(NOLOCK)
-		WHERE 
-			winlostdate between @FromDate and @ToDate and
-			ruben=1 and 
+			   SUM(winlost - actual_stake),
+			   SUM(awinlost),
+			   SUM(playercomm),
+			   SUM(comm-playercomm),
+			   isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
+			   -SUM(winlost - actual_stake + awinlost + comm),
+			   COUNT(transid) as NoOfTicket
+		  FROM Bettrans WITH(NOLOCK)
+		 WHERE 1 = 1
+		   and winlostdate between @FromDate and @ToDate
+		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
-			statusID not in (101, 102, 103) and
-			recommend=@custid 
-			and bettype < 19001
-			AND bettype NOT BETWEEN 81 AND 120
-		group by bettype 
+		   and statusID not in (101, 102, 103)
+		   and recommend = @custid
+		   and bettype < 19001
+		   AND bettype NOT BETWEEN 81 AND 120
+      group by bettype
 
 	INSERT INTO @AgWinLoss
-		SELECT 
-			bettype, 
-			liveindicator,
-		    sum(comm/(1 - apositiontaking)) as GrossComm,
-			SUM( CASE WHEN winlostdate >= @ABSDate  
-				THEN CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-				ELSE CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
+		SELECT bettype,
+		       liveindicator,
+		       SUM(comm/(1 - apositiontaking)) as GrossComm,
+		       SUM( CASE WHEN winlostdate >= @ABSDate
+				THEN CASE WHEN bettype in (33, 43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
+				ELSE CASE WHEN bettype in (33, 43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
 				END
 				) as TurnOver,
-			sum(winlost-actual_stake),
-			sum(awinlost),	
-			sum(playercomm),
-			sum(comm-playercomm),
-			isnull(sum(winlost-actual_stake), 0) + isnull(sum(playercomm), 0) as MemberTotal,
-			isnull(sum(awinlost), 0) + isnull(sum(comm-playercomm), 0) as AgTotal,
-			-sum(winlost-actual_stake+awinlost+comm)
-		FROM Bettrans14 WITH(NOLOCK, index=bettrans143)
-		WHERE 
-			winlostdate between @FromDate and @ToDate and
-			ruben=1 and 
+			   SUM(winlost - actual_stake),
+			   SUM(awinlost),
+			   SUM(playercomm),
+			   SUM(comm - playercomm),
+			   isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
+			   -SUM(winlost - actual_stake + awinlost + comm),
+			   COUNT(transid) as NoOfTicket
+		  FROM Bettrans14 WITH(NOLOCK, index = bettrans143)
+		 WHERE 1 = 1
+		   and winlostdate between @FromDate and @ToDate
+		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
-			statusID not in (101, 102, 103) and
-			recommend=@custid 
-			and bettype < 19001
-			AND bettype BETWEEN 81 AND 120
-		group by bettype, liveindicator
-		UNION ALL
-		SELECT 
-			bettype,
-			0 as  liveindicator,
-		    sum(case when bettype = 1000 then oddsspread else comm/(1 - apositiontaking) end) as GrossComm,
-			SUM( CASE WHEN winlostdate >= @ABSDate  
-				THEN CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-				ELSE CASE WHEN  bettype in(33,43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
+		   and statusID not in (101, 102, 103)
+		   and recommend = @custid
+		   and bettype < 19001
+		   AND bettype BETWEEN 81 AND 120
+      group by bettype, liveindicator
+
+         UNION ALL
+
+		SELECT bettype,
+		       0 as liveindicator,
+		       SUM(case when bettype = 1000 then oddsspread else comm/(1 - apositiontaking) end) as GrossComm,
+		       SUM( CASE WHEN winlostdate >= @ABSDate
+				THEN CASE WHEN bettype in (33, 43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
+				ELSE CASE WHEN bettype in (33, 43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
 				END
 				) as TurnOver,
-			sum(winlost-actual_stake),
-			sum(awinlost),	
-			sum(playercomm),
-			sum(comm-playercomm),
-			isnull(sum(winlost-actual_stake), 0) + isnull(sum(playercomm), 0) as MemberTotal,
-			isnull(sum(awinlost), 0) + isnull(sum(comm-playercomm), 0) as AgTotal,
-			-sum(winlost-actual_stake+awinlost+comm)
-		FROM Bettrans14 WITH(NOLOCK, index=bettrans143)
-		WHERE 
-			winlostdate between @FromDate and @ToDate and
-			ruben=1 and 
+			   SUM(winlost - actual_stake),
+			   SUM(awinlost),
+			   SUM(playercomm),
+			   SUM(comm - playercomm),
+			   isnull(SUM(winlost-actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+			   isnull(SUM(awinlost), 0) + isnull(SUM(comm-playercomm), 0) as AgTotal,
+			   -SUM(winlost - actual_stake + awinlost+comm),
+			   COUNT(transid) as NoOfTicket
+		  FROM Bettrans14 WITH(NOLOCK, index = bettrans143)
+		 WHERE 1 = 1
+		   and winlostdate between @FromDate and @ToDate
+		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
-			statusID not in (101, 102, 103) and
-			recommend=@custid 
-			and bettype < 19001
-			AND bettype NOT BETWEEN 81 AND 120
-		group by bettype
+		   and statusID not in (101, 102, 103)
+		   and recommend = @custid
+		   and bettype < 19001
+		   AND bettype NOT BETWEEN 81 AND 120
+      group by bettype
 END
 
-SELECT
-	bettype, 
-	liveindicator,
-	sum(GrossComm) as GrossComm,
-	sum(TurnOver) as TurnOver,
-	sum(MemberWinLost) as MemberWinLost,
-	sum(playercomm) as PlayerComm,
-	sum(MemberTotal) as MemberTotal,
-	sum(AgWinLost) as AgWinLost,
-	sum(AgComm) as AgComm,		
-	sum(AgTotal) as AgTotal,
-	sum(company) as Company
-FROM @AgWinLoss 
-Group by bettype, liveindicator
-ORDER BY bettype, liveindicator
-
+SELECT bettype,
+       liveindicator,
+       SUM(GrossComm) as GrossComm,
+       SUM(TurnOver) as TurnOver,
+       SUM(MemberWinLost) as MemberWinLost,
+       SUM(playercomm) as PlayerComm,
+       SUM(MemberTotal) as MemberTotal,
+       SUM(AgWinLost) as AgWinLost,
+       SUM(AgComm) as AgComm,
+       SUM(AgTotal) as AgTotal,
+       SUM(company) as Company,
+       SUM(NoOfTicket) as NoOfTicket
+  FROM @AgWinLoss
+ Group by bettype, liveindicator
+ ORDER BY bettype, liveindicator
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Ag] TO [bodbDownlineNet]
