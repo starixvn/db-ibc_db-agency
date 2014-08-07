@@ -13,6 +13,9 @@ AS
 	Description:
 	- count total record with input conditions
 	
+	Revisions:
+	- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+
     Param's Explaination:    
 	- @RequestUserId: Authenticated user 
 	- @CustID: a customer which we want to view actions affect to.
@@ -31,20 +34,24 @@ BEGIN
 	SELECT  COUNT(LogID)                           
 	FROM    dbo.UserLog_Login AS ul WITH(NOLOCK)
 			INNER JOIN dbo.LogAction AS la WITH(NOLOCK) ON ul.ActionID = la.ActionID
+			INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = ul.UserID
 	WHERE    LogDate BETWEEN @FromDate AND @ToDate			
 			AND IsInternal <= @IsAdminAccess
 			AND ((	UserID = @UserId AND SubAccID = 0)
 					or (SubAccID = @UserId))
+			AND ci.roleid <=4
 END
 ELSE
 BEGIN
 	SELECT  COUNT(LogID)                           
 	FROM    dbo.UserLog_Login AS ul WITH(NOLOCK)
 			INNER JOIN dbo.LogAction AS la WITH(NOLOCK) ON ul.ActionID = la.ActionID
+			INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = ul.UserID
 	WHERE     LogDate BETWEEN @FromDate AND @ToDate			
 			AND IsInternal <= @IsAdminAccess
 			AND ((	UserID = @UserId AND SubAccID <= 0)
 					OR (SubAccID = @UserId))
+			AND ci.roleid <=4
 END
    
 GO
