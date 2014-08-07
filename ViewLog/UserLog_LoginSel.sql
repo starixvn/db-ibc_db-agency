@@ -24,7 +24,7 @@ AS
 	- 20100710@Kiwi: put in a check to return retrieving data if roleid = 1
 	- 20100711@Thien: add index hint
 	- 20101018@Anders: query columns Browser, Domain, Planform, CountryCode
-	
+	- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
 	
     Param's Explaination:    
 	- @UserId: a customer which we want to view actions affect to.
@@ -96,10 +96,12 @@ BEGIN
 							CountryCode
 				  FROM      dbo.UserLog_Login AS ul WITH(NOLOCK, index=CIX_LogDate_User)
 							INNER JOIN dbo.LogAction AS la WITH(NOLOCK) ON ul.ActionID = la.ActionID
+							INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = ul.UserID
 				  WHERE     LogDate BETWEEN @FromDate AND @ToDate			
 							AND IsInternal <= @IsAdminAccess
 							AND ((	UserID = @UserId AND SubAccID = 0)
 									OR (SubAccID = @UserId))
+							AND ci.roleid <=4
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 END
@@ -138,10 +140,12 @@ BEGIN
 							CountryCode
 				  FROM      dbo.UserLog_Login AS ul WITH(NOLOCK, index=CIX_LogDate_User)
 							INNER JOIN dbo.LogAction AS la WITH(NOLOCK) ON ul.ActionID = la.ActionID
+							INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = ul.UserID
 				  WHERE     LogDate BETWEEN @FromDate AND @ToDate			
 							AND IsInternal <= @IsAdminAccess
 							AND ((	UserID = @UserId AND SubAccID <= 0)
 									OR (SubAccID = @UserId))
+							AND ci.roleid <=4
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 END

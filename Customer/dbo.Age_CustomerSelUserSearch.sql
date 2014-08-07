@@ -21,6 +21,7 @@ Revisions:
 	- 20101112@Terry: Allow search Subaccount for Viewlog login tab and exclude Member.
 	- 20110721@Sophia: Add parameter @isInternalAgent
 	- 20120326@Sophia: replace "where username like '%' + @username + '%'" (index scan) by "where username like @username + '%'" (index seek)
+	- 20140708@Dom: Do not allow Super search Super name from Account Info section [Redmine: #18125]
 Param's Explanation:
 • @custid: User who are logging in.
 • @username: part of downline's username.
@@ -30,8 +31,10 @@ SET NOCOUNT ON
 DECLARE @tmpUsername TABLE(username VARCHAR(30), firstname NVARCHAR(50), lastname NVARCHAR(50), searchcount INT)
 
 DECLARE @roleid TINYINT
+DECLARE @CurrentUsername VARCHAR(30)
 
-SELECT @roleid = roleid
+
+SELECT @roleid = roleid,@CurrentUsername = username
 FROM custinfo WITH (NOLOCK)
 WHERE custid = @custid
 
@@ -203,6 +206,7 @@ FROM
 		FROM  @tmpSearchMax 
 		WHERE username NOT IN (SELECT username FROM @tmpSearchMax WHERE searchcount < 0) 			
 	)a
+WHERE a.username <> @CurrentUsername
 ORDER BY searchcount DESC, username
 
 
@@ -212,3 +216,4 @@ GO
 GRANT EXECUTE ON [dbo].Age_CustomerSelUserSearch TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].Age_CustomerSelUserSearch TO [vnteam]
+

@@ -23,6 +23,9 @@ AS
 	Description:
 	- Get paged log credit
 	
+	Revisions:
+	- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+
     Param's Explaination:    
 	- @RequestUserId: Authenticated user 
 	- @CustID: a customer which we want to view actions affect to.
@@ -82,10 +85,11 @@ FROM    ( SELECT    ROW_NUMBER() OVER (ORDER BY LogDate DESC) AS RowNum,
 					IsInternal,
 					la.ActionTypeID,
                     la.SPName,
-					Username =	CASE 
-										when (ci.RoleId > 4 and @IsInternal=0) THEN 'Admin'
-										ELSE ci.Username
-									END,
+					Username,
+					--Username =	CASE 
+					--					when (ci.RoleId > 4 and @IsInternal=0) THEN 'Admin'
+					--					ELSE ci.Username
+					--				END,
 					@CustName as CustName,                                         
 					'' As ActionName
           FROM      dbo.UserLog_Credit AS uc WITH (NOLOCK)
@@ -94,6 +98,7 @@ FROM    ( SELECT    ROW_NUMBER() OVER (ORDER BY LogDate DESC) AS RowNum,
           WHERE     uc.CustID = @CustID
                     AND LogDate BETWEEN @FromDate AND @ToDate                            
                     AND IsInternal <= @IsInternal
+					AND ci.roleid <=4
         ) AS MyTable
 WHERE   RowNum BETWEEN @lbound AND @ubound
 

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[UserLog_CreditSelTotalRecords]
+﻿ALTER PROCEDURE [dbo].[UserLog_CreditSelTotalRecords]
     @RequestUserId INT = NULL,
     @CustID INT,
     @FromDate DATETIME,
@@ -12,6 +12,9 @@ AS
 	Description:
 	- count total record with input conditions
 	
+	Revisions:
+	- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+
     Param's Explaination:    
 	- @RequestUserId: Authenticated user 
 	- @CustID: a customer which we want to view actions affect to.
@@ -27,9 +30,11 @@ SET NOCOUNT ON;
 SELECT    COUNT(LogID)                           
            FROM     dbo.UserLog_Credit AS uc WITH (NOLOCK)
 					INNER JOIN dbo.LogAction AS la WITH (NOLOCK) ON uc.ActionID = la.ActionID
-          WHERE     CustID = @CustID
+					INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = uc.UserID
+          WHERE     uc.CustID = @CustID
                     AND LogDate BETWEEN @FromDate AND @ToDate                           
                     AND IsInternal <= @IsInternal
+					AND ci.roleid <=4
 
 GO
 GRANT EXECUTE ON [dbo].[UserLog_CreditSelTotalRecords] TO [bodbAdminNet]
