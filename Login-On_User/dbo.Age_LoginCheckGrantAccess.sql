@@ -36,7 +36,7 @@ BEGIN
 				@Role int
 		SELECT @Role = roleid, @SuperCustID = srecommend, @MasterCustID = mrecommend FROM custInfo with (NOLOCK) where custid = @CustID 
 
-		IF @LoginIP not in (select IP FROM DBTXNIP.IPDB.dbo.IPOffice WITH (NOLOCK)) and @PrefixLoginIP <> '10.19.10.' and @LoginIP <> '127.0.0.1' and @LoginIP <> '::1' -- not in IP's Office		
+		IF @LoginIP not in (select IP FROM DBTXNIP.IPDB.dbo.IPOffice WITH (NOLOCK)) and @PrefixLoginIP <> '10.19.10.' and @PrefixLoginIP <> '10.21.10.' and @PrefixLoginIP <>'10.18.200.' and @LoginIP <> '127.0.0.1' and @LoginIP <> '::1' -- not in IP's Office		
 		BEGIN			
 			IF @Role = 4 -- super				
 				IF  not (exists(select 1 from Acc_CustAllowList WITH (NOLOCK) WHERE CustID = @CustID AND isAllowed = 1))
