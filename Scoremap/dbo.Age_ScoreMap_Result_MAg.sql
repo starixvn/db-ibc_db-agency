@@ -18,6 +18,7 @@ AS
 		- 20121011@Johnson: correct forecast winloss for bettype 121,122
 		- 20130311@Elodie: Get matchs which have eventstatus <> 'completed'
 		- 20140417@Dom: Add new bettype 126
+		- 20140616@Dom: Support BetRadar [Redmine: #17148]
 
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -61,14 +62,14 @@ SET NOCOUNT ON;
 						END * risk * trueodds),0)
 					+/*once bt = 1,3,7,8,25 will calculate equation above ,the other way will calculate below*/
 						ISNULL(-SUM(CASE
-							WHEN r=0 AND bt IN (2,4,5,6,12,13,15,24,26,27,28,30,123,126)THEN 1 --Dom
+							WHEN r=0 AND bt IN (2,4,5,6,12,13,15,24,26,27,28,30,123,126,151,145,146)THEN 1 --Dom
 							WHEN r = 0 AND bt IN (20,21,25) AND home <> away THEN 1
 							WHEN r = 0 AND bt = 121 THEN CASE WHEN home > away THEN 0 ELSE 1 END
 							WHEN r = 0 AND bt = 122 THEN CASE WHEN away > home THEN 0 ELSE 1 END														
 							ELSE 0
 						END * risk) 
 						+SUM(CASE
-							WHEN r=1 AND bt IN (2,4,5,6,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126)THEN 1 --Dom
+							WHEN r=1 AND bt IN (2,4,5,6,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,151,145,146)THEN 1 --Dom
 							ELSE 0
 						END * risk * trueodds),0)
 				  total
@@ -96,14 +97,14 @@ SET NOCOUNT ON;
 						WHEN betteam = 'an' AND home > 0 AND bt = 13 THEN 1
 						WHEN home > away AND betteam = 'h' AND bt IN (20, 21) THEN 1
 						WHEN away > home AND betteam = 'a' AND bt IN (20, 21) THEN 1						
-						WHEN betteam = '1x' AND (home >= away) AND bt = 24 THEN 1
-						WHEN betteam = '2x' AND (away >= home) AND bt = 24 THEN 1
-						WHEN betteam = '12' AND (home <> away) AND bt = 24 THEN 1
+						WHEN betteam = '1x' AND (home >= away) AND bt IN (24,151) THEN 1
+						WHEN betteam = '2x' AND (away >= home) AND bt IN (24,151) THEN 1
+						WHEN betteam = '12' AND (home <> away) AND bt IN (24,151) THEN 1
 						WHEN betteam = 'h' AND (home > away) AND bt = 25 THEN 1
 						WHEN betteam = 'a' AND (away > home) AND bt = 25 THEN 1
-						WHEN betteam = 'n' AND home = 0 AND away = 0 AND bt= 26 THEN 1
-						WHEN betteam = 'o' AND (home = 0 or away = 0) AND home + away >=1 AND bt= 26 THEN 1
-						WHEN betteam = 'b' AND home + away >= 2 AND home <> 0 AND away <> 0  AND bt= 26 THEN 1
+						WHEN betteam = 'n' AND home = 0 AND away = 0 AND bt in(26,145,146) THEN 1
+						WHEN betteam = 'o' AND (home = 0 or away = 0) AND home + away >=1 AND bt in(26,145,146) THEN 1
+						WHEN betteam = 'b' AND home + away >= 2 AND home <> 0 AND away <> 0  AND bt in(26,145,146) THEN 1
 						WHEN betteam = 'h' AND away = 0 AND home >= 1 AND bt = 27 THEN 1
 						WHEN betteam = 'a' AND home = 0 AND away >= 1 AND bt = 27 THEN 1
 						WHEN betteam = '1' AND hc + home - away > 0 AND  bt = 28 THEN 1 
@@ -214,7 +215,7 @@ SET NOCOUNT ON;
 							0 hd,
 							24 bt
 						FROM @tmpBettrans b 
-						WHERE bettype = 24
+						WHERE bettype IN (24,151)
 						GROUP BY betteam, matchid
 					UNION ALL
 						SELECT	matchid, betteam, 
@@ -234,7 +235,7 @@ SET NOCOUNT ON;
 								0 hd,
 								26 bt
 						FROM @tmpBettrans b 
-						WHERE bettype = 26
+						WHERE bettype IN (26,145,146)
 						GROUP BY betteam, matchid
 					UNION ALL
 						SELECT	matchid, betteam, 

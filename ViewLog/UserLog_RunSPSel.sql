@@ -18,6 +18,9 @@ AS
 	Description:
 	- Get paged log run sp. If @LowerActionId and @UpperActionId are both not null, get actions in range 
 	
+	Revisions:
+	- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+
     Param's Explaination:    
 	- @RequestUserId: Authenticated user 
 	- @UserId: a customer which we want to view actions affect to.
@@ -30,6 +33,7 @@ AS
 	- @UpperActionId: query actionid in range	
 	- @PageIndex: from 0
 	- @PageSize: total record per request
+	
 */
 -- SET NOCOUNT ON added to prevent extra result sets from
 -- interfering with SELECT statements.
@@ -68,10 +72,11 @@ BEGIN
 			 SELECT    ROW_NUMBER() OVER ( ORDER BY LogDate DESC) AS RowNum,
 						LogID,
 						UserID,
-						Username =	CASE 
-										when (c.RoleId > 4 and @IsInternal=0) THEN 'Admin'
-										ELSE c.Username
-									END,
+						c.Username,
+						--Username =	CASE 
+						--				when (c.RoleId > 4 and @IsInternal=0) THEN 'Admin'
+						--				ELSE c.Username
+						--			END,
 						TrackingValue,
 						LogDate,
 						la.ActionID,
@@ -88,7 +93,7 @@ BEGIN
 						AND LogDate BETWEEN @FromDate AND @ToDate
 						AND  la.ActionTypeID = @ActionTypeId
 						AND IsInternal <= @IsInternal
-
+						AND c.roleid <= 4
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 	ELSE
@@ -109,10 +114,11 @@ BEGIN
 			 SELECT    ROW_NUMBER() OVER ( ORDER BY LogDate DESC) AS RowNum,
 						LogID,
 						UserID,
-						Username =	CASE 
-										when (c.RoleId > 4 and @IsInternal=0) THEN 'Admin'
-										ELSE c.Username
-									END,
+						Username,
+						--Username =	CASE 
+						--				when (c.RoleId > 4 and @IsInternal=0) THEN 'Admin'
+						--				ELSE c.Username
+						--			END,
 						TrackingValue,
 						LogDate,
 						la.ActionID,
@@ -129,6 +135,7 @@ BEGIN
 						AND LogDate BETWEEN @FromDate AND @ToDate				
 						AND IsInternal <= @IsInternal
 						AND la.ActionID NOT BETWEEN @LowerActionId AND @UpperActionId
+						AND c.roleid <= 4
 
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
@@ -151,10 +158,11 @@ BEGIN
 	FROM    ( SELECT    ROW_NUMBER() OVER ( ORDER BY LogDate DESC) AS RowNum,
 						LogID,
 						UserID,
-						Username =	CASE 
-										when (c.RoleId > 4 and @IsInternal=0) THEN 'Admin'
-										ELSE c.Username
-									END,
+						Username,
+						--Username =	CASE 
+						--				when (c.RoleId > 4 and @IsInternal=0) THEN 'Admin'
+						--				ELSE c.Username
+						--			END,
 						TrackingValue,
 						LogDate,
 						la.ActionID,
@@ -171,6 +179,7 @@ BEGIN
 						AND LogDate BETWEEN @FromDate AND @ToDate
 						AND la.actionid BETWEEN @LowerActionId AND @UpperActionId
 						AND IsInternal <= @IsInternal
+						AND c.roleid <= 4
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 END

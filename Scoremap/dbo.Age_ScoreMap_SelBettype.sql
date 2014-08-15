@@ -9,29 +9,33 @@ AS
 	- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
     - 20140417@Dom: Add new bettype 126
 */  
-		SELECT 1 typeid, 1 isLive, 1 isDead, 7 [1stId]    
+		SELECT 1 typeid, 1 isLive, 1 isDead, '7' [1stId]    
 	UNION ALL     
-		SELECT 2 typeid, 1 isLive, 1 isDead, 12 [1stId]    
+		SELECT 2 typeid, 1 isLive, 1 isDead, '12' [1stId]    
 	UNION ALL     
-		SELECT 3 typeid, 1 isLive, 1 isDead, 8 [1stId]    
+		SELECT 3 typeid, 1 isLive, 1 isDead, '8' [1stId]    
 	UNION ALL     
-		SELECT 5 typeid, 1 isLive, 1 isDead, 15 [1stId]    
+		SELECT 5 typeid, 1 isLive, 1 isDead, '15' [1stId]    
 	UNION ALL     
-		SELECT 20 typeid, 1 isLive, 1 isDead, 21 [1stId]    
+		SELECT 20 typeid, 1 isLive, 1 isDead, '21' [1stId]    
+	UNION ALL     
+		SELECT 24 typeid, 1 isLive, 1 isDead, '151' [1stId]
+	UNION ALL     
+		SELECT 26 typeid, 1 isLive, 1 isDead, '145,146' [1stId]
 	UNION ALL   
-		SELECT typeid, 1 isLive, 1 isDead, 0 as [1stId]    
+		SELECT typeid, 1 isLive, 1 isDead, '0' as [1stId]    
 		FROM bettype WITH(NOLOCK)    
-		WHERE typeid IN (13,24,25,27,28,26)    	   
+		WHERE typeid IN (13,25,27,28)
 	UNION ALL    
-		SELECT 4 typeid , 0 isLive, 1 isDead, 30 [1stId]    
+		SELECT 4 typeid , 0 isLive, 1 isDead, '30' [1stId]    
 	UNION ALL     
-		SELECT 6 typeid , 0 isLive, 1 isDead, 126 [1stId]   --Dom add 126
+		SELECT 6 typeid , 0 isLive, 1 isDead, '126' [1stId]   --Dom add 126
 	UNION ALL     
-		SELECT 121 typeid , 1 isLive, 1 isDead, 0 [1stId] 
+		SELECT 121 typeid , 1 isLive, 1 isDead, '0' [1stId] 
 	UNION ALL     
-		SELECT 122 typeid , 1 isLive, 1 isDead, 0 [1stId] 
+		SELECT 122 typeid , 1 isLive, 1 isDead, '0' [1stId] 
 	UNION ALL     
-		SELECT 123 typeid , 1 isLive, 1 isDead, 0 [1stId] 
+		SELECT 123 typeid , 1 isLive, 1 isDead, '0' [1stId] 
   
   
 	

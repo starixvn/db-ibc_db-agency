@@ -38,6 +38,7 @@ Revisions:
 	- 20120705@Sophia: Get sporttype for outright
 	- 20120926@Sophia: Get Comstatus
 	- 20140425@Dom: Group TB and FGLG
+	- 20140611@Dom: Support BetRadar [Redmine: #17148]
 */
 
 SET NOCOUNT ON
@@ -190,7 +191,7 @@ BEGIN
 	where 
 		b.SRecommend=@custid
 		--and b.bettype=@bettype
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype )
+		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR bettype = @bettype )
 		--and b.status in ('waiting','running')
 		and b.statusID in (0,1)
 		

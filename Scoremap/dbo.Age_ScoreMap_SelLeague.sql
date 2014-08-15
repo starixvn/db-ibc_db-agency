@@ -26,7 +26,7 @@ AS
 								WHERE srecommend = @agentid 
 									AND statusid IN (0,1)
 									AND ruben = 0
-									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126)--Dom														
+									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151)--Dom														
 							)
 		GROUP BY m.sporttype, m.leagueid 
 	END
@@ -40,7 +40,7 @@ AS
 								WHERE mrecommend = @agentid 
 									AND statusid IN (0,1)
 									AND ruben = 0
-									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126)--Dom														
+									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151)--Dom														
 							)
 		GROUP BY  m.sporttype ,m.leagueid 
 	END
@@ -54,7 +54,7 @@ AS
 								WHERE recommend = @agentid 
 									AND statusid IN (0,1)
 									AND ruben = 0
-									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126)--Dom														
+									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151)--Dom														
 							)
 		GROUP BY m.sporttype ,m.leagueid
 	END
