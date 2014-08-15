@@ -14,8 +14,7 @@ Original:
 Revisions:
 	- 20120327@Elodie: all downlines are allowed to access if upline is allowed
 	- 20130123@Elodie: Add link server to DBTXNIP
-Param's Explanation:
-	
+Param's Explanation:	
 */
 BEGIN	
 	SET NOCOUNT ON 
