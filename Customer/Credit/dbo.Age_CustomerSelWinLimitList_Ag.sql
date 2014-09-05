@@ -19,7 +19,7 @@ Revisions:
 	- 20121026@Jamie: Set WinLimit = 0 in case Credit = 0 
 	- 20130708@Viet: create new param @_username to resolve parameter sniffing's issue.
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call BalanceCreditGame, BalanceDebitGame by link database)
-					   
+	- 20140905@Lukas: change the order of queries to reduce IO on custinfo 
 Param's Explanation:
 • @CustID: AgentID
 */
@@ -49,26 +49,27 @@ CREATE TABLE #GameBalance
 	balance money	
 )
 
-INSERT INTO #GameBalance  
-SELECT credit.custid, ISNULL(credit.Balance,0) - ISNULL(debit.Balance,0) as Balance
-FROM 
-(
-	SELECT
-		ci.custid,  SUM(b.balance) as Balance		
-	FROM custinfo ci WITH (NOLOCK) 
-		LEFT JOIN bodb02.dbo.BalanceCreditGame b WITH (NOLOCK) ON b.custid=ci.custid	
-	WHERE recommend=@CustID and roleid=1
-	GROUP BY ci.custid
-) credit 
-JOIN 
-(
-	SELECT
-		ci.custid,  SUM(b.balance) as Balance		
-	FROM custinfo ci WITH (NOLOCK) 
-		LEFT JOIN bodb02.dbo.BalanceDebitGame b WITH (NOLOCK) ON b.custid=ci.custid
-	WHERE recommend=@CustID and roleid=1
-	GROUP BY ci.custid
-) Debit ON credit.custid=debit.custid
+--INSERT INTO #GameBalance  
+--SELECT credit.custid, ISNULL(credit.Balance,0) - ISNULL(debit.Balance,0) as Balance
+--FROM 
+--(
+--	SELECT
+--		ci.custid,  SUM(b.balance) as Balance		
+--	FROM custinfo ci WITH (NOLOCK) 
+--		LEFT JOIN bodb02.dbo.BalanceCreditGame b WITH (NOLOCK) ON b.custid=ci.custid	
+--	WHERE recommend=@CustID and roleid=1
+--	GROUP BY ci.custid
+--) credit 
+--JOIN 
+--(
+--	SELECT
+--		ci.custid,  SUM(b.balance) as Balance		
+--	FROM custinfo ci WITH (NOLOCK) 
+--		LEFT JOIN bodb02.dbo.BalanceDebitGame b WITH (NOLOCK) ON b.custid=ci.custid
+--	WHERE recommend=@CustID and roleid=1
+--	GROUP BY ci.custid
+--) Debit ON credit.custid=debit.custid
+
 
 --Filter user
 IF @_Username = ''
@@ -90,6 +91,28 @@ ELSE
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
 		AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
 		AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end			
+
+
+INSERT INTO #GameBalance  
+SELECT credit.custid, ISNULL(credit.Balance,0) - ISNULL(debit.Balance,0) as Balance
+FROM 
+(
+	SELECT
+		ci.custid,  SUM(b.balance) as Balance		
+	FROM #tmp_customer ci WITH (NOLOCK) 
+		LEFT JOIN bodb02.dbo.BalanceCreditGame b WITH (NOLOCK) ON b.custid=ci.custid		
+	GROUP BY ci.custid
+) credit 
+JOIN 
+(
+	SELECT
+		ci.custid,  SUM(b.balance) as Balance		
+	FROM #tmp_customer ci WITH (NOLOCK) 
+		LEFT JOIN bodb02.dbo.BalanceDebitGame b WITH (NOLOCK) ON b.custid=ci.custid	
+	GROUP BY ci.custid
+) Debit ON credit.custid=debit.custid
+
+
 
 SELECT * FROM 
 (
