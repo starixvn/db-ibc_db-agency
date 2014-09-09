@@ -75,6 +75,7 @@ Revisions:
 	- 20131003@Lukas: sort tickets by transid
 	- 20140306@Patrick:	Add more Keno product
 	- 20140310@Patrick:	Exclude keno from Sportbook
+	- 20140907@Dom:	[Redmine #22012] remove duplicate VS transaction id in bet list feature
 */
 
 
@@ -786,6 +787,7 @@ BEGIN
 		b.recommend=@Recommend  
 		AND b.transdate>=@FromDate and b.transdate<=@ToDate
 		AND b.bettype BETWEEN 1201 AND 1299
+		AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	
 	INSERT INTO @BetListSelAllByDateMem
 	--Virtual HR
