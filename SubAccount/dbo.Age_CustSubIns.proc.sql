@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustSubIns]
+
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Age_CustSubIns    Script Date: 8/19/2014 12:42:20 PM ******/
+CREATE PROCEDURE [dbo].[Age_CustSubIns]
 	@subaccid int OUTPUT,
 	@custid int, -- agentid or masterid or superid
 	@username varchar(30),
@@ -17,7 +24,7 @@ AS
 /*
 Created: 20080508
 Task : Create new sub-account for agent
-DB: DBTXN/BODB02
+DB: DBTXN/CustDB
 Original: Age_CustSubIns
 
 Revisions:    
@@ -31,7 +38,8 @@ Revisions:
 	- 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
 	- 20130218@Dan: Write more log on DBTXN server in case of DBLOG server failure
 	- 20130328@Jamie: Add CustLoginInfoSub 
-	- 20130424@Jamie: Set isForcedChangeSecurityCode = 1 WHEN Upline's SecurityCode NOT NULL 
+	- 20130424@Jamie: Set isForcedChangeSecurityCode = 1 WHEN Upline's SecurityCode NOT NULL
+	- 20140709@Logan: Force using Security Code for SMA from all sites (except 789y) [Redmine:#18121]
 
 Param's Explanation:
 • @ErrCode:
@@ -109,70 +117,80 @@ END
 
 --Insert data to db
 Insert into custsub
-			(
-			custid,
-			username,
-			userpwd,
-			firstname,
-			lastname,
-			PageAccess,
-			createdate			
-			)
-			VALUES
-			(
-			@custid,
-			@username,			
-			@userpwd,
-			@firstname,
-			@lastname,
-			@PageAccess,
-			getdate()
-			)
+(
+    custid,
+	username,
+	userpwd,
+	firstname,
+	lastname,
+	PageAccess,
+	createdate			
+)
+VALUES
+(
+    @custid,
+	@username,			
+	@userpwd,
+	@firstname,
+	@lastname,
+	@PageAccess,
+	getdate()
+)
 			
 Select @subaccid = @@IDENTITY
 
 if @@error <> 0
 BEGIN
-	select @ErrMsg = case @Language 
-			when 'E' then 'Create sub-account failed. Please try again.'
-			ELSE [dbo].[f_Get_MsgNamebyMsgID](40009,@Language)
-		end	,@ErrCode=104		
-	return	
+	SELECT @ErrMsg = CASE @Language 
+			           WHEN 'E' then 'Create sub-account failed. Please try again.'
+			           ELSE [dbo].[f_Get_MsgNamebyMsgID](40009,@Language)
+		             END
+		 , @ErrCode = 104
+	RETURN	
 END
 
 
-DECLARE	@UplineSecurityCode				VARCHAR(50)
-		,@isForcedChangeSecurityCode	BIT
+DECLARE	@UplineSecurityCode			VARCHAR(50)
+	  , @isForcedChangeSecurityCode	BIT
 
-SELECT	 @UplineSecurityCode			= NULL
-		,@isForcedChangeSecurityCode	= 0
+SELECT @UplineSecurityCode		   = NULL,
+       @isForcedChangeSecurityCode = 0
 
-SELECT	@UplineSecurityCode = SecurityCode
-FROM	dbo.CustLoginInfo WITH (NOLOCK)
-WHERE	CustID = @CustID
+SELECT @UplineSecurityCode = SecurityCode
+     , @isForcedChangeSecurityCode = isForcedChangeSecurityCode
+  FROM dbo.CustLoginInfo WITH(NOLOCK)
+ WHERE CustID = @CustID
 
-IF	@UplineSecurityCode IS NOT NULL 
-	SELECT	@isForcedChangeSecurityCode = 1 
+IF @UplineSecurityCode IS NOT NULL OR @isForcedChangeSecurityCode = 1
+	SELECT @isForcedChangeSecurityCode = 1
 
-INSERT INTO dbo.CustLoginInfoSub(SubAccID,CustID,OldUserPwd,PwdExpiry,LastChangedPwdDate,isFirstLogin
-	,SecurityCodeCount,SecurityCode,isForcedChangeSecurityCode,LastChangedSecurityCodeDate
+INSERT INTO dbo.CustLoginInfoSub
+(
+    SubAccID, CustID, OldUserPwd, PwdExpiry, LastChangedPwdDate, isFirstLogin,
+    SecurityCodeCount, SecurityCode, isForcedChangeSecurityCode, LastChangedSecurityCodeDate
 )
-VALUES(@subaccid,@CustID,NULL,@PwdExpiry,GETDATE(),1
-	,0,NULL,@isForcedChangeSecurityCode,NULL
+VALUES
+(   
+    @subaccid, @CustID, NULL, @PwdExpiry, GETDATE(), 1,
+    0, NULL, @isForcedChangeSecurityCode, NULL
 )
 	
 if @@ERROR <> 0
 BEGIN
-	DELETE FROM custsub WITH (ROWLOCK) WHERE subaccid = @subaccid
-	select @ErrMsg = case @Language 
-					when 'E' then 'Create sub-account failed. Please try again.'
-			ELSE [dbo].[f_Get_MsgNamebyMsgID](40009,@Language)
-		end	,@ErrCode=105		
-	return	
+	DELETE FROM custsub WITH(ROWLOCK)
+	      WHERE subaccid = @subaccid
+
+	SELECT @ErrMsg = CASE @Language 
+					   WHEN 'E' THEN 'Create sub-account failed. Please try again.'
+			           ELSE [dbo].[f_Get_MsgNamebyMsgID](40009, @Language)
+		             END
+		 , @ErrCode = 105
+
+	RETURN
 END
 
-Select @Success = 1
-Declare @LogSPData varchar(5000)
+SELECT @Success = 1
+DECLARE @LogSPData varchar(5000)
 ---------------------------
 -- ***Check Sub-Account***
 -- For Edit Sub-Account
@@ -225,9 +243,19 @@ BEGIN CATCH
 		@duration = @duration
 END CATCH
 	
+
 GO
-GRANT  EXECUTE  ON [dbo].[Age_CustSubIns]  TO [bodbDownlineNet]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT  EXECUTE  ON [dbo].[Age_CustSubIns]  TO [bodbDownlineNetView]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustSubIns] TO [vnteam]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Age_CustSubIns] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_CustSubIns] TO [bodbDownlineNetView]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_CustSubIns] TO [bodbDownlineNet]
+GO 

@@ -1,10 +1,6 @@
 # Microsoft Developer Studio Project File - Database Project
 Begin DataProject = "Agent"
    MSDTVersion = "80"
-   SccProjectName = "SAK"
-   SccLocalPath = "SAK"
-   SccAuxPath = "SAK"
-   SccProvider = "SAK"
    Begin Folder = "AccountSetting"
       Script = "dbo.Age_CustomerSelBalance_Ag.StoredProcedure.sql"
       Script = "dbo.Age_CustomerSelBalance_MAg.StoredProcedure.sql"

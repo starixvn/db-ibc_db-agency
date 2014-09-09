@@ -5,7 +5,7 @@
 	@LoginIP varchar(20),
 	@SessionID int,
 	@ServerID int,
-	@RoleID int OUTPUT,
+	@RoleID int = 0 OUTPUT,
 	@CustID int OUTPUT,
 	@On_UserID int OUTPUT,
 	@Currency varchar(10) = '' OUTPUT,
@@ -14,15 +14,28 @@
 	@SubAccID int = 0, --Sub-AccountID,
 	@site varchar(20) = '' OUTPUT
 AS
-
--- 20111031@Viet: allow sub-account to access the service also.
--- 20121203@Thien: hard-code to exclude agent MSE06 from using this API.
--- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
--- 20131108@Elodie: Splitting bodb02 into CustDB (call WriteLog_UserLog SP by link database)
+/*
+	Created: 
+	
+	DB: DBTXN/CustDB
+	
+	Revisions:
+		- 20111031@Viet: allow sub-account to access the service also.
+		- 20121203@Thien: hard-code to exclude agent MSE06 from using this API.
+		- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
+		- 20131108@Elodie: Splitting bodb02 into CustDB (call WriteLog_UserLog SP by link database)
+		- 20140826@Johnson: write log into userlog_login
+*/
+BEGIN
+	SET NOCOUNT ON
+DECLARE @Begin		DATETIME
+DECLARE @End		DATETIME
+DECLARE @Duration	INT
+SET @Begin = GETDATE() 
 
 IF @UserPwd2 = '' SET @UserPwd2 = @UserPwd
 
-declare @LogData nvarchar(200),
+declare @LogData nvarchar(300),
 	@ErrMsg nvarchar(200)
 --	,@logincount int,@locked int,
 --	@RoleID_SAg int
@@ -40,7 +53,8 @@ declare @LogData nvarchar(200),
 
 -- 20121203@Thien: hard-code to exclude agent MSE06 from using this API.
 -- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
-IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN ('SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04','MSE14Sub00'))
+-- 20140502@Viet: Add SAI0000Sub04, requested by Martin JR.
+IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN ('SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04','MSE14Sub00', 'MSE18Sub02', 'SAI0000Sub04'))
  BEGIN
 	select @ErrMsg = N'Login Failed.'
 	raiserror (@ErrMsg, 16, 1)
@@ -91,9 +105,34 @@ end
 -- user not found
 IF @rowcount=1
 BEGIN
-	SELECT @LogData = 'Agent:' + @UserName + ' IP:' + @LoginIP + ' Result:Failed(User_Not_Found) ServerID:' + 
-CAST(@ServerID as nvarchar(20))
-	EXEC bodb02.dbo.WriteLog_UserLog @UserID = 0, @Doing = @LogData
+	SELECT @LogData = 'Agent:' + @UserName +' - ' + 'Login Result:Failed(User_Not_Found)' 
+	
+	SET @End = GETDATE() 
+	SET @Duration = DATEDIFF(millisecond,@Begin,@End)
+	BEGIN TRY
+		EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Login
+			@UserID = 0, 
+			@RoleID = @RoleID, 
+			@SubAccID = @SubAccID,
+			@ServerID = @ServerID,
+			@LoginIP = @LoginIP,
+			@ActionID = 1322,
+			@Doing = @LogData,
+			@Duration = @Duration
+	END TRY
+	BEGIN CATCH		
+		SELECT @LogData = @LogData + ' ErrMsg=' + left(error_message(), 400)
+		
+		EXEC bodb_customerlog.dbo.WriteLog_UserLog_Login
+			@UserID = 0, 
+			@RoleID = @RoleID, 
+			@SubAccID = @SubAccID,
+			@ServerID = @ServerID,
+			@LoginIP = @LoginIP,
+			@ActionID = 1322,
+			@Doing = @LogData,
+			@Duration = @Duration
+	END CATCH	
 
 	select @ErrMsg = N'Wrong username or password.'
 	raiserror (@ErrMsg, 16, 1)
@@ -105,10 +144,35 @@ SELECT @role = CASE @db_roleid WHEN 1 THEN 'Customer:' WHEN 2 THEN 'Agent:' WHEN
 -- check condition
 IF @db_roleid not in (2,3,4)
 	BEGIN
-		SELECT @LogData = @role + @UserName + ' IP:' + @LoginIP + ' Result:Failed(Not_Agent) ServerID:' + 
-CAST(@ServerID as nvarchar(20))
-		EXEC bodb02.dbo.WriteLog_UserLog @UserID = 0, @Doing = @LogData
-	
+		SELECT @LogData = @role + @UserName + ' - ' + 'Login Result:Failed(Not_Agent)'		
+		
+		SET @End = GETDATE() 
+		SET @Duration = DATEDIFF(millisecond,@Begin,@End)
+		BEGIN TRY
+			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Login
+				@UserID = @db_custid, 
+				@RoleID = @db_roleid, 
+				@SubAccID = @SubAccID,
+				@ServerID = @ServerID,
+				@LoginIP = @LoginIP,
+				@ActionID = 1322,
+				@Doing = @LogData,
+				@Duration = @Duration
+		END TRY
+		BEGIN CATCH		
+			SELECT @LogData = @LogData + ' ErrMsg=' + left(error_message(), 400)
+			
+			EXEC bodb_customerlog.dbo.WriteLog_UserLog_Login
+				@UserID = @db_custid, 
+				@RoleID = @db_roleid, 
+				@SubAccID = @SubAccID,
+				@ServerID = @ServerID,
+				@LoginIP = @LoginIP,
+				@ActionID = 1322,
+				@Doing = @LogData,
+				@Duration = @Duration
+		END CATCH	
+		
 		select @ErrMsg = N'Login Failed.'
 		raiserror (@ErrMsg, 16, 1)
 		return
@@ -116,10 +180,35 @@ CAST(@ServerID as nvarchar(20))
 
 IF IsNull(@closed, 1) = 1
 	BEGIN
-		SELECT @LogData = @role + @UserName + ' IP:' + @LoginIP + ' Result:Failed(A/C_Closed) ServerID:' + 
-			CAST(@ServerID as nvarchar(20))
-		EXEC bodb02.dbo.WriteLog_UserLog @UserID = @db_custid, @Doing = @LogData
-	
+		SELECT @LogData = @role + @UserName + ' - ' + 'Login Result:Failed(A/C_Closed)'
+		
+		SET @End = GETDATE() 
+		SET @Duration = DATEDIFF(millisecond,@Begin,@End)
+		BEGIN TRY
+			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Login
+				@UserID = @db_custid, 
+				@RoleID = @db_roleid, 
+				@SubAccID = @SubAccID,
+				@ServerID = @ServerID,
+				@LoginIP = @LoginIP,
+				@ActionID = 1322,
+				@Doing = @LogData,
+				@Duration = @Duration
+		END TRY
+		BEGIN CATCH		
+			SELECT @LogData = @LogData + ' ErrMsg=' + left(error_message(), 400)
+			
+			EXEC bodb_customerlog.dbo.WriteLog_UserLog_Login
+				@UserID = @db_custid, 
+				@RoleID = @db_roleid, 
+				@SubAccID = @SubAccID,
+				@ServerID = @ServerID,
+				@LoginIP = @LoginIP,
+				@ActionID = 1322,
+				@Doing = @LogData,
+				@Duration = @Duration
+		END CATCH	
+		
 		select @ErrMsg = case @Language when 'E' then N'Account closed. Please contact your administrator!' 
 				else N'此戶口已關閉. 請聯絡管理部' end
 		raiserror (@ErrMsg, 16, 1)
@@ -127,10 +216,36 @@ IF IsNull(@closed, 1) = 1
 	END
 ELSE IF @db_userpwd <> @UserPWD
 	BEGIN			
-		SELECT @LogData = @role + @UserName + ' IP:' + @LoginIP + ' Result:Failed(Password) ServerID:' + CAST(@ServerID as nvarchar(20))
+		SELECT @LogData = @role + @UserName + ' - ' + 'Login Result:Failed(Password)'
 			,@failedcount = @failedcount + 1
-		EXEC bodb02.dbo.WriteLog_UserLog @UserID = @db_custid, @Doing = @LogData
-
+		
+		SET @End = GETDATE() 
+		SET @Duration = DATEDIFF(millisecond,@Begin,@End)
+		BEGIN TRY
+			EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Login
+				@UserID = @db_custid, 
+				@RoleID = @db_roleid, 
+				@SubAccID = @SubAccID,
+				@ServerID = @ServerID,
+				@LoginIP = @LoginIP,
+				@ActionID = 1322,
+				@Doing = @LogData,
+				@Duration = @Duration
+		END TRY
+		BEGIN CATCH		
+			SELECT @LogData = @LogData + ' ErrMsg=' + left(error_message(), 400)
+			
+			EXEC bodb_customerlog.dbo.WriteLog_UserLog_Login
+				@UserID = @db_custid, 
+				@RoleID = @db_roleid, 
+				@SubAccID = @SubAccID,
+				@ServerID = @ServerID,
+				@LoginIP = @LoginIP,
+				@ActionID = 1322,
+				@Doing = @LogData,
+				@Duration = @Duration
+		END CATCH		
+		
 		IF @isSubAcc = 0
 		BEGIN
 			IF @failedcount > 5 and @isSubAcc = 0
@@ -173,13 +288,42 @@ else
 begin
 	UPDATE custSub with (rowlock, updlock) SET logincount = 0 WHERE subaccid = @subaccid 
 end
-SELECT @LogData = @role + @UserName + ' IP:' + @LoginIP + ' Result:Success ServerID:' + CAST(@ServerID as nvarchar(20))
+
+SELECT @LogData = @role + @UserName + ' - ' + 'Login Result:Success'
 ---------------------------
 -- ***Check Sub-Account***
 if @SubAccID > 0
 	SET @LogData = 'SubAccountID:' +  convert(varchar(20), @SubAccID) + ' - ' + @LogData
 ---------------------------
-EXEC bodb02.dbo.WriteLog_UserLog @UserID = @db_custid, @Doing = @LogData
+SET @End = GETDATE() 
+SET @Duration = DATEDIFF(millisecond,@Begin,@End)
+BEGIN TRY
+	EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Login
+		@UserID = @db_custid, 
+		@RoleID = @db_roleid, 
+		@SubAccID = @SubAccID,
+		@ServerID = @ServerID,
+		@LoginIP = @LoginIP,
+		@ActionID = 1322,
+		@Doing = @LogData,
+		@Duration = @Duration
+END TRY
+BEGIN CATCH		
+	SELECT @LogData = @LogData + ' ErrMsg=' + left(error_message(), 400)
+	
+	EXEC bodb_customerlog.dbo.WriteLog_UserLog_Login
+		@UserID = @db_custid, 
+		@RoleID = @db_roleid, 
+		@SubAccID = @SubAccID,
+		@ServerID = @ServerID,
+		@LoginIP = @LoginIP,
+		@ActionID = 1322,
+		@Doing = @LogData,
+		@Duration = @Duration
+END CATCH		
+
+
+END
 
 GO
 GRANT EXECUTE ON [dbo].[Age_LoginDownline_API] TO [bodbDownlineNet] AS [dbo]
