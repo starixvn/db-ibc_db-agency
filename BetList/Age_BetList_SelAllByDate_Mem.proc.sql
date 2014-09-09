@@ -848,7 +848,7 @@ BEGIN
 		b.CustID = @CustID and
 		b.recommend=@Recommend  
 		AND b.transdate>=@FromDate and b.transdate<=@ToDate		
-		AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+		AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 END
 
 --Keno
