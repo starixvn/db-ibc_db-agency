@@ -21,67 +21,73 @@ Revisions:
 	- 20120817@Sophia: get DisableVirtualSports, HideVirtualSports
 	- 20120926@Sophia: Get DoubleCommLosing
 	- 20140303@Kathy: Get HideKeno [Redmine:#12691]
+	- 20140822@Logan:   Get Esports status [Redmine: #21007]
 
 */
+BEGIN
+    SET NOCOUNT ON
 
-SET NOCOUNT ON
+    DECLARE @RoleID TINYINT
+          , @TransferOption VARCHAR(8)
+          , @DisableAutoMPT BIT
 
-DECLARE @RoleID TINYINT, @TransferOption varchar(8), @DisableAutoMPT BIT
+    SELECT @RoleID = RoleID
+      FROM custinfo WITH(NOLOCK)
+     WHERE custid = @CustId
 
-SELECT @RoleID = RoleID FROM custinfo WITH (NOLOCK) WHERE custid = @CustId
+    IF (@RoleID = 4)
+    BEGIN 
+	    SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption, 0))
+	      FROM CustSuper WITH(NOLOCK) 
+	     WHERE custid = @CustId
+    END
+    ELSE IF (@RoleID = 3)
+    BEGIN 
+	    SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption, 0)),
+		       @DisableAutoMPT = DisableAutoMPT
+	      FROM CustMaster WITH(NOLOCK) 
+	     WHERE custid = @CustId
+    END
+    ELSE IF (@RoleID = 2)
+    BEGIN 
+	    SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption, 0))
+	      FROM CustAgent WITH(NOLOCK) 
+	     WHERE custid = @CustId
+    END
 
-IF (@RoleID = 4)
-BEGIN 
-	SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption,0))
-	FROM CustSuper  WITH (NOLOCK) 
-	WHERE custid = @CustId
+    SELECT c.username
+         , firstname
+         , lastname
+         , iplogin
+         , closed
+         , reject suspended
+         , c.roleid roleid
+         , ISNULL(@TransferOption, 0) transferoption
+         , ISNULL(@DisableAutoMPT, 0) DisableAutoMPT
+         , ci.DisableHorseRacing Disable151_31
+         , ci.DisableOpenTote Disable151_41
+         , ci.Disable151_AU Disable151_51
+         , ci.Disable152_UK Disable152_41
+         , ci.Disable152_AU Disable152_51
+         , ci.Disable153_AU Disable153_51
+         , ci.DisableFinancial
+         , ci.DisableOutright
+         , ci.disablecasino
+         , ci.DisableBingo
+         , ci.DisableNumber
+         , ci.DisableVirtualSports
+         , ci.synccasino
+         , ci.syncBingo
+         , ci.HideVirtualSports
+         , ci.currency
+         , ci.credit
+         , ci.DoubleCommLosing
+         , ci.HideKeno
+         , ci.DisableEsports
+      FROM Customer c WITH(NOLOCK)
+INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
+     WHERE c.CustID = @CustID
 END
-ELSE IF (@RoleID = 3)
-BEGIN 
-	SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption,0)),
-		   @DisableAutoMPT = DisableAutoMPT
-	FROM CustMaster  WITH (NOLOCK) 
-	WHERE custid = @CustId
-END
-ELSE IF (@RoleID = 2)
-BEGIN 
-	SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption,0))
-	FROM CustAgent  WITH (NOLOCK) 
-	WHERE custid = @CustId
-END
-
-SELECT c.username, 
-		firstname, 
-		lastname, 
- 		iplogin, 
-		closed, 
-		reject as suspended, 
-		c.roleid as roleid, 
-		ISNULL(@TransferOption,0) as transferoption,
-		ISNULL(@DisableAutoMPT,0) as DisableAutoMPT,
-		ci.DisableHorseRacing as Disable151_31, 
-		ci.DisableOpenTote as Disable151_41,
-		ci.Disable151_AU as Disable151_51,
-		ci.Disable152_UK as Disable152_41,
-		ci.Disable152_AU as Disable152_51,
-		ci.Disable153_AU as Disable153_51,
-		ci.DisableFinancial,
-		ci.DisableOutright,
-		ci.disablecasino,
-		ci.DisableBingo,
-		ci.DisableNumber,
-		ci.DisableVirtualSports,
-		ci.synccasino,
-		ci.syncBingo,
-		ci.HideVirtualSports,
-		ci.currency,
-		ci.credit,
-		ci.DoubleCommLosing,
-		ci.HideKeno
-FROM Customer c with(nolock) 
-INNER JOIN Custinfo ci with(nolock) ON c.CustID = ci.CustID
-WHERE c.CustID = @CustID
-
 GO
 GRANT EXECUTE ON [dbo].[Agw_CustomerSelInfo] TO [bodbDownlineNet]
 GO
