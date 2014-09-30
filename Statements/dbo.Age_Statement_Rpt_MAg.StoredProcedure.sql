@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE dbo.[Age_Statement_Rpt_MAg]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Statement_Rpt_MAg]    Script Date: 09/30/2014 13:58:40 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Age_Statement_Rpt_MAg]
 @custid int,
 @fromdate 	DATETIME,
 @todate 	DATETIME,
@@ -20,6 +27,7 @@ Revisions:
 	- 20101224@Johnson: Apply new arrange of bettype
 	- 20130121@Dan: change linked server DB06 to DBRPT
 	- 20130715@Johnson: fix report in case of @fromdate > BUDate (should get from @fromdate not BUDate)	
+	- 20140930@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
 Param's Explanation:
 
 */
@@ -27,8 +35,10 @@ Param's Explanation:
 SET NOCOUNT ON
 
 DECLARE @RowStart int, @RowEnd int  
-SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
-
+SELECT	@PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
+		,@TotalRows =0
+		,@SumOfTotalAmt = 0
+		
 DECLARE @StatementTable TABLE(
 	matchdate datetime,
 	transtype nvarchar(100),
@@ -113,6 +123,12 @@ BEGIN
 		AND accdate <= @f_date
 	ORDER BY accdate DESC
 	
+	--if cannot find any old BU row, get BUDate from last BUDate before @fromdate
+	if (@PreBalanceUpDay is NULL) 
+		select @PreBalanceUpDay = accdate
+		from DBRPT.bodb_Report.dbo.Statement with (NOLOCK)
+		where custid = @custid AND accdate BETWEEN DATEADD(dd, -7, @FromDate) and @FromDate AND DATEPART(WEEKDAY, accdate) = 7	
+	
 	SELECT @f_Date = ISNULL(@PreBalanceUpDay,@f_Date)	
 	
 	insert into @StatementTable
@@ -156,7 +172,7 @@ END
 IF @TotalRows = 0  
 BEGIN
 	SELECT @TotalRows = count(matchdate) FROM @StatementTable
-	where (matchdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
+	--where (matchdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE')
 END
 
 Declare @Temp money
@@ -190,11 +206,11 @@ FROM
 WHERE A.RowNum between @RowStart and @RowEnd
 
 
-GO
-GRANT  EXECUTE  ON [dbo].Age_Statement_Rpt_MAg  TO [bodbDownlineNet]
-GO
-GRANT  EXECUTE  ON [dbo].Age_Statement_Rpt_MAg  TO [bodbDownlineNetView]
-GO
 
 
-
+GO
+GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_MAg] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_MAg] TO [bodbDownlineNetView] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_Statement_Rpt_MAg] TO [vnteam] AS [dbo]
