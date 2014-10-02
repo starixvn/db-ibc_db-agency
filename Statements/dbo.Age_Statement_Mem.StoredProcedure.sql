@@ -1,4 +1,15 @@
-﻿ALTER PROCEDURE [Age_Statement_Mem]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Statement_Mem]    Script Date: 10/02/2014 09:17:15 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_Statement_Mem    Script Date: 3/18/2014 3:18:56 AM ******/
+/****** Object:  Stored Procedure dbo.Age_Statement_Mem    Script Date: 3/7/2014 3:34:56 PM ******/
+
+
+ALTER PROCEDURE [dbo].[Age_Statement_Mem]
 	@CustID 		INT,
 	@FromDate		DATETIME,
 	@ToDate			DATETIME,
@@ -29,6 +40,7 @@ Revisions:
 	- 20130715@Johnson: fix report in case of @fromdate > BUDate (should get from @fromdate not BUDate)	
 	- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
 	- 20140305@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
+	- 20140930@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
 
 Param's Explanation:	
 • @ErrCode:
@@ -206,7 +218,16 @@ BEGIN
 	WHERE	custid = @custid AND transdesc = 'OPENING BALANCE' AND accdate <= @f_date
 	ORDER BY accdate DESC
 	
+	--if cannot find any old BU row, get BUDate from last BUDate before @fromdate
+	if (@PreBalanceUpDay is NULL) 
+	BEGIN
+		SET @PreBalanceUpDay = @f_date
+		WHILE(DATEPART(WEEKDAY, @PreBalanceUpDay) <> 7) SET @PreBalanceUpDay = DATEADD(dd, -1, @PreBalanceUpDay)  
+	END	
+	
 	SELECT @f_Date = ISNULL(@PreBalanceUpDay,@f_Date)
+
+	
 
 	INSERT INTO @Data 
 	SELECT	1, AccDate, 'BET', 'Betting Statement', 0,
@@ -253,10 +274,10 @@ FROM	@Data
 WHERE winlostdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE'
 ORDER BY winlostdate, OrderKey
 
+
 GO
-GRANT EXECUTE ON [dbo].[Age_Statement_Mem] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_Statement_Mem] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Statement_Mem] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_Statement_Mem] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Statement_Mem] TO [VNTeam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Age_Statement_Mem] TO [vnteam] AS [dbo]
