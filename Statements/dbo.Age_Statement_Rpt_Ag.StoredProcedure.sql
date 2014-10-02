@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_Statement_Rpt_Ag]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Statement_Rpt_Ag]    Script Date: 10/02/2014 09:19:07 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Age_Statement_Rpt_Ag]
 @custid int=null,
 @fromdate 	DATETIME,
 @todate 	DATETIME,
@@ -21,6 +28,7 @@ Revisions:
 	- 20101224@Johnson: Apply new arrange of bettype
 	- 20130121@Dan: change linked server DB06 to DBRPT
 	- 20130715@Johnson: fix report in case of @fromdate > BUDate (should get from @fromdate not BUDate)	
+	- 20140930@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
 Param's Explanation:
 
 */
@@ -30,8 +38,10 @@ AS
 SET NOCOUNT ON
 
 DECLARE @RowStart int, @RowEnd int  
-SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
-
+SELECT	@PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
+		,@TotalRows =0
+		,@SumOfTotalAmt = 0
+		
 DECLARE @StatementTable TABLE(
 	matchdate datetime,
 	transtype nvarchar(100),
@@ -122,6 +132,13 @@ BEGIN
 		AND transdesc = 'OPENING BALANCE' 
 		AND accdate <= @f_date
 	ORDER BY accdate DESC
+
+	--if cannot find any old BU row, get BUDate from last BUDate before @fromdate
+	if (@PreBalanceUpDay is NULL) 
+	BEGIN
+		SET @PreBalanceUpDay = @f_date
+		WHILE(DATEPART(WEEKDAY, @PreBalanceUpDay) <> 7) SET @PreBalanceUpDay = DATEADD(dd, -1, @PreBalanceUpDay)  
+	END	
 	
 	SELECT @f_Date = ISNULL(@PreBalanceUpDay,@f_Date)	
 	
@@ -199,12 +216,12 @@ WHERE A.RowNum between @RowStart and @RowEnd
 
 
 
+
+
+
 GO
-GRANT  EXECUTE  ON [dbo].Age_Statement_Rpt_Ag  TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_Ag] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT  EXECUTE  ON [dbo].Age_Statement_Rpt_Ag  TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_Ag] TO [bodbDownlineNetView] AS [dbo]
 GO
-
-
-
-
+GRANT VIEW DEFINITION ON [dbo].[Age_Statement_Rpt_Ag] TO [vnteam] AS [dbo]

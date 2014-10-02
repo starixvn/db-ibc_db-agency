@@ -3,17 +3,18 @@ ALTER PROCEDURE dbo.Age_Rpt_GetTimeRange (
 	,@SiteName	VARCHAR(100) = ''
 )
 AS
-/**
-Author:20140926@Bobby.Nguyen
+/*
+Created: 20140926@Bobby.Nguyen
 Task: Feature #22421 - Additional disclaimer into report to indicate the available time range having data
-DB:	DBAGE\bodb_Age 
-Original:[Age_Rpt_GetTimeRange]
+DB:	DBAGE.bodb_Age 
+Original:
+
 Revisions:           
 
 Param's Explanation: 
 	- @RptTypeId: 0: All time ranges - X: specific one
 
-**/
+*/
 BEGIN
 	SET NOCOUNT ON;
 
