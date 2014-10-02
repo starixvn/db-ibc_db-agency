@@ -1,6 +1,6 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_Statement_Mem]    Script Date: 09/29/2014 07:02:26 ******/
+/****** Object:  StoredProcedure [dbo].[Age_Statement_Mem]    Script Date: 10/02/2014 09:17:15 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -220,9 +220,10 @@ BEGIN
 	
 	--if cannot find any old BU row, get BUDate from last BUDate before @fromdate
 	if (@PreBalanceUpDay is NULL) 
-		select @PreBalanceUpDay = accdate
-		from DBRPT.bodb_Report.dbo.Statement with (NOLOCK)
-		where custid = @custid AND accdate BETWEEN DATEADD(dd, -7, @FromDate) and @FromDate AND DATEPART(WEEKDAY, accdate) = 7
+	BEGIN
+		SET @PreBalanceUpDay = @f_date
+		WHILE(DATEPART(WEEKDAY, @PreBalanceUpDay) <> 7) SET @PreBalanceUpDay = DATEADD(dd, -1, @PreBalanceUpDay)  
+	END	
 	
 	SELECT @f_Date = ISNULL(@PreBalanceUpDay,@f_Date)
 
@@ -272,6 +273,7 @@ SELECT	winlostdate,
 FROM	@Data  
 WHERE winlostdate >= @fromdate OR transdesc = 'ACCUMULATED BALANCE'
 ORDER BY winlostdate, OrderKey
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Statement_Mem] TO [bodbDownlineNet] AS [dbo]
