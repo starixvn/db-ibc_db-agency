@@ -4,10 +4,11 @@ ALTER PROCEDURE dbo.Age_Rpt_GetTimeRange (
 )
 AS
 /**
-Author:20140926@Bobby
-Database:bodb_Age.dbo.Age_Rpt_GetTimeRange
-
-Revisions:
+Author:20140926@Bobby.Nguyen
+Task: Feature #22421 - Additional disclaimer into report to indicate the available time range having data
+DB:	DBAGE\bodb_Age 
+Original:[Age_Rpt_GetTimeRange]
+Revisions:           
 
 Param's Explanation: 
 	- @RptTypeId: 0: All time ranges - X: specific one
