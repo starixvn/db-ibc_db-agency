@@ -48,6 +48,7 @@ Revisions:
 	- 20121108@Johnson: Add new range bettype for tennis: 1301 -> 1334
 	- 20130121@Dan: add linked server DBSUM for bodb_Summary
 	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
+	- 20140926@Sophia:  Expand the range of Sporting Solution (1301 -> 1399)  [Redmine: #23446]
 
 + Note: Review index=IX_srecommend when modifying this SP 
 	
@@ -128,7 +129,7 @@ BEGIN
 			(
 				bettype < case when @showSB=1 then 31 else 0 end
 				OR bettype between 121 and case when @showSB=1 then 999 else 0 end
-				OR bettype between 1301 and case when @showSB= 1 then 1334 else 0 end
+				OR bettype between 1301 and case when @showSB= 1 then 1399 else 0 end
 				OR bettype between 31 and case when @ShowRB=1 then 49 else 0 end
 				OR bettype = case when @showCasino=1 then 71 else 0 end
 				OR bettype = case when @showP2P=1 then 1000 else 0 end
