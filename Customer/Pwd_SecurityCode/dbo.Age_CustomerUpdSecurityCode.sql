@@ -17,7 +17,7 @@
 		
 		Revisions:
 			- 20140514@viet: also check sub-account's security code
-		
+			- 20141008@Johnson: write log in case of updating own security code
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -28,7 +28,9 @@ SET NOCOUNT ON
 			,@uplineSecurityCode VARCHAR(50)
 			,@roleid INT
 			,@uplineSecurityCode_sub VARCHAR(50)
-		
+			,@actionID INT
+			,@LogSPData VARCHAR(MAX)
+			
 	SET @startRun = GETDATE()
 	
 	--Check disable user
@@ -85,9 +87,9 @@ SET NOCOUNT ON
 		END
 		
 		IF @custid = @userid -- reset isForcedChangeSecurityCode = 0 if customer reset his SC
-			SELECT @isForcedChangeSecurityCode = 0
+			SELECT @isForcedChangeSecurityCode = 0, @actionID = 924			
 		ELSE
-			SELECT @isForcedChangeSecurityCode = 1 -- hard code to force customer change SC
+			SELECT @isForcedChangeSecurityCode = 1, @actionID = 916 -- hard code to force customer change SC
 			
 		UPDATE CustLoginInfo WITH(UPDLOCK,ROWLOCK)
 		SET SecurityCode = @SecurityCode
@@ -102,6 +104,41 @@ SET NOCOUNT ON
 					@ErrCode = 101
 			RETURN
 		END
+		
+		SELECT @LogSPData = '<Age_CustomerUpdSecurityCode custid="' + COALESCE(CAST(@custid AS VARCHAR(10)),SPACE(1)) + '" ' 								
+								+ 'SubAccount="' + COALESCE(CAST(dbo.f_GetSubUsername(@SubAccID) AS VARCHAR(30)), SPACE(1)) + '" ' 
+								+ 'isForcedChangeSecurityCode="' + COALESCE(CAST(@isForcedChangeSecurityCode AS VARCHAR(10)), SPACE(1)) + '" ' 
+								+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" '
+								+ 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' 
+								+ 'ErrMsg="' + COALESCE(@ErrMsg, SPACE(1)) + '" />'
+				
+		SET @endRun = GETDATE()
+		SET @duration  = DATEDIFF (MILLISECOND,@startRun,@endRun)
+		
+		BEGIN TRY
+			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
+				@UserID = @UserID,
+				@CustID = @CustID, 
+				@ActionID = @ActionID, 
+				@TrackingValue = @LogSPData,
+				@duration = @duration
+		END TRY
+		BEGIN CATCH
+			SELECT @LogSPData = '<Age_CustomerUpdSecurityCode custid="' + COALESCE(CAST(@custid AS VARCHAR(10)),SPACE(1)) + '" ' 								
+								+ 'SubAccount="' + COALESCE(CAST(dbo.f_GetSubUsername(@SubAccID) AS VARCHAR(30)), SPACE(1)) + '" ' 
+								+ 'isForcedChangeSecurityCode="' + COALESCE(CAST(@isForcedChangeSecurityCode AS VARCHAR(10)), SPACE(1)) + '" ' 
+								+ 'IP="' + COALESCE(@IP,SPACE(1)) + '" '
+								+ 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(10)), SPACE(1)) + '" ' 
+								+ 'ErrMsg="' + ERROR_MESSAGE() + '" />'
+								
+			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
+				@UserID = @UserID,
+				@CustID = @CustID, 
+				@ActionID = @ActionID, 
+				@TrackingValue = @LogSPData,
+				@duration = @duration 
+		END CATCH
+		
 	END
 	ELSE IF @roleid = 1
 	BEGIN
@@ -127,8 +164,6 @@ SET NOCOUNT ON
 				RETURN
 			END
 		END
-			
-		DECLARE @LogSPData VARCHAR(MAX)
 		
 		SELECT @LogSPData = '<Age_CustomerUpdSecurityCode custid="' + COALESCE(CAST(@custid AS VARCHAR(10)),SPACE(1)) + '" ' 								
 								+ 'SubAccount="' + COALESCE(CAST(dbo.f_GetSubUsername(@SubAccID) AS VARCHAR(30)), SPACE(1)) + '" ' 
