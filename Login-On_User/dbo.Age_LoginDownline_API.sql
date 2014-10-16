@@ -12,7 +12,8 @@
 	@Language varchar(2) = 'E',
 	@MasterUsername varchar(50) = '' OUTPUT,
 	@SubAccID int = 0, --Sub-AccountID,
-	@site varchar(20) = '' OUTPUT
+	@site varchar(20) = '' OUTPUT,
+	@ErrCode INT = 0 OUTPUT
 AS
 /*
 	Created: 
@@ -25,6 +26,17 @@ AS
 		- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call WriteLog_UserLog SP by link database)
 		- 20140826@Johnson: write log into userlog_login
+		- 20141010@Johnson: return ErrCode 
+	
+	Parameter's Explanation:
+		 = 0: Transaction recorded successfully.
+		> 0: Specific Error.		
+			106: wrong username and password
+			107: login failed
+			108: account closed
+			109: login exceed 5 times
+			110: login failed because access from outsite throught test accounts
+
 */
 BEGIN
 	SET NOCOUNT ON
@@ -134,7 +146,7 @@ BEGIN
 			@Duration = @Duration
 	END CATCH	
 
-	select @ErrMsg = N'Wrong username or password.'
+	select @ErrMsg = N'Wrong username or password.', @ErrCode = 106
 	raiserror (@ErrMsg, 16, 1)
 	return
 END
@@ -173,7 +185,7 @@ IF @db_roleid not in (2,3,4)
 				@Duration = @Duration
 		END CATCH	
 		
-		select @ErrMsg = N'Login Failed.'
+		select @ErrMsg = N'Login Failed.', @ErrCode = 107
 		raiserror (@ErrMsg, 16, 1)
 		return
 	END
@@ -210,7 +222,7 @@ IF IsNull(@closed, 1) = 1
 		END CATCH	
 		
 		select @ErrMsg = case @Language when 'E' then N'Account closed. Please contact your administrator!' 
-				else N'此戶口已關閉. 請聯絡管理部' end
+				else N'此戶口已關閉. 請聯絡管理部' end, @ErrCode = 108
 		raiserror (@ErrMsg, 16, 1)
 		return
 	END
@@ -249,7 +261,35 @@ ELSE IF @db_userpwd <> @UserPWD
 		IF @isSubAcc = 0
 		BEGIN
 			IF @failedcount > 5 and @isSubAcc = 0
+			BEGIN
 				UPDATE custinfo with (rowlock, updlock) SET closed = 1 WHERE custid = @db_custid
+				
+				DECLARE @LogSPData VARCHAR(500)
+				
+				--log data to UserLog_RunSP 
+	    		SELECT @LogSPData = '<Age_LoginDownline_API IP="'+ @LoginIP + '" />'		    
+				BEGIN TRY 	
+				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_RunSP
+					@UserID = @db_custid,
+					@CustID = @db_custid,
+					@ActionID = 925,
+					@TrackingValue = @LogSPData,
+					@Duration = @Duration
+				END TRY 
+				BEGIN CATCH
+					SELECT @LogSPData = '<Age_LoginDownline_API IP="'+ @LoginIP + '" ' +
+												'ErrMsg="' + ERROR_MESSAGE() +'" ' + 
+										
+										' />'
+					EXEC bodb_customerlog.dbo.WriteLog_UserLog_RunSP
+						@UserID = @db_custid,
+						@CustID = @db_custid,
+						@ActionID = 925,
+						@TrackingValue = @LogSPData,
+						@Duration = @Duration		
+				
+				END CATCH 
+			END
 			ELSE
 				UPDATE customer with (rowlock, updlock) SET logincount = @failedcount WHERE custid = @db_custid
 		END
@@ -261,7 +301,7 @@ ELSE IF @db_userpwd <> @UserPWD
 			END
 		END
 		
-		select @ErrMsg = N'Wrong username or password.'
+		select @ErrMsg = N'Wrong username or password.', @ErrCode = 106
 		raiserror (@ErrMsg, 16, 1)
 		return
 		
