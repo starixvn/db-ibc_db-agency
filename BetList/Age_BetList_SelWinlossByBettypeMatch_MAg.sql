@@ -30,7 +30,8 @@ Revisions:
 	- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
 	- 20120112@Sophia:  Add refno, showtime for Table - Shoe - Hand of LiveCasino 
 						Add Sub table for Live Casino
-	- 20120927@Sophia: Get comstatus
+	- 20120927@Sophia: Get comstatus]
+	- 20141016@Sophia: support Sporting solution-grouped bettype 
 */
 
 SET NOCOUNT ON
@@ -89,10 +90,11 @@ BEGIN
 	FROM
 		bettrans b with (nolock) 
 		inner join match m with (nolock) on b.matchid=m.matchid 
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 	WHERE
 		b.matchid=@matchid and 
 		b.mrecommend=@custid  and 		
-		b.bettype=@bettype and
+		(b.bettype=@bettype OR GroupTypeId = @bettype) and
 		b.Liveindicator = CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END 
 	ORDER BY
 		b.status, b.transid
@@ -168,10 +170,11 @@ BEGIN
 	FROM
 		bettrans14 b with (nolock) 
 		inner join match14 m with (nolock) on b.matchid=m.matchid 		
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 	WHERE
 		b.matchid=@matchid and 
 		b.mrecommend=@custid  and 		
-		b.bettype=@bettype and
+		(b.bettype=@bettype OR GroupTypeId = @bettype) and
 		b.Liveindicator = CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END 
 	ORDER BY
 		b.status, b.transid		
