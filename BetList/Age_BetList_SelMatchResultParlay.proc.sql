@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResultParlay_Xtest]
+﻿ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResultParlay]
 	@refno	BIGINT
 AS
 /*
