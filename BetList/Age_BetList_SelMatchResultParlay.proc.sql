@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResultParlay]
+﻿ALTER PROCEDURE [dbo].[Age_BetList_SelMatchResultParlay_Xtest]
 	@refno	BIGINT
 AS
 /*
@@ -110,7 +110,7 @@ BEGIN
 				ISNULL(mr.IsPending,0) as IsPending,
 				bm.Bettype, 
 				bm.Betcheck 
-		FROM	(SELECT b.matchId, b.Bettype, REPLACE (ISNULL(b.Betcheck,''),'8','') AS Betcheck FROM BettransM b WITH (NOLOCK) WHERE b.refno = @refno ) bm
+		FROM	(SELECT b.matchId, b.Bettype,b.Betcheck FROM BettransM b WITH (NOLOCK) WHERE b.refno = @refno ) bm
 				INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 		
@@ -126,7 +126,7 @@ BEGIN
 				INNER JOIN @tmpParlay P 
 					ON D.MatchId = P.MatchId		
 			WHERE	CASE WHEN P.Bettype NOT IN (1324) THEN 2 ELSE 
-						CASE WHEN P.Bettype IN (1324) AND LEFT(D.ResourceId,2) = LEFT(P.BetCheck,2) THEN 4 
+						CASE WHEN P.Bettype IN (1324) AND LEFT(D.ResourceId,2) = LEFT(REPLACE (ISNULL(P.Betcheck,''),'8','') ,2) THEN 4 
 							ELSE 0 END END = LEN(D.ResourceId)
 
 	END
@@ -184,7 +184,7 @@ BEGIN
 				ISNULL(mr.IsPending,0) as IsPending,
 				bm.Bettype, 
 				bm.Betcheck 
-		FROM(	SELECT b.matchId, b.Bettype, REPLACE (ISNULL(b.Betcheck,''),'8','') AS Betcheck FROM BettransM14 b WITH (NOLOCK) WHERE b.refno = @refno ) bm
+		FROM(	SELECT b.matchId, b.Bettype, b.Betcheck FROM BettransM14 b WITH (NOLOCK) WHERE b.refno = @refno ) bm
 				INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
 
@@ -199,7 +199,7 @@ BEGIN
 				INNER JOIN @tmpParlay P 
 					ON D.MatchId = P.MatchId		
 			WHERE	CASE WHEN P.Bettype NOT IN (1324) THEN 2 ELSE 
-						CASE WHEN P.Bettype IN (1324) AND LEFT(D.ResourceId,2) = LEFT(P.BetCheck,2) THEN 4 
+						CASE WHEN P.Bettype IN (1324) AND LEFT(D.ResourceId,2) = LEFT(REPLACE (ISNULL(P.Betcheck,''),'8','') ,2) THEN 4 
 							ELSE 0 END END = LEN(D.ResourceId)
 					 
 
