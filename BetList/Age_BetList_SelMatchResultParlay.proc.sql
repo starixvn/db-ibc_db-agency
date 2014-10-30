@@ -276,7 +276,7 @@ BEGIN
 							ELSE 0 END END = LEN(D.ResourceId)
 	END
 	SELECT * FROM @tmpParlay
-	ORDER BY LeagueID, eventdate, matchcode	
+	ORDER BY LeagueID, bettype, eventdate, matchcode	
 
 	SELECT DISTINCT * FROM @tmpResultDetail
 	ORDER BY MatchID, ResourceId
