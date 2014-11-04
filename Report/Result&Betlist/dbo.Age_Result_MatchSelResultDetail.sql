@@ -27,7 +27,10 @@ BEGIN
 		m.htawayscore, 
 		m.finalhomescore,
 		m.finalawayscore,
-		m.eventstatus,
+		case when m.betstatus like 'Refund FT%' then 'Refund FT' 
+				 when m.betstatus like 'Refund HT%' then 'Refund HT'
+				 when m.betstatus like 'Refund%' then 'Refund' 
+			else m.eventstatus end as eventstatus,  
 		m.showtime,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 		m.goalrecord,
@@ -53,7 +56,10 @@ BEGIN
 		m.htawayscore, 
 		m.finalhomescore,
 		m.finalawayscore,
-		m.eventstatus,
+		case when m.betstatus like 'Refund FT%' then 'Refund FT' 
+				 when m.betstatus like 'Refund HT%' then 'Refund HT'
+				 when m.betstatus like 'Refund%' then 'Refund' 
+			else m.eventstatus end as eventstatus,  
 		m.showtime,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 		m.goalrecord,
