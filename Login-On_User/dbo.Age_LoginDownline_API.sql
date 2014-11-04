@@ -11,9 +11,10 @@
 	@Currency varchar(10) = '' OUTPUT,
 	@Language varchar(2) = 'E',
 	@MasterUsername varchar(50) = '' OUTPUT,
-	@SubAccID int = 0, --Sub-AccountID,
+	@SubAccID int = 0 OUTPUT, --Sub-AccountID,
 	@site varchar(20) = '' OUTPUT,
-	@ErrCode INT = 0 OUTPUT
+	@ErrCode INT = 0 OUTPUT,
+	@ErrMsg NVARCHAR(500) = '' OUTPUT
 AS
 /*
 	Created: 
@@ -26,7 +27,9 @@ AS
 		- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
 		- 20131108@Elodie: Splitting bodb02 into CustDB (call WriteLog_UserLog SP by link database)
 		- 20140826@Johnson: write log into userlog_login
-		- 20141010@Johnson: return ErrCode 
+		- 20141010@Johnson: - Check login by Nickname, reset logincount =0 when account closed
+							- Return ErrCode, ErrMsg 
+		- 20141102@Viet: add ASB00Sub00, ASB01Sub00, requested by Martin Jr.
 	
 	Parameter's Explanation:
 		 = 0: Transaction recorded successfully.
@@ -47,8 +50,8 @@ SET @Begin = GETDATE()
 
 IF @UserPwd2 = '' SET @UserPwd2 = @UserPwd
 
-declare @LogData nvarchar(300),
-	@ErrMsg nvarchar(200)
+declare @LogData nvarchar(300)
+	
 --	,@logincount int,@locked int,
 --	@RoleID_SAg int
 --Select @RoleID_SAg  =4
@@ -66,10 +69,9 @@ declare @LogData nvarchar(300),
 -- 20121203@Thien: hard-code to exclude agent MSE06 from using this API.
 -- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
 -- 20140502@Viet: Add SAI0000Sub04, requested by Martin JR.
-IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN ('SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04','MSE14Sub00', 'MSE18Sub02', 'SAI0000Sub04'))
+IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN ('SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04','MSE14Sub00', 'MSE18Sub02', 'SAI0000Sub04','ASB00Sub00','ASB01Sub00'))
  BEGIN
-	select @ErrMsg = N'Login Failed.'
-	raiserror (@ErrMsg, 16, 1)
+	select @ErrMsg = N'Login Failed.'	
 	return
  END
 
@@ -99,7 +101,7 @@ BEGIN
 		@failedcount = logincount,
 		@site = site
 	FROM customer with (nolock) 
-	WHERE username = @UserName
+	WHERE username = @UserName OR username2 = @username
 		
 	IF @@ROWCOUNT = 0 select @rowcount = 1
 	
@@ -146,8 +148,7 @@ BEGIN
 			@Duration = @Duration
 	END CATCH	
 
-	select @ErrMsg = N'Wrong username or password.', @ErrCode = 106
-	raiserror (@ErrMsg, 16, 1)
+	select @ErrMsg = N'Wrong username or password.', @ErrCode = 106	
 	return
 END
 
@@ -185,8 +186,7 @@ IF @db_roleid not in (2,3,4)
 				@Duration = @Duration
 		END CATCH	
 		
-		select @ErrMsg = N'Login Failed.', @ErrCode = 107
-		raiserror (@ErrMsg, 16, 1)
+		select @ErrMsg = N'Login Failed.', @ErrCode = 107		
 		return
 	END
 
@@ -223,7 +223,6 @@ IF IsNull(@closed, 1) = 1
 		
 		select @ErrMsg = case @Language when 'E' then N'Account closed. Please contact your administrator!' 
 				else N'此戶口已關閉. 請聯絡管理部' end, @ErrCode = 108
-		raiserror (@ErrMsg, 16, 1)
 		return
 	END
 ELSE IF @db_userpwd <> @UserPWD
@@ -264,6 +263,8 @@ ELSE IF @db_userpwd <> @UserPWD
 			BEGIN
 				UPDATE custinfo with (rowlock, updlock) SET closed = 1 WHERE custid = @db_custid
 				
+				UPDATE customer with (rowlock, updlock) SET logincount = 0 WHERE custid = @db_custid
+				
 				DECLARE @LogSPData VARCHAR(500)
 				
 				--log data to UserLog_RunSP 
@@ -301,8 +302,9 @@ ELSE IF @db_userpwd <> @UserPWD
 			END
 		END
 		
-		select @ErrMsg = N'Wrong username or password.', @ErrCode = 106
-		raiserror (@ErrMsg, 16, 1)
+		select @ErrMsg = N'Wrong username or password.', 
+				@ErrCode = case when @failedcount > 5 then 109 else 106 end
+		SELECT @CustID = @db_custid
 		return
 		
 	END
