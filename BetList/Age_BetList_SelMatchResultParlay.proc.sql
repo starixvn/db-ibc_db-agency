@@ -128,6 +128,7 @@ BEGIN
 			WHERE	CASE WHEN P.Bettype NOT IN (1324) THEN 2 ELSE 
 						CASE WHEN P.Bettype IN (1324) AND LEFT(D.ResourceId,2) = LEFT(REPLACE (ISNULL(P.Betcheck,''),'8','') ,2) THEN 4 
 							ELSE 0 END END = LEN(D.ResourceId)
+					AND D.SettlementStatusID > 0
 
 	END
 	IF EXISTS (SELECT 1 FROM bettransm14 WITH (NOLOCK) WHERE  refno = @refno)
@@ -201,7 +202,7 @@ BEGIN
 			WHERE	CASE WHEN P.Bettype NOT IN (1324) THEN 2 ELSE 
 						CASE WHEN P.Bettype IN (1324) AND LEFT(D.ResourceId,2) = LEFT(REPLACE (ISNULL(P.Betcheck,''),'8','') ,2) THEN 4 
 							ELSE 0 END END = LEN(D.ResourceId)
-					 
+					 AND D.SettlementStatusID > 0
 
 	END
 	IF EXISTS (SELECT 1 FROM DBARC.bodb_archive.dbo.BettransM  WITH (NOLOCK) WHERE  refno = @refno)
@@ -274,9 +275,12 @@ BEGIN
 			WHERE	CASE WHEN P.Bettype NOT IN (1324) THEN 2 ELSE 
 						CASE WHEN P.Bettype IN (1324) AND LEFT(D.ResourceId,2) = LEFT(P.BetCheck,2) THEN 4 
 							ELSE 0 END END = LEN(D.ResourceId)
+					AND D.SettlementStatusID > 0
 	END
+	
 	SELECT * FROM @tmpParlay
 	ORDER BY LeagueID, bettype, eventdate, matchcode	
+	---- Order [LeagueID, Bettype] to group choices in Set x game y together in the same LeagueId.
 
 	SELECT DISTINCT * FROM @tmpResultDetail
 	ORDER BY MatchID, ResourceId
