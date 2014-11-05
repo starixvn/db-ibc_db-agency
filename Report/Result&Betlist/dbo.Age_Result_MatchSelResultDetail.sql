@@ -79,7 +79,7 @@ BEGIN
 			,ResultStatusID
 			,SettlementStatusID
 	FROM	dbo.ResultDetail WITH (NOLOCK)
-	WHERE	MatchId = @MatchId AND SettlementStatusID <> 0
+	WHERE	MatchId = @MatchId AND SettlementStatusID > 0
 	UNION ALL
 	SELECT	MatchId
 			,ResourceId
@@ -88,7 +88,7 @@ BEGIN
 			,ResultStatusID
 			,SettlementStatusID
 	FROM	dbo.ResultDetail14 WITH (NOLOCK)
-	WHERE	MatchId = @MatchId AND SettlementStatusID <> 0
+	WHERE	MatchId = @MatchId AND SettlementStatusID > 0
 	
 END
 GO 
