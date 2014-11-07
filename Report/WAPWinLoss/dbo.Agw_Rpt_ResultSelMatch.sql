@@ -103,6 +103,7 @@ AS
 		and m.matchcode not like '%hedge%'
 		and m.matchcode not like '%betdaq%'
 		and (isnull(@site,'')='789y' OR  (m.matchcode not like '%(LR)%' and isnull(@site,'')<>'789y'))
+		and R.SettlementStatusID > 0
 	
 	UNION ALL
 	SELECT	R.MatchId,
@@ -120,6 +121,8 @@ AS
 		and m.matchcode not like '%hedge%'
 		and m.matchcode not like '%betdaq%'
 		and (isnull(@site,'')='789y' OR  (m.matchcode not like '%(LR)%' and isnull(@site,'')<>'789y'))
+		and R.SettlementStatusID > 0
+		
 	ORDER BY R.ResourceId
 
 
