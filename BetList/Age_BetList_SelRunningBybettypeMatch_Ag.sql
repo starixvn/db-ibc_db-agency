@@ -38,7 +38,6 @@ Revisions:
 	- 20120705@Sophia: Get sporttype for outright
 	- 20120926@Sophia: Get Comstatus
 	- 20140425@Dom: Group TB and FGLG
-	- 20141016@Sophia: support Sporting solution-grouped bettype
 */
 
 SET NOCOUNT ON
@@ -128,12 +127,11 @@ BEGIN
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM 
 		Bettrans b with (nolock) 
-		inner join Match m with (nolock) on b.matchid=m.matchid 
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype					
+		inner join Match m with (nolock) on b.matchid=m.matchid 	
 	WHERE
 		b.Recommend=@custid  
 		and b.matchid=@matchid 
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR b.bettype = @bettype OR f.GroupTypeId = @bettype)
+		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype )
 		--b.status in ('waiting','running') and
 		 and b.statusID in (0,1) 
 		 and b.Liveindicator= CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END AND
@@ -171,3 +169,4 @@ GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag] TO [bodbDownlin
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag] TO [bodbDownlineNetView]
 GO
+GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag] TO [vnteam]

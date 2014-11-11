@@ -13,7 +13,6 @@
 	- 20110923@Sophia: Add condition OR to show the row which have eventstatus = 'running' and (mr.ishtcal=1 OR mr.calculate=1)
 	- 20111003@Sophia: . Add column IsPending Pending Status. 
 					   . Edit condition OR to show the row which have eventstatus IN ('running','closed') 
-	- 20141008@Sophia: Get Result detail for Tennis Sport
 	*/
 AS
 	SET NOCOUNT ON
@@ -85,46 +84,5 @@ AS
 		and (isnull(@site,'')='789y' OR  (matchcode not like '%(LR)%' and isnull(@site,'')<>'789y'))
 	) m	
 	order by m.eventdate,m.matchcode
-
-
-	
-	SELECT	R.MatchId,
-			R.ResourceId,
-			R.HomeValue,
-			R.AwayValue,
-			R.SettlementStatusID
-	FROM dbo.ResultDetail R WITH (NOLOCK)
-	INNER JOIN dbo.Match M WITH (NOLOCK)
-		ON M.MatchID = R.MatchId
-	WHERE 	m.eventdate = Convert(Date,@FromDate)
-		and m.matchID = @MatchId
-		and m.leagueid = @leagueID 
-		and m.sporttype = 5
-		and m.matchcode not like '%hedge%'
-		and m.matchcode not like '%betdaq%'
-		and (isnull(@site,'')='789y' OR  (m.matchcode not like '%(LR)%' and isnull(@site,'')<>'789y'))
-		and R.SettlementStatusID > 0
-	
-	UNION ALL
-	SELECT	R.MatchId,
-			R.ResourceId,
-			R.HomeValue,
-			R.AwayValue,
-			R.SettlementStatusID
-	FROM dbo.ResultDetail14 R WITH (NOLOCK)
-	INNER JOIN dbo.Match14 M WITH (NOLOCK)
-		ON M.MatchID = R.MatchId
-	WHERE 	m.eventdate = Convert(Date,@FromDate)
-		and m.matchID = @MatchId
-		and m.leagueid = @leagueID 
-		and m.sporttype = 5
-		and m.matchcode not like '%hedge%'
-		and m.matchcode not like '%betdaq%'
-		and (isnull(@site,'')='789y' OR  (m.matchcode not like '%(LR)%' and isnull(@site,'')<>'789y'))
-		and R.SettlementStatusID > 0
-		
-	ORDER BY R.ResourceId
-
-
 GO
 GRANT EXECUTE ON [dbo].[Agw_Rpt_ResultSelMatch] TO [bodbDownlineNet]

@@ -39,7 +39,6 @@ Revisions:
 	- 20120926@Sophia: Get Comstatus
 	- 20140425@Dom: Group TB and FGLG
 	- 20140611@Dom: Support BetRadar [Redmine: #17148]
-	- 20141016@Sophia: support Sporting solution-grouped bettype
 */
 
 SET NOCOUNT ON
@@ -189,10 +188,10 @@ BEGIN
  	from 
 		bettrans b with (nolock)
 		inner join match m with (nolock) on  b.matchid=m.matchid 
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
 	where 
 		b.SRecommend=@custid
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR b.bettype = @bettype OR GroupTypeId = @bettype)
+		--and b.bettype=@bettype
+		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR bettype = @bettype )
 		--and b.status in ('waiting','running')
 		and b.statusID in (0,1)
 		
@@ -229,5 +228,4 @@ GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_SAg] TO [bodbDownlineNet
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettype_SAg] TO vnteam
 GO
-
 

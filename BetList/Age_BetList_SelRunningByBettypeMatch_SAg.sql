@@ -40,7 +40,6 @@ Revisions:
 	- 20130107@Dan: merge code from production	
 	- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE
 	- 20140425@Dom: Group TB and FGLG
-	- 20141016@Sophia: support Sporting solution-grouped bettype
 */
 SET NOCOUNT ON
 
@@ -139,11 +138,10 @@ BEGIN
 	FROM 		
 		dbo.bettrans_running b with (nolock, index=IX_srecommend) 
 		inner join bodb02.dbo.Match m with (nolock) on b.matchid=m.matchid 
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype		
 	WHERE
 		b.matchid= @matchid  and
 		b.SRecommend=@custid  and 
-		( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR b.bettype = @bettype OR GroupTypeId = @bettype) and 
+		( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype ) and 
 		--b.bettype=@bettype and
 		--b.status in ('waiting','running') 
 		b.statusID in (0,1) and 
@@ -182,4 +180,3 @@ GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettypeMatch_SAg] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettypeMatch_SAg] TO [vnteam]
-

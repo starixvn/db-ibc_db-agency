@@ -42,7 +42,6 @@ Revisions:
 	- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE
 	- 20140425@Dom: Group TB and FGLG
 	- 20140611@Dom: Support BetRadar  [Redmine: #17148]
-	- 20141016@Sophia: support Sporting solution-grouped bettype
 */
 
 SET NOCOUNT ON
@@ -191,12 +190,11 @@ BEGIN
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
  	from 		
 		dbo.bettrans_running b with (nolock)
-		inner join bodb02.dbo.match m with (nolock) on  b.matchid=m.matchid 	
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype					
+		inner join bodb02.dbo.match m with (nolock) on  b.matchid=m.matchid 				
 	where 
 		b.Recommend=@custid
 		--and b.bettype=@bettype
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR b.bettype = @bettype OR GroupTypeId = @bettype)
+		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR bettype = @bettype )
 		--and b.status in ('waiting','running')
 		and b.statusID in (0,1)
 		
@@ -231,4 +229,3 @@ GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_Ag] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettype_Ag] TO vnteam
-
