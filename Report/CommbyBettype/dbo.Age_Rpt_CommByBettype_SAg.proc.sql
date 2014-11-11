@@ -32,6 +32,8 @@ Revisions:
 	- 20130404@Lukas: remove HT.1x2 & FT.1x2 out from commission group 2
 	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 	- 20140616@Dom: Support BetRadar [Redmine: #17148]
+	- 20140814@Dom:  [Redmine: #19661] Offering 11 new bettypes
+	- 20140826@Dom: Move bettype 24,26 to commission3 [Redmine: #20771]
 */
 
 SET NOCOUNT ON
@@ -109,7 +111,8 @@ SELECT pvt.mrecommend, c.username,
 	isnull([122],0) as ANB_comm,
 	isnull([123],0) as DND_comm,
 	--isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([22],0) + isnull([13],0) + isnull([24],0) + isnull([25],0) + isnull([26],0) + isnull([27],0) + isnull([28],0) as totalcomm_1,
-	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([24],0) + isnull([25],0) + isnull([26],0) + isnull([27],0) + isnull([28],0) + isnull([121],0) + isnull([122],0) + isnull([123],0) + isnull([124],0) + isnull([125],0) as totalcomm_1,
+	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([25],0) +  
+	isnull([27],0) + isnull([28],0) + isnull([121],0) + isnull([122],0) + isnull([123],0) + isnull([124],0) + isnull([125],0) + isnull([128],0) + isnull([136],0) + isnull([137],0) + isnull([138],0) + isnull([139],0) as totalcomm_1,
 
 	isnull([4],0) as cs_comm,
 	isnull([30],0) as f_cs_comm,
@@ -132,7 +135,8 @@ SELECT pvt.mrecommend, c.username,
 	isnull([16],0) as htft_comm,
 	isnull([20],0) as moneyline_comm,
 	isnull([21],0) as moneyline1st_comm,
-	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([20],0) + isnull([29],0) as totalcomm_3,
+	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([20],0) + isnull([29],0) + isnull([24],0) + isnull([26],0) +
+	isnull([129],0) + isnull([130],0) + isnull([131],0) + isnull([132],0) + isnull([143],0) + isnull([144],0) as totalcomm_3,
 	
 	isnull([1301],0) + isnull([1302],0) + isnull([1303],0) + isnull([1304],0) + isnull([1305],0) + isnull([1306],0) + isnull([1307],0) + isnull([1308],0) + isnull([1309],0) + isnull([1310],0) +
 	isnull([1311],0) + isnull([1312],0) + isnull([1313],0) + isnull([1314],0) + isnull([1315],0) + isnull([1316],0) + isnull([1317],0) + isnull([1318],0) + isnull([1319],0) + isnull([1320],0) +	
@@ -153,7 +157,7 @@ SELECT pvt.mrecommend, c.username,
 	isnull([101],0) + isnull([102],0) + isnull([103],0) + isnull([104],0) + isnull([105],0) + isnull([106],0) + isnull([107],0) + isnull([108],0) + isnull([109],0) + isnull([110],0)+ 
 	isnull([111],0) + isnull([112],0) + isnull([113],0) + isnull([114],0) + isnull([115],0) + isnull([116],0) + isnull([117],0) + isnull([118],0) + isnull([119],0) + isnull([120],0)
 	as NumberGame_comm,
-	isnull([73],0) as Bingo_comm	,
+	isnull([73],0) as Bingo_comm,
 	ISNULL([1501],0) as Keno_comm
 FROM #tmp AS p
 PIVOT
@@ -164,9 +168,10 @@ PIVOT
 					[101],[102],[103],[104],[105],[106],[107],[108],[109],[110],[111],[112],[113],[114],[115],[116],[117],[118],[119],[120],
 					[121],[122],[123],[124],[125],[126],[127],[1000],[1101],[1102],[1103],[1104],[1105],[1106],[1107],[1108],[1109],[1110],[1111],[1112],
 					[133],[134],[135],[145],[146],[147],[148],[149],[150],[151],[152],[140],[141],[142],
+					/*Dom*/[128],[136],[137],[138],[139],[129],[130],[131],[132],[143],[144],/*Dom*/
 					[1113],[1114],[1115],[1116],[1117],[1118],[1119],[1120],[1121],[1122],[1123],[1124],[1125],[1126],[1127],[1128],[1129],[1130],
 					[1131],[1132],[1133],[1134],[1135],[1136],[1137],[1138],[1139],[1140],[1141],[1142],[1143],[1144],[1145],[1146],[1147],[1148],[1149],[1150],
-					[1301],[1302],[1303],[1304],[1305],[1306],[1307],[1308],[1309],[1310],[1311],[1312],[1313],[1314],[1315],[1316],[1317],[1318],[1319],[1320],					
+					[1301],[1302],[1303],[1304],[1305],[1306],[1307],[1308],[1309],[1310],[1311],[1312],[1313],[1314],[1315],[1316],[1317],[1318],[1319],[1320],
 					[1321],[1322],[1323],[1324],[1325],[1326],[1327],[1328],[1329],[1330],[1331],[1332],[1333],[1334],
 					[1501]
 					)
