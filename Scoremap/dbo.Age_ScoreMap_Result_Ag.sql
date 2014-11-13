@@ -19,6 +19,7 @@ AS
 		- 20130311@Elodie: Get matchs which have eventstatus <> 'completed'
 		- 20140417@Dom: Add new bettype 126
 		- 20140616@Dom: Support BetRadar [Redmine: #17148]
+		- 20140814@Dom:  [Redmine: #19661] Offering 11 new bettypes
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
 		@bettypes_dead : dead ball bet types
@@ -61,14 +62,14 @@ SET NOCOUNT ON;
 						END * risk * trueodds),0)
 					+/*once bt = 1,3,7,8 will calculate equation above ,the other way will calculate below*/
 						ISNULL(-SUM(CASE
-							WHEN r=0 AND bt IN (2,4,5,6,12,13,15,24,26,27,28,30,123,126,151,145,146)THEN 1 --Dom
+							WHEN r=0 AND bt IN (2,4,5,6,12,13,15,24,26,27,28,30,123,126,151,145,146,131,132,136,137,138,139)THEN 1 --Dom
 							WHEN r = 0 AND bt IN (20,21,25) AND home <> away THEN 1
 							WHEN r = 0 AND bt = 121 THEN CASE WHEN home > away THEN 0 ELSE 1 END
 							WHEN r = 0 AND bt = 122 THEN CASE WHEN away > home THEN 0 ELSE 1 END							
 							ELSE 0
 						END * risk) 
 						+SUM(CASE
-							WHEN r=1 AND bt IN (2,4,5,6,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,151,145,146)THEN 1 --Dom
+							WHEN r=1 AND bt IN (2,4,5,6,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,151,145,146,131,132,136,137,138,139)THEN 1 --Dom
 							ELSE 0
 						END * risk * trueodds),0)
 				  total
@@ -80,8 +81,8 @@ SET NOCOUNT ON;
 					r.trueodds,
 					CASE WHEN betteam  = 'h' AND bt IN (1,7) THEN (home+hc) - (away) 
 						WHEN betteam <> 'h' AND bt IN (1,7) THEN (away+hc) - (home) 
-						WHEN betteam  = 'h' AND bt IN (2,12) THEN (home+away)&1  
-						WHEN betteam <> 'h' AND bt IN (2,12) THEN 1-( (home+away)&1)
+						WHEN betteam  = 'h' AND bt IN (2,12,136,137,138,139) THEN (home+away)&1  --Dom
+						WHEN betteam <> 'h' AND bt IN (2,12,136,137,138,139) THEN 1-( (home+away)&1) --Dom
 						WHEN betteam  = 'h' AND bt IN (3,8) THEN (home+away) - hc 
 						WHEN betteam <> 'h' AND bt IN (3,8) THEN hc - (home+away)
 						WHEN home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30) THEN 1  
@@ -89,7 +90,7 @@ SET NOCOUNT ON;
 						WHEN home>away AND betteam = '1' AND bt IN (5,15) THEN 1 
 						WHEN away>home AND betteam = '2' AND bt IN (5,15) THEN 1
 						WHEN home=away AND betteam = 'x' AND bt IN (5,15) THEN 1 
-						WHEN home+away>= hc AND home+away<=hd AND bt IN (6,126) THEN 1 --Dom
+						WHEN home+away>= hc AND home+away<=hd AND bt IN (6,126,131,132) THEN 1 --Dom
 						WHEN betteam = 'hy' AND away = 0 AND bt = 13 THEN 1
 						WHEN betteam = 'hn' AND away > 0 AND bt = 13 THEN 1
 						WHEN betteam = 'ay' AND home = 0 AND bt = 13 THEN 1
@@ -142,7 +143,7 @@ SET NOCOUNT ON;
 							0 hd,
 							bettype bt
 						FROM @tmpBettrans b 
-						WHERE bettype IN (2 ,12)
+						WHERE bettype IN (2 ,12,136,137,138,139) --Dom
 						GROUP BY betteam, bettype, hdp1, matchid
 					UNION ALL
 						SELECT	matchid , betteam,
@@ -185,7 +186,7 @@ SET NOCOUNT ON;
 								END AS hd,
 								6 bt
 						FROM @tmpBettrans b 
-						WHERE bettype IN (6,126) --Dom
+						WHERE bettype IN (6,126,131,132) --Dom
 						GROUP BY betteam, matchid					
 					UNION ALL
 						SELECT	matchid, betteam, 

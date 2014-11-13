@@ -64,6 +64,7 @@ Revisions:
 	- 20130705@Kathy: Update matchid for RnG Casino (71) and Bingo (73)
 	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
 	- 20140303@Elodie: Add Keno sport [Redmine:#12756]
+	- 20141103@Dom: Apply sport bettype matrix
 
 Param's Explanation: 
 	+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet 
@@ -79,6 +80,11 @@ RUNNING: 0  WAITING: 1
 */
 
 DECLARE	@tmpStatus TABLE ([statusID] tinyint)
+
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 IF(@transtype = 1) 
 BEGIN
 	INSERT INTO @tmpStatus([statusID])
@@ -207,11 +213,14 @@ BEGIN
 	from 
 		dbo.bettrans14 b with (nolock, index=IX_bettrans14)
 		INNER JOIN dbo.match14 m with (nolock) ON b.matchid = m.matchid		
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where
 		b.custid=@custid 		
-		AND b.winlostdate=@fromdate AND b.bettype<= 19000 
-		and b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
-		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
+		AND b.winlostdate=@fromdate 
+		--AND b.bettype<= 19000 
+		--AND b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+		--AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
+		AND s.eventtype = 1
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
 	-- Virtual HR
@@ -268,9 +277,12 @@ BEGIN
 		dbo.bettrans14 b with (nolock, index=IX_bettrans14)
 		INNER JOIN VSOutright14 o with (NOLOCK) ON b.oddsid=o.Orid
 		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where
 		b.custid=@custid 		
-		AND b.winlostdate=@fromdate AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+		AND s.productid=5
+		AND s.eventtype=3
+		--AND b.winlostdate=@fromdate AND b.bettype in (1231, 1232, 1233, 1237, 1238)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		
 	-- CASINO
@@ -520,7 +532,7 @@ BEGIN
 		m.leagueID,
 		m.teamID as homeid,
 		0 as awayid,
-		bettype, 
+		b.bettype, 
 		m.matchcode,
 		m.groupmatch as race, 
 		m.orid, 
@@ -566,10 +578,13 @@ BEGIN
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	from 
 		dbo.bettrans14 b with (nolock, index=IX_bettrans14)
-		inner join dbo.outright14 m with (nolock) on b.matchid = m.orid	
-		inner join dbo.league l with (nolock) on m.leagueid = l.leagueid
+		INNER JOIN dbo.outright14 m with (nolock) on b.matchid = m.orid	
+		INNER JOIN dbo.league l with (nolock) on m.leagueid = l.leagueid
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where
-		b.custid=@custid AND b.bettype in (10,31,32,33,41,42,43)
+		b.custid=@custid 
+		AND s.eventtype=2
+		--AND b.bettype in (10,31,32,33,41,42,43)
 		AND b.winlostdate = @fromdate
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
@@ -627,11 +642,13 @@ BEGIN
 			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 		from 
 			dbo.bettrans14 b with (nolock, index=IX_bettrans14)
-			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) t
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			OUTER APPLY dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) t
 		where
 			b.custid=@custid 		
 			AND b.winlostdate=@fromdate 
-			AND b.bettype BETWEEN 1501 AND 1599
+			AND s.productid=8
+			--AND b.bettype BETWEEN 1501 AND 1599
 			AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 END
 ELSE
@@ -692,11 +709,14 @@ BEGIN
 	from 
 		dbo.bettrans b with (nolock, index=IX_custid_matchid_bettype)
 		INNER JOIN dbo.match m with (nolock) ON b.matchid = m.matchid		
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where
 		b.custid=@custid 		
-		AND b.winlostdate=@fromdate AND b.bettype<= 19000 
-		and b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
-		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
+		AND b.winlostdate=@fromdate 
+		AND s.eventtype = 1
+		--AND b.bettype<= 19000 
+		--AND b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+		--AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno from Sportbook
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 
 	-- Virtual HR
@@ -753,9 +773,13 @@ BEGIN
 		dbo.bettrans b with (nolock, index=IX_custid_matchid_bettype)
 		INNER JOIN VSOutright o with (NOLOCK) ON b.oddsid=o.Orid
 		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where
 		b.custid=@custid 		
-		AND b.winlostdate=@fromdate AND b.bettype in (1231, 1232, 1233, 1237, 1238)
+		AND b.winlostdate=@fromdate 
+		AND s.productid=5
+		AND s.eventtype=3
+		--AND b.bettype in (1231, 1232, 1233, 1237, 1238)
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 		
 	-- CASINO
@@ -1053,8 +1077,11 @@ BEGIN
 		dbo.bettrans b with (nolock, index=IX_custid_matchid_bettype)
 		inner join dbo.outright m with (nolock) on b.matchid = m.orid	
 		inner join dbo.league l with (nolock) on m.leagueid = l.leagueid
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where
-		b.custid=@custid AND b.bettype in (10,31,32,33,41,42,43)
+		b.custid=@custid 
+		--AND b.bettype in (10,31,32,33,41,42,43)
+		AND s.eventtype=2
 		AND b.winlostdate = @fromdate
 		AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 	
@@ -1112,11 +1139,13 @@ BEGIN
 			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 		from 
 			dbo.bettrans b with (nolock, index=IX_custid_matchid_bettype)
+			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 			outer apply dbo.[f_ParseTransDesc](b.TransDesc, b.bettype) t
 		where
 			b.custid=@custid 		
 			AND b.winlostdate=@fromdate 
-			AND b.bettype BETWEEN 1501 AND 1599
+			AND s.productid=8
+			--AND b.bettype BETWEEN 1501 AND 1599
 			AND b.statusID IN (SELECT [statusID] FROM @tmpStatus)
 	ELSE 
 		INSERT INTO @Data 

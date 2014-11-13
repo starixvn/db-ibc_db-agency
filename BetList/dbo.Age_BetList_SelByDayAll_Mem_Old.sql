@@ -42,6 +42,7 @@ Revisions:
 	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
 	- 20140306@Patrick:	Add more Keno product
 	- 20140310@Patrick:	Exclude keno from Sportbook
+	- 20141103@Dom: Apply sport bettype matrix
 
 Param's Explanation: 
 */
@@ -50,6 +51,10 @@ SET NOCOUNT ON
 
 declare @_custid int, @_fromdate datetime
 select @_custid = @custid, @_fromdate = @fromdate
+
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC DBAGE.bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 
 DECLARE @Username VARCHAR(30) 
 SELECT	@Username = username FROM bodb02.dbo.Custinfo WITH(NOLOCK) WHERE custid = @_custid 
@@ -163,8 +168,10 @@ INSERT INTO @Data SELECT
 	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 FROM #bettrans_temp b
 	INNER JOIN dbo.match_bk m with(nolock) ON b.matchid = m.matchid		
-WHERE b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
-	AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+WHERE s.eventtype = 1
+	--b.bettype not in (10,31,32,33,41,42,43,1231,1232,1233,1237,1238) --20120626@Elodie: exclude outright, HR from sportbook
+	--AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
 		--AND b.status <>'REFUND'		
 
 -- Virtual HR
@@ -220,7 +227,9 @@ SELECT
 FROM #bettrans_temp b
 	INNER JOIN VSOutright_bk o with (NOLOCK) ON b.oddsid=o.Orid
 	INNER JOIN bodb02.dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID	
-WHERE b.bettype in (1231, 1232, 1233, 1237, 1238)		
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+WHERE s.productid=5 AND s.eventtype=3
+	--b.bettype in (1231, 1232, 1233, 1237, 1238)		
 
 -- CASINO
 INSERT INTO @Data 
@@ -274,8 +283,10 @@ SELECT
 	'' as betcheck,
 	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 FROM	#bettrans_temp b	
-WHERE	b.bettype IN (71, 72)		-- not include transfer			--20120405@Hurri
-		AND b.matchID in(0, 71)
+INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+WHERE	s.ProductID = 6
+		--b.bettype IN (71, 72)		-- not include transfer			--20120405@Hurri
+		--AND b.matchID in(0, 71)
 		--AND b.status <>'REFUND'
 		
 -- P2P -- 20120405@Hurri
@@ -385,8 +396,10 @@ SELECT
 	'' as betcheck,
 	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 FROM	#bettrans_temp b
-WHERE	b.bettype = 73
-		AND b.matchID in (0, 73)
+INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+WHERE	s.ProductID = 7
+		--b.bettype = 73
+		--AND b.matchID in (0, 73)
 		--AND b.status <>'REFUND'	
 
 -- mix parlay
@@ -449,7 +462,7 @@ INSERT INTO @Data SELECT
 	m.leagueID,
 	m.teamID as homeid,
 	0 as awayid,
-	bettype, 
+	b.bettype, 
 	m.matchcode,
 	m.groupmatch as race, 
 	m.orid, 
@@ -496,7 +509,9 @@ INSERT INTO @Data SELECT
 from #bettrans_temp b
 	inner join dbo.outright_bk m with (nolock) on b.matchid = m.orid	
 	inner join bodb02.dbo.league l with (nolock) on m.leagueid = l.leagueid
-where b.bettype in (10,31,32,33,41,42,43)	
+	INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+where s.eventtype=2
+	--b.bettype in (10,31,32,33,41,42,43)	
 	--AND b.status <>'REFUND'
 
 --Keno
@@ -551,8 +566,10 @@ SELECT
 	'' as betcheck,
 	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 FROM	#bettrans_temp b
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype) AS fnc
-WHERE	b.bettype BETWEEN 1501 AND 1599
+WHERE	s.productid = 8
+	--b.bettype BETWEEN 1501 AND 1599
 
 SELECT * FROM @Data 
 ORDER BY transid, refno

@@ -1,4 +1,6 @@
-﻿ALTER PROCEDURE [Age_Rpt_CommByBettype_Ag]
+﻿Text
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE [Age_Rpt_CommByBettype_Ag]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,
@@ -150,6 +152,9 @@ INNER JOIN customer c with(nolock) on c.custid = pvt.custid
 ORDER BY c.username
 
 DROP TABLE #tmp
+
+
+
 
 
 GO

@@ -9,6 +9,7 @@ AS
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
 		- 20130311@Elodie: Get matchs which have eventstatus <> 'completed'
 		- 20140417@Dom: Add new bettype 126
+		- 20140814@Dom: [Redmine: #19661] Offering 11 new bettypes
 	Parameter's Explanations:
 
 */
@@ -26,7 +27,7 @@ AS
 								WHERE srecommend = @agentid 
 									AND statusid IN (0,1)
 									AND ruben = 0
-									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151)--Dom														
+									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151,131,132,136,137,138,139)--Dom														
 							)
 		GROUP BY m.sporttype, m.leagueid 
 	END
@@ -40,7 +41,7 @@ AS
 								WHERE mrecommend = @agentid 
 									AND statusid IN (0,1)
 									AND ruben = 0
-									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151)--Dom														
+									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151,131,132,136,137,138,139)--Dom														
 							)
 		GROUP BY  m.sporttype ,m.leagueid 
 	END
@@ -54,7 +55,7 @@ AS
 								WHERE recommend = @agentid 
 									AND statusid IN (0,1)
 									AND ruben = 0
-									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151)--Dom														
+									AND bettype IN (1,2,3,4,5,6,7,8,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,145,146,151,131,132,136,137,138,139)--Dom														
 							)
 		GROUP BY m.sporttype ,m.leagueid
 	END
