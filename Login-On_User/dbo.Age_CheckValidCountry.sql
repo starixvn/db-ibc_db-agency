@@ -1,6 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Age_CheckValidCountry]
 	@IP NVARCHAR(15),
-	@isValid BIT = 1 OUTPUT
+	@countryCode VARCHAR(2) = '' OUTPUT
 AS
 	/*
 		Created: Johnson
@@ -15,15 +15,13 @@ AS
 BEGIN
 	SET NOCOUNT ON 
 	
-	DECLARE @countrySHORT nvarchar(2),
-			@countryLONG nvarchar(64)
+	DECLARE @countryLONG nvarchar(64)
+			
+	EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countryCode OUTPUT, @countryLONG = @countryLONG OUTPUT
 	
-	SET @isValid = 1
-	
-	EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countrySHORT OUTPUT, @countryLONG = @countryLONG OUTPUT
-	
-	IF @countrySHORT = 'SG'
-		SELECT @isValid = 0
+	--hardcode for testing on local
+	IF @IP IN ('10.21.10.38','10.21.10.31')
+		SELECT @CountryCode = 'SG'
 	
 END
 GO
