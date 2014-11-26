@@ -76,6 +76,7 @@ Revisions:
 	- 20140306@Patrick:	Add more Keno product
 	- 20140310@Patrick:	Exclude keno from Sportbook
 	- 20140907@Dom:	[Redmine #22012] remove duplicate VS transaction id in bet list feature
+	- 20141103@Dom: Apply sport bettype matrix
 */
 
 
@@ -85,6 +86,9 @@ if @custid is null
 Declare @Recommend int
 	Select @Recommend = Recommend, @UserName = Username From custinfo With(NOLOCK) Where CustID=@CustID
 
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4
 
 DECLARE @BetListSelAllByDateMem TABLE(
 	Username nvarchar(30), 
@@ -207,15 +211,19 @@ BEGIN
 	FROM 
 		bettrans b with (nolock)
 		INNER JOIN match m with (nolock) ON b.matchid=m.matchid		
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE
-		b.CustID = @CustID and
-		b.recommend=@Recommend  
-		AND b.transdate>=@FromDate and b.transdate<=@ToDate
-		AND b.bettype NOT IN (51,52,53,54,55,56,61,62,63,64,65,66,10,31,32,33,41,42,43) --20120626@Elodie: exclude outright, HR from sportbook
-		AND b.bettype NOT BETWEEN 81 AND 120  --- Change arrange of Numbergame from 81 to 120
-		AND b.bettype NOT BETWEEN 1101 AND 1199  --- Change arrange of Numbergame from 1101 to 1199
-		AND b.bettype NOT BETWEEN 1201 AND 1299		
-		AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
+		b.CustID = @CustID
+		AND b.recommend=@Recommend  
+		AND b.transdate>=@FromDate 
+		AND b.transdate<=@ToDate
+		--AND b.bettype NOT IN (51,52,53,54,55,56,61,62,63,64,65,66,10,31,32,33,41,42,43) --20120626@Elodie: exclude outright, HR from sportbook
+		--AND b.bettype NOT BETWEEN 81 AND 120  --- Change arrange of Numbergame from 81 to 120
+		--AND b.bettype NOT BETWEEN 1101 AND 1199  --- Change arrange of Numbergame from 1101 to 1199
+		--AND b.bettype NOT BETWEEN 1201 AND 1299		
+		--AND b.bettype NOT BETWEEN 1501 AND 1599 -- exclude Keno
+		AND s.ProductID = 1 
+		AND s.EventType = 1 
 				
 	-- OutRight tickets
 	INSERT INTO @BetListSelAllByDateMem
@@ -398,11 +406,14 @@ BEGIN
 		bettrans b with (nolock)
 		INNER JOIN outright m with (nolock) ON b.matchid=m.orid	
 		INNER JOIN league l WITH(NOLOCK) ON l.leagueid = m.leagueid	
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	where
-		b.CustID = @CustID and
-		b.recommend=@Recommend
-		and b.transdate>=@FromDate and b.transdate<=@ToDate	
-		and b.bettype in (31, 32, 33,41,42,43)
+		b.CustID = @CustID
+		AND b.recommend=@Recommend
+		AND b.transdate>=@FromDate 
+		AND b.transdate<=@ToDate	
+		AND s.ProductID = 2
+		--and b.bettype in (31, 32, 33,41,42,43)
 END
 
 IF @ShowCasino=1
@@ -591,11 +602,14 @@ BEGIN
 	FROM 
 		bettrans b with (nolock)
 		INNER JOIN match m with (nolock) ON b.matchid=m.matchid		
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE
-		b.CustID = @CustID AND
-		b.recommend=@Recommend  
-		AND b.transdate>=@FromDate AND b.transdate<=@ToDate
-		AND b.bettype BETWEEN 81 AND 120
+		b.CustID = @CustID
+		AND b.recommend=@Recommend  
+		AND b.transdate>=@FromDate 
+		AND b.transdate<=@ToDate
+		AND s.ProductID = 3
+		--AND b.bettype BETWEEN 81 AND 120
 END
 IF @ShowBI=1
 BEGIN
@@ -717,11 +731,14 @@ BEGIN
 	FROM 
 		bettrans b with (nolock)
 		INNER JOIN match m with (nolock) ON b.matchid=m.matchid		
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 	WHERE
-		b.CustID = @CustID AND
-		b.recommend=@Recommend  
-		AND b.transdate>=@FromDate AND b.transdate<=@ToDate
-		AND b.bettype BETWEEN 1101 AND 1199
+		b.CustID = @CustID
+		AND b.recommend=@Recommend  
+		AND b.transdate>=@FromDate 
+		AND b.transdate<=@ToDate
+		AND s.ProductID = 4
+		--AND b.bettype BETWEEN 1101 AND 1199
 END
 
 ----Show Virtual Sports
@@ -782,12 +799,16 @@ BEGIN
 	FROM 
 		bettrans b with (nolock)
 		INNER JOIN match m with (nolock) ON b.matchid=m.matchid		
+		INNER JOIN @SportBettype s ON s.BetType = b.BetType 
 	WHERE
-		b.CustID = @CustID and
-		b.recommend=@Recommend  
-		AND b.transdate>=@FromDate and b.transdate<=@ToDate
-		AND b.bettype BETWEEN 1201 AND 1299
-		AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+		b.CustID = @CustID
+		AND b.recommend=@Recommend  
+		AND b.transdate>=@FromDate 
+		AND b.transdate<=@ToDate
+		AND s.ProductID=5
+		AND s.EventType=1
+		--AND b.bettype BETWEEN 1201 AND 1299
+		--AND b.bettype NOT IN (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 	
 	INSERT INTO @BetListSelAllByDateMem
 	--Virtual HR
@@ -844,11 +865,14 @@ BEGIN
 		bettrans b with (nolock)
 		INNER JOIN VSOutright o with (nolock) ON b.oddsid=o.Orid
 		INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		INNER JOIN @SportBettype s ON s.BetType = b.BetType 
 	WHERE
 		b.CustID = @CustID and
 		b.recommend=@Recommend  
 		AND b.transdate>=@FromDate and b.transdate<=@ToDate		
-		AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+		AND s.ProductID = 5
+		AND s.EventType = 3
+		--AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 END
 
 --Keno
@@ -907,12 +931,14 @@ BEGIN
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM
 		dbo.bettrans AS b WITH (NOLOCK)
+		INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype) fnc
 	WHERE
 		b.transdate BETWEEN @fromdate AND @todate AND
 		b.recommend = @Recommend AND  
 		b.custid = @CustID AND
-		b.bettype BETWEEN 1501 AND 1599 AND
+		s.ProductID = 8 AND
+		--b.bettype BETWEEN 1501 AND 1599 AND
 		b.statusID NOT IN (0,1)	
 		
 	--Tickets only Waiting & Runing status
@@ -968,12 +994,14 @@ BEGIN
 		0 AS comstatus
 	FROM
 		dbo.translog AS b WITH (NOLOCK)
+		INNER JOIN @SportBettype s ON s.Bettype = b.gameID
 		CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.gameid) fnc
 	WHERE
 		b.transdate BETWEEN @fromdate AND @todate AND
 		b.recommend = @Recommend AND  
 		b.custid = @CustID AND
-		b.gameID BETWEEN 1501 AND 1599 AND
+		s.ProductID = 8 AND
+		--b.gameID BETWEEN 1501 AND 1599 AND
 		b.statusID IN (0,1)					
 END
 

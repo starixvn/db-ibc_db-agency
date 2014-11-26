@@ -13,6 +13,7 @@ Revisions:
 	- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
 	- 20140416@Dom: Add First Half Total Goal (1H Total Goal) (126)
+	- 20140814@Dom:  [Redmine: #19661] Offering 11 new bettypes - Include 7&Over, 4&over
 */					 
 SET NOCOUNT ON
 SELECT   
@@ -24,11 +25,11 @@ SELECT
 	sum((Case when  betteam = '0-1' and bettype = 6 then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end)*(bettrans.apositiontaking)) AS [6_total01],
 	sum((Case when  betteam = '2-3' and bettype = 6  then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*(bettrans.apositiontaking)) AS [6_total23],
 	sum((Case when  betteam = '4-6' and bettype = 6 then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*( bettrans.apositiontaking)) AS [6_total46],
-	sum((Case when  betteam = '7-over' and bettype = 6 then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*(bettrans.apositiontaking)) AS [6_total7over],
+	sum((Case when  betteam IN ('7-over','7&over') and bettype = 6 then (stake*odds)-stake else case when bettype = 126 then 0 else -stake end end )*(bettrans.apositiontaking)) AS [6_total7over],
 
 	sum((Case when betteam = '0-1' and bettype = 126 then (stake*odds)-stake else case when bettype = 6 then 0 else -stake end end)*(bettrans.apositiontaking)) AS [126_total01],
 	sum((Case when betteam = '2-3' and bettype = 126 then (stake*odds)-stake else case when bettype = 6 then 0 else -stake end  end )*(bettrans.apositiontaking)) AS [126_total23],
-	sum((Case when betteam = '4-over' and bettype = 126 then (stake*odds)-stake else case when bettype = 6 then 0 else -stake end  end )*(bettrans.apositiontaking)) AS [126_total4over],
+	sum((Case when betteam IN ('4-over','4&over') and bettype = 126 then (stake*odds)-stake else case when bettype = 6 then 0 else -stake end  end )*(bettrans.apositiontaking)) AS [126_total4over],
 
 	sum(case when bettype=6 then 1 else 0 end) [betcount_6],
 	sum(case when bettype=126 then 1 else 0 end) [betcount_126],

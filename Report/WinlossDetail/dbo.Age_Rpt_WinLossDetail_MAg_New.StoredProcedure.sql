@@ -60,6 +60,7 @@ Revisions:
 	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 	- 20140509@Logan:	1.Add counting for number of tickets
 	                    2.Code aligning
+	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
 */
 
 SET NOCOUNT ON
@@ -176,7 +177,7 @@ BEGIN
 	     WHERE 1 = 1
 		   and (bettype < case when @showSB = 1 then 31 else 0 end
 				OR bettype between 121 and case when @showSB = 1 then 999 else 0 end
-				OR bettype between 1301 and case when @showSB = 1 then 1334 else 0 end
+				OR bettype between 1301 and case when @showSB = 1 then 1399 else 0 end
 				OR bettype between 31 and case when @ShowRB = 1 then 49 else 0 end
 				OR bettype = case when @showCasino = 1 then 71 else 0 end
 				OR bettype = case when @showP2P = 1 then 1000 else 0 end

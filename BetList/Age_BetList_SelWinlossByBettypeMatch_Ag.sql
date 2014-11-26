@@ -31,6 +31,7 @@ Revisions:
 	- 20120112@Sophia:  Add refno, showtime for Table - Shoe - Hand of LiveCasino 
 						Add Sub table for Live Casino
 	- 20120926@Sophia: Get comstatus
+	- 20141016@Sophia: support Sporting solution-grouped bettype 
 */
 
 
@@ -89,11 +90,12 @@ BEGIN
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM
 		bettrans b with (nolock) 
-		inner join match m with (nolock) on b.matchid=m.matchid 		
+		inner join match m with (nolock) on b.matchid=m.matchid 
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype				
 	WHERE
 		b.matchid=@matchid and 
 		b.recommend=@custid  and 		
-		b.bettype=@bettype AND
+		(b.bettype=@bettype OR GroupTypeId = @bettype ) AND
 		b.Liveindicator = CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END 
 	ORDER BY
 		b.status, b.transid
@@ -170,11 +172,12 @@ BEGIN
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM
 		bettrans14 b with (nolock) 
-		inner join match14 m with (nolock) on b.matchid=m.matchid 			
+		inner join match14 m with (nolock) on b.matchid=m.matchid 	
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
 	WHERE
 		b.matchid=@matchid and 
 		b.recommend=@custid  and 		
-		b.bettype=@bettype and
+		(b.bettype=@bettype OR GroupTypeId = @bettype ) AND
 		b.Liveindicator= CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END 
 	ORDER BY
 		b.status, b.transid

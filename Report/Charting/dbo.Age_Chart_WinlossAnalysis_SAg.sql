@@ -26,6 +26,8 @@ AS
 		- 20121010@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
 		- 20130121@Dan: add linked server DBSUM for bodb_Summary
 		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
+		- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
+
 
 	Parameters Explanation:
 */
@@ -47,7 +49,7 @@ SET NOCOUNT ON
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT 0 AS sporttype, typeid FROM bettype WITH(NOLOCK)
 		WHERE (typeid>0 and typeid<31) OR (typeid>=121 and typeid<=999)
-		OR (typeid >= 1301 and typeid <= 1334)
+		OR (typeid >= 1301 and typeid <= 1399)
 
 		--Sum_winloss  
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  

@@ -1,8 +1,9 @@
 ﻿ALTER  PROCEDURE [dbo].[Age_CustomerInsNickName] 
-	@custid int,
-	@Nickname varchar(50) = NULL,
-	@language VARCHAR(2) = 'E' ,
-	@ErrCode int = 0 OUTPUT,
+	@custid			INT,
+	@Nickname		VARCHAR(50) = NULL,
+	@IP				VARCHAR(30) = '',
+	@language		VARCHAR(2) = 'E' ,
+	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg nvarchar(4000) = '' OUTPUT
 AS
 
@@ -16,6 +17,7 @@ Revisions:
 	- 20110722@Sophia: don't use prefix for username2 anymore
 	- 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
     - 20130311@Dan: Write more log on DBTXN server in case of DBLOG server failure
+    - 20141117@Johnson: write log IP
 Param's Explanation:
 • @custid: custid that need to be update.   
 */
@@ -70,6 +72,7 @@ END
 
     SELECT  @LogSPData = '<Age_CustomerInsNickname CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)), SPACE(1)) + '" '
 						+ 'Username2="'+ dbo.f_EncodeXMLValue(COALESCE(CAST(@Nickname AS  VARCHAR(50)), SPACE(1))) + '" '
+						+ 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" ' 
 						+ 'ErrCode="' + COALESCE(CAST(@ErrCode AS VARCHAR(50)), SPACE(1)) + '" ' 
 						+ 'ErrMsg="' + COALESCE(CAST(@ErrMsg AS VARCHAR(400)), SPACE(1)) + '" />' 
 
@@ -84,6 +87,7 @@ END TRY
 BEGIN CATCH
     SELECT  @LogSPData = '<Age_CustomerInsNickname CustID="' + COALESCE(CAST(@CustID AS VARCHAR(50)), SPACE(1)) + '" '
 					+ 'Username2="'+ dbo.f_EncodeXMLValue(COALESCE(CAST(@Nickname AS  VARCHAR(50)), SPACE(1))) + '" '
+					+ 'IP="' + COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" ' 
 					+ 'ErrCode="' + COALESCE(CAST(ERROR_NUMBER() AS VARCHAR(50)), SPACE(1)) + '" ' 
 					+ 'ErrMsg="' + COALESCE(CAST(ERROR_MESSAGE() AS VARCHAR(2000)), SPACE(1)) + '" />'
 						

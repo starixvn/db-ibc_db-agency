@@ -8,10 +8,11 @@ AS
  Revisions:  
 	- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
     - 20140417@Dom: Add new bettype 126
+	- 20140807@Dom: Include 11 new bettypes of Soccer [feature: #19632]
 */  
 		SELECT 1 typeid, 1 isLive, 1 isDead, '7' [1stId]    
 	UNION ALL     
-		SELECT 2 typeid, 1 isLive, 1 isDead, '12' [1stId]    
+		SELECT 2 typeid, 1 isLive, 1 isDead, '12,136,137,138,139' [1stId]    
 	UNION ALL     
 		SELECT 3 typeid, 1 isLive, 1 isDead, '8' [1stId]    
 	UNION ALL     
@@ -29,7 +30,7 @@ AS
 	UNION ALL    
 		SELECT 4 typeid , 0 isLive, 1 isDead, '30' [1stId]    
 	UNION ALL     
-		SELECT 6 typeid , 0 isLive, 1 isDead, '126' [1stId]   --Dom add 126
+		SELECT 6 typeid , 1 isLive, 1 isDead, '126,131,132' [1stId]   --Dom add 126
 	UNION ALL     
 		SELECT 121 typeid , 1 isLive, 1 isDead, '0' [1stId] 
 	UNION ALL     

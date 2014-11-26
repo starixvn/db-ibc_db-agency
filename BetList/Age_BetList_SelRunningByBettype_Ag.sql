@@ -229,4 +229,3 @@ GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_Ag] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettype_Ag] TO vnteam
-

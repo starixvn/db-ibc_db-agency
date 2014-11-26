@@ -229,4 +229,3 @@ GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettype_SAg] TO vnteam
 GO
 
-

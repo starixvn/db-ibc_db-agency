@@ -180,4 +180,3 @@ GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettypeMatch_SAg] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettypeMatch_SAg] TO [vnteam]
-
