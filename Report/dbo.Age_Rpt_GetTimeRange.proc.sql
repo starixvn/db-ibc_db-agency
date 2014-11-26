@@ -1,5 +1,5 @@
 ALTER PROCEDURE dbo.Age_Rpt_GetTimeRange (
-	@RptTypeId	TINYINT
+	@RptTypeId	TINYINT		 = 0
 	,@SiteName	VARCHAR(100) = ''
 )
 AS
@@ -10,7 +10,9 @@ DB:	DBAGE.bodb_Age
 Original:
 
 Revisions:           
-
+	-20140926@Bobby.Nguyen: Init SP
+	-20141121@Bobby.Nguyen: Add Historical report time range
+	
 Param's Explanation: 
 	- @RptTypeId: 0: All time ranges - X: specific one
 
@@ -45,7 +47,7 @@ BEGIN
 	2. First day of previous 3 Months
 	3. From 05/20/2013 (special case for report FB Financial)
 	4. First date of previous 18 Months
-	5. First date of first month of previous 5 Years
+	5. Historical report - the first date of first month of previous X Years
 	**/
 	INSERT INTO @Age_RptTimeRange_Config
 	SELECT t.RptType
@@ -76,12 +78,12 @@ BEGIN
 			,'Previous18Months'	AS TypeName
 			,-18				AS SValue
 			,'M'				AS SUnit
-
+		
 		UNION
 		SELECT
 			5					AS RptType
-			,'Previous5Years'	AS TypeName
-			,-5					AS SValue
+			,'HistoricalReport'	AS TypeName
+			,-3					AS SValue
 			,'Y'				AS SUnit
 
 	) AS t
@@ -128,7 +130,7 @@ BEGIN
 	END
 
 	--update Previous Months/Years time range
-	IF(@rptTypeName IN ('Previous3Months', 'Previous18Months', 'Previous5Years')
+	IF(@rptTypeName IN ('Previous3Months', 'Previous18Months', 'HistoricalReport')
 		OR @RptTypeId = 0 )
 	BEGIN
 	
@@ -147,7 +149,7 @@ BEGIN
 			WHERE cf.RptType = d.RptType
 		) t
 		WHERE d.TypeName = @rptTypeName
-			OR (@rptTypeId = 0 AND d.TypeName IN ('Previous3Months', 'Previous18Months', 'Previous5Years') )
+			OR (@rptTypeId = 0 AND d.TypeName IN ('Previous3Months', 'Previous18Months', 'HistoricalReport') )
 	END
 
 	--return to time range
