@@ -11,12 +11,12 @@ AS
 	Created: 20140611@Logan - [Redmine:#17174]
 	Date:  
 	Task : Select Keno PT Info of Agentss
-	DB: DB053.bodb02
+	DB: DBAGE\bodb02
 	Original: Age_CustomerSelKenoPositionTakingBySAg
 
 
 	Revisions: 
-
+		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
 */
@@ -54,6 +54,7 @@ BEGIN
 		           MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1509,
 		           MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1511,
 		           MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1513,
+		           MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1514,
 		           
 		           MAX(CASE WHEN cg.bettype = 1501 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1501,
 		           --MAX(CASE WHEN cg.bettype = 1502 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1502,
@@ -65,7 +66,8 @@ BEGIN
 		           MAX(CASE WHEN cg.bettype = 1508 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1508,
 		           MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1509,
 		           MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1511,
-		           MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1513
+		           MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1513,
+		           MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1514
 	          FROM custinfo ci with(nolock)
         inner join CustSettingGame cg with(nolock) on ci.custid = cg.custid
         inner join CustGameType ct with(nolock) on ci.custid = ct.CustID
