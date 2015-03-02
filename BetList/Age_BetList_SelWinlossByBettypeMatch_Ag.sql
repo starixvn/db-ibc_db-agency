@@ -32,6 +32,7 @@ Revisions:
 						Add Sub table for Live Casino
 	- 20120926@Sophia: Get comstatus
 	- 20141016@Sophia: support Sporting solution-grouped bettype 
+	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 */
 
 
@@ -87,6 +88,7 @@ BEGIN
 		b.betid,
 		m.showtime,
 		b.refno,
+		b.betcheck,
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM
 		bettrans b with (nolock) 
@@ -169,6 +171,7 @@ BEGIN
 		b.betid,
 		m.showtime,
 		b.refno,
+		b.betcheck,
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM
 		bettrans14 b with (nolock) 
