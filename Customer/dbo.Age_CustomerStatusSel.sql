@@ -15,9 +15,9 @@ AS
 	*/
 BEGIN
 	SET NOCOUNT ON
-	IF EXISTS (SELECT TOP (1) 1 FROM CustSup WITH(NOLOCK) WHERE subAccID = @custid)
+	IF EXISTS (SELECT TOP (1) 1 FROM CustSub WITH(NOLOCK) WHERE subAccID = @custid)
 	BEGIN
-		SELECT @isActive = ISNULL(closed,0)
+		SELECT @isActive =  CASE WHEN closed = 1 THEN 0 ELSE 1 END
 		FROM CustSub WITH(NOLOCK)
 		WHERE subAccID = @custid
 	END
