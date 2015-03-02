@@ -84,6 +84,7 @@ Begin DataProject = "Agent"
       End
       Script = "dbo.Age_CustomerCheckNotification.sql"
       Script = "dbo.Age_CustomerInsNickName.sql"
+      Script = "dbo.Age_CustomerPermissionCheck.sql"
       Script = "dbo.Age_CustomerSelAgentList.proc.sql"
       Script = "dbo.Age_CustomerSelAllInfo.sql"
       Script = "dbo.Age_CustomerSelBetSetting.sql"
