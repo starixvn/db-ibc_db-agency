@@ -43,6 +43,7 @@ Revisions:
 	- 20140306@Patrick:	Add more Keno product
 	- 20140310@Patrick:	Exclude keno from Sportbook
 	- 20141103@Dom: Apply sport bettype matrix
+	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 
 Param's Explanation: 
 */
@@ -164,7 +165,7 @@ INSERT INTO @Data SELECT
 	@Username,
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 	m.showtime,
-	'' as betcheck,
+	CASE WHEN b.bettype IN (217,216) THEN b.betcheck ELSE '' END as betcheck,
 	CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 FROM #bettrans_temp b
 	INNER JOIN dbo.match_bk m with(nolock) ON b.matchid = m.matchid		

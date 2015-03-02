@@ -65,7 +65,8 @@ Revisions:
 	- 20130820@Kathy: Apply Progressive Bonus: bettype 72 for Casino
 	- 20140303@Elodie: Add Keno sport [Redmine:#12756]
 	- 20141103@Dom: Apply sport bettype matrix
-
+	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
+	
 Param's Explanation: 
 	+ @transtype: 1-Betting Statement; 2-VOID/Cancelled Bet; 3-Outstanding Bet 
 */
@@ -208,7 +209,7 @@ BEGIN
 		b.Username,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 		m.showtime,
-		'' as betcheck,
+		CASE WHEN b.bettype IN (217,216) THEN b.betcheck ELSE '' END as betcheck,
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	from 
 		dbo.bettrans14 b with (nolock, index=IX_bettrans14)
@@ -704,7 +705,7 @@ BEGIN
 		b.Username,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 		m.showtime,
-		'' as betcheck,
+		CASE WHEN b.bettype IN (217,216) THEN b.betcheck ELSE '' END as betcheck,
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	from 
 		dbo.bettrans b with (nolock, index=IX_custid_matchid_bettype)

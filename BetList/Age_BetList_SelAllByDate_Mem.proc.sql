@@ -77,6 +77,7 @@ Revisions:
 	- 20140310@Patrick:	Exclude keno from Sportbook
 	- 20140907@Dom:	[Redmine #22012] remove duplicate VS transaction id in bet list feature
 	- 20141103@Dom: Apply sport bettype matrix
+	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 */
 
 
@@ -206,7 +207,7 @@ BEGIN
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 		b.OddsType as OddsType,
 		m.showtime,
-		'' as betcheck,
+		CASE WHEN b.bettype IN (217,216) THEN b.betcheck ELSE '' END as betcheck,
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM 
 		bettrans b with (nolock)
