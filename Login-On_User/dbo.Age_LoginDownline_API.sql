@@ -70,8 +70,15 @@ BEGIN
 	-- 20121203@Thien: hard-code to exclude agent MSE06 from using this API.
 	-- 20130427@Thien: hard-code to exclude all 'MSE%' and IP '94.136.37.180'
 	-- 20140502@Viet: Add SAI0000Sub04, requested by Martin JR.
+	-- 20150213@Viet: Add MSE05Sub02, MSE07Sub01, MSE10sub01, MSE21Sub02, MSE22Sub03, Requested by Martin Jr.
 	-- 20150304@Elodie: Add SAS0109Sub02, MSE12Sub01, requested by Martin JR.
-	IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN ('SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04','MSE14Sub00', 'MSE18Sub02', 'SAI0000Sub04','ASB00Sub00','ASB01Sub00', 'SAS0109Sub02', 'MSE12Sub01'))
+	IF (@LoginIP in ( '94.136.37.180', '94.136.37.177', '81.218.184.31')) AND (@UserName NOT IN (
+		'SAS0102SUB02', 'SAS0101SUB04', 'SAS0103SUB02', 'SAS0104SUB02', 'SI0301SUB05', 'MSE01Sub02', 'MSE03Sub01', 
+		'MSE04Sub02', 'MSE09Sub02', 'SI0303SUB03', 'SI0305SUB02', 'SI0306SUB03', 'MSE08Sub02', 'ASASub03', 'si0307sub04',
+		'MSE14Sub00', 'MSE18Sub02', 'SAI0000Sub04','ASB00Sub00','ASB01Sub00',
+		'MSE05Sub02', 'MSE07Sub01', 'MSE10sub01', 'MSE21Sub02', 'MSE22Sub03', 
+		'SAS0109Sub02', 'MSE12Sub01'
+		))
 	BEGIN
 		select @ErrMsg = N'Login Failed.'	
 		return
@@ -365,9 +372,8 @@ BEGIN
 			@Doing = @LogData,
 			@Duration = @Duration
 	END CATCH		
-
-
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_LoginDownline_API] TO [bodbDownlineNet] AS [dbo]
