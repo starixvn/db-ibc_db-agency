@@ -31,7 +31,7 @@ AS
 	WHERE	bo.srecommend = @CustID 
 			and bo.ruben = 1 
 			and bo.winlostdate between @FromDate and @ToDate 
-			and bo.bettype in (31,32,33,41,42,43)
+			and bo.bettype in (31,32,33,41,42,43) -- productID = 2
 	GROUP BY bo.mrecommend, bo.bettype
 	
 	
@@ -47,7 +47,7 @@ AS
 	WHERE	bo.srecommend = @CustID 
 			and bo.ruben = 1 
 			and bo.winlostdate between @FromDate and @ToDate 
-			and bo.bettype in (31,32,33,41,42,43)
+			and bo.bettype in (31,32,33,41,42,43) -- productID = 2
 	GROUP BY bo.mrecommend, bo.bettype
 	
 

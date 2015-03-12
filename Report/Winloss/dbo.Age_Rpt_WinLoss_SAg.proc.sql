@@ -1,19 +1,19 @@
 ﻿ALTER PROCEDURE [Age_Rpt_WinLoss_SAg]  
- @CustID INT,--srecommend  
- @FromDate SMALLDATETIME,  
- @ToDate SMALLDATETIME,   
- @showSB BIT=1,  
- @showCasino BIT=0,  
- @showP2P BIT=0,  
- @showRB BIT=0,  
- @showFI BIT=0,  
- @showNG BIT=0,  
- @showBI BIT=0,  
- @showLiveCasino BIT = 0,
- @showVS BIT = 0,
- @showProgressiveBonus BIT =0,
- @showKeno BIT = 0,
- @BalanceUpDay SMALLDATETIME  
+ @CustID				INT --srecommend  
+ ,@FromDate				SMALLDATETIME
+ ,@ToDate				SMALLDATETIME  
+ ,@showSB				BIT = 1
+ ,@showCasino			BIT = 0
+ ,@showP2P				BIT = 0
+ ,@showRB				BIT = 0  
+ ,@showFI				BIT = 0  
+ ,@showNG				BIT = 0  
+ ,@showBI				BIT = 0  
+ ,@showLiveCasino		BIT = 0
+ ,@showVS				BIT = 0
+ ,@showProgressiveBonus BIT =0
+ ,@showKeno				BIT = 0
+ ,@BalanceUpDay			SMALLDATETIME  
   
 WITH RECOMPILE  
   
@@ -53,6 +53,7 @@ AS
   - 20130717@Kathy: Apply Progressive Bonus: add bettype 72 for Casino
   - 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
   - 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
+  - 20150306@Cody: Apply sport bettype matrix [redmine: #30169]
   
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -60,63 +61,75 @@ AS
 SET NOCOUNT ON  
 
  
-DECLARE @SAgWinLoss TABLE(CustID INT, TurnOver MONEY, GrossComm money, MAgTotal MONEY,   
- SAgWinlost MONEY, Comm MONEY, SAgTotal MONEY, Company MONEY)  
+DECLARE @SAgWinLoss TABLE(
+				CustID		INT
+				,TurnOver	MONEY
+				,GrossComm	MONEY
+				,MAgTotal	MONEY
+				,SAgWinlost MONEY
+				,Comm		MONEY
+				,SAgTotal	MONEY
+				,Company	MONEY
+			)  
   
-DECLARE @TmpCondSumWL TABLE(sporttype INT, bettype INT)  
+DECLARE @TmpCondSumWL TABLE(
+				sporttype INT
+				,bettype INT
+			)
+			  
 IF @ShowSB = 1  
 BEGIN  
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
- VALUES(0,0)   
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
+	VALUES(0, 0)
 END  
 IF @ShowCasino = 1  
 BEGIN  
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
- VALUES(251,71)  
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
+	VALUES(251, 71)  
 END  
 IF @ShowP2P = 1  
 BEGIN  
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
- VALUES(253,1000)  
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
+	VALUES(253, 1000)  
 END  
 IF @ShowRB = 1  
 BEGIN  
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- SELECT 151,0
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	SELECT 151, 0
 END  
 IF @ShowNG = 1  
 BEGIN  
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(161,0)  
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(161, 0)  
 END  
 IF @ShowBI = 1  
 BEGIN  
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(252,73)  
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(252, 73)  
 END  
 IF @showLiveCasino = 1
 BEGIN
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(162,0) 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(162, 0) 
 END
 IF @showVS = 1
 BEGIN
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(180,0) 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(180, 0) 
 END
 IF @showProgressiveBonus = 1
 BEGIN
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(251,72) 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(251, 72) 
 END
 --Sum_winloss 
 IF @showKeno = 1
@@ -124,61 +137,75 @@ BEGIN
 	INSERT INTO @TmpCondSumWL (sporttype, bettype)
 	VALUES(202, 0)
 END 
+
+DECLARE @SportBettype TABLE(
+	ProductID INT
+	,Bettype INT
+	,EventType INT
+)
+
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
 IF @Todate >= @BalanceUpDay   
 BEGIN   
      INSERT INTO @SAgWinLoss  
       SELECT  
-       mrecommend,   
-	   SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end),
-	   sum(case when b.bettype = 1000 then oddsspread else case when tpositiontaking=1 then 0 else scomm/(1-tpositiontaking) end end) as GrossComm,
-       SUM(mwinlost+awinlost+acomm+winlost-actual_stake),  
-       SUM(swinlost),  
-       ISNULL(SUM(scomm), 0)-ISNULL(SUM(acomm), 0),  
-       ISNULL(SUM(swinlost), 0) + ISNULL(SUM(scomm), 0)-SUM(acomm),  
-       -(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost-actual_stake), 0))     
+       mrecommend
+	   ,SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN(33,43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END)
+	   ,SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END END) AS GrossComm
+       ,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
+       ,SUM(swinlost)
+       ,ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0)
+       ,ISNULL(SUM(swinlost), 0) + ISNULL(SUM(scomm), 0) - SUM(acomm)
+       ,-(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost - actual_stake), 0))     
       FROM   
-       dbo.bettrans b WITH (NOLOCK,index=IX_srecommend)  
+		dbo.bettrans b WITH (NOLOCK, index = IX_srecommend)  
+		INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
       WHERE  
-    (  
-     bettype < case when @showSB=1 then 31 else 0 end  
-     OR bettype between 121 and case when @showSB=1 then 999 else 0 end
-     OR bettype between 1301 and case when @showSB=1 then 1399 else 0 end
-     OR bettype between 31 and case when @ShowRB=1 then 49 else 0 end  
-     OR bettype = case when @showCasino=1 then 71 else 0 end  
-     OR bettype = case when @showP2P=1 then 1000 else 0 end  
-     OR bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)  
-     OR bettype = (CASE WHEN @showBI =1 THEN 73 ELSE 0 END)  
-	 OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino =1 THEN 1199 ELSE 0 END)  
-	 OR bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
-	 OR bettype = CASE WHEN @showProgressiveBonus =1 then 72 else 0 end
-	 OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END 
-    ) AND   
-    SRecommend=@CustID 
+			
+  --  (  
+  --   bettype < case when @showSB=1 then 31 else 0 end  
+  --   OR bettype between 121 and case when @showSB=1 then 999 else 0 end
+  --   OR bettype between 1301 and case when @showSB=1 then 1399 else 0 end
+  --   OR bettype between 31 and case when @ShowRB=1 then 49 else 0 end  
+  --   OR bettype = case when @showCasino=1 then 71 else 0 end  
+  --   OR bettype = case when @showP2P=1 then 1000 else 0 end  
+  --   OR bettype BETWEEN 81 AND (CASE WHEN @showNG=1 THEN 120 ELSE 0 END)  
+  --   OR bettype = (CASE WHEN @showBI =1 THEN 73 ELSE 0 END)  
+	 --OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino =1 THEN 1199 ELSE 0 END)  
+	 --OR bettype BETWEEN 1201 AND (CASE WHEN @showVS=1 THEN 1299 ELSE 0 END)
+	 --OR bettype = CASE WHEN @showProgressiveBonus =1 then 72 else 0 end
+	 --OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END 
+  --  ) AND
+		s.ProductID IN (1, 2, 3, 4, 5, 6, 7)
+		AND SRecommend = @CustID 
 		AND  winlostdate BETWEEN @FromDate AND @ToDate 
 		--AND  status NOT IN ('VOID', 'REJECT', 'Refund') 
-		AND  b.statusID not in (0,1,101, 102, 103)   
-       --ruben=1  
-            
-      GROUP BY mrecommend,b.bettype  
+		AND  b.statusID NOT IN (0,1,101, 102, 103)   
+		AND ruben = 1
+      GROUP BY mrecommend, b.bettype  
    
  IF @BalanceUpDay < @FromDate  
   SELECT @BalanceUpDay=@FromDate  
   
     INSERT INTO @SAgWinLoss  
      SELECT     
-      CustID,         
-      SUM(ABS(TurnOver)),
-      SUM(ISNULL(grosscomm,0)) as GrossComm,  
-      SUM(mwinlost+awinlost+acomm+winlost),  
-      SUM(swinlost),  
-      ISNULL(SUM(scomm), 0)-ISNULL(SUM(acomm), 0),  
-      ISNULL(SUM(swinlost), 0) + ISNULL(SUM(scomm), 0)-SUM(acomm),  
-      -(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost), 0))     
-     FROM   
-      dbo.sum_winloss b WITH (NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
+		CustID
+		,SUM(ABS(TurnOver))
+		,SUM(ISNULL(grosscomm, 0)) AS GrossComm
+		,SUM(mwinlost + awinlost + acomm + winlost)  
+		,SUM(swinlost)
+		,ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0)
+		,ISNULL(SUM(swinlost), 0) + ISNULL(SUM(scomm), 0) - SUM(acomm)
+		,-(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost), 0))     
+     FROM
+		dbo.sum_winloss b WITH (NOLOCK) 
+		INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
      WHERE  
-      winlostdate BETWEEN @BalanceUpDay AND @todate  
-      AND Srecommend=@custid AND roleid=3  
+		winlostdate BETWEEN @BalanceUpDay AND @todate  
+		AND Srecommend = @custid
+		AND roleid = 3  
      GROUP BY custid  
 END  
 IF @FromDate < @BalanceUpDay   
@@ -188,20 +215,21 @@ BEGIN
    
     INSERT INTO @SAgWinLoss  
      SELECT     
-      CustID,          
-      SUM(ABS(TurnOver)),
-      SUM(ISNULL(grosscomm,0)) as GrossComm,  
-      SUM(mwinlost+awinlost+acomm+winlost),  
-      SUM(swinlost),  
-      ISNULL(SUM(scomm), 0)-ISNULL(SUM(acomm), 0),  
-      ISNULL(SUM(swinlost), 0) + ISNULL(SUM(scomm), 0)-SUM(acomm),  
-      -(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost), 0))     
+		CustID          
+		,SUM(ABS(TurnOver))
+		,SUM(ISNULL(grosscomm,0)) AS GrossComm
+		,SUM(mwinlost + awinlost + acomm + winlost)  
+		,SUM(swinlost)
+		,ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0)
+		,ISNULL(SUM(swinlost), 0) + ISNULL(SUM(scomm), 0) - SUM(acomm)
+		,-(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost), 0))     
      FROM   
-      DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
+		DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
+		INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
      WHERE  
-      Winlostdate BETWEEN @FromDate AND @ToDate  
-      AND SRecommend = @CustID  
-      AND RoleID = 3  
+		Winlostdate BETWEEN @FromDate AND @ToDate  
+		AND SRecommend = @CustID  
+		AND RoleID = 3  
      GROUP BY CustID  
   
         --Write log to monitor performance on DB06  
@@ -211,21 +239,20 @@ BEGIN
 END  
   
 SELECT  
- w.CustID,   
- c.UserName,   
- SUM(TurnOver) AS TurnOver,   
- SUM(GrossComm) as GrossComm,  
- SUM(MAgTotal) AS MAgTotal,  
- SUM(SAgWinlost) AS SAgWinlost,  
- SUM(Comm) AS Comm,  
- SUM(SAgTotal) AS SAgTotal,  
- SUM(Company) AS Company  
-FROM @SAgWinLoss w INNER JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID   
+	w.CustID   
+	,c.UserName
+	,SUM(TurnOver) AS TurnOver
+	,SUM(GrossComm) AS GrossComm
+	,SUM(MAgTotal) AS MAgTotal 
+	,SUM(SAgWinlost) AS SAgWinlost
+	,SUM(Comm) AS Comm
+	,SUM(SAgTotal) AS SAgTotal
+	,SUM(Company) AS Company  
+FROM 
+	@SAgWinLoss w 
+	INNER JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID   
 GROUP BY w.CustID, c.UserName  
 ORDER BY c.Username
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinLoss_SAg] TO [bodbDownlineNet]

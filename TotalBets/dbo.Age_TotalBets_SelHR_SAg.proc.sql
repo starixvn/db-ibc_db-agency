@@ -49,7 +49,7 @@ INSERT INTO @TotalBets(     transid, bettype, matchid, stake, spositiontaking, s
 	    bettrans b1 (NOLOCK) INNER JOIN outright m1 (NOLOCK) ON b1.matchid = m1.orid 
     WHERE 
 	    b1.SRecommend = @custid AND 
-	    b1.bettype IN (31,32,41,42,33,43) AND 
+	    b1.bettype IN (31,32,41,42,33,43) AND -- productID = 2
 	    m1.eventdate >= @fromdate AND 
 	    --b1.status NOT IN('reject','void','Refund')
 	     b1.statusID NOT IN (101,102,103)
