@@ -187,9 +187,8 @@ BEGIN
 		       COUNT(b.transid) --No Of Ticket
 	    FROM dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
-		WHERE --1 = 1
-			--AND 
-		  -- and (bettype < case when @showSB = 1 then 31 else 0 end
+		WHERE 
+				-- and (bettype < case when @showSB = 1 then 31 else 0 end
 				--OR bettype between 121 and case when @showSB = 1 then 999 else 0 end
 				--OR bettype between 1301 and case when @showSB = 1 then 1399 else 0 end
 				--OR bettype between 31 and case when @ShowRB = 1 then 49 else 0 end
