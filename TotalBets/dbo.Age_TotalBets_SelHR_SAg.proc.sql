@@ -15,6 +15,7 @@
 		- 20101007@Henry: Change column transid from INT to BIGINT
 		- 20101224@Johnson: change type of bettype to smallint in temporary table
 		- 20120313@Lukas: modify winlostdate condition to get tickets of Aust racing (cross-date meetings)
+		- 20150323@Cody: Apply sport bettype matrix
 	Param's Explanation:
 	• @CustID: Super Agent ID
 */
