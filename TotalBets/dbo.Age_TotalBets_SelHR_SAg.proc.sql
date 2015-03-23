@@ -2,7 +2,6 @@
 	@custid		INT
 	,@Language	VARCHAR(2) = 'E'
  AS
-
 /*
 	Created: 
 	Task : Retrieve Total Bet values for bettype HR

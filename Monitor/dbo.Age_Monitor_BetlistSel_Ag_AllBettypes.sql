@@ -23,8 +23,6 @@ Parameter's Explanation:
 */ 
 	SET NOCOUNT ON
 	
-	
-	
 	SELECT TOP(@LimitRowCount)
 		b.custid,
 		0 AS sporttype,

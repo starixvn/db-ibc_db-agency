@@ -13,6 +13,7 @@ AS
 		- 20110803@Johnson: Include commission into today winloss and yesterday winloss
 		- 20150318
 */
+
 SET NOCOUNT ON 
 
 DECLARE @username nvarchar(50)

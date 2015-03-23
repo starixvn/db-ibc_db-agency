@@ -3,6 +3,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_Ag]
 	 @custid		INT,
 	 @MoveBetsDay	DATETIME
 AS
+
 /*
 	Created: Johnson
 	Date: 2011-05-31

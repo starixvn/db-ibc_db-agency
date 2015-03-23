@@ -64,6 +64,7 @@ Revisions:
 	- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
 */
 
+
 SET NOCOUNT ON
 
 DECLARE @RowStart	INT

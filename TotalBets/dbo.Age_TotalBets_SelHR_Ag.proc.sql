@@ -20,6 +20,7 @@
 	Param's Explanation:
 	• @CustID: agentID
 */
+
 SET NOCOUNT ON
 
 DECLARE @FromDate DATETIME

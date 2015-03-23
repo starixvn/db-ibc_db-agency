@@ -23,7 +23,6 @@ ALTER PROCEDURE [dbo].[Age_TotalBets_SelHR_MAg]
 	• @CustID: Master Agent ID
 */
 
-
 SET NOCOUNT ON
 
 DECLARE @FromDate DATETIME

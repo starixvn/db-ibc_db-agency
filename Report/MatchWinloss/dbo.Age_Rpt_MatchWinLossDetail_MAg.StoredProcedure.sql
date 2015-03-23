@@ -10,7 +10,6 @@ ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinLossDetail_MAg]
 	@showLiveCasino BIT = 0,
 	@showVS BIT = 0
 AS
-
 /*
 Created: 
 Task : 
