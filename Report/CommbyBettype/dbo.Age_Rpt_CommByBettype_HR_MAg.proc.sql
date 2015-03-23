@@ -5,7 +5,7 @@
 AS
 	SET NOCOUNT ON 
 	
-	--------------------------------------------
+/*
 	--- HORSE RACING
 	--- 2008-11-21 
 	--- Phuong Dao
@@ -13,39 +13,63 @@ AS
 	---        masterComm = acomm - comm
 	---        turnOver = sum (stake)
 	--- 20090528@AnhPham: Get HR commisions with PT and remove turnover
-	--------------------------------------------
+	--- 20150317@Cody: apply sport bettype matrix [Redmine: #30169]
+*/
+	DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 	
-	CREATE TABLE #MasterComm(	recommend		int,
-								bettype		int,
-								masterComm	money)
+	
+	CREATE TABLE #MasterComm(	recommend		INT
+								,bettype		INT
+								,masterComm		MONEY
+							)
 								 
-	INSERT INTO #MasterComm(recommend, bettype, masterComm)
-	
-	SELECT	bo.recommend, bo.bettype, sum(isnull(bo.acomm,0) - isnull(bo.comm,0)) ma_comm
+	INSERT INTO #MasterComm(
+					recommend
+					,bettype
+					,masterComm
+				)
+	SELECT	
+			bo.recommend
+			,bo.bettype
+			,SUM(ISNULL(bo.acomm,0) - ISNULL(bo.comm,0)) ma_comm
 	FROM 
 		(	SELECT	winlostdate, recommend, bettype, acomm, comm, mrecommend, ruben
-			FROM bettrans with (NOLOCK)
+			FROM bettrans WITH(NOLOCK)
 			--WHERE status not in ('running','waiting','void','reject','refund')
-		) bo
+		) bo INNER JOIN @SportBettype s ON bo.bettype = s.Bettype
 	WHERE	bo.mrecommend = @CustID
-			and bo.ruben = 1 
-			and bo.winlostdate between @FromDate and @ToDate 
-			and bo.bettype in (31,32,33,41,42,43)
+			AND bo.ruben = 1 
+			AND bo.winlostdate BETWEEN @FromDate AND @ToDate 
+			AND s.ProductID = 2
+			--and bo.bettype in (31,32,33,41,42,43)
 	GROUP BY bo.recommend, bo.bettype
 	 
 	 
-	INSERT INTO #MasterComm(recommend, bettype, masterComm)
-	 
-	SELECT	bo.recommend, bo.bettype, sum(isnull(bo.acomm,0) - isnull(bo.comm,0)) ma_comm
+	INSERT INTO #MasterComm(
+					recommend
+					,bettype
+					,masterComm
+				)
+	SELECT	
+			bo.recommend
+			,bo.bettype
+			,SUM(ISNULL(bo.acomm,0) - ISNULL(bo.comm,0)) ma_comm
 	FROM 
 		(	SELECT	winlostdate, recommend, bettype, acomm, comm, mrecommend, ruben
-			FROM bettrans14 with (NOLOCK)
+			FROM bettrans14 WITH(NOLOCK)
 			--WHERE status not in ('running','waiting','void','reject','refund')
-		) bo
+		) bo INNER JOIN @SportBettype s ON bo.bettype = s.Bettype
 	WHERE	bo.mrecommend = @CustID
-			and bo.ruben = 1 
-			and bo.winlostdate between @FromDate and @ToDate 
-			and bo.bettype in (31,32,33,41,42,43)
+			AND bo.ruben = 1 
+			AND bo.winlostdate BETWEEN @FromDate AND @ToDate 
+			AND s.ProductID = 2
+			--and bo.bettype in (31,32,33,41,42,43)
 	GROUP BY bo.recommend, bo.bettype
 
 

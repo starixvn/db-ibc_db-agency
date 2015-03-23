@@ -4,32 +4,41 @@
 	@ToDate SMALLDATETIME
 AS
 	SET NOCOUNT ON 
-	--------------------------------------------
-	--- HORSE RACING
-	--- 2008-11-21 
-	--- Phuong Dao
-	--- Task : Commission By Bettype 
-	---        agentComm = comm - playercom
-	---        turnOver = sum (stake)
-	--- 20090528@AnhPham: Get HR commisions with PT and remove turnover
-	--------------------------------------------	
+/*
+--- HORSE RACING
+--- 2008-11-21 
+--- Phuong Dao
+--- Task : Commission By Bettype 
+---        agentComm = comm - playercom
+---        turnOver = sum (stake)
+--- 20090528@AnhPham: Get HR commisions with PT and remove turnover
+--- 20150317@Cody: apply sport bettype matrix [Redmine: #30169]
+*/	
+	DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
 	
-	CREATE TABLE #AgentComm(	custID		int,
-								bettype		int,
-								agentComm	money)
+	CREATE TABLE #AgentComm(	custID		INT
+								,bettype	INT
+								,agentComm	MONEY
+							)
 								 
 	INSERT INTO #AgentComm(custid, bettype, agentComm)
-	
 	SELECT	bo.custid, bo.bettype, sum(isnull(bo.comm,0) - isnull(bo.playercomm,0)) a_comm
 	FROM 
 		(	SELECT	winlostdate, custid, bettype, comm, playercomm, recommend, ruben
 			FROM bettrans with (NOLOCK)
 			--WHERE status not in ('running','waiting','void','reject','refund')
-		) bo
+		) bo INNER JOIN @SportBettype s ON bo.bettype = s.Bettype
 	WHERE	bo.recommend = @CustID 
-			and bo.ruben = 1 
-			and bo.winlostdate between @FromDate and @ToDate 
-			and bo.bettype in (31,32,33,41,42,43)
+			AND bo.ruben = 1 
+			AND bo.winlostdate BETWEEN @FromDate AND @ToDate 
+			AND s.ProductID = 2
+			--and bo.bettype in (31,32,33,41,42,43)
 	GROUP BY bo.custid, bo.bettype
 	 
 	 
@@ -40,11 +49,12 @@ AS
 		(	SELECT	winlostdate, custid, bettype, comm, playercomm, recommend, ruben
 			FROM bettrans14 with (NOLOCK)
 			--WHERE status not in ('running','waiting','void','reject','refund')
-		) bo
+		) bo INNER JOIN @SportBettype s ON bo.bettype = s.Bettype
 	WHERE	bo.recommend = @CustID 
-			and bo.ruben = 1 
-			and bo.winlostdate between @FromDate and @ToDate 
-			and bo.bettype in (31,32,33,41,42,43)
+			AND bo.ruben = 1 
+			AND bo.winlostdate between @FromDate and @ToDate 
+			AND s.ProductID = 2
+			--and bo.bettype in (31,32,33,41,42,43)
 	GROUP BY bo.custid, bo.bettype
 
 
