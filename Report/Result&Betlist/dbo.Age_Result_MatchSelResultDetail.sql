@@ -8,6 +8,7 @@ Created: 20141016@Sophia
 Task: 	Get ResultDetail of a match
 DB:  DBAGE/bodb02
 Revisions: 
+	- 20141218@Sophia: Not to use Betstatus to get REFUND status of Tennis anymore
 
 */
 BEGIN 
@@ -27,10 +28,11 @@ BEGIN
 		m.htawayscore, 
 		m.finalhomescore,
 		m.finalawayscore,
-		case when m.betstatus like 'Refund FT%' then 'Refund FT' 
-				 when m.betstatus like 'Refund HT%' then 'Refund HT'
-				 when m.betstatus like 'Refund%' then 'Refund' 
-			else m.eventstatus end as eventstatus,  
+		CASE ISNULL(R.SettlementStatusID,0)	 
+			WHEN 1 THEN 'Refund' 
+			WHEN 2 THEN 'Refund HT'
+			WHEN 3 THEN 'Refund FT'
+		ELSE m.eventstatus END AS eventstatus,  
 		m.showtime,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 		m.goalrecord,
@@ -39,10 +41,12 @@ BEGIN
 		ISNULL(mr.calculate,0) as calculate	,
 		ISNULL(mr.IsPending,0) as IsPending	
 	FROM  dbo.Match m WITH (NOLOCK)
-		LEFT JOIn dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+		LEFT JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+		LEFT JOIN dbo.ResultDetail R WITH (NOLOCK) ON R.matchID = M.MatchID AND R.ResourceId = '00'
 	WHERE m.MatchId = @matchid
+
 	UNION ALL 
-		SELECT 
+	SELECT 
 		m.sporttype, 
 		m.betstatus, 
 		m.leagueid,
@@ -56,10 +60,11 @@ BEGIN
 		m.htawayscore, 
 		m.finalhomescore,
 		m.finalawayscore,
-		case when m.betstatus like 'Refund FT%' then 'Refund FT' 
-				 when m.betstatus like 'Refund HT%' then 'Refund HT'
-				 when m.betstatus like 'Refund%' then 'Refund' 
-			else m.eventstatus end as eventstatus,  
+		CASE ISNULL(R.SettlementStatusID,0)	 
+			WHEN 1 THEN 'Refund' 
+			WHEN 2 THEN 'Refund HT'
+			WHEN 3 THEN 'Refund FT'
+		ELSE m.eventstatus END AS eventstatus,  
 		m.showtime,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 		m.goalrecord,
@@ -69,6 +74,7 @@ BEGIN
 		ISNULL(mr.IsPending,0) as IsPending	
 	FROM  dbo.Match14 m WITH (NOLOCK)
 		LEFT JOIn dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+		LEFT JOIN dbo.ResultDetail14 R WITH (NOLOCK) ON R.matchID = M.MatchID AND R.ResourceId = '00'
 	WHERE m.MatchId = @matchid	
 
 
