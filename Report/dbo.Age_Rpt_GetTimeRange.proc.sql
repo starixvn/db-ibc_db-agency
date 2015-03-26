@@ -1,11 +1,4 @@
-USE [bodb_Age]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_GetTimeRange_xtest]    Script Date: 3/26/2015 3:54:39 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Age_Rpt_GetTimeRange_xtest] (
+ALTER PROCEDURE [dbo].[Age_Rpt_GetTimeRange] (
 	@RptTypeId	TINYINT		 = 0
 	,@SiteName	VARCHAR(100) = ''
 )

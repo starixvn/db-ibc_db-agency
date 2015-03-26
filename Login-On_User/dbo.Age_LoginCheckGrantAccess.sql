@@ -19,7 +19,7 @@ Param's Explanation:
 BEGIN	
 	SET NOCOUNT ON 
 	
-	IF @CustID IN (1374738,2085352)   --20120623@Jamie: Allow TESTCS0101 (Agent:1374738) and supertest6(Super:2085352) login from outside 
+	IF @CustID IN (1374738,2085352,15322739)   --20120623@Jamie: Allow TESTCS0101 (Agent:1374738) and supertest6(Super:2085352) and SuperTestAuto1(Super:15322739) login from outside 
 	BEGIN
 		SET @IsAccess = 1
 		RETURN

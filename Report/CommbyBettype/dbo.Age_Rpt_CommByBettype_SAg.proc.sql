@@ -1,6 +1,4 @@
-﻿Text
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-CREATE PROCEDURE [Age_Rpt_CommByBettype_SAg]
+﻿ALTER PROCEDURE [Age_Rpt_CommByBettype_SAg]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,
@@ -36,6 +34,7 @@ Revisions:
 	- 20140616@Dom: Support BetRadar [Redmine: #17148]
 	- 20140826@Dom: Move bettype 24,26 to commission3 [Redmine: #20771]
 	- 20140929@Sophia: Remove detail comm columns and calculate Sporting solution into TotalComm_1, TotalComm_3 [Redmine: #22640]
+	- 20150326@Elodie: Move some bettypes to commission1 [Redmine: #32993]
 */
 
 SET NOCOUNT ON
@@ -97,17 +96,17 @@ END
 
 SELECT pvt.mrecommend, c.username, 
 	
-	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([25],0) + isnull([27],0) + isnull([28],0) +
+	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([20],0) + isnull([21],0) + isnull([25],0) + isnull([27],0) + isnull([28],0) +
 	isnull([121],0) + isnull([122],0) + isnull([123],0) + isnull([124],0) + isnull([125],0) +
-	isnull([153],0) + isnull([155],0) + isnull([156],0) + isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0) + isnull([1312],0) + isnull([1316],0) + isnull([1318],0) as totalcomm_1,
-
+	isnull([153],0) + isnull([154],0) + isnull([155],0) + isnull([156],0) + 
+	isnull([1301],0) + isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0) + isnull([1311],0) + isnull([1312],0) + isnull([1316],0) + isnull([1318],0) + isnull([1324],0) as totalcomm_1,
 	
 	isnull([5],0) + isnull([15],0) as [totalcomm_2],
-	
-	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([20],0) + isnull([29],0) +
-	isnull([133],0) + isnull([134],0) + isnull([135],0) + isnull([145],0) + isnull([146],0) + isnull([147],0) + isnull([24],0) + isnull([26],0) +
+		
+	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([29],0) +
+	isnull([133],0) + isnull([134],0) + isnull([135],0) + isnull([145],0) + isnull([146],0) + isnull([147],0) + isnull([24],0) +  isnull([26],0) +
 	isnull([148],0) + isnull([149],0) + isnull([150],0) + isnull([151],0) + isnull([152],0) + isnull([140],0) + isnull([141],0) + isnull([142],0) +
-	isnull([154],0) + isnull([1301],0) + isnull([1302],0) + isnull([1311],0) + isnull([1317],0) + isnull([1324],0) as totalcomm_3,
+	isnull([1302],0) + isnull([1317],0) as totalcomm_3,
 		
 	---Casino_comm
 	isnull([71],0) + 
