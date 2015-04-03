@@ -29,6 +29,7 @@ Revisions:
 					   Change DB053 server instead of DB052 server
     - 20140509@Logan:	Add counting for number of tickets - Code aligning
 	- 20140926@Sophia:  Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]
+	- 20150331@Cody: Apply sport bettype matrix [Redmine: #30169]
 */
 SET NOCOUNT ON
 DECLARE @MAgWinLoss TABLE
@@ -48,20 +49,29 @@ DECLARE @MAgWinLoss TABLE
 DECLARE @ABSDate DATETIME
 SET @ABSDate = '2011-09-01'
 
+DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
+		
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 IF @Todate >= @BalanceUpDay 
 BEGIN
 		INSERT INTO @MAgWinLoss
-		SELECT bettype
+		SELECT b.bettype
 			,liveindicator
 			,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
 			,SUM(CASE 
 					WHEN winlostdate >= @ABSDate THEN CASE 
-							WHEN bettype IN (33, 43)
+							WHEN b.bettype IN (33, 43)
 								AND liveawayscore = 0 THEN ABS(stake) / 2
 							ELSE ABS(stake)
 							END
 					ELSE CASE 
-							WHEN bettype IN (33, 43)
+							WHEN b.bettype IN (33, 43)
 								AND liveawayscore = 0 THEN stake / 2
 							ELSE stake
 							END
@@ -72,16 +82,18 @@ BEGIN
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans WITH (NOLOCK)
+		FROM dbo.bettrans b WITH (NOLOCK)
+			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate
 			AND statusID NOT IN (101, 102, 103)
 			--status not in ('VOID', 'REJECT', 'Refund')  and
 			AND ruben = 1
 			AND mrecommend = @CustID
-			AND bettype < 19001
-			AND bettype BETWEEN 81 AND 120
-		GROUP BY bettype,liveindicator
+			--AND bettype < 19001
+			--AND bettype BETWEEN 81 AND 120
+			AND s.ProductID = 3
+		GROUP BY b.bettype,liveindicator
 
 		UNION ALL --- Not number Game not group by liveindicator
 		SELECT
@@ -111,29 +123,30 @@ BEGIN
 			,COUNT(transid) AS NoOfTicket
 		FROM dbo.bettrans b WITH (NOLOCK)
 			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate
 					--status not in ('VOID', 'REJECT', 'Refund')  and
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
 			AND mrecommend = @CustID
-			AND b.bettype < 19001
-			AND b.bettype NOT BETWEEN 81 AND 120
+			--AND b.bettype < 19001
+			--AND b.bettype NOT BETWEEN 81 AND 120
+			AND s.ProductID <> 3
 		GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
-		
 		INSERT INTO @MAgWinLoss
-		SELECT bettype
+		SELECT b.bettype
 			,liveindicator
 			,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
 			,SUM(CASE 
 					WHEN winlostdate >= @ABSDate THEN CASE 
-							WHEN bettype IN (33, 43)
+							WHEN b.bettype IN (33, 43)
 								AND liveawayscore = 0 THEN ABS(stake) / 2
 							ELSE ABS(stake)
 							END
 					ELSE CASE 
-							WHEN bettype IN (33, 43)
+							WHEN b.bettype IN (33, 43)
 								AND liveawayscore = 0 THEN stake / 2
 							ELSE stake
 							END
@@ -144,16 +157,18 @@ BEGIN
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans14 WITH (NOLOCK, INDEX = IX_bettrans4)
+		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate
 					--status not in ('VOID', 'REJECT', 'Refund')  and
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
 			AND mrecommend = @CustID
-			AND bettype < 19001
-			AND bettype BETWEEN 81 AND 120
-		GROUP BY bettype
+			--AND bettype < 19001
+			--AND bettype BETWEEN 81 AND 120
+			AND S.ProductID = 3
+		GROUP BY B.bettype
 			,liveindicator
 
 		UNION ALL
@@ -184,14 +199,16 @@ BEGIN
 			,COUNT(transid) AS NoOfTicket
 		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
 			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate
 					--status not in ('VOID', 'REJECT', 'Refund')  and
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
 			AND mrecommend = @CustID
-			AND b.bettype < 19001
-			AND b.bettype NOT BETWEEN 81 AND 120
+			--AND b.bettype < 19001
+			--AND b.bettype NOT BETWEEN 81 AND 120
+			AND s.ProductID <> 3
 		GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
  
 END

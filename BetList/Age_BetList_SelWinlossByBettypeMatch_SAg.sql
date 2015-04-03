@@ -30,7 +30,7 @@ Revisions:
 						Add Sub table for Live Casino
 	- 20120927@Sophia: Get comstatus
 	- 20141016@Sophia: support Sporting solution-grouped bettype 
-						
+	- 20150331@Cody: Aplly sport bettype matrix [Redmine: #30169]
 */
 
 SET NOCOUNT ON
@@ -98,7 +98,8 @@ BEGIN
 	ORDER BY
 		b.status, b.transid
 		
-		IF @bettype between 1101 and 1199
+		--IF @bettype between 1101 and 1199
+		IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 		BEGIN
 			--get data from bettransg for bettype 1101
 			SELECT 
@@ -178,7 +179,8 @@ BEGIN
 	ORDER BY
 		b.status, b.transid
 		
-		IF @bettype between 1101 and 1199
+		--IF @bettype between 1101 and 1199
+		IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 		BEGIN
 			--get data from bettransg for bettype 1101
 			SELECT 

@@ -23,6 +23,15 @@ Parameter's Explanation:
 */ 
 	SET NOCOUNT ON
 	
+	DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
+		
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 	SELECT TOP(@LimitRowCount)
 		b.custid,
 		0 AS sporttype,
@@ -54,7 +63,7 @@ Parameter's Explanation:
 		CONVERT(BIT,0) AS isNeutral, 		
 		b.oddstype
 	FROM dbo.bettrans b WITH(NOLOCK)
-		INNER JOIN SportBettypeMatrix s ON b.bettype = s.BetType			
+		INNER JOIN @SportBettype s ON b.bettype = s.BetType			
 	WHERE b.recommend = @custid 
 		AND b.transid > @transid
 		--AND b.bettype < 19001

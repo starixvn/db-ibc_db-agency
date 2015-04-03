@@ -41,7 +41,6 @@ Revisions:
 	- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
 	- 20140305@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 	- 20140930@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
-	- 20150318@Cody: Apply sporttype bettype matrix
 
 Param's Explanation:	
 • @ErrCode:
