@@ -82,6 +82,7 @@ Begin DataProject = "Agent"
          Script = "dbo.Agw_SelCustomerGivenCreditBySAg.sql"
          Script = "dbo.Agw_SelMaxMemberCredit.sql"
       End
+      Script = "dbo.Age_CustomerCheckExists.sql"
       Script = "dbo.Age_CustomerCheckNotification.sql"
       Script = "dbo.Age_CustomerInsNickName.sql"
       Script = "dbo.Age_CustomerPermissionCheck.sql"
