@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_Rpt_CommByBettype_SAg]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_SAg]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,
@@ -35,6 +35,7 @@ Revisions:
 	- 20140826@Dom: Move bettype 24,26 to commission3 [Redmine: #20771]
 	- 20140929@Sophia: Remove detail comm columns and calculate Sporting solution into TotalComm_1, TotalComm_3 [Redmine: #22640]
 	- 20150326@Elodie: Move some bettypes to commission1 [Redmine: #32993]
+	- 20150401@Elodie: Fix bug because of getting wrong data of Keno
 */
 
 SET NOCOUNT ON
@@ -82,7 +83,7 @@ BEGIN
 	WHERE b.srecommend = @CustID and ruben = 1 and
 		winlostdate between @FromDate and @TDate 
 		and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
-		AND b.bettype BETWEEN 1501 AND 1599 
+		AND b.bettype NOT BETWEEN 1501 AND 1599 
 	GROUP BY mrecommend,bettype
 
 	INSERT INTO #tmp
