@@ -35,7 +35,7 @@ Revisions:
 	- 20140826@Dom: Move bettype 24,26 to commission3 [Redmine: #20771]
 	- 20140929@Sophia: Remove detail comm columns and calculate Sporting solution into TotalComm_1, TotalComm_3 [Redmine: #22640]
 	- 20150326@Elodie: Move some bettypes to commission1 [Redmine: #32993]
-	- 20150401@Elodie: Fix bug because of getting wrong data of Keno
+	- 20150401@Elodie: Fix bug because of getting wrong data of Keno 
 */
 
 SET NOCOUNT ON
