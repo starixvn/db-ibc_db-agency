@@ -29,15 +29,16 @@ Revisions:
 	- 20130925@Lukas: revert column alias eventstatus -> status for horse racing product
 	- 20131010@Kathy: Turn to use GlobalShowTime for display the Kick-off-Time [redmine:#6076] (exclusive LiveCasino)
 	- 20140930@Sophia: Get the detail information of Tennis sport
+	- 20140403@Sophia: Support BetRadar
 */
 
 SET NOCOUNT ON
 	IF(@RaceNo is NULL )
 	BEGIN
-		DECLARE @ResourceId VARCHAR(20) 
+		DECLARE @ResourceId VARCHAR(20) , @Sporttype TINYINT
 		SELECT @ResourceId = LEFT(REPLACE(CONVERT(VARCHAR(20),@BetId), '8', '' ),2)
 		
-		IF exists(SELECT 1 FROM match WITH(NOLOCK) WHERE matchid = @matchid)
+		IF EXISTS(SELECT 1 FROM match WITH(NOLOCK) WHERE matchid = @matchid)
 		BEGIN	
 			SELECT 
 				m.sporttype, 
@@ -60,10 +61,17 @@ SET NOCOUNT ON
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
-				case when m.betstatus like 'Refund FT%' then 'Refund FT' 
-							 when m.betstatus like 'Refund HT%' then 'Refund HT'
-							 when m.betstatus like 'Refund%' then 'Refund' 
-							else m.eventstatus end as eventstatus,
+				CASE m.Sporttype WHEN 5 THEN CASE ISNULL(D.SettlementStatusID,0)	 
+										WHEN 1 THEN 'Refund' 
+										WHEN 2 THEN 'Refund HT'
+										WHEN 3 THEN 'Refund FT'
+									ELSE m.eventstatus END 
+								ELSE 
+									CASE  WHEN m.betstatus like 'Refund FT%' THEN 'Refund FT' 
+											WHEN m.betstatus like 'Refund HT%' THEN 'Refund HT'
+											WHEN m.betstatus like 'Refund%' THEN 'Refund' 
+									ELSE m.eventstatus END 
+						END AS eventstatus, 
 				isnull(mr.refund,0) IsRefund, 
 				isnull(mr.calrefund,0) IsCalRefund,
 				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
@@ -74,27 +82,40 @@ SET NOCOUNT ON
 				m.showtime
 			FROM match m WITH(NOLOCK)
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+				LEFT JOIN dbo.ResultDetail D WITH (NOLOCK) ON D.matchID = M.MatchID AND D.ResourceId = '00'
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
 
 			
+			SELECT @Sporttype = Sporttype FROM dbo.match m WITH(NOLOCK) WHERE m.matchid = @matchid
+				
 			SELECT	D.MatchId,
 					D.ResourceId,
 					D.HomeValue,
 					D.AwayValue,
 					D.ResultStatusID,
-					D.SettlementStatusID
+					D.SettlementStatusID,
+					D.OtherInfo
 			FROM	dbo.ResultDetail D WITH (NOLOCK)			
-			WHERE	D.MatchId = @MatchId AND D.SettlementStatusID > 0 				
-					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
-							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
-								ELSE 0 END END = LEN(D.ResourceId)
-
+				LEFT JOIN (SELECT Bettype, ResourceId FROM dbo.f_ResourceBettype()) F 					
+					ON	F.Bettype = @Bettype					
+						AND D.ResourceId LIKE F.ResourceID		
+			WHERE	D.MatchId = @MatchId AND D.SettlementStatusID > 0 	
+					AND (	(@Sporttype = 5 AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
+								 					 CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
+														ELSE 0 END END = LEN(D.ResourceId)
+							 )
+							OR 
+							(@Sporttype = 1 AND D.ResourceId NOT IN ( '00', '01', '08') 
+							 AND D.ResourceId LIKE F.ResourceID		 	 
+							 	
+							)
+						)
 			ORDER BY ResourceId
 
 			RETURN
 		END
-		IF exists(SELECT 1 FROM match14 WITH(NOLOCK) WHERE matchid = @matchid)	
+		IF EXISTS(SELECT 1 FROM match14 WITH(NOLOCK) WHERE matchid = @matchid)	
 		BEGIN
 			SELECT 
 				m.sporttype, 
@@ -117,10 +138,17 @@ SET NOCOUNT ON
 				m.eventdate,
 				m.finalhomescore,
 				m.finalawayscore,
-				case when m.betstatus like 'Refund FT%' then 'Refund FT' 
-							 when m.betstatus like 'Refund HT%' then 'Refund HT'
-							 when m.betstatus like 'Refund%' then 'Refund' 
-							else m.eventstatus end as eventstatus,
+				CASE m.Sporttype WHEN 5 THEN CASE ISNULL(D.SettlementStatusID,0)	 
+										WHEN 1 THEN 'Refund' 
+										WHEN 2 THEN 'Refund HT'
+										WHEN 3 THEN 'Refund FT'
+									ELSE m.eventstatus END 
+								ELSE 
+									CASE  WHEN m.betstatus like 'Refund FT%' THEN 'Refund FT' 
+											WHEN m.betstatus like 'Refund HT%' THEN 'Refund HT'
+											WHEN m.betstatus like 'Refund%' THEN 'Refund' 
+									ELSE m.eventstatus END 
+						END AS eventstatus,
 				isnull(mr.refund,0) IsRefund, 
 				isnull(mr.calrefund,0) IsCalRefund,
 				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
@@ -131,6 +159,7 @@ SET NOCOUNT ON
 				m.showtime
 			FROM match14 m WITH(NOLOCK)		
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+				LEFT JOIN dbo.ResultDetail14 D WITH (NOLOCK) ON D.matchID = M.MatchID AND D.ResourceId = '00'
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
 
@@ -139,12 +168,23 @@ SET NOCOUNT ON
 					D.HomeValue,
 					D.AwayValue,
 					D.ResultStatusID,
-					D.SettlementStatusID
+					D.SettlementStatusID,
+					D.OtherInfo
 			FROM	dbo.ResultDetail14 D WITH (NOLOCK)			
+				LEFT JOIN (SELECT Bettype, ResourceId FROM dbo.f_ResourceBettype()) F 					
+					ON	F.Bettype = @Bettype
+						AND D.ResourceId LIKE F.ResourceID	
 			WHERE	D.MatchId = @MatchId AND D.SettlementStatusID > 0 	
-					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
-							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
-								ELSE 0 END END = LEN(D.ResourceId)
+					AND (	(@Sporttype = 5 AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
+								 					 CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
+														ELSE 0 END END = LEN(D.ResourceId)
+							 )
+							OR 
+							(@Sporttype = 1 AND D.ResourceId NOT IN ( '00', '01', '08') 
+							 AND D.ResourceId LIKE F.ResourceID							 	 
+							 	
+							)
+						)
 			ORDER BY ResourceId
 
 			RETURN
@@ -172,10 +212,17 @@ SET NOCOUNT ON
 				end kickofftime,
 				m.finalhomescore,
 				m.finalawayscore,
-				case when m.betstatus like 'Refund FT%' then 'Refund FT' 
-							 when m.betstatus like 'Refund HT%' then 'Refund HT'
-							 when m.betstatus like 'Refund%' then 'Refund' 
-							else m.eventstatus end as eventstatus,
+				CASE m.Sporttype WHEN 5 THEN CASE ISNULL(D.SettlementStatusID,0)	 
+										WHEN 1 THEN 'Refund' 
+										WHEN 2 THEN 'Refund HT'
+										WHEN 3 THEN 'Refund FT'
+									ELSE m.eventstatus END 
+								ELSE 
+									CASE  WHEN m.betstatus like 'Refund FT%' THEN 'Refund FT' 
+											WHEN m.betstatus like 'Refund HT%' THEN 'Refund HT'
+											WHEN m.betstatus like 'Refund%' THEN 'Refund' 
+									ELSE m.eventstatus END 
+						END AS eventstatus,
 				isnull(mr.refund,0) IsRefund,  
 				isnull(mr.calrefund,0) IsCalRefund,
 				isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
@@ -186,28 +233,41 @@ SET NOCOUNT ON
 				m.showtime 
 			FROM DBARC.bodb_archive.dbo.Match_BK m WITH(NOLOCK)		
 				LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
+				LEFT JOIN DBARC.bodb_archive.dbo.ResultDetail_BK D WITH (NOLOCK) ON D.matchID = M.MatchID AND D.ResourceId = '00'
 			WHERE m.matchid = @matchid
 			ORDER BY m.eventdate,m.matchcode
 
-		
+
 			SELECT	D.MatchId,
 					D.ResourceId,
 					D.HomeValue,
 					D.AwayValue,
 					D.ResultStatusID,
-					D.SettlementStatusID
+					D.SettlementStatusID,
+					D.OtherInfo
 			FROM	DBARC.bodb_archive.dbo.ResultDetail_BK D WITH (NOLOCK)			
+				LEFT JOIN (SELECT Bettype, ResourceId FROM dbo.f_ResourceBettype()) F 					
+					ON	F.Bettype = @Bettype
+						AND D.ResourceId LIKE F.ResourceID	
 			WHERE	D.MatchId = @MatchId AND D.SettlementStatusID > 0 	
-					AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
-							CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
-								ELSE 0 END END = LEN(D.ResourceId)
+					AND (	(@Sporttype = 5 AND CASE WHEN @Bettype NOT IN (1324) THEN 2 ELSE 
+								 					 CASE WHEN @Bettype IN (1324) AND LEFT(D.ResourceId,2) = @ResourceId THEN 4 
+														ELSE 0 END END = LEN(D.ResourceId)
+							 )
+							OR 
+							(@Sporttype = 1 AND D.ResourceId NOT IN ( '00', '01', '08') 
+							 AND D.ResourceId LIKE F.ResourceID			 	 
+							 	
+							)
+						)
 			ORDER BY ResourceId
+
 		END						
 	END
 	ELSE
 	BEGIN
 		DECLARE	@leagueid INT, @eventdate DATETIME 
-		IF exists(select 1 from outright WITH(NOLOCK) where orid = @matchid)
+		IF EXISTS(select 1 from outright WITH(NOLOCK) where orid = @matchid)
 		BEGIN
 			SELECT	@leagueid = leagueid , @eventdate = eventdate 
 			FROM	Outright WITH (NOLOCK)
@@ -285,7 +345,7 @@ SET NOCOUNT ON
 					AND (ISNULL(placing,0)<> 0  OR isScr = 1)			
 			ORDER BY placing
 		END 	
-		ELSE IF exists(select 1 from VSOutright WITH(NOLOCK) where orid = @RaceNo)
+		ELSE IF EXISTS(select 1 from VSOutright WITH(NOLOCK) where orid = @RaceNo)
 		BEGIN
 			-- Virtual HR 
 			SELECT	RacerNum AS horseNo, 
@@ -306,7 +366,7 @@ SET NOCOUNT ON
 					AND (ISNULL(placing,0) <> 0)
 			ORDER BY placing
 		END
-		ELSE IF exists(select 1 from VSOutright14 WITH(NOLOCK) where orid = @RaceNo)
+		ELSE IF EXISTS(select 1 from VSOutright14 WITH(NOLOCK) where orid = @RaceNo)
 		BEGIN
 			-- Virtual HR 
 			SELECT	RacerNum AS horseNo, 
