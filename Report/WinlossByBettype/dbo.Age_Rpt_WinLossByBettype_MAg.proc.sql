@@ -122,7 +122,7 @@ BEGIN
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
 		FROM dbo.bettrans b WITH (NOLOCK)
-			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
 			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate
@@ -198,7 +198,7 @@ BEGIN
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 			,COUNT(transid) AS NoOfTicket
 		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
-			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
 			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		WHERE 1 = 1
 			AND winlostdate BETWEEN @FromDate AND @ToDate

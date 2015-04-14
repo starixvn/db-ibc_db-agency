@@ -9,12 +9,19 @@ Revisions:
 	- 20090213@Kiwi: + Remove inner join customer table because we retrieve data directly from bettrans table.
 					 + Remove b.status in ('running','waiting') to use correct Index named _MS_Sys_38_52_42.
 	- 20110520@Johnson: change the type of variables @Bettype1x2, @BettypeHT1x2 to int
+	- 20150408@Cody: Apply bet radar bettype (167) [Remine: #32734]
 */
 
 SET NOCOUNT ON
 
-Declare @BetType1x2 int, @BetTypeHT1x2 int
-select @BetType1x2 = 5, @BetTypeHT1x2 = 15
+Declare 
+		@BetType1x2			INT
+		,@BetTypeHT1x2		INT
+		,@BetTypeHT1x2_167	INT
+		
+SELECT @BetType1x2 = 5
+		,@BetTypeHT1x2 = 15
+		,@BetTypeHT1x2_167 = 167
 	
 	select  x.MatchID, x.homeid, x.awayid,	
 		x.liveindicator, isnull(x.LiveHomeScore, 0) as livehomescore, isnull(x.LiveAwayScore, 0) as liveawayscore,x.ShowTime,x.MatchCode,isNeutral,
@@ -37,16 +44,16 @@ select @BetType1x2 = 5, @BetTypeHT1x2 = 15
 			sum(case when betteam='2' and bettype = @BetType1x2 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) awaylose,	
 			sum(case when betteam='x' and bettype = @BetType1x2 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) drawlose,
 
-			sum(case when betteam='1'  and bettype = @BetTypeHT1x2 then (case when odds < 0 then 1 else odds - 1 end) * stake * (b.spositiontaking) else 0 end) ht_homewin,
-			sum(case when betteam='2'  and bettype = @BetTypeHT1x2 then (case when odds < 0 then 1 else odds - 1 end) * stake * (b.spositiontaking) else 0 end) ht_awaywin,
-			sum(case when betteam='x'  and bettype = @BetTypeHT1x2 then (case when odds < 0 then 1 else odds - 1 end) * stake * (b.spositiontaking) else 0 end) ht_drawwin,
+			sum(case when betteam='1'  and (bettype = @BetTypeHT1x2 OR bettype = @BetTypeHT1x2_167) then (case when odds < 0 then 1 else odds - 1 end) * stake * (b.spositiontaking) else 0 end) ht_homewin,
+			sum(case when betteam='2'  and (bettype = @BetTypeHT1x2 OR bettype = @BetTypeHT1x2_167) then (case when odds < 0 then 1 else odds - 1 end) * stake * (b.spositiontaking) else 0 end) ht_awaywin,
+			sum(case when betteam='x'  and (bettype = @BetTypeHT1x2 OR bettype = @BetTypeHT1x2_167) then (case when odds < 0 then 1 else odds - 1 end) * stake * (b.spositiontaking) else 0 end) ht_drawwin,
 
-			sum(case when betteam='1'  and bettype = @BetTypeHT1x2 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) ht_homelose,
-			sum(case when betteam='2'  and bettype = @BetTypeHT1x2 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) ht_awaylose,	
-			sum(case when betteam='x'  and bettype = @BetTypeHT1x2 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) ht_drawlose
+			sum(case when betteam='1'  and (bettype = @BetTypeHT1x2 OR bettype = @BetTypeHT1x2_167) then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) ht_homelose,
+			sum(case when betteam='2'  and (bettype = @BetTypeHT1x2 OR bettype = @BetTypeHT1x2_167) then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) ht_awaylose,	
+			sum(case when betteam='x'  and (bettype = @BetTypeHT1x2 OR bettype = @BetTypeHT1x2_167) then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.spositiontaking) else 0 end) ht_drawlose
 		from bettrans b with(nolock) 
 			inner join Match M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
-		where b.bettype in (@Bettype1x2, @BettypeHT1x2)
+		where b.bettype in (@Bettype1x2, @BettypeHT1x2, @BetTypeHT1x2_167)
 			AND LeagueID = @LeagueID
 			and b.ruben = 0
 			AND b.srecommend = @custid

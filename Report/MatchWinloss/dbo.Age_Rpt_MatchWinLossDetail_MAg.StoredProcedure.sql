@@ -168,7 +168,7 @@ BEGIN
 			FROM 
 				bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
 				INNER JOIN @SportBettype s ON b.bettype = s.Bettype		
 			WHERE 
 				b.mrecommend = @custid
@@ -405,7 +405,7 @@ BEGIN
 			FROM 
 				bettrans14 b WITH (NOLOCK, index=IX_bettrans4)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
 				INNER JOIN @SportBettype s ON b.bettype = s.Bettype		
 			WHERE 
 				b.mrecommend = @custid
@@ -665,7 +665,7 @@ ELSE BEGIN
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID <> 3 -- bettype NOT BETWEEN 81 AND 120
-				AND s.ProductID = 5 AND s.EventType <> 3 -- bettype not in(1231,1232,1233,1237,1238)
+				AND s.EventType <> 3 -- bettype not in(1231,1232,1233,1237,1238)
 				--AND b.bettype NOT BETWEEN 81 AND 120
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
@@ -904,7 +904,7 @@ ELSE BEGIN
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund' 
 				AND s.ProductID <> 3 -- bettype NOT BETWEEN 81 AND 120
-				AND s.ProductID = 5 AND s.EventType <> 3 -- bettype not in(1231, 1232, 1233, 1237, 1238)
+				AND s.EventType <> 3 -- bettype not in(1231, 1232, 1233, 1237, 1238)
 				--AND b.bettype NOT BETWEEN 81 AND 120
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,

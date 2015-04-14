@@ -39,6 +39,8 @@ Revisions:
 	- 20120926@Sophia: Get Comstatus
 	- 20140425@Dom: Group TB and FGLG
 	- 20140611@Dom: Support BetRadar [Redmine: #17148]
+	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
+	- 20150407@Cody: Support 60 BetRadar bettype (186) [Redmine: 32734]
 */
 
 SET NOCOUNT ON
@@ -191,7 +193,7 @@ BEGIN
 	where 
 		b.SRecommend=@custid
 		--and b.bettype=@bettype
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR bettype = @bettype )
+		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151,186)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR bettype = @bettype )
 		--and b.status in ('waiting','running')
 		and b.statusID in (0,1)
 		
@@ -199,7 +201,8 @@ BEGIN
 END
 
 
-IF @bettype between 1101 and 1199
+--IF @bettype between 1101 and 1199
+IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 BEGIN
 	--get data from bettransg for bettype 1101
 	SELECT 

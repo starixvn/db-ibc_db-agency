@@ -92,7 +92,7 @@ BEGIN
 	FROM
 		bettrans b with (nolock) 
 		inner join match m with (nolock) on b.matchid=m.matchid 
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype				
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype				
 	WHERE
 		b.matchid=@matchid and 
 		b.recommend=@custid  and 		
@@ -175,7 +175,7 @@ BEGIN
 	FROM
 		bettrans14 b with (nolock) 
 		inner join match14 m with (nolock) on b.matchid=m.matchid 	
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype			
 	WHERE
 		b.matchid=@matchid and 
 		b.recommend=@custid  and 		

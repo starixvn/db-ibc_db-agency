@@ -11,7 +11,7 @@ AS
 	
 	Revisions:
 		- 20110803@Johnson: Include commission into today winloss and yesterday winloss
-		- 20150318
+		- 20150318@Cody: Apply sport bettype matrix [Redmine: #30169]
 */
 
 SET NOCOUNT ON 

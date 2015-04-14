@@ -1,6 +1,4 @@
-﻿Text
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-CREATE PROCEDURE [Age_Rpt_CommByBettype_MAg]
+﻿ALTER PROCEDURE [Age_Rpt_CommByBettype_MAg]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,
@@ -37,6 +35,9 @@ Revisions:
 	- 20140616@Dom: Support BetRadar [Redmine: #17148]
 	- 20140826@Dom: Move bettype 24,26 to commission3 [Redmine: #20771]
 	- 20140929@Sophia: Remove detail comm columns and calculate Sporting solution into TotalComm_1, TotalComm_3 [Redmine: #22640]
+	- 20150326@Elodie: Move some bettypes to commission1 [Redmine: #32993]
+	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
+	- 20150407@Cody: Apply 60 New Bettypes - BetRadar Phase II [Redmine: #32734]
 */
 
 SET NOCOUNT ON
@@ -46,6 +47,15 @@ DECLARE @TDate SMALLDATETIME
 
 CREATE TABLE #tmp(ma_comm money, bettype int, recommend int)
 
+DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
+		
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 IF @Todate > @MoveBetsDay
 BEGIN
 	IF @FromDate <= @MoveBetsDay
@@ -54,20 +64,24 @@ BEGIN
 		SET @FDate = @FromDate
 
 	INSERT INTO #tmp
-	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, bettype, recommend
+	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, b.bettype, recommend
 	FROM dbo.bettrans b with(nolock) 
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 	WHERE b.mrecommend = @CustID and ruben = 1 and
 		winlostdate between @FDate and @ToDate 
-		and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
-		AND b.bettype NOT BETWEEN 1501 AND 1599 
-	GROUP BY recommend, bettype
+		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
+		--AND b.bettype NOT BETWEEN 1501 AND 1599 
+		AND s.ProductID NOT IN(2, 8)
+	GROUP BY recommend, b.bettype
 
 	INSERT INTO #tmp
 	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, 1501, recommend
 	FROM dbo.bettrans b with(nolock) 
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 	WHERE b.mrecommend = @CustID and ruben = 1 and
 		winlostdate between @FDate and @ToDate 
-		AND b.bettype BETWEEN 1501 AND 1599
+		--AND b.bettype BETWEEN 1501 AND 1599
+		AND s.ProductID = 8
 	GROUP BY recommend
 END
 
@@ -79,35 +93,48 @@ BEGIN
 		SET @TDate = @ToDate
 		
 	INSERT INTO #tmp
-	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, bettype, recommend
+	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, b.bettype, recommend
 	FROM dbo.bettrans14 b with(nolock) 
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 	WHERE b.mrecommend = @CustID and ruben = 1 and
 		winlostdate between @FromDate and @TDate 
-		and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
-		AND b.bettype not BETWEEN 1501 AND 1599
-	GROUP BY recommend, bettype
+		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
+		--AND b.bettype not BETWEEN 1501 AND 1599
+		AND s.ProductID NOT IN(2, 8)
+	GROUP BY recommend, b.bettype
 
 	INSERT INTO #tmp
 	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, 1501, recommend
 	FROM dbo.bettrans14 b with(nolock) 
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 	WHERE b.mrecommend = @CustID and ruben = 1 and
 		winlostdate between @FromDate and @TDate 
-		AND b.bettype BETWEEN 1501 AND 1599
+		--AND b.bettype BETWEEN 1501 AND 1599
+		AND s.ProductID = 8
 	GROUP BY recommend
 END
 		
 SELECT pvt.recommend, c.username, 
 	
-	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([25],0) + isnull([27],0) + isnull([28],0) +
+	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([20],0) + isnull([21],0) + isnull([25],0) + isnull([27],0) + isnull([28],0) +
 	isnull([121],0) + isnull([122],0) + isnull([123],0) + isnull([124],0) + isnull([125],0) +
-	isnull([153],0) + isnull([155],0) + isnull([156],0) + isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0) + isnull([1312],0) + isnull([1316],0) + isnull([1318],0) as totalcomm_1,
-
-	isnull([5],0) + isnull([15],0) as [totalcomm_2],	
+	isnull([153],0) + isnull([154],0) + isnull([155],0) + isnull([156],0) + 
+	isnull([1301],0) + isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0) + isnull([1311],0) + isnull([1312],0) + isnull([1316],0) + isnull([1318],0) + isnull([1324],0) +
+	ISNULL([157], 0) + ISNULL([178], 0) + ISNULL([183], 0) + ISNULL([184], 0) + ISNULL([185], 0) + ISNULL([189], 0) + ISNULL([190], 0) + ISNULL([191], 0) + ISNULL([194], 0) + ISNULL([197], 0) +
+	ISNULL([198], 0) + ISNULL([203], 0) + ISNULL([204], 0) + ISNULL([205], 0) as totalcomm_1,
 	
-	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([20],0) + isnull([29],0) +
-	isnull([133],0) + isnull([134],0) + isnull([135],0) + isnull([145],0) + isnull([146],0) + isnull([147],0) + isnull([24],0) + isnull([26],0) +
+	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) as [totalcomm_2],
+		
+	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([29],0) +
+	isnull([133],0) + isnull([134],0) + isnull([135],0) + isnull([145],0) + isnull([146],0) + isnull([147],0) + isnull([24],0) +  isnull([26],0) +
 	isnull([148],0) + isnull([149],0) + isnull([150],0) + isnull([151],0) + isnull([152],0) + isnull([140],0) + isnull([141],0) + isnull([142],0) +
-	isnull([154],0) + isnull([1301],0) + isnull([1302],0) + isnull([1311],0) + isnull([1317],0) + isnull([1324],0) as totalcomm_3,
+	isnull([1302],0) + isnull([1317],0) +
+	
+	ISNULL([159],0) + ISNULL([160],0) + ISNULL([161],0) + ISNULL([162],0) + ISNULL([163],0) + ISNULL([164],0) + ISNULL([165],0) + ISNULL([166],0) + ISNULL([168],0) + 
+	ISNULL([169],0) + ISNULL([170],0) + ISNULL([171],0) + ISNULL([172],0) + ISNULL([173],0) + ISNULL([174],0) + ISNULL([175],0) + ISNULL([179],0) + ISNULL([180],0) + 
+	ISNULL([181],0) + ISNULL([182],0) +	ISNULL([186],0) + ISNULL([187],0) + ISNULL([188],0) + ISNULL([192],0) + ISNULL([193],0) + ISNULL([195],0) + ISNULL([196],0) + 
+	ISNULL([199],0) + ISNULL([200],0) + ISNULL([201],0) + ISNULL([202],0) +	ISNULL([206],0) + ISNULL([207],0) + ISNULL([208],0) + ISNULL([209],0) + ISNULL([210],0) + 
+	ISNULL([211],0) + ISNULL([212],0) +	ISNULL([213],0) + ISNULL([214],0) + ISNULL([215],0) + ISNULL([216],0) + ISNULL([217],0) as totalcomm_3,
 	
 	---Casino_comm
 	isnull([71],0) + 
@@ -141,7 +168,12 @@ PIVOT
 					[1301],[1302],[1303],[1304],[1305],[1306],[1307],[1308],[1309],[1310],[1311],[1312],[1313],[1314],[1315],[1316],[1317],[1318],[1319],[1320],
 					[1321],[1322],[1323],[1324],[1325],[1326],[1327],[1328],[1329],[1330],[1331],[1332],[1333],[1334],
 					[153],[154],[155],[156],
-					[1501]
+					[1501],
+					
+					[157], [159], [160], [161], [162], [163], [164], [165], [166], [167], [168], [169], [170], [171], [172],
+					[173], [174], [175], [176], [177], [178], [179], [180], [181], [182], [183], [184], [185], [186], [187], 
+					[188], [189], [190], [191], [192], [193], [194], [195], [196], [197], [198], [199], [200], [201], [202], 
+					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217]
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.recommend 
