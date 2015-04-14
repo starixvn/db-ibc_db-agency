@@ -11,7 +11,7 @@ Revisions:
 	- 20060222: remove refno
 	- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 	- 20120626@Sophia: Add new bettype 123 for Draw/No Draw
-
+	- 20150408@Cody: Apply bet radar bettype (157, 167) [Remine: #32734]
 Param's Explanation:
 • @CustID: AgentID
 */
@@ -27,8 +27,8 @@ select
 	m.matchid,
 	m.homeid,
 	m.awayid,
-	sum((Case when bettype=2 and betteam = 'h' then (a.apositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS home_odds_OE,
-	sum((Case when bettype=2 and betteam = 'a' then (a.apositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS away_odds_OE,
+	sum((Case when (bettype = 2 OR bettype = 157) and betteam = 'h' then (a.apositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS home_odds_OE,
+	sum((Case when (bettype = 2 OR bettype = 157) and betteam = 'a' then (a.apositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS away_odds_OE,
 	
 	sum((Case when bettype=12 and betteam = 'h' then (a.apositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS home_odds_OE_1st,
 	sum((Case when bettype=12 and betteam = 'a' then (a.apositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS away_odds_OE_1st,
@@ -38,17 +38,17 @@ select
 	sum(Case when bettype=5 and betteam = 'x' then  (a.apositiontaking)*stake   else 0 end) AS odds_x,
 	sum(Case when bettype=5 and betteam = '2' then  (a.apositiontaking)*stake   else 0 end) AS odds_2,
 
-	sum(Case when bettype=15 and betteam = '1' then  (a.apositiontaking)*stake   else 0 end) AS odds_1_1st,
-	sum(Case when bettype=15 and betteam = 'x' then  (a.apositiontaking)*stake   else 0 end) AS odds_x_1st,
-	sum(Case when bettype=15 and betteam = '2' then  (a.apositiontaking)*stake   else 0 end) AS odds_2_1st,
+	sum(Case when (bettype = 15 OR bettype = 167) and betteam = '1' then  (a.apositiontaking)*stake   else 0 end) AS odds_1_1st,
+	sum(Case when (bettype = 15 OR bettype = 167) and betteam = 'x' then  (a.apositiontaking)*stake   else 0 end) AS odds_x_1st,
+	sum(Case when (bettype = 15 OR bettype = 167) and betteam = '2' then  (a.apositiontaking)*stake   else 0 end) AS odds_2_1st,
 	
 	sum(Case when bettype=123 and betteam = 'h' then  (a.apositiontaking)*stake   else 0 end) AS home_odds_DND,
 	sum(Case when bettype=123 and betteam = 'a' then  (a.apositiontaking)*stake   else 0 end) AS away_odds_DND,
 
-	sum(case when bettype=2 then 1 else 0 end) as BetCount_OE,
+	sum(case when (bettype = 2 OR bettype = 157) then 1 else 0 end) as BetCount_OE,
 	sum(case when bettype=12 then 1 else 0 end) as BetCount_OE_1st,
 	sum(case when bettype=5 then 1 else 0 end) as BetCount_1x2,
-	sum(case when bettype=15 then 1 else 0 end) as BetCount_1x2_1st,
+	sum(case when (bettype = 15 OR bettype = 167) then 1 else 0 end) as BetCount_1x2_1st,
 	sum(case when bettype=123 then 1 else 0 end) as BetCount_DND,
 	
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
@@ -58,7 +58,7 @@ FROM
 where  	
 	a.recommend=@custid and
 	m.eventstatus='running'  and
-	a.bettype in (2, 12, 5, 15, 123)
+	a.bettype in (2, 12, 5, 15, 123, 157, 167)
 	--AND a.status in('running','waiting')
 	AND a.statusID in (0,1)
 	and a.ruben = 0
