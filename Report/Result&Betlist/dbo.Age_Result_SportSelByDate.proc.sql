@@ -15,6 +15,7 @@ Revision:
  - 20130805@Lukas: hide live casino game
  - 20131121@Kathy: Add Virtual Greyhounds (182), Virtual Motor Racing (184) [Redmine:#7234]
  - 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185) 
+ - 20150414@Sophia: Support BetRadar
 */  
   
 SET NOCOUNT ON  
@@ -34,12 +35,18 @@ FROM sports WITH (nolock)
 	
 		LEFT JOIN match_remark mr ON match.matchid = mr.matchid         
 		INNER JOIN league l with(nolock) on l.leagueid = match.leagueid
+		LEFT JOIN ( SELECT DISTINCT MatchID FROM dbo.ResultDetail R WITH (NOLOCK) WHERE SettlementStatusID > 0
+					UNION ALL  
+					SELECT DISTINCT MatchID FROM dbo.ResultDetail14 R WITH (NOLOCK) WHERE SettlementStatusID > 0
+					) R
+				ON match.Matchid = R.MatchId 
 WHERE   
 		match.eventdate >= @EventDate  
 		AND match.eventdate <= @toDate  
 		AND ( match.eventstatus NOT IN ('internal','closed','running')  
-		OR ( mr.IsPending=1 AND match.eventstatus IN ('running','closed') )  
-		OR ( mr.IsHTCal = 1 AND match.eventstatus ='running')  
+			OR ( mr.IsPending=1 AND match.eventstatus IN ('running','closed') )  
+			OR ( mr.IsHTCal = 1 AND match.eventstatus ='running')  
+			OR ( ISNULL(R.MatchID,0) <> 0 AND match.eventstatus = 'running')
 		)  
 		AND sports.sporttype NOT IN (201,162)
 		AND l.isTest= CASE WHEN @isshowall = 1 THEN l.isTest ELSE @isshowall END 
