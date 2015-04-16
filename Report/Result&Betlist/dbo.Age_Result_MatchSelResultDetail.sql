@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Age_Result_MatchSelResultDetail_Xtest]
+ALTER PROCEDURE [dbo].[Age_Result_MatchSelResultDetail]
 (	
 	@MatchId INT
 )
