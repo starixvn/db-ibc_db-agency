@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_SAg]
+﻿ USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_SAg]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,

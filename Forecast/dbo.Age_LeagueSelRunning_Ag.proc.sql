@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_LeagueSelRunning_Ag]
+﻿ USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_LeagueSelRunning_Ag]
 	@AgID int,	
 	@Language NVARCHAR(2) = 'E',
 	@Bettypes varchar(100) = '0'--0: all, 1:1,3,7,8; 5:5,15 
@@ -8,7 +11,7 @@ SET NOCOUNT ON
 /*
 Original: LeagueSelRunning
 Task: Select running Leagues for 1,3,5,7,8, and 15 bet types
-DB: DB05.bodb02
+DB: DBAGE.bodb02
 Revisions: 
 	- 20090213@Kiwi: Use ruben = 0 instead of status in ('running','waiting').
 	- 20090325@Phuc: add para bettypes, remove unused code

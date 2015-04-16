@@ -1,19 +1,24 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_HR_Ag]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_HR_Ag]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME
 AS
-	SET NOCOUNT ON 
 /*
 --- HORSE RACING
 --- 2008-11-21 
 --- Phuong Dao
+--- DB: DBAGE\bodb02
 --- Task : Commission By Bettype 
 ---        agentComm = comm - playercom
 ---        turnOver = sum (stake)
 --- 20090528@AnhPham: Get HR commisions with PT and remove turnover
 --- 20150317@Cody: apply sport bettype matrix [Redmine: #30169]
 */	
+	SET NOCOUNT ON 
+	
 	DECLARE @SportBettype TABLE(
 			ProductID INT
 			,Bettype INT

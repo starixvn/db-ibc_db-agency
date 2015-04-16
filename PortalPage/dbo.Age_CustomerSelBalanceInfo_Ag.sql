@@ -1,4 +1,7 @@
-﻿  
+﻿USE bodb02
+GO
+
+  
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_Ag]
 	 @custid		INT,
 	 @MoveBetsDay	DATETIME
@@ -7,7 +10,7 @@ AS
 /*
 	Created: Johnson
 	Date: 2011-05-31
-	DB: DB052.BODB02
+	DB: DBAGE.BODB02
 	Task: Get Agent Statictis Info 
 	
 	Revisions:

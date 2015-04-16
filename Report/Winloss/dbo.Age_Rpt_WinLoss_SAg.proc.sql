@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [Age_Rpt_WinLoss_SAg]  
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [Age_Rpt_WinLoss_SAg]  
  @CustID				INT --srecommend  
  ,@FromDate				SMALLDATETIME
  ,@ToDate				SMALLDATETIME  

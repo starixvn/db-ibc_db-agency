@@ -1,4 +1,6 @@
- 
+ USE bodb02
+GO
+
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinLossDetail_MAg] 
 	@CustID int,
 	@FromDate smalldatetime,
@@ -14,7 +16,7 @@ AS
 /*
 Created: 
 Task : 
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original: Rpt_MatchWinLostDetail_MAg
 Revisions:
     - 20081031@QuangVinh: Add more result "Horseracing", "Financial",
@@ -136,9 +138,7 @@ BEGIN
 				AND isnull(m.betstatus, '') <> 'refund'
 				AND s.ProductID = 3
 				--AND 1 = CASE ----WHEN @showSB = 1 and b.bettype < 31 then 1 
-				--		 WHEN @showNG = 1 and b.bettype BETWEEN 81 AND 120 then 1 else 0 end	
-				m.eventstatus='completed'  AND
-				isnull(m.betstatus,'') <> 'refund'  AND
+				--		 WHEN @showNG = 1 and b.bettype BETWEEN 81 AND 120 then 1 else 0 end
 				
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral,b.liveindicator
@@ -631,11 +631,7 @@ ELSE BEGIN
 				m.matchid,
 				m.homeid,
 				m.awayid,
-				CASE b.Bettype WHEN 1308 THEN 153 
-							   WHEN 1311 THEN 154
-							   WHEN 1316 THEN 155
-							   WHEN 1312 THEN 156
-							   ELSE b.bettype END AS bettype,
+				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,	
 				0 as liveindicator,
 				m.leagueid,
 				SUM(ABS(stake)) as turnover,
@@ -660,6 +656,7 @@ ELSE BEGIN
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid 
 				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
 			WHERE 
 				b.mrecommend = @custid
 				AND b.bettype < 19001 
@@ -675,11 +672,7 @@ ELSE BEGIN
 				--AND b.bettype NOT BETWEEN 81 AND 120
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
-				CASE b.Bettype WHEN 1308 THEN 153 
-							   WHEN 1311 THEN 154
-							   WHEN 1316 THEN 155
-							   WHEN 1312 THEN 156
-							   ELSE b.bettype END
+				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 		
 		-- MixParlay
 		INSERT INTO @MAgMatchWLDetails 	
@@ -870,11 +863,7 @@ ELSE BEGIN
 				m.matchid,
 				m.homeid,
 				m.awayid,
-				CASE b.Bettype WHEN 1308 THEN 153 
-							   WHEN 1311 THEN 154
-							   WHEN 1316 THEN 155
-							   WHEN 1312 THEN 156
-							   ELSE b.bettype END AS bettype,
+				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
 				0 as liveindicator,
 				m.leagueid,
 				SUM(ABS(stake)) as turnover,
@@ -898,7 +887,8 @@ ELSE BEGIN
 				bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype		
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
 			WHERE 
 				b.mrecommend = @custid
 				--b.status not in ('VOID', 'REJECT', 'Refund') AND
@@ -914,11 +904,7 @@ ELSE BEGIN
 				--AND b.bettype NOT BETWEEN 81 AND 120
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
-				CASE b.Bettype WHEN 1308 THEN 153 
-							   WHEN 1311 THEN 154
-							   WHEN 1316 THEN 155
-							   WHEN 1312 THEN 156
-							   ELSE b.bettype END
+				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END 
 
 			-- mix parlay (14)	
 			INSERT INTO @MAgMatchWLDetails 	

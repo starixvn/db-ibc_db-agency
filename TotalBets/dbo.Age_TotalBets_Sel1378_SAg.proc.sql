@@ -1,11 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Age_TotalBets_Sel1378_SAg]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel1378_SAg]
 	@custid INT,
 	@Language varchar(2) = 'E'
 AS
 /*
 Original: SP eagenttotalbet13
 Task: Retrieve Total Bet values for 1,3,7,8 bet types.
-DB: DB05.bodb02
+DB: DBAGE.bodb02
 Revisions:
 	- 20090216@Kiwi: Remove status in ('running', 'waiting') to avoid Key Lookup while using Index named _MS_Sys_38_52_42.
 */

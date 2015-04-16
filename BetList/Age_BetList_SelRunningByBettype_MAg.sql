@@ -1,4 +1,6 @@
-﻿
+﻿USE bodb_AGE
+GO
+
 ALTER PROC [dbo].[Age_BetList_SelRunningByBettype_MAg]
 	@CustID int,
 	@Bettype int,
@@ -202,7 +204,7 @@ BEGIN
 	order by b.status, b.transid
 END
 --IF @bettype between 1101 and 1199
-IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
+IF EXISTS(SELECT TOP 1 1 FROM bodb02.dbo.SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 BEGIN
 	--get data from bettransg for bettype 1101
 	SELECT 

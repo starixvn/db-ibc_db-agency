@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,	
@@ -7,7 +10,7 @@ AS
 /*
 Created: 
 Task : Report WinLoss
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Revisions:
      - 20090321@Hiep: Get more result for Casino Integration	
      - 20090602@Kiwi: exclude "refund" tickets.

@@ -1,4 +1,6 @@
-﻿
+﻿USE bodb02
+GO
+
 ALTER PROC [dbo].[Age_BetList_SelRunningByBettype_SAg]
 	@custid int,
 	@bettype int,
@@ -7,7 +9,7 @@ ALTER PROC [dbo].[Age_BetList_SelRunningByBettype_SAg]
 /*
 Created: 
 Task : Betlist
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original:BetsSelBetList_SAg
 Revisions:
     - 20080104@Vinh: include mix parlay
@@ -202,7 +204,7 @@ END
 
 
 --IF @bettype between 1101 and 1199
-IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
+IF EXISTS(SELECT TOP 1 1 FROM bodb02.dbo.SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 BEGIN
 	--get data from bettransg for bettype 1101
 	SELECT 

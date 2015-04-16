@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME

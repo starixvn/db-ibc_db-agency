@@ -1,4 +1,5 @@
-﻿
+﻿USE bodb02
+GO
 
 ALTER PROCEDURE [dbo].[Age_TotalBets_SelHR_MAg]
 @custid int,
@@ -8,7 +9,7 @@ ALTER PROCEDURE [dbo].[Age_TotalBets_SelHR_MAg]
 /*
 	Created: 
 	Task : Retrieve Total Bet values for bettype HR
-	DB: DB053.bodb02
+	DB: DBAGE.bodb02
 	Original:
 
 	Revisions:

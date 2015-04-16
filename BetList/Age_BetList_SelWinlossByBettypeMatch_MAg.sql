@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossByBettypeMatch_MAg]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossByBettypeMatch_MAg]
 	@matchid int,
 	@custid int=null, --masterID
 	@bettype int,
@@ -9,7 +12,7 @@ AS
 /*
 Created: 
 Task : Betlist
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original:BetsSelBetListMatchWinLoss_MAg
 Revisions:
     - 20071211@Phuc: For API

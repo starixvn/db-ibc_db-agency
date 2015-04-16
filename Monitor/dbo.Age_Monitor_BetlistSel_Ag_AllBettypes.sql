@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]
  @custid	INT
  ,@transid BIGINT = 0
  ,@LimitRowCount INT = 20 
@@ -9,7 +12,7 @@ BEGIN
 Created	: Johnson
 Task: Monitor lastest bets list( all bettypes and all sports)
 Date: 28/06/2011
-DB: DB053.BODB02
+DB: DBAGE.BODB02
 Revision:
 	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
 	- 20120827@Jamie: Add actual_stake for System Parlay Bet list 

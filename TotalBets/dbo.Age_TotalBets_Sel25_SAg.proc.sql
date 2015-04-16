@@ -1,4 +1,7 @@
-﻿Alter PROCEDURE [dbo].[Age_TotalBets_Sel25_SAg]
+﻿USE bodb02
+GO
+
+Alter PROCEDURE [dbo].[Age_TotalBets_Sel25_SAg]
 	@custid int,
 	@Language varchar(2) = 'E'
  AS
@@ -6,7 +9,7 @@
 /*
 Original: SP emagenttotalbet27
 Task: Retrieve Total Bet values for Odd/Even, 1st Odd/Even, FT.1X2 and 1st 1X2.
-DB: DB05.bodb02
+DB: DBAGE.bodb02
 Revisions:
 	- 20090216@Kiwi: Remove status in ('running', 'waiting') to avoid Key Lookup while using Index named _MS_Sys_38_52_42.
 	- 20120626@Sophia: Add new bettype 123 for Draw/No Draw

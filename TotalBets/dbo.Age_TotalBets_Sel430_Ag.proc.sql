@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_TotalBets_Sel430_Ag]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel430_Ag]
 	@custid INT,
 	@Language VARCHAR(2) = 'E'
  AS
@@ -6,7 +9,7 @@
 /*
 Created: 20110915@TOM
 Task : Retrieve total bet of 1St Correct Score/Correct Score. (BetType: 4,30)
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original:Age_BetList_SelRunningByBettype_Ag
 
 Revisions:

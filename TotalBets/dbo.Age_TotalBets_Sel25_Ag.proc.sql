@@ -1,11 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Age_TotalBets_Sel25_Ag]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel25_Ag]
 	@custid int,
 	@Language varchar(2) = 'E'
  AS
 
 /*
 Task : Retrieve Total bets for bettype 25
-DB: DB05.bodb02
+DB: DBAGE.bodb02
 Original:eagenttotalbet27
 Revisions:
 	- 20060222: remove refno

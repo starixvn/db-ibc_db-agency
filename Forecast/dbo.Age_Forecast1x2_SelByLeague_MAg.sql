@@ -1,10 +1,13 @@
-﻿ALTER PROCEDURE Age_Forecast1x2_SelByLeague_MAg
+﻿ USE bodb02
+GO
+
+ALTER PROCEDURE Age_Forecast1x2_SelByLeague_MAg
 	@leagueid int,
 	@custid int
 AS
 /*
 Task: Forecast for 1x2 bettype according to league
-DB: DB05.bodb02
+DB: DBAGE.bodb02
 Revisions: 
 	- 20090213@Kiwi: Remove inner join customer table because we retrieve data directly from bettrans table.)
 	-- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement

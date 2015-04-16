@@ -1,4 +1,7 @@
-﻿
+﻿USE bodb02
+GO
+
+
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_SAg]
 	 @custid		INT
 	 ,@MoveBetsDay	DATETIME
@@ -6,7 +9,7 @@ AS
 /*
 	Created: Johnson
 	Date: 2011-04-27
-	DB: DB052.BODB02
+	DB: DBAGE.BODB02
 	Task: Get Super Balance Info 
 	
 	Revisions:
