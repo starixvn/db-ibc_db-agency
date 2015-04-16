@@ -31,6 +31,7 @@ Revisions:
 	- 20120927@Sophia: Get comstatus
 	- 20141016@Sophia: support Sporting solution-grouped bettype 
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 		
+	- 20150331@Cody: Aplly sport bettype matrix [Redmine: #30169]
 */
 
 SET NOCOUNT ON
@@ -90,7 +91,7 @@ BEGIN
 	FROM
 		bettrans b with (nolock) 
 		inner join match m with (nolock) on b.matchid=m.matchid 
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype					
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype					
 	WHERE
 		b.matchid=@matchid and 
 		b.srecommend=@custid  and 		
@@ -99,7 +100,8 @@ BEGIN
 	ORDER BY
 		b.status, b.transid
 		
-		IF @bettype between 1101 and 1199
+		--IF @bettype between 1101 and 1199
+		IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 		BEGIN
 			--get data from bettransg for bettype 1101
 			SELECT 
@@ -171,7 +173,7 @@ BEGIN
 	FROM
 		bettrans14 b with (nolock) 
 		inner join match14 m with (nolock) on b.matchid=m.matchid 		
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
+		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype			
 	WHERE
 		b.matchid=@matchid and 
 		b.srecommend=@custid  and 		
@@ -180,7 +182,8 @@ BEGIN
 	ORDER BY
 		b.status, b.transid
 		
-		IF @bettype between 1101 and 1199
+		--IF @bettype between 1101 and 1199
+		IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 		BEGIN
 			--get data from bettransg for bettype 1101
 			SELECT 

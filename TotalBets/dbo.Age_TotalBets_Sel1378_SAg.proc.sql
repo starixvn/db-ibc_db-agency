@@ -38,14 +38,14 @@ FROM
 	(SELECT
 		matchid, bettype, betteam,
 		liveindicator, livehomescore, liveawayscore,
-		SUM(spositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake, COUNT(*) BetCount
+		SUM(spositiontaking * stake * case when abs(odds) < 1 then 1 else abs(odds) end) Stake, COUNT(*) BetCount
 	FROM bettrans with (nolock)
 	WHERE
 			bettype IN (1,3,7,8)
 			AND srecommend = @custid
 			AND ruben = 0
 	GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
-	INNER JOIN match 	m  WITH (NOLOCK) ON m.matchid       = b.matchid 	
+	INNER JOIN match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
 WHERE	
 	m.eventstatus = 'running'	
 	

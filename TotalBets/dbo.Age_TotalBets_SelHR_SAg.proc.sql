@@ -1,8 +1,7 @@
 ﻿ALTER PROCEDURE [dbo].[Age_TotalBets_SelHR_SAg]
-@custid int,
-@Language varchar(2) = 'E'
+	@custid		INT
+	,@Language	VARCHAR(2) = 'E'
  AS
-
 /*
 	Created: 
 	Task : Retrieve Total Bet values for bettype HR
@@ -16,6 +15,7 @@
 		- 20101007@Henry: Change column transid from INT to BIGINT
 		- 20101224@Johnson: change type of bettype to smallint in temporary table
 		- 20120313@Lukas: modify winlostdate condition to get tickets of Aust racing (cross-date meetings)
+		- 20150323@Cody: Apply sport bettype matrix
 	Param's Explanation:
 	• @CustID: Super Agent ID
 */
@@ -24,35 +24,74 @@ SET NOCOUNT ON
 DECLARE @FromDate DATETIME
 SELECT @FromDate = CONVERT(VARCHAR(10), CURRENT_TIMESTAMP,120)
 
-DECLARE @TotalBets TABLE(   transid bigint, bettype smallint, matchid int, stake money, spositiontaking smallmoney, swinlost money, ruben tinyint, 
-                            GroupMatch varchar(20), MatchCode varchar(10), oddsstatus varchar(10), eventdate smalldatetime, 
-                            kickofftime datetime, teamID int, leagueId int)
+DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
+		
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
-INSERT INTO @TotalBets(     transid, bettype, matchid, stake, spositiontaking, swinlost, ruben, 
-                            GroupMatch, MatchCode, oddsstatus, eventdate, kickofftime, teamID, leagueId)
+DECLARE @TotalBets TABLE(   
+			transid				BIGINT
+			,bettype			SMALLINT
+			,matchid			INT
+			,stake				MONEY
+			,spositiontaking	SMALLMONEY
+			,swinlost			MONEY
+			,ruben				TINYINT
+			,GroupMatch			VARCHAR(20)
+			,MatchCode			VARCHAR(10)
+			,oddsstatus			VARCHAR(10)
+			,eventdate			SMALLDATETIME
+			,kickofftime		DATETIME
+			,teamID				INT
+			,leagueId			INT
+		)
+
+INSERT INTO @TotalBets(
+			transid
+			,bettype
+			,matchid
+			,stake
+			,spositiontaking
+			,swinlost
+			,ruben
+			,GroupMatch
+			,MatchCode
+			,oddsstatus
+			,eventdate
+			,kickofftime
+			,teamID
+			,leagueId
+		)
     SELECT 
-        b1.transid, 
-	    b1.bettype, 
-	    b1.matchid, 
-	    b1.stake, 
-	    b1.spositiontaking, 
-	    b1.swinlost, 
-	    b1.ruben,
-	    m1.GroupMatch, 
-	    m1.MatchCode, 
-	    m1.oddsstatus, 
-	    m1.eventdate, 
-	    m1.kickofftime, 
-	    m1.teamID, 
-	    m1.leagueId 
+        b1.transid
+	    ,b1.bettype
+	    ,b1.matchid 
+	    ,b1.stake
+	    ,b1.spositiontaking
+	    ,b1.swinlost
+	    ,b1.ruben
+	    ,m1.GroupMatch
+	    ,m1.MatchCode 
+	    ,m1.oddsstatus 
+	    ,m1.eventdate 
+	    ,m1.kickofftime
+	    ,m1.teamID
+	    ,m1.leagueId 
     FROM 
-	    bettrans b1 (NOLOCK) INNER JOIN outright m1 (NOLOCK) ON b1.matchid = m1.orid 
+	    bettrans b1 (NOLOCK) 
+	    INNER JOIN outright m1 (NOLOCK) ON b1.matchid = m1.orid
+	    INNER JOIN @SportBettype s ON b1.bettype = s.Bettype
     WHERE 
-	    b1.SRecommend = @custid AND 
-	    b1.bettype IN (31,32,41,42,33,43) AND 
-	    m1.eventdate >= @fromdate AND 
+	    b1.SRecommend = @custid 
+	    AND s.ProductID = 2
+	    --AND b1.bettype IN (31,32,41,42,33,43) -- productID = 2
+	    AND m1.eventdate >= @fromdate 
 	    --b1.status NOT IN('reject','void','Refund')
-	     b1.statusID NOT IN (101,102,103)
+	    AND b1.statusID NOT IN (101,102,103)
 	
 
 SELECT 

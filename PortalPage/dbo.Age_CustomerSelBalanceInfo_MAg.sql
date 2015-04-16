@@ -1,7 +1,7 @@
 ﻿ 
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_MAg]
-	 @custid		INT,
-	 @MoveBetsDay	DATETIME	
+	 @custid		INT
+	 ,@MoveBetsDay	DATETIME	
 AS
 /*
 	Created: Johnson
@@ -11,25 +11,36 @@ AS
 	
 	Revisions:
 		- 20110803@Johnson: Include commission into today winloss and yesterday winloss
+		- 20150318@Cody: Apply sport bettype matrix [Redmine: #30169]
 */
+
 SET NOCOUNT ON 
 
-DECLARE @username nvarchar(50),
-		@roleid INT, 
-		@givenCredit MONEY,
-		@memberCredit MONEY,
-		@cashBalance MONEY, 
-		@today_cashBalance MONEY, 
-		@today_totalBalance MONEY,
-		@totalBalance MONEY,
-		@today_Winloss MONEY,
-		@yesterday_Winloss MONEY,
-		@today DATETIME,
-		@yesterday DATETIME
+DECLARE @username nvarchar(50)
+		,@roleid INT
+		,@givenCredit MONEY
+		,@memberCredit MONEY
+		,@cashBalance MONEY 
+		,@today_cashBalance MONEY
+		,@today_totalBalance MONEY
+		,@totalBalance MONEY
+		,@today_Winloss MONEY
+		,@yesterday_Winloss MONEY
+		,@today DATETIME
+		,@yesterday DATETIME
 		
+DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
 		
-SELECT @today = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)
-SELECT @yesterday = DATEADD(dd,-1,@today)	
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
+
+SELECT @today = CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120)
+SELECT @yesterday = DATEADD(dd, -1, @today)	
 
 SELECT @username = username ,
 		@givenCredit = ISNULL(Credit,0) 
@@ -43,9 +54,10 @@ WHERE mrecommend = @custid AND roleid = 2
 SELECT  @today_cashBalance = iSNULL(SUM(mwinlost + acomm - comm),0),
 		@today_totalBalance = ISNULL(SUM(mwinlost + acomm + awinlost + winlost - actual_stake),0),
 		@today_Winloss = ISNULL(SUM(mwinlost + acomm - comm),0)
-FROM bettrans WITH(NOLOCK)
+FROM bettrans b WITH(NOLOCK)
+	INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 WHERE mrecommend = @custid
-	AND bettype < 19001
+	--AND bettype < 19001
 	AND ruben = 1	
 	AND winlostdate >= @today
 
@@ -60,21 +72,23 @@ WHERE mrecommend = @custid
 IF @yesterday <= @MoveBetsDay
 BEGIN
 	SELECT @yesterday_Winloss = ISNULL(SUM(mwinlost + acomm - comm),0)
-	FROM bettrans14 WITH(NOLOCK)
+	FROM bettrans14 b WITH(NOLOCK)
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 	WHERE 
 		 mrecommend = @custid
 		 AND ruben = 1
-		 AND bettype < 19001
+		 --AND bettype < 19001
 		 AND winlostdate = @yesterday 
 END
 ELSE
 BEGIN
 	SELECT @yesterday_Winloss = ISNULL(SUM(mwinlost + acomm - comm),0)
-	FROM bettrans WITH(NOLOCK)
+	FROM bettrans b WITH(NOLOCK)
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 	WHERE 
 		 mrecommend = @custid
 		 AND ruben = 1
-		 AND bettype < 19001
+		 --AND bettype < 19001
 		 AND winlostdate = @yesterday
 END	
 	
@@ -87,8 +101,6 @@ SELECT	@username AS username,
 		@yesterday_Winloss AS yesterdayWinloss,
 		@givenCredit AS givenCredit,
 		@memberCredit AS memberCredit
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelBalanceInfo_MAg] TO [bodbDownlineNet]
