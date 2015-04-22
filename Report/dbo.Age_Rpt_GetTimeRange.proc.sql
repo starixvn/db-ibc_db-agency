@@ -1,4 +1,4 @@
-ALTER PROCEDURE dbo.Age_Rpt_GetTimeRange (
+ALTER PROCEDURE [dbo].[Age_Rpt_GetTimeRange] (
 	@RptTypeId	TINYINT		 = 0
 	,@SiteName	VARCHAR(100) = ''
 )
@@ -12,6 +12,7 @@ Original:
 Revisions:           
 	-20140926@Bobby.Nguyen: Init SP
 	-20141121@Bobby.Nguyen: Add Historical report time range
+	-20150326@Bobby.Nguyen: Update Historical report time range without counting the current year
 	
 Param's Explanation: 
 	- @RptTypeId: 0: All time ranges - X: specific one
@@ -142,7 +143,7 @@ BEGIN
 				CASE 
 					WHEN cf.SUnit = 'D' THEN DATEADD(D, cf.SValue, @curDate) 
 					WHEN cf.SUnit = 'M' THEN DATEADD(M, cf.SValue, DATEADD(M, DATEDIFF(M, 0, @curDate), 0))
-					WHEN cf.SUnit = 'Y' THEN DATEADD(YEAR, cf.SValue, DATEADD(YEAR, DATEDIFF(YEAR, -1, @curDate), 0)) -- -1: count current year
+					WHEN cf.SUnit = 'Y' THEN DATEADD(YEAR, cf.SValue, DATEADD(YEAR, DATEDIFF(YEAR, 0, @curDate), 0)) -- -1|0: count|no count current year
 					ELSE @curDate
 				END	AS FromDate
 			FROM @Age_RptTimeRange_Config cf

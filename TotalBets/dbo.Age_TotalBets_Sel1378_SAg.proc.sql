@@ -1,11 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Age_TotalBets_Sel1378_SAg]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel1378_SAg]
 	@custid INT,
 	@Language varchar(2) = 'E'
 AS
 /*
 Original: SP eagenttotalbet13
 Task: Retrieve Total Bet values for 1,3,7,8 bet types.
-DB: DB05.bodb02
+DB: DBAGE.bodb02
 Revisions:
 	- 20090216@Kiwi: Remove status in ('running', 'waiting') to avoid Key Lookup while using Index named _MS_Sys_38_52_42.
 */
@@ -38,14 +41,14 @@ FROM
 	(SELECT
 		matchid, bettype, betteam,
 		liveindicator, livehomescore, liveawayscore,
-		SUM(spositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake, COUNT(*) BetCount
+		SUM(spositiontaking * stake * case when abs(odds) < 1 then 1 else abs(odds) end) Stake, COUNT(*) BetCount
 	FROM bettrans with (nolock)
 	WHERE
 			bettype IN (1,3,7,8)
 			AND srecommend = @custid
 			AND ruben = 0
 	GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
-	INNER JOIN match 	m  WITH (NOLOCK) ON m.matchid       = b.matchid 	
+	INNER JOIN match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
 WHERE	
 	m.eventstatus = 'running'	
 	

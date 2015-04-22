@@ -1,26 +1,40 @@
-﻿ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]
- @custid	INT, 
- @transid BIGINT = 0,
- @LimitRowCount INT = 20 
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]
+ @custid	INT
+ ,@transid BIGINT = 0
+ ,@LimitRowCount INT = 20 
  WITH RECOMPILE
 AS
 BEGIN
 /*	
-	Created	: Johnson
-	Task: Monitor lastest bets list( all bettypes and all sports)
-	Date: 28/06/2011
-	DB: DB053.BODB02
-	Revision:
-		- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
-		- 20120827@Jamie: Add actual_stake for System Parlay Bet list 
-		- 20130222@Elodie: Get custid value
-		- 20130222@Elodie: Get oddsid value to use for Virtual HR
-	Parameter's Explanation:
-		- @custid : agent's ID
-		- @transid: lastest transid 
-		- @LimitRowCount: max record return.
+Created	: Johnson
+Task: Monitor lastest bets list( all bettypes and all sports)
+Date: 28/06/2011
+DB: DBAGE.BODB02
+Revision:
+	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
+	- 20120827@Jamie: Add actual_stake for System Parlay Bet list 
+	- 20130222@Elodie: Get custid value
+	- 20130222@Elodie: Get oddsid value to use for Virtual HR
+	- 20150318@Cody: Apply sporttype bettype matrix
+Parameter's Explanation:
+	- @custid : agent's ID
+	- @transid: lastest transid 
+	- @LimitRowCount: max record return.
 */ 
 	SET NOCOUNT ON
+	
+	DECLARE @SportBettype TABLE(
+			ProductID INT
+			,Bettype INT
+			,EventType INT
+		)
+		
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 	SELECT TOP(@LimitRowCount)
 		b.custid,
 		0 AS sporttype,
@@ -51,10 +65,11 @@ BEGIN
 		b.IP,	
 		CONVERT(BIT,0) AS isNeutral, 		
 		b.oddstype
-	FROM dbo.bettrans b WITH(NOLOCK)				
+	FROM dbo.bettrans b WITH(NOLOCK)
+		INNER JOIN @SportBettype s ON b.bettype = s.BetType			
 	WHERE b.recommend = @custid 
 		AND b.transid > @transid
-		AND b.bettype <19001
+		--AND b.bettype < 19001
 		AND b.statusID BETWEEN 0 AND 1				
 	ORDER BY b.transid DESC
 END

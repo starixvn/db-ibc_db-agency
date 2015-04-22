@@ -1,21 +1,24 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
-	@custid         int = NULL,--mrecommend
-	@FromDate       smalldatetime,
-	@ToDate         smalldatetime,
-	@showSB         bit=1,
-	@showCasino     bit=0,
-	@showP2P        bit=0,
-	@showRB         bit=0,
-	@showFI         bit=0,
-	@showNG         BIT=0,
-	@showBI         BIT=0,
-	@showLiveCasino BIT = 0,
-	@showVS         BIT = 0,
-	@showKeno       BIT = 0,
-	@BalanceUpDay   SMALLDATETIME,
-	@PageSize       int=0,
-	@PageIndex      int=0,
-	@TotalRows      int=0 output
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
+	@custid			 INT = NULL --mrecommend
+	,@FromDate       SMALLDATETIME
+	,@ToDate         SMALLDATETIME
+	,@showSB         BIT = 1
+	,@showCasino     BIT = 0
+	,@showP2P        BIT = 0
+	,@showRB         BIT = 0
+	,@showFI         BIT = 0
+	,@showNG         BIT = 0
+	,@showBI         BIT = 0
+	,@showLiveCasino BIT = 0
+	,@showVS         BIT = 0
+	,@showKeno       BIT = 0
+	,@BalanceUpDay   SMALLDATETIME
+	,@PageSize       INT = 0
+	,@PageIndex      INT = 0
+	,@TotalRows      INT = 0 OUTPUT
 AS
 /*
 Created: 
@@ -61,107 +64,120 @@ Revisions:
 	- 20140509@Logan:	1.Add counting for number of tickets
 	                    2.Code aligning
 	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
+	- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
 */
+
 
 SET NOCOUNT ON
 
-DECLARE @RowStart int, @RowEnd int  
-SELECT @PageIndex = @PageIndex - 1,
-       @RowStart = @PageSize * @PageIndex + 1,
-       @RowEnd = @RowStart + @PageSize - 1
+DECLARE @RowStart	INT
+		,@RowEnd	INT
+		  
+SELECT @PageIndex = @PageIndex - 1
+       ,@RowStart = @PageSize * @PageIndex + 1
+       ,@RowEnd = @RowStart + @PageSize - 1
 
 
 DECLARE @MAgWinLossDetails TABLE
 (
-    CustID int, 
-    TurnOver money, 
-    GrossComm money, 
-    MemberWinLost money, 
-	PlayerComm money, 
-	MemberTotal money, 
-	AgWinLost money, 
-	AgComm money, 
-	AgTotal money, 
-	MAgWinLost money, 
-	MAgComm money, 
-	MAgTotal money, 
-	Company money,
-	NoOfTicket int
+    CustID			INT
+    ,TurnOver		MONEY
+    ,GrossComm		MONEY
+    ,MemberWinLost	MONEY
+	,PlayerComm		MONEY
+	,MemberTotal	MONEY
+	,AgWinLost		MONEY
+	,AgComm			MONEY
+	,AgTotal		MONEY
+	,MAgWinLost		MONEY
+	,MAgComm		MONEY
+	,MAgTotal		MONEY
+	,Company		MONEY
+	,NoOfTicket		INT
 )
 
-
 DECLARE @TmpCondSumWL TABLE(sporttype INT, bettype INT)
+
 IF @ShowSB = 1
 BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
-	VALUES(0,0)	
+	VALUES(0, 0)	
 END
 
 IF @ShowCasino = 1
 BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
-	VALUES(251,71)
+	VALUES(251, 71)
 END
 
 IF @ShowP2P = 1
 BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
-	VALUES(253,1000)
+	VALUES(253, 1000)
 END
 
 IF @ShowRB = 1
 BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)
-	SELECT 151,0
+	SELECT 151, 0
 END
 
 IF @ShowNG = 1
 BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)
-	VALUES(161,0)
+	VALUES(161, 0)
 END
 
 IF @ShowBI = 1
 BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)
-	VALUES(252,73)
+	VALUES(252, 73)
 END
 
 IF @showLiveCasino = 1
 BEGIN
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(162,0) 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(162, 0) 
 END
 
 IF @showVS = 1
 BEGIN
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(180,0) 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(180, 0) 
 END
 
 IF @showKeno = 1
 BEGIN
- --Sum_winloss  
- INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
- VALUES(202,0) 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(202, 0) 
 END
+
+DECLARE @SportBettype TABLE(
+	ProductID INT
+	,Bettype INT
+	,EventType INT
+)
+
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
 IF @Todate >= @BalanceUpDay
 BEGIN 
     INSERT INTO @MAgWinLossDetails
 	    SELECT Recommend,			
-			   SUM(case when b.liveawayscore = 0 and b.bettype in (33, 43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver, 
+			   SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
 		    --SUM(acomm/(1-apositiontaking-mpositiontaking)) as GrossComm,
 			---- @Lukas20111024: hot fix - casino only
-			   SUM(case when b.bettype = 1000 then oddsspread else case when (apositiontaking + mpositiontaking = 1) then 0 else acomm/(1 - apositiontaking - mpositiontaking) end end) as GrossComm,
+			   SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN (apositiontaking + mpositiontaking = 1) THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
 		       SUM(winlost - actual_stake), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
 		       ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(playercomm), 0), --MemberTotal
@@ -173,34 +189,46 @@ BEGIN
 		       ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) - SUM(comm), --MAgTotal
 		       -(ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost - actual_stake), 0)),--Company
 		       COUNT(b.transid) --No Of Ticket
-	      FROM dbo.bettrans b WITH(NOLOCK)
-	     WHERE 1 = 1
-		   and (bettype < case when @showSB = 1 then 31 else 0 end
-				OR bettype between 121 and case when @showSB = 1 then 999 else 0 end
-				OR bettype between 1301 and case when @showSB = 1 then 1399 else 0 end
-				OR bettype between 31 and case when @ShowRB = 1 then 49 else 0 end
-				OR bettype = case when @showCasino = 1 then 71 else 0 end
-				OR bettype = case when @showP2P = 1 then 1000 else 0 end
-				OR bettype BETWEEN 81 AND (CASE WHEN @showNG = 1 THEN 120 ELSE 0 END)
-				OR bettype = (CASE WHEN @showBI = 1 THEN 73 ELSE 0 END)
-				OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino = 1 THEN 1199 ELSE 0 END) 
-				OR bettype BETWEEN 1201 AND (CASE WHEN @showVS = 1 THEN 1299 ELSE 0 END)
-				OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END
-			   )
-		   and winlostdate between @FromDate and @todate
-		    --status not in ('running','waiting','VOID', 'REJECT', 'Refund') and
-		   and statusID not in (101, 102, 103)
-		   and ruben = 1
-		   and mrecommend = @custid
+	    FROM dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
+		WHERE 
+				1 = 1
+				AND (s.ProductID = CASE WHEN @showSB = 1 THEN 1 ELSE 0 END
+					OR s.ProductID = CASE WHEN @ShowRB = 1 THEN 2 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showCasino = 1 THEN 6 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showP2P = 1 THEN 9 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showNG = 1 THEN 3 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showBI = 1 THEN 7 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showLiveCasino = 1 THEN 4 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showVS = 1 THEN 5 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
+				)
+				-- and (bettype < case when @showSB = 1 then 31 else 0 end
+				--OR bettype between 121 and case when @showSB = 1 then 999 else 0 end
+				--OR bettype between 1301 and case when @showSB = 1 then 1399 else 0 end
+				--OR bettype between 31 and case when @ShowRB = 1 then 49 else 0 end
+				--OR bettype = case when @showCasino = 1 then 71 else 0 end
+				--OR bettype = case when @showP2P = 1 then 1000 else 0 end
+				--OR bettype BETWEEN 81 AND (CASE WHEN @showNG = 1 THEN 120 ELSE 0 END)
+				--OR bettype = (CASE WHEN @showBI = 1 THEN 73 ELSE 0 END)
+				--OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino = 1 THEN 1199 ELSE 0 END) 
+				--OR bettype BETWEEN 1201 AND (CASE WHEN @showVS = 1 THEN 1299 ELSE 0 END)
+				--OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END
+			 --  )
+			AND winlostdate BETWEEN @FromDate AND @todate
+			--status not in ('running','waiting','VOID', 'REJECT', 'Refund') and
+			AND statusID NOT IN (101, 102, 103)
+			AND ruben = 1
+			AND mrecommend = @custid
 	  GROUP BY Recommend, b.bettype
 		
-	if @BalanceUpDay < @FromDate
-	    select @BalanceUpDay=@FromDate
+	IF @BalanceUpDay < @FromDate
+	    SELECT @BalanceUpDay = @FromDate
 	
     INSERT INTO @MAgWinLossDetails
 	    SELECT CustID,			
-		       SUM(ABS(TurnOver)) as TurnOver,
-		       SUM(grosscomm) as GrossComm,
+		       SUM(ABS(TurnOver)) AS TurnOver,
+		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
 		       ISNULL(SUM(winlost), 0) + ISNULL(SUM(playercomm), 0), --MemberTotal
@@ -216,21 +244,21 @@ BEGIN
 	        ON b.sporttype = t.sporttype
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1
-		   and winlostdate between @BalanceUpDay and @todate			
-		   and MRecommend = @custid
-		   and RoleID = 2
+		   AND winlostdate BETWEEN @BalanceUpDay AND @todate			
+		   AND MRecommend = @custid
+		   AND RoleID = 2
 	  GROUP BY CustID
 END
 
 IF @FromDate < @BalanceUpDay 
 BEGIN
-	if @ToDate >= DATEADD(dd, -1, @BalanceUpDay)
-		select @ToDate = DATEADD(dd, -1, @BalanceUpDay)
+	IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)
+		SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDay)
 	
     INSERT INTO @MAgWinLossDetails
 	    SELECT CustID,			
-		       SUM(ABS(TurnOver)) as TurnOver,
-		       SUM(grosscomm) as GrossComm,
+		       SUM(ABS(TurnOver)) AS TurnOver,
+		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
 		       ISNULL(SUM(winlost), 0) + ISNULL(SUM(playercomm), 0), --MemberTotal
@@ -246,9 +274,9 @@ BEGIN
 	        ON b.sporttype = t.sporttype
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1
-		   and winlostdate between @fromdate and @ToDate			
-		   and MRecommend = @custid
-		   and RoleID = 2
+		   AND winlostdate BETWEEN @fromdate AND @ToDate			
+		   AND MRecommend = @custid
+		   AND RoleID = 2
 	  GROUP BY CustID
 END	
 
@@ -257,23 +285,23 @@ IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 BEGIN
     SELECT w.CustID, 
 	       c.UserName, 
-	       SUM(TurnOver) as TurnOver,
-	       SUM(GrossComm) as GrossComm,
-	       SUM(MemberWinLost) as MemberWinlost,
-	       SUM(PlayerComm) as PlayerComm,
-	       SUM(MemberTotal) as MemberTotal,
-	       SUM(AgWinlost) as AgWinlost,
-	       SUM(AgComm) as AgComm,
-	       SUM(AgTotal) as AgTotal,
-	       SUM(MAgWinlost) as MAgWinlost,
-	       SUM(MAgComm) as MAgComm,
-	       SUM(MAgTotal) as MAgTotal,
-	       SUM(Company) as Company,
-	       SUM(NoOfTicket) as NoOfTicket
+	       SUM(TurnOver) AS TurnOver,
+	       SUM(GrossComm) AS GrossComm,
+	       SUM(MemberWinLost) AS MemberWinlost,
+	       SUM(PlayerComm) AS PlayerComm,
+	       SUM(MemberTotal) AS MemberTotal,
+	       SUM(AgWinlost) AS AgWinlost,
+	       SUM(AgComm) AS AgComm,
+	       SUM(AgTotal) AS AgTotal,
+	       SUM(MAgWinlost) AS MAgWinlost,
+	       SUM(MAgComm) AS MAgComm,
+	       SUM(MAgTotal) AS MAgTotal,
+	       SUM(Company) AS Company,
+	       SUM(NoOfTicket) AS NoOfTicket
       FROM @MAgWinLossDetails w INNER JOIN Customer c WITH(NOLOCK)
         ON w.CustID = c.CustID 
-  Group by w.CustID, c.UserName
-  order by c.Username
+  GROUP BY w.CustID, c.UserName
+  ORDER BY c.Username
 
     RETURN
 END
@@ -284,7 +312,7 @@ BEGIN
     SELECT @TotalRows = count(tmp.CustID)
       FROM (SELECT CustID
               FROM @MAgWinLossDetails
-          Group by CustID
+          GROUP BY CustID
            ) tmp
  
 END
@@ -292,27 +320,26 @@ END
 SELECT wl.*
   FROM (SELECT w.CustID, 
 	           c.UserName, 
-	           SUM(TurnOver) as TurnOver,
-	           SUM(GrossComm) as GrossComm,
-	           SUM(MemberWinLost) as MemberWinlost,
-	           SUM(PlayerComm) as PlayerComm,
-	           SUM(MemberTotal) as MemberTotal,
-	           SUM(AgWinlost) as AgWinlost,
-	           SUM(AgComm) as AgComm,
-	           SUM(AgTotal) as AgTotal,
-	           SUM(MAgWinlost) as MAgWinlost,
-	           SUM(MAgComm) as MAgComm,
-	           SUM(MAgTotal) as MAgTotal,
-	           SUM(Company) as Company,
-	           SUM(NoOfTicket) as NoOfTicket,
-	           ROW_NUMBER() over (order by c.UserName) as RowNum
+	           SUM(TurnOver) AS TurnOver,
+	           SUM(GrossComm) AS GrossComm,
+	           SUM(MemberWinLost) AS MemberWinlost,
+	           SUM(PlayerComm) AS PlayerComm,
+	           SUM(MemberTotal) AS MemberTotal,
+	           SUM(AgWinlost) AS AgWinlost,
+	           SUM(AgComm) AS AgComm,
+	           SUM(AgTotal) AS AgTotal,
+	           SUM(MAgWinlost) AS MAgWinlost,
+	           SUM(MAgComm) AS MAgComm,
+	           SUM(MAgTotal) AS MAgTotal,
+	           SUM(Company) AS Company,
+	           SUM(NoOfTicket) AS NoOfTicket,
+	           ROW_NUMBER() OVER (ORDER BY c.UserName) AS RowNum
           FROM @MAgWinLossDetails w INNER JOIN Customer c WITH(NOLOCK)
             ON w.CustID = c.CustID 
-      Group by w.CustID, c.UserName
+      GROUP BY w.CustID, c.UserName
        ) wl
-    
  WHERE 1 = 1
-   and wl.RowNum between @RowStart and @RowEnd
+   AND wl.RowNum BETWEEN @RowStart AND @RowEnd
 
 
 GO

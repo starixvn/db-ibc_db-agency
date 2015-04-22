@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_SAg]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_SAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,	
@@ -7,7 +10,7 @@ AS
 /*
 Created: 
 Task : Report WinLoss
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Revisions:
      - 20090321@Hiep: Get more result for Casino Integration	
      - 20090602@Kiwi: exclude "refund" tickets.
@@ -23,7 +26,8 @@ Revisions:
   	 - 20120608@Elodie: Change the gross commission for P2P
 						Change DB053 server instead of DB052 server
     - 20140509@Logan:	Add counting for number of tickets - Code aligning			
-	- 20140926@Sophia:  Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]	
+	- 20140926@Sophia:  Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]
+	- 20150331@Cody: Apply sport bettype matrix	[Redmine: #30169]
 
 + Note: Review index=IX_srecommend when modifying this SP 
 */
@@ -46,20 +50,29 @@ DECLARE @SAgWinLoss TABLE
 DECLARE @ABSDate DATETIME
 SET @ABSDate = '2011-09-01'
 
+DECLARE @SportBettype TABLE(
+	ProductID INT
+	,Bettype INT
+	,EventType INT
+)
+
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
 IF @Todate >= @BalanceUpDay 
 BEGIN	
 	INSERT INTO @SAgWinLoss
-	SELECT bettype
+	SELECT b.bettype
 		,liveindicator
 		,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
 		,SUM(CASE 
 				WHEN winlostdate >= @ABSDate THEN CASE 
-						WHEN bettype IN (33, 43)
+						WHEN b.bettype IN (33, 43)
 							AND liveawayscore = 0 THEN ABS(stake) / 2
 						ELSE ABS(stake)
 						END
 				ELSE CASE 
-						WHEN bettype IN (33, 43)
+						WHEN b.bettype IN (33, 43)
 							AND liveawayscore = 0 THEN stake / 2
 						ELSE stake
 						END
@@ -70,7 +83,8 @@ BEGIN
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 		,COUNT(transid) AS NoOfTicket
-	FROM dbo.bettrans WITH (NOLOCK, INDEX = IX_srecommend)
+	FROM dbo.bettrans b WITH(NOLOCK, INDEX = IX_srecommend)
+		INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FromDate
 			AND @ToDate
@@ -78,9 +92,10 @@ BEGIN
 		AND statusID NOT IN (0, 1, 101, 102, 103)
 		--ruben=1 and 
 		AND SRecommend = @CustID
-		AND bettype < 19001
-		AND bettype BETWEEN 81 AND 120
-	GROUP BY bettype,liveindicator
+		--AND bettype < 19001
+		--AND bettype BETWEEN 81 AND 120
+		AND s.ProductID = 3
+	GROUP BY b.bettype, liveindicator
 
 	UNION ALL --- Not number Game not group by liveindicator
 	SELECT 
@@ -109,7 +124,8 @@ BEGIN
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
-		LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
+		LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
+		INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FromDate
 			AND @ToDate
@@ -117,25 +133,23 @@ BEGIN
 		AND statusID NOT IN (0, 1, 101, 102, 103)
 		--ruben=1 and 
 		AND SRecommend = @CustID
-		AND b.bettype < 19001
-		AND b.bettype NOT BETWEEN 81 AND 120
+		--AND b.bettype < 19001
+		--AND b.bettype NOT BETWEEN 81 AND 120
+		AND s.ProductID <> 3
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
-
-
-
 	INSERT INTO @SAgWinLoss
-	SELECT bettype
+	SELECT b.bettype
 		,liveindicator
 		,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
 		,SUM(CASE 
 				WHEN winlostdate >= @ABSDate THEN CASE 
-						WHEN bettype IN (33, 43)
+						WHEN b.bettype IN (33, 43)
 							AND liveawayscore = 0 THEN ABS(stake) / 2
 						ELSE ABS(stake)
 						END
 				ELSE CASE 
-						WHEN bettype IN (33, 43)
+						WHEN b.bettype IN (33, 43)
 							AND liveawayscore = 0 THEN stake / 2
 						ELSE stake
 						END
@@ -146,16 +160,18 @@ BEGIN
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 		,COUNT(transid) AS NoOfTicket
-	FROM dbo.bettrans14 WITH (NOLOCK)
+	FROM dbo.bettrans14 b WITH (NOLOCK)
+		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FromDate AND @ToDate
 				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
 		AND SRecommend = @CustID
-		AND bettype < 19001
-		AND bettype BETWEEN 81 AND 120
-	GROUP BY bettype,liveindicator
+		--AND bettype < 19001
+		--AND bettype BETWEEN 81 AND 120
+		AND s.ProductID = 3
+	GROUP BY b.bettype, liveindicator
 
 	UNION ALL --- Not number Game not group by liveindicator
 	SELECT 
@@ -184,15 +200,17 @@ BEGIN
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
 		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans14 b WITH (NOLOCK)
-		LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
+		LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
+		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FromDate AND @ToDate
 				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
 		AND SRecommend = @CustID
-		AND b.bettype < 19001
-		AND b.bettype NOT BETWEEN 81 AND 120
+		--AND b.bettype < 19001
+		--AND b.bettype NOT BETWEEN 81 AND 120
+		AND s.ProductID <> 3
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 END
 

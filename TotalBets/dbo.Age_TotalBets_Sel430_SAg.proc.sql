@@ -1,11 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Age_TotalBets_Sel430_SAg]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel430_SAg]
 	@custid int,
 	@Language varchar(2) = 'E'
  AS
 /*
 Created: 20110915@TOM
 Task : Retrieve total bet of 1St Correct Score/Correct Score. (BetType: 4,30)
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original:Age_BetList_SelRunningByBettype_SAg
 
 Revisions:
@@ -14,6 +17,7 @@ Revisions:
 	- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
 	- 20121004@Johnson: get comstatus to check double comm losing 	
 	- 20140611@Dom: Add new bettype ht correct score 152
+	- 20150407@Cody: Integrate new 60 bet types from BetRadar [Redmine: #32734]
 */
 
 SET NOCOUNT ON
@@ -58,7 +62,7 @@ SET NOCOUNT ON
 		inner join match m with (nolock) on  b.matchid=m.matchid 
 	where 
 		b.SRecommend=@custid
-		AND b.bettype IN (4,30,152)
+		AND b.bettype IN (4,30,152,165,166)
 		and b.statusID in (0,1)
 		
 	order by b.status, b.transid
