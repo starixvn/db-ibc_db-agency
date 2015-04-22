@@ -259,7 +259,7 @@ SET NOCOUNT ON
 							 )
 							OR 
 							(@Sporttype = 1 AND D.ResourceId NOT IN ( '00', '01', '08') 
-							 AND D.ResourceId LIKE F.ResourceID			 	 
+							 AND D.ResourceId LIKE F.ResourceID							 	 
 							 	
 							)
 						)

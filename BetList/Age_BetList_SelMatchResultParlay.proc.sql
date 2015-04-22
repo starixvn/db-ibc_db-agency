@@ -54,7 +54,7 @@ BEGIN
 		AwayValue VARCHAR(20),
 		ResultStatusID TINYINT,
 		SettlementStatusID TINYINT,
-		OtherInfo VARCHAR(20)
+		OtherInfo VARCHAR(50)
 	)
 
 
