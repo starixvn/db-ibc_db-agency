@@ -25,7 +25,7 @@ SET NOCOUNT ON
 	INSERT INTO @tblBetType(BetType,isHT)
 	SELECT val AS BetType,0 isHT FROM strSplit('5',',') --BETTYPE FT
 	UNION ALL
-	SELECT val AS BetType,0 isHT FROM strSplit('15,167',',') --BETTYPE FT
+	SELECT val AS BetType,1 isHT FROM strSplit('15,167',',') --BETTYPE HT
 
 	select x.MatchID, x.homeid,	x.awayid,	
 		x.liveindicator, isnull(x.LiveHomeScore, 0) as livehomescore, isnull(x.LiveAwayScore, 0) as liveawayscore,x.ShowTime,x.MatchCode,isNeutral,

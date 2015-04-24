@@ -53,8 +53,12 @@ Revisions:
 
 SET NOCOUNT ON
 
+IF OBJECT_ID('tempdb..#MAgMatchWLDetails') IS NOT NULL
+BEGIN
+	DROP TABLE #MAgMatchWLDetails
+END
 
-DECLARE @MAgMatchWLDetails TABLE(
+CREATE TABLE #MAgMatchWLDetails (
 				BetGroup		INT
 				,matchid		INT
 				,homeid			INT
@@ -81,21 +85,53 @@ DECLARE @MAgMatchWLDetails TABLE(
 				,showtime		NVARCHAR(50)
 			)
 
-DECLARE @SportBettype TABLE(
+IF OBJECT_ID('tempdb..#SportBettype') IS NOT NULL
+BEGIN
+	DROP TABLE #SportBettype
+END
+
+CREATE TABLE #SportBettype (
 			ProductID INT
 			,Bettype INT
 			,EventType INT
-		)
-		
-INSERT INTO @SportBettype
-EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+		)		
+
+DECLARE @ProductPrefix VARCHAR(100)='-'
+
+IF @ShowSB	= 1
+	BEGIN
+		SET @ProductPrefix=@ProductPrefix+',SB'
+	END
+
+IF @showRB	= 1
+	BEGIN	
+		SET @ProductPrefix=@ProductPrefix+',RB'
+	END
+
+IF @showNG	= 1
+	BEGIN	
+		SET @ProductPrefix=@ProductPrefix+',NG'
+	END
+	
+IF @showLiveCasino	= 1
+	BEGIN	
+		SET @ProductPrefix=@ProductPrefix+',LC'		
+	END
+	
+IF @showVS	= 1
+	BEGIN	
+		SET @ProductPrefix=@ProductPrefix+',VS'
+	END	
+	
+INSERT INTO #SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductPrefix=@ProductPrefix
 
 IF @league = ''
 BEGIN
 	-- Get all leagues by sport's selected
 	IF @Todate > @MoveBetsDay
 	BEGIN
-		INSERT INTO @MAgMatchWLDetails 	
+		INSERT INTO #MAgMatchWLDetails 	
 			SELECT
 				0 as BetGroup,
 				m.matchid,
@@ -124,7 +160,7 @@ BEGIN
 			FROM 
 				bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		--		INNER JOIN league l WITH(NOLOCK) ON m.leagueid = l.leagueid 			
 			WHERE 
 				b.mrecommend = @custid
@@ -173,7 +209,7 @@ BEGIN
 				bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype		
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE 
 				b.mrecommend = @custid
 				--AND b.bettype < 19001 
@@ -196,7 +232,7 @@ BEGIN
 		-- MixParlay
 		IF @showSB = 1 
 		BEGIN
-			INSERT INTO @MAgMatchWLDetails 	
+			INSERT INTO #MAgMatchWLDetails 	
 				SELECT
 					3 as BetGroup,
 					0 as matchid,
@@ -239,7 +275,7 @@ BEGIN
 		-- Virtual HR
 		IF @showVS = 1 
 		BEGIN
-			INSERT INTO @MAgMatchWLDetails
+			INSERT INTO #MAgMatchWLDetails
 			SELECT
 				0 as BetGroup,
 				'' matchid,
@@ -269,7 +305,7 @@ BEGIN
 				bettrans b WITH (NOLOCK)
 				INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
                 INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-                INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+                INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE 
 				b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
@@ -285,7 +321,7 @@ BEGIN
 		END
 		
 		-- Outright
-		INSERT INTO @MAgMatchWLDetails 
+		INSERT INTO #MAgMatchWLDetails 
 			SELECT
 				(case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 				0 as matchid,
@@ -315,7 +351,7 @@ BEGIN
 			FROM 
 				bettrans b WITH (NOLOCK)
 				INNER JOIN outright m with (nolock) on m.orid = b.matchid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE 
 				b.mrecommend = @custid
 				AND b.winlostdate >= @fromdate
@@ -333,7 +369,7 @@ BEGIN
 	END
 	IF @Fromdate <= @MoveBetsDay
 	BEGIN	
-		INSERT INTO @MAgMatchWLDetails 	
+		INSERT INTO #MAgMatchWLDetails 	
 			SELECT
 				0 as BetGroup,
 				m.matchid,
@@ -362,7 +398,7 @@ BEGIN
 			FROM 
 				bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			--	INNER JOIN league l WITH (NOLOCK) ON m.leagueid = l.leagueid 				
 			WHERE 
 				b.mrecommend = @custid
@@ -411,7 +447,7 @@ BEGIN
 				bettrans14 b WITH (NOLOCK, index=IX_bettrans4)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype		
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE 
 				b.mrecommend = @custid
 				--b.status not in ('VOID', 'REJECT', 'Refund') AND
@@ -434,7 +470,7 @@ BEGIN
 			-- mix parlay (14)	
 			IF @showSB = 1
 			BEGIN
-				INSERT INTO @MAgMatchWLDetails 	
+				INSERT INTO #MAgMatchWLDetails 	
 				SELECT
 					3 as BetGroup,
 					0 as matchid,
@@ -477,7 +513,7 @@ BEGIN
 			-- Virtual HR
 			IF @showVS = 1 
 			BEGIN
-				INSERT INTO @MAgMatchWLDetails
+				INSERT INTO #MAgMatchWLDetails
 				SELECT
 				0 as BetGroup,
 				'' matchid,
@@ -507,7 +543,7 @@ BEGIN
 					bettrans14 b WITH (NOLOCK)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-					INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE 
 					b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
@@ -523,7 +559,7 @@ BEGIN
 			END
 		
 			-- outright (14)
-			INSERT INTO @MAgMatchWLDetails 
+			INSERT INTO #MAgMatchWLDetails 
 			SELECT
 				(case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 				0 as matchid,
@@ -553,7 +589,7 @@ BEGIN
 			FROM 
 				bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
 				inner join outright14 m with (nolock) on m.orid = b.matchid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE 
 				b.mrecommend = @custid
 				AND b.winlostdate >= @fromdate
@@ -573,13 +609,15 @@ END
 ELSE BEGIN
 	DECLARE @tmpLeague TABLE(leagueid INT)
 	
+	DECLARE @tmpParlayRefno TABLE(TransID BIGINT)
+	
 	INSERT INTO @tmpLeague
 	SELECT CONVERT(INT,val)
 	FROM strSplit(@league,',')
 	
 	IF @Todate > @MoveBetsDay
 	BEGIN
-		INSERT INTO @MAgMatchWLDetails 	
+		INSERT INTO #MAgMatchWLDetails 	
 			SELECT
 				0 as BetGroup,
 				m.matchid,
@@ -608,8 +646,8 @@ ELSE BEGIN
 			FROM 
 				bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype	
-				--INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid 			
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype	
+				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid 			
 			WHERE 
 				b.mrecommend = @custid
 				--AND b.bettype < 19001 
@@ -655,7 +693,7 @@ ELSE BEGIN
 				bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid 
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
 			WHERE 
 				b.mrecommend = @custid
@@ -667,7 +705,7 @@ ELSE BEGIN
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
-				AND s.ProductID <> 3 -- bettype NOT BETWEEN 81 AND 120
+				AND s.ProductID IN(1, 4, 5) -- bettype NOT BETWEEN 81 AND 120
 				AND s.EventType <> 3 -- bettype not in(1231,1232,1233,1237,1238)
 				--AND b.bettype NOT BETWEEN 81 AND 120
 			GROUP BY 
@@ -675,7 +713,25 @@ ELSE BEGIN
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 		
 		-- MixParlay
-		INSERT INTO @MAgMatchWLDetails 	
+		/*
+		IF @showSB = 1
+		BEGIN
+			INSERT INTO @tmpParlayRefno(TransID)
+			SELECT b.TransID
+			FROM bettrans b WITH (NOLOCK)
+				INNER JOIN bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
+				INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
+				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
+			WHERE 
+				b.mrecommend = @custid
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
+				AND b.bettype IN (9, 29)
+				AND b.ruben = 1
+				AND b.statusID NOT IN (101, 102, 103)
+			GROUP BY  b.TransID
+				
+			INSERT INTO #MAgMatchWLDetails 	
 			SELECT
 				3 as BetGroup,
 				0 as matchid,
@@ -703,9 +759,7 @@ ELSE BEGIN
 				'' as showtime
 			FROM
 				bettrans b WITH (NOLOCK)
-				INNER JOIN bettransm bm WITH(NOLOCK) ON b.refno = bm.refno
-				INNER JOIN match m WITH(NOLOCK) ON bm.matchid = m.matchid
-				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
+				INNER JOIN @tmpParlayRefno tmp ON b.TransID = tmp.TransID 
 			WHERE 
 				b.mrecommend = @custid
 				AND b.bettype IN (9, 29)
@@ -716,9 +770,11 @@ ELSE BEGIN
 				AND b.statusID NOT IN (101, 102, 103) 
 			GROUP BY b.bettype	
 			HAVING ISNULL(COUNT(b.transid),0) > 0
+		END
+		*/
 		
 		-- Virtual HR		
-		INSERT INTO @MAgMatchWLDetails
+		INSERT INTO #MAgMatchWLDetails
 		SELECT
 			0 as BetGroup,
 				'' matchid,
@@ -749,7 +805,7 @@ ELSE BEGIN
 			INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
             INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
             INNER JOIN @tmpLeague l ON r.leagueid = l.leagueid
-            INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+            INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		WHERE 
 			b.mrecommend = @custid
 			AND b.statusID NOT IN (101, 102, 103)
@@ -764,7 +820,7 @@ ELSE BEGIN
 			r.LeagueID, r.EventTime, r.eventID, b.bettype
 			
 		-- Outright
-		INSERT INTO @MAgMatchWLDetails 
+		INSERT INTO #MAgMatchWLDetails 
 			SELECT
 				(case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 				0 as matchid,
@@ -772,7 +828,7 @@ ELSE BEGIN
 				0 as awayid,
 				b.bettype,
 				0 as liveindicator,
-				(case b.bettype when 10 then 0 else m.leagueid end) as leagueid,	
+				m.leagueid  as leagueid,	
 				--SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then b.stake/2 else b.stake end),	
 				SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
 				SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
@@ -795,7 +851,7 @@ ELSE BEGIN
 				bettrans b WITH (NOLOCK)
 				inner join outright m with (nolock) on m.orid = b.matchid
 				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE 
 				b.mrecommend = @custid
 				AND b.winlostdate >= @fromdate
@@ -806,12 +862,12 @@ ELSE BEGIN
 				AND b.ruben = 1
 				--b.status not in ('VOID', 'REJECT', 'Refund') AND
 				AND b.statusID NOT IN (101, 102, 103) 
-			GROUP BY b.bettype, m.groupmatch, (CASE b.bettype WHEN 10 THEN 0 ELSE m.leagueid END)
+			GROUP BY b.bettype, m.groupmatch, m.leagueid 
 			HAVING ISNULL(COUNT(transid),0) > 0	
 	END
 	IF @Fromdate <= @MoveBetsDay
 	BEGIN	
-		INSERT INTO @MAgMatchWLDetails 	
+		INSERT INTO #MAgMatchWLDetails 	
 			SELECT
 				0 as BetGroup,
 				m.matchid,
@@ -841,7 +897,7 @@ ELSE BEGIN
 				bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype		
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE 
 				b.mrecommend = @custid
 				--b.status not in ('VOID', 'REJECT', 'Refund') AND
@@ -887,7 +943,7 @@ ELSE BEGIN
 				bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
 			WHERE 
 				b.mrecommend = @custid
@@ -899,15 +955,33 @@ ELSE BEGIN
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund' 
-				AND s.ProductID <> 3 -- bettype NOT BETWEEN 81 AND 120
+				AND s.ProductID IN(1, 4, 5) -- bettype NOT BETWEEN 81 AND 120
 				AND s.EventType <> 3 -- bettype not in(1231, 1232, 1233, 1237, 1238)
 				--AND b.bettype NOT BETWEEN 81 AND 120
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END 
 
-			-- mix parlay (14)	
-			INSERT INTO @MAgMatchWLDetails 	
+		-- mix parlay (14)
+		/*
+		IF @showSB = 1
+		BEGIN
+			INSERT INTO @tmpParlayRefno(TransID)
+			SELECT b.TransID
+			FROM bettrans14 b WITH (NOLOCK)
+				INNER JOIN bettransm14 bm WITH(NOLOCK) ON b.refno = bm.refno
+				INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid
+				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
+			WHERE 
+				b.mrecommend = @custid
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
+				AND b.bettype IN (9, 29)
+				AND b.ruben = 1
+				AND b.statusID NOT IN (101, 102, 103)
+			GROUP BY  b.TransID
+				
+			INSERT INTO #MAgMatchWLDetails 	
 			SELECT
 				3 as BetGroup,
 				0 as matchid,
@@ -935,9 +1009,7 @@ ELSE BEGIN
 				'' as showtime
 			FROM
 				bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
-				INNER JOIN bettransm14 bm WITH(NOLOCK) ON b.refno = bm.refno 
-				INNER JOIN match14 m WITH(NOLOCK) ON bm.matchid = m.matchid 
-				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
+				INNER JOIN @tmpParlayRefno tmp ON b.TransID = tmp.TransID 
 			WHERE 
 				b.mrecommend = @custid AND
 				b.bettype IN (9, 29) AND
@@ -948,9 +1020,10 @@ ELSE BEGIN
 				b.statusID NOT IN (101, 102, 103)
 			GROUP BY b.bettype	
 			HAVING ISNULL(COUNT(b.transid), 0) > 0
-			
+		END
+			*/
 			-- Virtual HR		
-			INSERT INTO @MAgMatchWLDetails
+			INSERT INTO #MAgMatchWLDetails
 			SELECT
 				0 as BetGroup,
 				'' matchid,
@@ -981,7 +1054,7 @@ ELSE BEGIN
 				INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
 				INNER JOIN @tmpLeague l ON r.leagueid = l.leagueid
-				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE 
 				b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
@@ -996,7 +1069,7 @@ ELSE BEGIN
 				r.LeagueID, r.EventTime, r.eventID, b.bettype
 			
 			-- outright (14)
-			INSERT INTO @MAgMatchWLDetails 
+			INSERT INTO #MAgMatchWLDetails 
 			SELECT
 				(case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 				0 as matchid,
@@ -1004,7 +1077,7 @@ ELSE BEGIN
 				0 as awayid,
 				b.bettype,
 				0 as liveindicator,
-				(case b.bettype when 10 then 0 else m.leagueid end) as leagueid,	
+				m.leagueid  as leagueid,	
 				---SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then b.stake/2 else b.stake end),	
 				SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
 				SUM(acomm/(1 - apositiontaking-mpositiontaking)) as GrossComm,
@@ -1027,7 +1100,7 @@ ELSE BEGIN
 				bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
 				inner join outright14 m with (nolock) on m.orid = b.matchid
 				INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
-				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE 
 				b.mrecommend = @custid
 				AND b.winlostdate >= @fromdate
@@ -1038,7 +1111,7 @@ ELSE BEGIN
 				AND b.ruben = 1
 				--b.status not in ('VOID', 'REJECT', 'Refund') AND
 				AND b.statusID NOT IN (101, 102, 103)
-			GROUP BY b.bettype, m.groupmatch, (CASE b.bettype WHEN 10 THEN 0 ELSE m.leagueid END)
+			GROUP BY b.bettype, m.groupmatch, m.leagueid 
 			HAVING ISNULL(COUNT(transid),0) > 0	
 
 	END
@@ -1069,15 +1142,25 @@ SELECT
 	matchcode, 
 	isNeutral, 
 	showtime
-FROM @MAgMatchWLDetails	
+FROM #MAgMatchWLDetails	
 GROUP BY BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode,isNeutral, showtime
 ORDER BY betgroup, matchid, leagueid, race, bettype, liveindicator, matchcode
 
+
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [bodbAdminNet]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [bodbDownlineNet]
+SET ANSI_NULLS ON 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [vnteam]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [bodbDownlineNetView]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [bodbDownlineNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_MAg] TO [bodbAdminNet]
+GO 

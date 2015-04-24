@@ -23,10 +23,16 @@ SET NOCOUNT ON
 
 DECLARE @tblBetType TABLE(BetType INT,isHT BIT)
 
-INSERT INTO @tblBetType(BetType,isHT)
-SELECT val AS BetType,0 isHT FROM strSplit('5',',') --BETTYPE FT
-UNION ALL
-SELECT val AS BetType,0 isHT FROM strSplit('15,167',',') --BETTYPE FT
+IF @bettype = 5
+BEGIN
+	INSERT INTO @tblBetType(BetType,isHT)
+	SELECT val AS BetType,0 isHT FROM strSplit('5',',') --BETTYPE FT
+END
+ELSE
+BEGIN
+	INSERT INTO @tblBetType(BetType,isHT)
+	SELECT val AS BetType,1 isHT FROM strSplit('15,167',',') --BETTYPE FT
+END
 
 if @roleid = 2 
 BEGIN
@@ -60,8 +66,8 @@ BEGIN
 		from dbo.bettrans b with(nolock) 
 			inner join dbo.Match M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'			
 			INNER JOIN @tblBetType tblBetType ON b.bettype = tblBetType.BetType
-		where b.bettype = @bettype
-			AND b.matchid = @MatchID
+		where 
+			b.matchid = @MatchID
 			AND b.recommend = @custid
 			--AND b.status in ('running','waiting')
 			AND b.statusID in (0,1)
@@ -104,8 +110,7 @@ BEGIN
 		from dbo.bettrans b with(nolock) 
 			inner join dbo.Match M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
 			INNER JOIN @tblBetType tblBetType ON b.bettype = tblBetType.BetType
-		where b.bettype = @bettype
-			AND b.matchid = @MatchID 
+		where  b.matchid = @MatchID 
 			AND b.mrecommend = @custid
 			--AND b.status in ('running','waiting')
 			AND b.statusID in (0,1)
@@ -147,8 +152,7 @@ BEGIN
 		from dbo.bettrans b with(nolock) 
 			inner join dbo.Match M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
 			INNER JOIN @tblBetType tblBetType ON b.bettype = tblBetType.BetType
-		where b.bettype = @bettype
-			AND b.matchid = @MatchID
+		where b.matchid = @MatchID
 			and b.ruben = 0
 			AND b.srecommend = @custid
 		group by liveindicator, b.currency ,m.MatchID, m.homeid, m.awayid,	

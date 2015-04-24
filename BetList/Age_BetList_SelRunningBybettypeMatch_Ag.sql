@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag]
 	@MatchID int,
 	@CustID int,
 	@Bettype int,
@@ -10,7 +13,7 @@ AS
 /*
 Created: 
 Task : Betlist
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original: BetsSelBetListMatchWinLoss_Ag
 Revisions:    
     - 20080105: Add typenamee2,sportname 
@@ -38,6 +41,7 @@ Revisions:
 	- 20120705@Sophia: Get sporttype for outright
 	- 20120926@Sophia: Get Comstatus
 	- 20140425@Dom: Group TB and FGLG
+	- 20150416@Tom: Integrate new 60 bet types from BetRadar (32734)
 */
 
 SET NOCOUNT ON
@@ -131,7 +135,13 @@ BEGIN
 	WHERE
 		b.Recommend=@custid  
 		and b.matchid=@matchid 
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype )
+		and ( 
+			(@bettype=6 AND b.bettype IN(6,159,161,162,126,179,181,182)) 
+			OR (@bettype=14 and b.bettype IN(14,127)) 
+			OR (@bettype=2 and b.bettype IN(2,157)) 
+			OR (@bettype=15 and b.bettype IN(15,167)) 
+			OR bettype = @bettype 
+			)
 		--b.status in ('waiting','running') and
 		 and b.statusID in (0,1) 
 		 and b.Liveindicator= CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END AND
@@ -154,7 +164,7 @@ BEGIN
 		bg.spositiontaking,
 		bg.betteam  
 	FROM bettransg bg with (NOLOCK)
-	INNER JOIN bettrans B ON bg.refno = B.refno
+	INNER JOIN bettrans B with (NOLOCK)ON bg.refno = B.refno
 	WHERE	bg.matchid=@matchid and 
 			b.Recommend=@custid  and 
 			b.statusID in (0,1) and 		

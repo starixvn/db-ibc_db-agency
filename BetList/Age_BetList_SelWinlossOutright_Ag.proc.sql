@@ -1,7 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossOutright_Ag]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossOutright_Ag]
 	@CustID int=null, --superID
 	@FromDate smalldatetime,
 	@ToDate smalldatetime,
+	@leagueID int=NULL,
 	@Language varchar(2) = 'E',
 	@MoveBetsDay smalldatetime
 AS
@@ -21,6 +25,7 @@ Revisions:
 	- 20101224@Johnson: change type of bettype to smallint in temporary table
 	- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
 	- 20120927@Sophia: Get comstatus
+	- 20150420@Tom: Add @leagueID parameter
 */
 SET NOCOUNT ON
 DECLARE @AgWinlossOutright TABLE(
@@ -108,7 +113,8 @@ BEGIN
 		b.Winlostdate>=@FromDate AND
 		b.Winlostdate<=@ToDate AND
 		b.Bettype=10 AND
-		b.Ruben=1
+		b.Ruben=1 AND
+		(@leagueID IS NULL OR m.leagueID = @leagueID)
 END
 
 IF @Fromdate <= @MoveBetsDay
@@ -158,7 +164,8 @@ BEGIN
 		b.Winlostdate>=@FromDate AND
 		b.Winlostdate<=@ToDate AND
 		b.Bettype=10 AND
-		b.Ruben=1	
+		b.Ruben=1	AND
+		(@leagueID IS NULL OR m.leagueID = @leagueID)
 END
 
 SELECT * FROM @AgWinlossOutright ORDER BY Status, Transid

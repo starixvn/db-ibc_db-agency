@@ -1,4 +1,7 @@
-﻿  ALTER PROCEDURE [dbo].[Age_ScoreMap_SelLeague]
+﻿USE bodb02
+GO
+
+  ALTER PROCEDURE [dbo].[Age_ScoreMap_SelLeague]
  	@agentid INT 	
 AS
 /*
@@ -27,7 +30,7 @@ BEGIN
 	INSERT INTO @tblBetType(BetType)
 	SELECT val AS BetType FROM strSplit('7,8,12,15,21,126,136,138,167,179,181,182,188,191',',') --BETTYPE HT
 	UNION ALL
-	SELECT val AS BetType FROM strSplit('1,2,3,5,6,13,20,24,25,26,27,28,121,122,123,131,132,137,139,157,159,161,162,163,170',',') --BETTYPE FT
+	SELECT val AS BetType FROM strSplit('1,2,3,4,5,6,13,20,24,25,26,27,28,30,121,122,123,131,132,137,139,151,157,159,161,162,170',',') --BETTYPE FT
 
 	IF @roleid = 4
 	BEGIN

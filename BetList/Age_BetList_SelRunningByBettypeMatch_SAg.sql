@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettypeMatch_SAg]
+﻿USE bodb_AGE
+GO
+
+ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettypeMatch_SAg]
 	@matchid int,
 	@custid int,
 	@bettype int,
@@ -40,6 +43,7 @@ Revisions:
 	- 20130107@Dan: merge code from production	
 	- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE
 	- 20140425@Dom: Group TB and FGLG
+	- 20150416@Tom: Integrate new 60 bet types from BetRadar (32734)
 */
 SET NOCOUNT ON
 
@@ -141,7 +145,13 @@ BEGIN
 	WHERE
 		b.matchid= @matchid  and
 		b.SRecommend=@custid  and 
-		( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR bettype = @bettype ) and 
+		( 
+			(@bettype=6 AND b.bettype IN(6,159,161,162,126,179,181,182)) 
+			OR (@bettype=14 and b.bettype IN(14,127)) 
+			OR (@bettype=2 and b.bettype IN(2,157)) 
+			OR (@bettype=15 and b.bettype IN(15,167)) 
+			OR bettype = @bettype 
+			) and
 		--b.bettype=@bettype and
 		--b.status in ('waiting','running') 
 		b.statusID in (0,1) and 

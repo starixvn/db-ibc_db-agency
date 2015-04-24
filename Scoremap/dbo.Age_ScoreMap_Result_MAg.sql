@@ -1,4 +1,7 @@
-﻿   ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_MAg]
+﻿USE bodb02
+GO
+
+   ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_MAg]
  	@mrecommend INT, 	
  	@matchids	VARCHAR(4000) = '',
  	@bettypes_live	VARCHAR(500),
@@ -36,7 +39,7 @@ BEGIN
 	DECLARE @tblBetTypeHT_FT TABLE(BetType INT,isHT BIT)
 
 	INSERT INTO @tblBetTypeHT_FT(BetType,isHT)
-	SELECT val AS BetType,1 AS isHT  FROM strSplit('7, 8, 12, 15, 21, 126, 136, 138, 167, 179, 181, 182, 188, 191',',') 
+	SELECT val AS BetType,1 AS isHT  FROM strSplit('7, 8, 12, 15, 21, 126, 136, 138,167, 179, 181, 182, 188, 191',',') 
 	
 	-- get scores template
 	INSERT INTO @tmpScores (home, away) SELECT home, away FROM scores WITH(NOLOCK) WHERE (home BETWEEN @homeBeginScore AND @homeEndScore) AND (away BETWEEN @awayBeginScore AND @awayEndScore )	
@@ -69,7 +72,7 @@ BEGIN
 					+/*once bt = 1,3,7,8,25 will calculate equation above ,the other way will calculate below*/
 						ISNULL(-SUM(CASE
 							WHEN r=0 AND bt IN (2,4,5,6,12,13,15,24,26,27,28,30,123,126,151,145,146,131,132,136,137,138,139
-												,157,167,170,188,159,161,162,163,179,181,182 --Bet Radar
+												,157,167,170,188,159,161,162,165,166,179,181,182 --Bet Radar
 												)THEN 1 --Dom 
 							WHEN r = 0 AND bt IN (20,21,25,191) AND home <> away THEN 1			--Bet Radar
 							WHEN r = 0 AND bt = 121 THEN CASE WHEN home > away THEN 0 ELSE 1 END
@@ -78,7 +81,7 @@ BEGIN
 						END * risk) 
 						+SUM(CASE
 							WHEN r=1 AND bt IN (2,4,5,6,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,151,145,146,131,132,136,137,138,139
-												,157,167,170,188,159,161,162,163,179,181,182,191--Bet Radar
+												,157,167,170,188,159,161,162,165,166,179,181,182,191--Bet Radar
 												)THEN 1 --Dom
 							ELSE 0
 						END * risk * trueodds),0)
@@ -97,12 +100,16 @@ BEGIN
 						WHEN betteam <> 'h' AND bt IN (2, 12,136,137,138,139,157) THEN 1-( (home+away)&1) --Dom & Radar
 						WHEN betteam  = 'h' AND bt IN (3, 8) THEN (home+away) - hc 
 						WHEN betteam <> 'h' AND bt IN (3, 8) THEN hc - (home+away)
-						WHEN home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30) THEN 1  
-						WHEN (home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd) AND bt IN (4,30) THEN 1 
+						WHEN home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30,165,166) THEN 1  
+						WHEN (home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd) AND bt IN (4,30,165,166) THEN 1 
 						WHEN home>away AND betteam = '1' AND bt IN (5, 15,167) THEN 1	--Radar
 						WHEN away>home AND betteam = '2' AND bt IN (5, 15,167) THEN 1	--Radar
 						WHEN home=away AND betteam = 'x' AND bt IN (5, 15,167) THEN 1	--Radar 
-						WHEN home+away>= hc AND home+away<=hd AND bt in (6,126,131,132,159,161,162,163,179,181,182) THEN 1 	--Dom	 & Radar
+						
+						WHEN home+away>= hc AND home+away<=hd AND bt in (6,126,131,132) THEN 1 	--Dom	 & Radar
+						
+						WHEN home+away>= hc AND bt in (159,161,162,179,181,182) THEN 1 	--Dom	 & Radar
+						
 						WHEN betteam = 'hy' AND away = 0 AND bt = 13 THEN 1
 						WHEN betteam = 'hn' AND away > 0 AND bt = 13 THEN 1
 						WHEN betteam = 'ay' AND home = 0 AND bt = 13 THEN 1
@@ -115,8 +122,17 @@ BEGIN
 						WHEN betteam = 'h' AND (home > away) AND bt IN (25, 191) THEN 1 --Radar
 						WHEN betteam = 'a' AND (away > home) AND bt IN (25, 191) THEN 1 --Radar
 						WHEN betteam = 'n' AND home = 0 AND away = 0 AND bt in(26,145,146,170,188) THEN 1							--Radar
-						WHEN betteam = 'o' AND (home = 0 or away = 0) AND home + away >=1 AND bt in(26,145,146,170,188) THEN 1		--Radar
-						WHEN betteam = 'b' AND home + away >= 2 AND home <> 0 AND away <> 0  AND bt in(26,145,146,170,188) THEN 1	--Radar
+						WHEN betteam = 'o' AND (home = 0 or away = 0) AND home + away >=1 AND bt in(26,145,146) THEN 1		--Radar
+						WHEN betteam = 'b' AND home + away >= 2 AND home <> 0 AND away <> 0  AND bt in(26,145,146) THEN 1	--Radar	
+												
+						WHEN betteam = 'h' AND (home > 0) AND bt in(170) THEN 1		--Radar
+						WHEN betteam = 'a' AND (away > 0) AND bt in(170) THEN 1		--Radar
+						WHEN betteam = 'b' AND (home > 0 or away > 0) AND bt in(170) THEN 1		--Radar
+						WHEN betteam = 'n' AND (home = 0 AND away = 0)AND bt in(170) THEN 1		--Radar						
+						
+						WHEN betteam = 'y' AND (home > 0 AND away > 0) AND bt in(188) THEN 1		--Radar
+						WHEN betteam = 'n' AND (home = 0 AND away = 0)AND bt in(188) THEN 1		--Radar
+										
 						WHEN betteam = 'h' AND away = 0 AND home >= 1 AND bt = 27 THEN 1
 						WHEN betteam = 'a' AND home = 0 AND away >= 1 AND bt = 27 THEN 1
 						WHEN betteam = '1' AND hc + home - away > 0 AND  bt = 28 THEN 1 
@@ -174,7 +190,8 @@ BEGIN
 							hdp2,
 							bettype bt
 						FROM @tmpBettrans b
-						WHERE bettype IN (4 ,30)
+						WHERE bettype IN (4,30)
+						--WHERE bettype IN (4,30,165,166)
 						GROUP BY betteam, bettype, hdp1,hdp2, matchid
 					UNION ALL
 						SELECT	matchid , betteam,
@@ -190,14 +207,16 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 								SUM(stake * mpositiontaking) risk,
-								cast(left(betteam,1)AS INT) AS hc,
+								CASE WHEN bettype IN  (159,161,162,179,181,182) THEN cast(right(betteam,1)AS INT) 
+									ELSE cast(left(betteam,1)AS INT) END
+								AS hc,
 								CASE right(betteam,1) 
 									WHEN 'r' THEN 999
 									ELSE cast(right(betteam,1) AS INT) 
 								END AS hd,
 								b.bettype bt
 						FROM @tmpBettrans b 
-						WHERE bettype IN (6,126,131,132,159,161,162,163,179,181,182) --Dom & Radar
+						WHERE bettype IN (6,126,131,132,159,161,162,179,181,182) --Dom & Radar
 						GROUP BY betteam, matchid,b.bettype					
 					UNION ALL
 						SELECT	matchid, betteam, 

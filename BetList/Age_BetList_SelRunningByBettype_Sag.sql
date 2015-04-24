@@ -195,7 +195,12 @@ BEGIN
 	where 
 		b.SRecommend=@custid
 		--and b.bettype=@bettype
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151,186)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR bettype = @bettype )
+		--and b.bettype=@bettype
+		and ( (@bettype=6 AND b.bettype IN(6,126)) 
+		OR (@bettype=14 and b.bettype IN(14,127)) 
+		OR (@bettype=24 and b.bettype IN(24,151,186)) 
+		OR (@bettype=26 and b.bettype IN(26,145,146,170,188)) 
+		OR bettype = @bettype )
 		--and b.status in ('waiting','running')
 		and b.statusID in (0,1)
 		
