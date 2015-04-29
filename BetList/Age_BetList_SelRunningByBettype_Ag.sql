@@ -209,8 +209,13 @@ BEGIN
 	order by b.status, b.transid
 END
 
+
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
 --IF @bettype between 1101 and 1199
-IF EXISTS(SELECT TOP 1 1 FROM bodb02.dbo.SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
+IF EXISTS(SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 4 AND bettype = @bettype)
 BEGIN
 	--get data from bettransg for bettype 1101
 	SELECT 

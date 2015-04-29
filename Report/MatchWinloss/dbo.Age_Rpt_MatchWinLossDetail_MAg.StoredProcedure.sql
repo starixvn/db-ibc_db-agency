@@ -329,7 +329,7 @@ BEGIN
 				0 as awayid,
 				b.bettype,
 				0 as liveindicator,
-				(case b.bettype when 10 then 0 else m.leagueid end) as leagueid,	
+				m.leagueid as leagueid,	
 				--SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then b.stake/2 else b.stake end),	
 				SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,				
 				SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
@@ -363,7 +363,7 @@ BEGIN
 				AND s.EventType = 2
 				--AND 1 =  CASE WHEN @showSB = 1 AND b.bettype = 10 THEN 1 
 				--		  WHEN @showRB = 1 AND b.bettype IN (31,32,33) THEN 1 ELSE 0 END
-			GROUP BY b.bettype, m.groupmatch, (CASE b.bettype WHEN 10 THEN 0 ELSE m.leagueid END)
+			GROUP BY b.bettype, m.groupmatch, m.leagueid
 			HAVING ISNULL(COUNT(transid),0) > 0	
 
 	END
@@ -567,7 +567,7 @@ BEGIN
 				0 as awayid,
 				b.bettype,
 				0 as liveindicator,
-				(case b.bettype when 10 then 0 else m.leagueid end) as leagueid,	
+				m.leagueid,	
 				---SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then b.stake/2 else b.stake end),	
 				SUM(case when b.liveawayscore = 0 and b.bettype IN(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
 				SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
@@ -601,7 +601,7 @@ BEGIN
 				AND b.statusID NOT IN (101, 102, 103)
 				--AND 1 = CASE WHEN @showSB = 1 AND b.bettype = 10 THEN 1
 				--		 WHEN @showRB = 1 AND b.bettype IN (31,32,33) THEN 1 ELSE 0 END
-			GROUP BY b.bettype, m.groupmatch, (CASE b.bettype WHEN 10 THEN 0 ELSE m.leagueid END)
+			GROUP BY b.bettype, m.groupmatch, m.leagueid
 			HAVING ISNULL(COUNT(transid),0) > 0	
 
 	END

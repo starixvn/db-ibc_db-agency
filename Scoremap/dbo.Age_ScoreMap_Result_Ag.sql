@@ -100,14 +100,31 @@ BEGIN
 						WHEN betteam  = 'h' AND bt IN (3, 8) THEN (home+away) - hc 
 						WHEN betteam <> 'h' AND bt IN (3, 8) THEN hc - (home+away)
 						WHEN home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30,165,166) THEN 1  
-						WHEN (home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd) AND bt IN (4,30,165,166) THEN 1 
+						WHEN ((home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd)) AND bt IN (4,30,165,166) THEN 1 
 						WHEN home>away AND betteam = '1' AND bt IN (5, 15,167) THEN 1	--Radar
 						WHEN away>home AND betteam = '2' AND bt IN (5, 15,167) THEN 1	--Radar
 						WHEN home=away AND betteam = 'x' AND bt IN (5, 15,167) THEN 1	--Radar 
 						
 						WHEN home+away>= hc AND home+away<=hd AND bt in (6,126,131,132) THEN 1 	--Dom	 & Radar
 						
-						WHEN home+away>= hc AND bt in (159,161,162,179,181,182) THEN 1 	--Dom	 & Radar
+						WHEN home+away>= hc AND hc = 6 AND bt = 159 THEN 1 	--Dom	 & Radar
+						WHEN home+away= hc AND bt = 159 THEN 1 	--Dom	 & Radar
+						
+						WHEN home>= hc AND hc = 3 AND bt = 161 THEN 1 
+						WHEN home= hc AND bt = 161 THEN 1 
+						
+						WHEN away>= hc AND hc = 3 AND bt = 162 THEN 1 
+						WHEN away= hc AND bt = 162 THEN 1 
+						
+						WHEN home+away>= hc AND hc = 4 AND bt = 179 THEN 1 
+						WHEN home+away= hc AND bt = 179 THEN 1 
+						
+						WHEN home>= hc AND hc = 3 AND bt = 181 THEN 1 
+						WHEN home= hc AND bt = 181 THEN 1 
+						
+						WHEN away>= hc AND hc = 3 AND bt = 182 THEN 1 
+						WHEN away= hc AND bt = 182 THEN 1
+				
 						
 						WHEN betteam = 'hy' AND away = 0 AND bt = 13 THEN 1
 						WHEN betteam = 'hn' AND away > 0 AND bt = 13 THEN 1
