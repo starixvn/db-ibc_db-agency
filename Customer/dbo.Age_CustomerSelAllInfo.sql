@@ -33,7 +33,8 @@ Revisions:
 	- 20140303@Kathy: - get HideKeno column [Redmine:#12691]
 					  - modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
     - 20140822@Logan:   Add status for Esports [Redmine: #20661]			  
-	
+	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
+
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
 • @uplineId: the ID of the upline.
@@ -99,6 +100,7 @@ BEGIN
           , @uplineDoubleCommLosing     BIT
           , @uplineDisableHRFixedOdds   BIT
           , @uplineDisableEsports       BIT
+		  , @uplineDisableGoldDeluxe	BIT
 
     DECLARE @DisableAutoMPT BIT
     		
@@ -127,6 +129,7 @@ BEGIN
 	         , @uplineDoubleCommLosing = ISNULL(DoubleCommLosing, 0)
 	         , @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds, 0)
 	         , @uplineDisableEsports = ISNULL(DisableEsports, 0)
+			 , @uplineDisableGoldDeluxe = ISNULL(DisableGoldDeluxe, 0)
 	         , @Credit_Ag = ISNULL(credit, 0)
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @recommend	
@@ -163,6 +166,7 @@ BEGIN
 	         , @uplineDoubleCommLosing = ISNULL(DoubleCommLosing, 0)
 	         , @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds, 0)
 		     , @uplineDisableEsports = ISNULL(DisableEsports, 0)
+			 , @uplineDisableGoldDeluxe = ISNULL(DisableGoldDeluxe, 0)
 		     , @Credit_MAg = ISNULL(credit, 0)
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @mrecommend		
@@ -197,6 +201,7 @@ BEGIN
 	         , @uplineDoubleCommLosing = ISNULL(DoubleCommLosing, 0)
 	         , @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds, 0)
 		     , @uplineDisableEsports = ISNULL(DisableEsports, 0)
+			 , @uplineDisableGoldDeluxe = ISNULL(DisableGoldDeluxe, 0)
 		     , @Credit_SAg = ISNULL(credit, 0)
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @srecommend
@@ -273,6 +278,7 @@ BEGIN
 	    ISNULL(@uplineDoubleCommLosing,0) as [uplineDoubleCommLosing],
 	    ISNULL(@uplineDisableHRFixedOdds,0) AS [uplineDisableHRFixedOdds],
 	    ISNULL(@uplineDisableEsports, 0) AS uplineDisableEsports,
+		ISNULL(@uplineDisableGoldDeluxe, 0) AS uplineDisableGoldDeluxe,
     	
 	    @Credit_MAg_Min AS [MasterCredit_Min],
 	    @Credit_MAg_Max AS [MasterCredit_Max],
@@ -301,7 +307,8 @@ BEGIN
 	    --ci.DisableP2P, 
 	    ci.DisableHRFixedOdds,
 	    ci.HideKeno,
-	    ci.DisableEsports
+	    ci.DisableEsports,
+		ci.DisableGoldDeluxe
     FROM customer c WITH (NOLOCK)
 	    INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
     WHERE c.custid = @custid

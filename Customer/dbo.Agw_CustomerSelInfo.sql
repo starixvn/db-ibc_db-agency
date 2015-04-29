@@ -1,28 +1,28 @@
 ALTER PROCEDURE [Agw_CustomerSelInfo]
-@CustID int
+	@CustID int
 
 AS
 
 /*
-Created: 20080909@QuiNV
-Task: Get basic information of a customer (belonging have been checked on web already)
-DB: DB05.bodb02
-Original:
+	Created: 20080909@QuiNV
+	Task: Get basic information of a customer (belonging have been checked on web already)
+	DB: DB05.bodb02
+	Original:
 
 
-Revisions:
-    - 20090417@[Lee]: [Add 2 return values for Casino] 
-	- 20090710@Phuc: unhide IP for TB currency.
-	- 20100413@Kiwi: Get transferoption from CustSuper/CustMaster/CustAgent
-	- 20100513@Terry: Get Disable Open Tote Status
-	- 20100928@Johnson: get DisableNumber, DisableBingo and SyncBingo column
-	- 20110303@Simon: get Disable151_51, Disable152_41, Disable152_51 and Disable153_51 column
-	- 20110307@Lukas: get DisableAutoMPT
-	- 20120817@Sophia: get DisableVirtualSports, HideVirtualSports
-	- 20120926@Sophia: Get DoubleCommLosing
-	- 20140303@Kathy: Get HideKeno [Redmine:#12691]
-	- 20140822@Logan:   Get Esports status [Redmine: #21007]
-
+	Revisions:
+		- 20090417@[Lee]: [Add 2 return values for Casino] 
+		- 20090710@Phuc: unhide IP for TB currency.
+		- 20100413@Kiwi: Get transferoption from CustSuper/CustMaster/CustAgent
+		- 20100513@Terry: Get Disable Open Tote Status
+		- 20100928@Johnson: get DisableNumber, DisableBingo and SyncBingo column
+		- 20110303@Simon: get Disable151_51, Disable152_41, Disable152_51 and Disable153_51 column
+		- 20110307@Lukas: get DisableAutoMPT
+		- 20120817@Sophia: get DisableVirtualSports, HideVirtualSports
+		- 20120926@Sophia: Get DoubleCommLosing
+		- 20140303@Kathy: Get HideKeno [Redmine:#12691]
+		- 20140822@Logan: Get Esports status [Redmine: #21007]
+		- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 */
 BEGIN
     SET NOCOUNT ON
@@ -84,10 +84,13 @@ BEGIN
          , ci.DoubleCommLosing
          , ci.HideKeno
          , ci.DisableEsports
+		 , ci.DisableGoldDeluxe
+         , ci.HideGoldDeluxe
       FROM Customer c WITH(NOLOCK)
 INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
      WHERE c.CustID = @CustID
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Agw_CustomerSelInfo] TO [bodbDownlineNet]
 GO
