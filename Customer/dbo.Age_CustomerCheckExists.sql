@@ -16,13 +16,17 @@ BEGIN
 	SET NOCOUNT ON
 	
 	IF EXISTS(SELECT 1 FROM custinfo WITH(NOLOCK) WHERE username = @username)
-		SELECT @isExists = 1
+		OR EXISTS (SELECT 1 FROM customer WITH (NOLOCK) WHERE username2 = @username)
+		OR EXISTS(SELECT 1 FROM custsub WITH (NOLOCK) WHERE username = @username)
+			SELECT @isExists = 1
 	ELSE 
-		SELECT @isExists = 0
+			SELECT @isExists = 0
 		
 END
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerCheckExists] TO [bodbDownlineNet]
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerCheckExists] TO [bodbDownlineNetView]
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerCheckExists] TO [bodbExtAccNet]
  
