@@ -38,7 +38,7 @@ BEGIN
 	DECLARE @tblBetTypeHT_FT TABLE(BetType INT,isHT BIT)
 
 	INSERT INTO @tblBetTypeHT_FT(BetType,isHT)
-	SELECT val AS BetType,1 AS isHT  FROM strSplit('7, 8, 12, 15, 21, 126, 136, 138,167, 179, 181, 182, 188, 191',',') 
+	SELECT val AS BetType,1 AS isHT  FROM strSplit('7, 8, 12, 15, 21, 30 ,126, 136, 138,167, 179, 181, 182, 188, 191',',') 
 	
 	-- get scores template
 	INSERT INTO @tmpScores (home, away) SELECT home, away FROM scores WITH(NOLOCK) WHERE (home BETWEEN @homeBeginScore AND @homeEndScore) AND (away BETWEEN @awayBeginScore AND @awayEndScore )	
