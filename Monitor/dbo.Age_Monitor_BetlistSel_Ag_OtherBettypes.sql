@@ -51,7 +51,8 @@ BEGIN
 		b.betteam,				
 		b.IP,
 		CONVERT(BIT,0) AS isNeutral,			
-		b.oddstype
+		b.oddstype,
+		ISNULL(b.Betcheck,'') Betcheck
 	FROM dbo.bettrans b WITH(NOLOCK)				
 	WHERE b.recommend = @custid 
 		AND b.statusID BETWEEN 0 AND 1	

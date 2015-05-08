@@ -64,7 +64,8 @@ Parameter's Explanation:
 		b.betteam,				
 		b.IP,	
 		CONVERT(BIT,0) AS isNeutral, 		
-		b.oddstype
+		b.oddstype,
+		ISNULL(b.Betcheck,'') Betcheck
 	FROM dbo.bettrans b WITH(NOLOCK)
 		INNER JOIN @SportBettype s ON b.bettype = s.BetType			
 	WHERE b.recommend = @custid 
