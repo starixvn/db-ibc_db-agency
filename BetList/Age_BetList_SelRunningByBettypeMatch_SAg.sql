@@ -45,6 +45,65 @@ Revisions:
 	- 20140425@Dom: Group TB and FGLG
 	- 20150416@Tom: Integrate new 60 bet types from BetRadar (32734)
 */
+BEGIN
+	SET NOCOUNT ON;
+	
+	-- Gather Ticket status
+	CREATE TABLE #TransStatus (
+		StatusID 		INT
+	);
+	INSERT INTO #TransStatus
+	SELECT StatusId
+	FROM dbo.All_f_TransStatus (1) stt
+	WHERE stt.statusId IN (0, 1)	
+	
+	-- Gather BettypeMatrix
+	CREATE TABLE #BettypeMatrix (
+		ProductID 		INT
+		, Bettype 		INT
+		, EventType 	INT
+	);
+	INSERT INTO #BettypeMatrix
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=4
+	
+	;WITH CteBettype (bettype)
+	AS (
+		SELECT bt.bettype
+		FROM #BettypeMatrix bt
+		WHERE (bt.EventType 	= 1)						-- macth event
+			OR (bt.ProductId 	= 1 AND bt.EventType = 2)	-- outright
+	)
+	DELETE bt
+	FROM #BettypeMatrix bt
+		LEFT JOIN CteBettype ct 
+		ON bt.bettype = ct.bettype
+	WHERE ct.bettype IS NULL
+		OR (@bettype NOT IN (6, 14, 2, 15) AND bt.bettype  NOT IN (@bettype))
+		OR (@bettype = 6 	AND bt.bettype NOT IN(6,159,161,162,126,179,181,182) )
+		OR (@bettype = 14 	AND bt.bettype NOT IN(14,127) )
+		OR (@bettype = 2 	AND bt.bettype NOT IN(2,157)) 
+		OR (@bettype = 15 	AND bt.bettype NOT IN(15,167))
+		/*
+		and 
+		( 
+			(@bettype=6 AND b.bettype IN(6,159,161,162,126,179,181,182)) 
+			OR (@bettype=14 and b.bettype IN(14,127)) 
+			OR (@bettype=2 and b.bettype IN(2,157)) 
+			OR (@bettype=15 and b.bettype IN(15,167)) 
+			OR bettype = @bettype 
+			)
+		*/
+	EXEC [dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
+		@CustId 			= @CustId
+		, @RoleId			= 4
+		, @MatchId 			= @MatchID
+		, @Liveindicator 	= @liveindicator
+		, @Betteam			= @Betteam
+		, @Language 		= @Language
+		
+	RETURN;
+END
+/*
 SET NOCOUNT ON
 
 if @bettype in (10)
@@ -181,8 +240,7 @@ BEGIN
 			b.bettype=@bettype 
 
 END 
-
-
+*/
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettypeMatch_SAg] TO [bodbDownlineNet]

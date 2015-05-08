@@ -45,8 +45,56 @@ Revisions:
 	- 20140611@Dom: Support BetRadar [Redmine: #17148]
 	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20150407@Cody: Support 60 BetRadar bettype (186) [Redmine: 32734]
+	- 20150508@Bobby: Re-factor code and apply bettype matrix
 */
-
+BEGIN
+	SET NOCOUNT ON;
+	
+	-- Gather Ticket status
+	CREATE TABLE #TransStatus (
+		StatusID 		INT
+	);
+	INSERT INTO #TransStatus
+	SELECT StatusId
+	FROM dbo.All_f_TransStatus (1) stt
+	WHERE stt.statusId IN (0, 1)	
+	
+	-- Gather BettypeMatrix
+	CREATE TABLE #BettypeMatrix (
+		ProductID 		INT
+		, Bettype 		INT
+		, EventType 	INT
+	);
+	INSERT INTO #BettypeMatrix
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=4
+	
+	;WITH CteBettype (bettype)
+	AS (
+		SELECT bt.bettype
+		FROM #BettypeMatrix bt
+		WHERE (bt.ProductId 	= 1 AND bt.EventType = 0) 	-- mix-parlay
+			OR (bt.EventType 	= 1)						-- macth event
+			OR (bt.ProductId 	= 1 AND bt.EventType = 2)	-- outright
+	)
+	DELETE bt
+	FROM #BettypeMatrix bt
+		LEFT JOIN CteBettype ct 
+		ON bt.bettype = ct.bettype
+	WHERE ct.bettype IS NULL
+		OR (@bettype NOT IN (6, 14, 24, 26) AND bt.bettype  NOT IN (@bettype))
+		OR (@bettype = 6 	AND bt.bettype NOT IN(6,126) )
+		OR (@bettype = 14 	AND bt.bettype NOT IN(14,127) )
+		OR (@bettype = 24 	AND bt.bettype NOT IN(24,151,186)) 
+		OR (@bettype = 26 	AND bt.bettype NOT IN(26,145,146,170,188))
+	
+	EXEC [dbo].[Age_CoreBetList_SMABettype_SelBetTicket]
+		@CustId 			= @CustId
+		, @RoleId			= 3
+		, @Language 		= @Language
+		
+	RETURN;
+END
+/*
 SET NOCOUNT ON
 IF @bettype IN ( 9, 29)--inlcude mix parlay and Combination mix parlay
 BEGIN
@@ -232,9 +280,7 @@ BEGIN
 			b.bettype=@bettype and
 			b.statusID in (0,1)
 END
-
-
-
+*/
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_MAg] TO [bodbDownlineNet]
 GO

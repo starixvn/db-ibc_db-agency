@@ -1,14 +1,15 @@
 USE bodb02
 GO
 
-ALTER PROCEDURE [dbo].[Age_CoreBetList_SMABettype_SelBetTicket]
-	@CustId 			INT
+ALTER PROCEDURE [dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
+	@CustId 			INT 			= NULL
+	, @Username 		VARCHAR(50) 	= NULL
 	, @RoleId			INT
-	, @BettypeMatrix 	XML = NULL
-	, @TransStatus		VARCHAR(100)
-	, @Language 		VARCHAR(2) = 'E'
-	
-	, @Error			INT = 0
+	, @MatchId 			INT
+	, @Language 		VARCHAR(2) 		= 'E'
+	, @Liveindicator 	INT 			= 0
+	, @Betteam 			NVARCHAR(20)	= NULL
+	, @Error			INT 			= 0
 	, @ErrorMsg			NVARCHAR(250) = NULL
 AS
 /*
@@ -25,22 +26,39 @@ AS
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
 		
 	Wrapped SP List:
-		- Age_BetList_SelRunningByBettype_Ag
-		- Age_BetList_SelRunningByBettype_MAg
-		- Age_BetList_SelRunningByBettype_SAg
+		- Age_BetList_SelRunningByBettypeMatch_Ag
+		- Age_BetList_SelRunningByBettypeMatch_MAg
+		- Age_BetList_SelRunningByBettypeMatch_SAg
+		- Age_BetList_SelWinlossByBettypeMatch_Ag
+		- Age_BetList_SelWinlossByBettypeMatch_MAg
+		- Age_BetList_SelWinlossByBettypeMatch_SAg
 	
 */
 BEGIN
 	SET NOCOUNT ON;
-		
-	CREATE TABLE #TransStatus ()
 	
-	CREATE TABLE #BettypeMatrix ()
+	DECLARE @IsBet14	BIT
+	
+	SELECT TOP 1 CAST(1 AS BOOLEAN) 
+	FROM dbo.match WITH(NOLOCK) 
+	WHERE matchid	= @matchid
+	
+	SET @IsBet14 = ISNULL(@IsBet14, 0)
+	
+	IF ( @custid IS NULL )
+	BEGIN
+		SELECT @custid = custid 
+		FROM dbo.customer WITH (nolock) 
+		WHERE username = @username
+	END
 	
 	CREATE TABLE #tempCust 
 	( 
 		transid			BIGINT
+		, refno			BIGINT
 		, custid 		INT 
+		, productId 	INT 
+		, eventType		TINYINT 
 	)
 	
 	CREATE TABLE #MemBetTicket
@@ -94,137 +112,92 @@ BEGIN
 		, comstatus				NVARCHAR(20)
 	)
 	
-	-- CHECK for supporting running ticket only
-	IF( NOT EXISTS (SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN(0,1)) )
+	IF( @IsBet14 = 1 )
 	BEGIN
-		SELECT tk.* 
-		FROM #MemBetTicket tk
+		EXEC [dbo].[Age_CoreBetList_SMAEventBettype14_SelBetTicket]
+			CustId			= @CustId
+			, @RoleId		= @RoleId
+			, @MatchId 		= @MatchId
 		
 		RETURN;
+		
 	END
 	
-	-- MEMBER
 	IF ( @roleid = 1 )
 	BEGIN
 		INSERT INTO #tempCust
 		SELECT b.transid
+			,b.refno
 			,b.custid
-		FROM dbo.bettrans_running b WITH(nolock)			
+			,bt.ProductId
+			,bt.EventType
+		FROM dbo.bettrans b WITH(nolock)
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE b.custid 		= @custid
-		
+			AND b.matchid	= @matchid
 	END
-	-- AGENT
+	
 	IF ( @roleid = 2 )
 	BEGIN
 		INSERT INTO #tempCust
 		SELECT b.transid
+			,b.refno
 			,b.custid
-		FROM dbo.bettrans_running b WITH(nolock)
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
-			ON b.custid 	= c.custid
+			,bt.ProductId
+			,bt.EventType
+		FROM dbo.bettrans b WITH(nolock)
+			INNER JOIN dbo.Customer c WITH(NOLOCK)
+			ON b.recommend 	= c.custid
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE c.recommend 	= @custid
 			AND c.roleid 	= @roleid
+			AND b.matchid	= @matchid
 	END
-	-- MASTER
+	
 	IF ( @roleid = 3 )
 	BEGIN
 		INSERT INTO #tempCust
 		SELECT b.transid
+			,b.refno
 			,b.custid
-		FROM dbo.bettrans_running b WITH(nolock)
-			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
-			ON b.custid 	= c.custid	
-			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype			
-			INNER JOIN #TransStatus stt
-			ON b.statusid	= stt.statusid
-		WHERE c.mrecommend 	= @custid
-			AND c.roleid 	= @roleid
-	END
-	--SUPER
-	IF ( @roleid = 4 )
-	BEGIN
-		INSERT INTO #tempCust
-		SELECT b.transid
-			,b.custid
-		FROM dbo.bettrans_running b WITH(nolock)
+			,bt.ProductId
+			,bt.EventType
+		FROM dbo.bettrans b WITH(nolock)
 			INNER JOIN dbo.Customer c WITH(NOLOCK)
-			ON b.custid 	= c.custid
+			ON b.mrecommend = c.custid
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
-		WHERE c.srecommend 	= @custid
+		WHERE c.custid 	= @custid
 			AND c.roleid 	= @roleid
+			AND b.matchid	= @matchid
 	END
 	
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE EventType = 0) )
+	IF ( @roleid = 4 )
 	BEGIN
-		--INSERT INTO #MemBetTicket
-		SELECT 
-			b.transid
-			, b.custid
-			, b.username
-			, 0 AS leagueId
-			, 0 AS sporttype
-			, b.bettype
-			, 0 AS matchid
-			, '' AS matchcode
-			, '' AS Race
-			, 0 AS homeID
-			, 0 AS awayID
-			, 0 AS hdp1
-			, 0 AS hdp2 
-			, b.odds
-			, b.modds
-			, b.status 
-			, b.stake
-			, b.actual_stake
-			, (b.winlost-actual_stake) winlost
-			, b.awinlost
-			, b.mwinlost
-			, b.swinlost
-			
-			, b.playercomm
-			, (b.comm - b.playercomm) AS comm
-			, (b.acomm - b.comm) AS acomm 
-			, (b.scomm - b.acomm) AS scomm
-			
-			, b.transdate
-			, b.winlostdate
-			, b.betteam
-			, b.apositiontaking
-			, b.mpositiontaking
-			, b.spositiontaking	
-			, b.discount 	AS Adiscount
-			, b.adiscount 	AS Mdiscount
-			, b.sdiscount 	AS Sdiscount	
-			, 0 AS liveindicator
-			, 0 AS livehomescore
-			, 0 AS liveawayscore
-			
-			, b.IP AS IP
-			, m.betstatus
-			, ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
-			, 0 AS OddsType
-			, b.betid
-			, '' AS showtime
-			, b.refno
-			, '' AS betcheck
-			, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus 
-			
-		FROM dbo.bettrans_running b WITH(NOLOCK)
-			INNER JOIN #tempCust c
-			ON b.transid 	= c.transid
-			
+		INSERT INTO #tempCust
+		SELECT b.transid
+			,b.refno
+			,b.custid
+			,bt.ProductId
+			,bt.EventType
+		FROM dbo.bettrans b WITH(nolock)
+			INNER JOIN dbo.Customer c WITH(NOLOCK)
+			ON b.srecommend = c.custid
+			INNER JOIN #BettypeMatrix bt
+			ON b.bettype	= bt.bettype
+			INNER JOIN #TransStatus stt
+			ON b.statusid	= stt.statusid
+		WHERE c.custid 	= @custid
+			AND c.roleid 	= @roleid
+			AND b.matchid	= @matchid
 	END
 	
 	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE EventType = 1) )
@@ -281,13 +254,13 @@ BEGIN
 			, b.betid
 			, m.showtime
 			, b.refno
-			, CASE WHEN b.bettype IN (216,217) THEN b.betcheck ELSE '' END AS betcheck
+			, b.betcheck
 			, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus 
 			
-		FROM dbo.bettrans_running b WITH(NOLOCK)
+		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN #tempCust c
 			ON b.transid 	= c.transid
-			INNER JOIN bodb02.dbo.macth m WITH (NOLOCK) 
+			INNER JOIN dbo.macth m WITH (NOLOCK) 
 			ON b.matchid	= m.orid
 	END
 	
@@ -306,11 +279,13 @@ BEGIN
 			, m.GroupMatch AS Race
 			, m.TeamID AS HomeID
 			, 0 AS awayID
-			, convert(float, b.hdp1) as hdp1
-			, convert(float, b.hdp2) as hdp2
+			, 0 AS hdp1
+			, 0 AS hdp2 
 			, b.odds
 			, b.modds
-			, b.status 
+			, CASE WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+				ELSE b.status 
+			END AS status
 			, b.stake
 			, b.actual_stake
 			, (b.winlost-actual_stake) winlost
@@ -333,8 +308,8 @@ BEGIN
 			, b.adiscount AS Mdiscount
 			, b.sdiscount AS Sdiscount	
 			, 0 AS liveindicator
-			, b.livehomescore
-			, b.liveawayscore
+			, 0 AS livehomescore
+			, 0 AS liveawayscore
 			
 			, b.IP AS IP
 			, m.betstatus
@@ -343,21 +318,30 @@ BEGIN
 			, b.betid
 			, 0 AS showtime
 			, b.refno
-			, '' AS betcheck
+			, b.betcheck
 			, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus 
-			
-		FROM dbo.bettrans_running b WITH(NOLOCK)
+		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN #tempCust c
 			ON b.transid 	= c.transid
-			INNER JOIN bodb02.dbo.outright m WITH (NOLOCK) 
+			INNER JOIN dbo.outright m WITH (NOLOCK) 
 			ON b.matchid	= m.orid
-			INNER JOIN bodb02.dbo.league l WITH (NOLOCK) 
+			INNER JOIN league l WITH (NOLOCK) 
 			ON m.leagueid 	= l.leagueid
 	END
 	
 	-- FETCH result
-	SELECT m.*
-	FROM #MemBetTicket m
+	SELECT b.*
+	FROM #MemBetTicket b 
+	WHERE ( @liveindicator IS NULL OR b.Liveindicator = CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END )
+		AND ( LEN(b.betteam) = 0 OR (b.betteam = CASE WHEN m.sporttype = 161 THEN @betteam ELSE b.betteam END) )
+	/*(
+			(m.sporttype = 161 AND b.liveindicator = ISNULL(@liveindicator, b.liveindicator))
+			OR m.sporttype <> 161 
+		)
+		AND	( 
+			(LEN(b.betteam) > 0 AND m.sporttype = 161 AND b.betteam = @betteam)
+			OR LEN(b.betteam) = 0
+		)*/
 	
 	IF EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN( 4 ))
 	BEGIN
@@ -370,10 +354,10 @@ BEGIN
 			bg.mpositiontaking, 
 			bg.spositiontaking,
 			bg.betteam  
-		FROM bodb02.dbo.bettransg bg with (NOLOCK)
+		FROM dbo.bettransg bg with (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bg.custid	= b.custid
-			AND bg.refno 	= b.refno
+			AND bg.refno 	= B.refno
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype = bt.bettype
 		WHERE bt.ProductId 	IN (4)

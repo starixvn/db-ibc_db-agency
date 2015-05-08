@@ -8,27 +8,25 @@ GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 (
 	-- MEM INFO
-	@CustId 			INT			= NULL
-	, @UserName 		NVARCHAR(30)= NULL
+	@CustId 			INT				= NULL
+	, @UserName 		NVARCHAR(30)	= NULL
 	, @FromDate			DATE
 	, @ToDate 			DATE
-	, @MoveBetsDay 		DATE		= NULL
-	, @BalanceupDay		DATE		= NULL
+	, @MoveBetsDay 		DATE			= NULL
+	, @BalanceupDay		DATE			= NULL
 	-- PRODUCT - BETTYPE - STATUS
-	, @BettypeMatrix	XML = NULL
-	, @TransStatus		VARCHAR(250) = NULL
+	, @BettypeMatrix	XML 			= NULL
+	, @TransStatus		VARCHAR(250) 	= NULL
 	-- PAGING
-	, @PageIndex		INT	= 1
-	, @PageSize			INT	= 1000
-	, @Language 		VARCHAR(2) = 'E'
-	
+	, @PageIndex		INT				= 1
+	, @PageSize			INT				= 1000
+	, @Language 		VARCHAR(2) 		= 'E'
 	--OPTIONAL
-	, @CtxInfo			VARBINARY(128)
-	, @SelDateType		TINYINT	= 0
+	, @SelDateType		TINYINT			= 0
 	-- OUTPUT INFO
-	, @TotalRows		INT = 0 OUTPUT
-	, @Error			INT = 0 OUTPUT
-	, @ErrorMsg			VARCHAR(250) = '' OUTPUT
+	, @TotalRows		INT 			= 0 OUTPUT
+	, @Error			INT 			= 0 OUTPUT
+	, @ErrorMsg			VARCHAR(250) 	= '' OUTPUT
 )
 AS
 /*
@@ -213,7 +211,7 @@ BEGIN
 	)
 	BEGIN 
 		--INSERT INTO #MemBetTicket
-		EXEC [bodb_Age].[dbo].[Age_BetList_CoreMemRunning_SelBetTicket] 
+		EXEC [bodb_Age].[dbo].[Age_CoreBetList_MemRunning_SelBetTicket] 
 			@CustID			= @CustID 
 			,@FromDate 		= @FromDate
 			,@ToDate 		= @ToDate
@@ -232,7 +230,7 @@ BEGIN
 	IF ( @ToDate <= @MoveBetsDay )
 	BEGIN	
 		--INSERT INTO #MemBetTicket
-		EXEC [dbo].[Age_BetList_CoreMem14_SelBetTicket] 
+		EXEC [dbo].[Age_CoreBetList_Mem14_SelBetTicket] 
 			@CustID			= @CustID
 			,@Username		= @Username
 			,@FromDate 		= @FromDate
@@ -252,7 +250,7 @@ BEGIN
 		FROM #TransStatus t		
 
 		--INSERT INTO #MemBetTicket
-		EXEC [DBARC].[bodb_archive].[dbo].[Age_BetList_CoreMemArc_SelBetTicket] 
+		EXEC [DBARC].[bodb_archive].[dbo].[Age_CoreBetList_MemArc_SelBetTicket] 
 			@CustID			= @CustID 
 			,@Username		= @Username
 			,@FromDate 		= @FromDate
@@ -275,7 +273,7 @@ BEGIN
 		IF( @SelDateType = 1 ) -- by transdate
 		BEGIN
 			--INSERT INTO #MemBetTicket
-			EXEC [dbo].[Age_BetList_CoreMemTransDate_SelBetTicket] 
+			EXEC [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket] 
 				@CustID			= @CustID 
 				,@Username		= @Username
 				,@FromDate 		= @FromDate

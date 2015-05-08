@@ -23,9 +23,8 @@ ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
 	@ShowLiveCasino BIT = 0,
 	@ShowVS BIT = 0,
 	@ShowKeno BIT = 0
+	,@ShowGD BIT = 0
 AS
-SET NOCOUNT ON
-
 /*
 Created: 
 Task : Bet List
@@ -78,9 +77,65 @@ Revisions:
 	- 20140907@Dom:	[Redmine #22012] remove duplicate VS transaction id in bet list feature
 	- 20141103@Dom: Apply sport bettype matrix
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
+	- 20150506@Bobby: Add GD product
 */
+BEGIN
+	SET NOCOUNT ON;
+	
+	DECLARE @MoveBetsDay	DATE
+	
+	-- Gather Ticket status
+	CREATE TABLE #TransStatus (
+		StatusID 		INT
+	);
+	INSERT INTO #TransStatus
+	SELECT StatusId
+    FROM dbo.All_f_TransStatus (1) stt
+	
+	-- Gather BettypeMatrix
+	CREATE TABLE #BettypeMatrix (
+		ProductID 		INT
+		, Bettype 		INT
+		, EventType 	INT
+	);
+	INSERT INTO #BettypeMatrix
+	EXEC dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=4
+	
+	-- DO filtering bettype by product
+	DELETE bt
+	FROM ##BettypeMatrix bt
+	WHERE ProductID		= CASE WHEN @ShowSB					= 0 	THEN 1 END
+		OR ProductID	= CASE WHEN @ShowRB					= 0 	THEN 2 END
+		OR ProductID	= CASE WHEN @ShowNG					= 0 	THEN 3 END
+		OR ProductID	= CASE WHEN @ShowLiveCasino			= 0 	THEN 4 END
+		OR ProductID	= CASE WHEN @ShowVS					= 0 	THEN 5 END
+		OR ProductID	= CASE WHEN @ShowCasino				= 0 
+								AND @ShowProgressiveBonus 	= 0 	THEN 6 END
+		OR ProductID	= CASE WHEN @ShowBI					= 0 	THEN 7 END
+		OR ProductID	= CASE WHEN @ShowKeno				= 0 	THEN 8 END
+		OR ProductID	= CASE WHEN @ShowP2P				= 0 	THEN 9 END
+		OR ProductID	= CASE WHEN @ShowGD					= 0 	THEN 12 END
+									
+	-- RESET MoveBetsDay
+	SELECT @MoveBetsDay 	= MAX(Winlostdate) 
+	FROM dbo.bettrans14 WITH (NOLOCK)
 
-
+	-- CALL to core bet list
+	EXEC [dbo].[Age_CoreBetList_Mem_SelBetTicket]
+		@CustId 			= @CustId
+		, @FromDate			= @FromDate
+		, @ToDate 			= @FromDate
+		, @MoveBetsDay 		= @MoveBetsDay
+		, @BalanceupDay		= NULL
+		, @Language 		= @Language
+		
+		, @SelDateType		= 1 -- do filter by transdate
+	;
+	
+	RETURN;
+END
+/*
+SET NOCOUNT ON
 if @custid is null
 	select @custid = custid from customer with (nolock) where username = @username
 
@@ -873,7 +928,7 @@ BEGIN
 		AND b.transdate>=@FromDate and b.transdate<=@ToDate		
 		AND s.ProductID = 5
 		AND s.EventType = 3
-		--AND b.bettype in (/*1231, 1232, 1233, 1237, 1238*/SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
+		--AND b.bettype in (SELECT  bettype FROM dbo.f_VSHorseRacingByBettype())
 END
 
 --Keno
@@ -1070,6 +1125,7 @@ begin
 end
 
 SELECT * FROM @BettransDetail
+*/
 
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNet]
