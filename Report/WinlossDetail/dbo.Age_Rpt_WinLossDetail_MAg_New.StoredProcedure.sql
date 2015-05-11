@@ -15,6 +15,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	,@showLiveCasino BIT = 0
 	,@showVS         BIT = 0
 	,@showKeno       BIT = 0
+	,@showGD		 BIT = 0
 	,@BalanceUpDay   SMALLDATETIME
 	,@PageSize       INT = 0
 	,@PageIndex      INT = 0
@@ -65,6 +66,7 @@ Revisions:
 	                    2.Code aligning
 	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
 	- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
+	- 20150507@Sophia: Apply Gold Deluxe [Redmine: #35278]
 */
 
 
@@ -161,6 +163,13 @@ BEGIN
 	VALUES(202, 0) 
 END
 
+IF @showGD = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(255, 0) 
+END
+
 DECLARE @SportBettype TABLE(
 	ProductID INT
 	,Bettype INT
@@ -202,6 +211,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showLiveCasino = 1 THEN 4 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showVS = 1 THEN 5 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showGD = 1 THEN 12 ELSE 0 END
 				)
 				-- and (bettype < case when @showSB = 1 then 31 else 0 end
 				--OR bettype between 121 and case when @showSB = 1 then 999 else 0 end

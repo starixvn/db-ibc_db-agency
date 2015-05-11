@@ -16,6 +16,7 @@ ALTER PROCEDURE [Age_Rpt_WinLoss_SAg]
  ,@showVS				BIT = 0
  ,@showProgressiveBonus BIT =0
  ,@showKeno				BIT = 0
+ ,@showGD				BIT = 0
  ,@BalanceUpDay			SMALLDATETIME  
   
 WITH RECOMPILE  
@@ -58,6 +59,7 @@ AS
   - 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
   - 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
   - 20150306@Cody: Apply sport bettype matrix [redmine: #30169]
+  - 20150507@Sophia: Apply Gold Deluxe [Redmine: #35278]
   
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -135,12 +137,18 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(251, 72) 
 END
---Sum_winloss 
 IF @showKeno = 1
 BEGIN
+	--Sum_winloss 
 	INSERT INTO @TmpCondSumWL (sporttype, bettype)
 	VALUES(202, 0)
 END 
+IF @showGD = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(255, 0) 
+END
 
 DECLARE @SportBettype TABLE(
 	ProductID INT
@@ -177,6 +185,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showLiveCasino = 1 THEN 4 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showVS = 1 THEN 5 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showGD = 1 THEN 12 ELSE 0 END
 				)
 		  --  (  
 		  --   bettype < case when @showSB=1 then 31 else 0 end  
