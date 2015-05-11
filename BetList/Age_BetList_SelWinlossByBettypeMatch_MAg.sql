@@ -38,7 +38,55 @@ Revisions:
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	- 20150331@Cody: Apply sport bettype matrix [Remine: #30169]
 */
-
+BEGIN
+	SET NOCOUNT ON;
+	
+	-- Gather Ticket status
+	CREATE TABLE #TransStatus (
+		StatusID 		INT
+	);
+	INSERT INTO #TransStatus
+	SELECT StatusId
+	FROM dbo.All_f_TransStatus (1) stt	
+	
+	-- Gather BettypeMatrix
+	CREATE TABLE #BettypeMatrix (
+		ProductID 		INT
+		, Bettype 		INT
+		, EventType 	INT
+	);
+	INSERT INTO #BettypeMatrix
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=4
+	
+	;WITH CteBettype (bettype)
+	AS (
+		SELECT bt.bettype
+		FROM #BettypeMatrix bt
+			LEFT JOIN (SELECT Bettype, GroupTypeId 
+				FROM [dbo].[f_GroupBettype]()
+			) AS  f 
+			ON f.bettype 		= b.bettype	
+		WHERE bt.bettype		= @bettype 
+			OR f.GroupTypeId 	= @bettype
+	)
+	DELETE bt
+	FROM #BettypeMatrix bt
+		LEFT JOIN CteBettype ct 
+		ON bt.bettype = ct.bettype
+	WHERE ct.bettype IS NULL
+		
+	EXEC [dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
+		@CustId 			= @CustId
+		,@username			= @username
+		, @RoleId			= 3
+		, @MatchId 			= @MatchID
+		, @Liveindicator 	= @liveindicator
+		, @Betteam			= @Betteam
+		, @Language 		= @Language
+		
+	RETURN;
+END
+/*
 SET NOCOUNT ON
 if @custid is null
 	select @custid = custid from customer with (nolock) where username = @username
@@ -207,9 +255,7 @@ BEGIN
 				b.bettype=@bettype 
 	END
 END
-
-
-
+*/
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelWinlossByBettypeMatch_MAg] TO [bodbDownlineNet]
 GO
