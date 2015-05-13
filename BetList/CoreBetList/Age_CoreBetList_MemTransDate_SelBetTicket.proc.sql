@@ -5,13 +5,17 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE [dbo].[Age_BetList_CoreMemTransDate_SelBetTicket]
+ALTER PROCEDURE [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 (
 	-- MEM INFO
 	@CustId 			INT
 	, @Username			NVARCHAR(30)
 	, @FromDate			DATE
 	, @ToDate 			DATE
+	-- PRODUCT - BETTYPE - STATUS
+	, @BettypeMatrix	XML 			= NULL
+	, @TransStatus		VARCHAR(250) 	= NULL
+	, @Language 		VARCHAR(2) 		= 'E'
 	, @Error			INT = 0 OUTPUT
 	, @ErrorMsg			VARCHAR(250) = '' OUTPUT
 )
@@ -33,7 +37,41 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	
-	CREATE TABLE #MemBetTicket
+	-- CHECK TransStatus
+	IF ( OBJECT_ID('tempdb..#TransStatus') IS NULL )
+	BEGIN
+		CREATE TABLE #TransStatus (
+			StatusID 		INT
+		);
+		INSERT INTO #TransStatus
+		SELECT CAST(t.Val AS INT) 
+		FROM [bodb02].[dbo].[Age_f_SplitString] (@TransStatus, ',') t
+	END
+	
+	-- CHECK BettypeMatrix
+	IF ( OBJECT_ID('tempdb..#BettypeMatrix') IS NULL )
+	BEGIN
+		CREATE TABLE #BettypeMatrix (
+			ProductID 		INT
+			, Bettype 		INT
+			, EventType 	INT
+		);
+		WITH CteBT (ProductID, Bettype, EventType)
+		AS (
+			SELECT bt.Col.value('@ProductID'	,'INT')
+				, bt.Col.value('@Bettype'		,'INT')
+				, bt.Col.value('@EventType'		,'INT')
+			FROM  @BettypeMatrix.nodes('//row') bt(Col)
+		)
+		INSERT INTO #BettypeMatrix
+		SELECT *
+		FROM CteBT bt
+	END
+	
+	SELECT @Error			= 0
+		, @ErrorMsg			= ''
+		
+	CREATE TABLE #MemTransdateBetTicket
 	(
 		TransID 			BIGINT
 		, RefNO 			BIGINT	
@@ -61,15 +99,12 @@ BEGIN
 		, comm				MONEY
 		, acomm				MONEY
 		, scomm				MONEY
-				
 		, APositiontaking	SMALLMONEY
 		, MPositiontaking	SMALLMONEY
 		, SPositiontaking	SMALLMONEY
-		
 		, Adiscount 		SMALLMONEY
 		, Mdiscount 		SMALLMONEY
 		, Sdiscount 		SMALLMONEY
-		
 		, liveindicator 	BIT
 		, livehomescore 	SMALLINT
 		, liveawayscore 	SMALLINT
@@ -77,17 +112,16 @@ BEGIN
 		, finalawayscore 	SMALLINT 
 		, hthomescore 		SMALLINT
 		, htawayscore 		SMALLINT 
-		
 		, IP 				NVARCHAR(15)
 		, LeagueID 			INT
 		, MatchID 			INT
 		, MatchCode 		NVARCHAR(50)
 		, Race 				NVARCHAR(20)
+		, eventdate 		DATETIME
 		, HomeID 			INT
 		, AwayID 			INT 	
 		, Betstatus 		NVARCHAR(50)
 		, isNeutral 		BIT
-		
 		, showtime 			NVARCHAR(50)
 		, betcheck 			NVARCHAR(50)
 		, comstatus 		NVARCHAR(20)
@@ -103,14 +137,14 @@ BEGIN
 	*/
 	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (0)) )
 	BEGIN
-		PRINT 0
-		--INSERT INTO #MemBetTicket
+		INSERT INTO #MemTransdateBetTicket
 		SELECT
 			CASE WHEN bt.ProductID = 1 THEN 
 					CASE WHEN ISNULL(b.betid,0) = 0 
 						THEN b.TransID 
 						ELSE b.betid 
 					END
+				WHEN bt.ProductID = 6 THEN b.betid
 				ELSE b.transid
 			END							AS transid
 			, b.refno
@@ -201,6 +235,7 @@ BEGIN
 			END		AS MatchID
 			, ''	AS MatchCode
 			, ''	AS Race
+			, b.winlostdate AS eventdate
 			, 0		AS HomeID
 			, 0		AS AwayID		
 			, 0		AS Betstatus
@@ -216,7 +251,6 @@ BEGIN
 					ELSE '0' 
 			END		AS comstatus
 			
-		--FROM dbo.bettrans AS b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
 		FROM dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN #BettypeMatrix bt 
 			ON b.bettype		= bt.Bettype
@@ -228,13 +262,13 @@ BEGIN
 					SELECT GameId, ChoiceId 
 					FROM [dbo].[f_ParseTransDesc](b.transdesc, b.bettype)
 					UNION
-					SELECT 0 AS GameId, 0 AS ChoiceId 
+					SELECT '' AS GameId, '' AS ChoiceId 
 				) AS tmp
 			) AS fnc
 		WHERE	b.transdate	BETWEEN @fromdate AND @todate 
 			--AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND b.matchid		IN (0, 9, 29, 1000) 
+			AND b.matchid		IN (0, 9, 29, 1000, 255) 
 			AND (bt.ProductID	IN (1, 6, 7, 8, 9, 12) AND bt.EventType	= 0)
 	END
 
@@ -246,8 +280,7 @@ BEGIN
 	*/
 	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (1)) )
 	BEGIN
-		PRINT 1
-		--INSERT INTO #MemBetTicket
+		INSERT INTO #MemTransdateBetTicket
 		SELECT
 			b.transid
 			, b.refno
@@ -301,6 +334,7 @@ BEGIN
 			, m.MatchID	
 			, m.MatchCode
 			, '' AS Race	
+			, m.eventdate
 			, m.HomeID
 			, m.AwayID 		
 			, m.Betstatus
@@ -335,8 +369,7 @@ BEGIN
 	*/
 	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (2)) )
 	BEGIN
-		PRINT 2
-		--INSERT INTO #MemBetTicket
+		INSERT INTO #MemTransdateBetTicket
 		SELECT
 			b.transid
 			, b.refno
@@ -385,6 +418,7 @@ BEGIN
 			, m.OrId AS MatchID	
 			, m.MatchCode
 			, m.GroupMatch AS Race
+			, m.eventdate
 			, m.TeamID AS HomeID
 			, 0 AS AwayID		
 			, 0 AS Betstatus
@@ -415,7 +449,7 @@ BEGIN
 	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (3)) )
 	BEGIN
 		PRINT 3
-		--INSERT INTO #MemBetTicket
+		INSERT INTO #MemTransdateBetTicket
 		SELECT
 			b.transid
 			, b.refno
@@ -464,6 +498,7 @@ BEGIN
 			, b.MatchID	
 			, o.RacerNum AS MatchCode
 			, b.oddsid 	AS Race
+			, o.eventdate
 			, o.RacerID AS homeID
 			, 0 AS awayID		
 			, '' AS Betstatus
@@ -491,9 +526,9 @@ BEGIN
 	
 	-- RETURN main tickets		
 	SELECT tk.*
-	FROM #MemBetTicket tk
+	FROM #MemTransdateBetTicket tk
 	
-	DROP TABLE #MemBetTicket
+	DROP TABLE #MemTransdateBetTicket
 	
 	RETURN;
 END
