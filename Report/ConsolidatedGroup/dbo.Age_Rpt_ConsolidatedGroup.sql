@@ -26,7 +26,7 @@ AS
 
 	Revisions:   
 		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
-		- 20150511@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
+		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -60,13 +60,9 @@ DECLARE @AgencyWinloss AS TABLE (
 									betcount	INT
 								)
 
---DECLARE @TmpCond TABLE(sporttype INT, bettype INT)
+DECLARE @TmpCond TABLE(sporttype INT, bettype INT)
 DECLARE @TmpCondSumWL TABLE(sporttype INT, bettype INT)
 DECLARE @TmpCust TABLE(CustID INT, RoleID INT)
-
-DECLARE @SportBettype TABLE(ProductID INT, Sporttype INT DEFAULT (0) , Bettype INT, EventType INT, SubProduct VARCHAR(500) DEFAULT ('') )	
-DECLARE @ProductPrefix VARCHAR(100) = '-'
-
 
 DECLARE	@isSAg	INT,
 		@isMAg	INT,
@@ -90,138 +86,171 @@ FROM custAccount WITH (NOLOCK)
 INNER JOIN custInfo c WITH (NOLOCK) ON c.custid = custAccount.custid
 WHERE groupID = @GroupID
 
+
+DECLARE @SportBettype TABLE(ProductID INT,  Bettype INT, EventType INT)	
+INSERT INTO @SportBettype
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
 IF @ShowSB = 1  
-	BEGIN  
-		--bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype) 
-		--SELECT 0 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-		--WHERE (typeid>0 and typeid<31) OR (typeid>=121 and typeid<=999) OR (typeid between 1301 and 1334)
+BEGIN  
+	--bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype) 
+	--SELECT 0 AS sporttype, typeid FROM bettype WITH(NOLOCK)
+	--WHERE (typeid>0 and typeid<31) OR (typeid>=121 and typeid<=999)
+	--	OR (typeid>=1301 and typeid<=1399)
 
-		INSERT INTO @SportBettype (ProductID, Bettype, EventType)
-		EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4, @ProductPrefix = 'SB'
-
-		--Sum_winloss  
-		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-		VALUES(0,0)   
-	END  
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	0 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 1
+					
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
+	VALUES(0,0)   
+END  
 IF @ShowCasino = 1  
-	BEGIN  
-		--bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
-		SET @ProductPrefix = @ProductPrefix + ',CS'
+BEGIN  
+	--bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
+
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	251 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 6
 		
-		--Sum_winloss  
-		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-		VALUES(251,71)  
-	END
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
+	VALUES(251,71)  
+END
 IF @ShowRB = 1  
-	BEGIN  	
-		--bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 151, 31
-		--UNION ALL
-		--SELECT 151, 32
-		--UNION ALL
-		--SELECT 151, 33
+BEGIN  	
+	--bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype)  
+	--SELECT 151, 31
+	--UNION ALL
+	--SELECT 151, 32
+	--UNION ALL
+	--SELECT 151, 33
 
-		SET @ProductPrefix = @ProductPrefix + ',RB'
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	151 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 2
 		
-		-- sum_winloss
-		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		SELECT 151,0
-	END  	
+	-- sum_winloss
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	SELECT 151,0
+END
 IF @ShowNG = 1  
-	BEGIN  	
-		-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype) 
-		--SELECT 161, typeid FROM bettype WITH(NOLOCK) WHERE typeid BETWEEN 81 AND 120
-
-		SET @ProductPrefix = @ProductPrefix + ',NG'
-
-		-- sum_winloss
-		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		VALUES(161,0)  
-	END  
-IF @ShowBI = 1  
-	BEGIN  	
-		-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 252, 73
-
-		SET @ProductPrefix = @ProductPrefix + ',BG'
-
-		-- sum_winloss
-		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		VALUES(252,73) 
-	END  
-IF @ShowP2P = 1
-	BEGIN
-		-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 253, 1000
-
-		SET @ProductPrefix = @ProductPrefix + ',P2P'
-
-		--Sum_winloss
-		INSERT INTO @TmpCondSumWL(sporttype, Bettype)
-		VALUES(253,1000)
-	END
-
-IF @ShowLiveCasino = 1
-	BEGIN
+BEGIN  	
 	-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 162 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-		--WHERE typeid between 1101 and 1199
+	--INSERT INTO @TmpCond(Sporttype, Bettype) 
+	--SELECT 161, typeid FROM bettype WITH(NOLOCK) WHERE typeid BETWEEN 81 AND 120
 
-		SET @ProductPrefix = @ProductPrefix + ',LC'
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	161 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 3
 
-	 --Sum_winloss  
-		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		 VALUES(162,0)
-	END
+	-- sum_winloss
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(161,0)  
+END  
+IF @ShowBI = 1  
+BEGIN  	
+	-- bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype)  
+	--SELECT 252, 73
+
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	252 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 7
+
+	-- sum_winloss
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(252,73) 
+END  
+IF @ShowP2P = 1
+BEGIN
+	-- bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype)  
+	--SELECT 253, 1000
+
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	253 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 9
+
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
+	VALUES(253,1000)
+END
+	
+IF @ShowLiveCasino = 1
+BEGIN
+-- bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype)  
+	--SELECT 162 AS sporttype, typeid FROM bettype WITH(NOLOCK)
+	--WHERE typeid between 1101 and 1199
+
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	162 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 4
+
+	--Sum_winloss  
+		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+		VALUES(162,0)
+END
 	
 IF @ShowVS = 1
-	BEGIN
-	-- bettrans
-	--	INSERT INTO @TmpCond(Sporttype, Bettype)  
-	--	SELECT 180 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-	--	WHERE typeid between 1201 and 1299
+BEGIN
+-- bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype)  
+	--SELECT 180 AS sporttype, typeid FROM bettype WITH(NOLOCK)
+	--WHERE typeid between 1201 and 1299
 
-	SET @ProductPrefix = @ProductPrefix + ',VS'
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	180 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 5
 
-	 --Sum_winloss  
-		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		 VALUES(180,0)
-	END
-	
+	--Sum_winloss  
+		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+		VALUES(180,0)
+END
+
 IF @ShowKeno = 1
-	BEGIN
-	-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 202 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-		--WHERE typeid between 1501 and 1599
+BEGIN
+-- bettrans
+	--INSERT INTO @TmpCond(Sporttype, Bettype)  
+	--SELECT 202 AS sporttype, typeid FROM bettype WITH(NOLOCK)
+	--WHERE typeid between 1501 and 1599
 
-		SET @ProductPrefix = @ProductPrefix + ',KN'
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	202 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 8
 
-	 --Sum_winloss  
-		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		 VALUES(202,0)
-	END
-
+	--Sum_winloss  
+		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+		VALUES(202,0)
+END
+	
+	
 IF @showGD = 1
-	BEGIN
-		-- bettrans
-		SET @ProductPrefix = @ProductPrefix + ',GD'
+BEGIN
+	-- bettrans
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	255 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 12
 
-		--Sum_winloss
-		INSERT INTO @TmpCondSumWL(sporttype, bettype)
-		VALUES(255, 0)
-	END
-
-	---insert data to table Sporttype - bettype
-	INSERT INTO @SportBettype (ProductID, Sporttype, Bettype, EventType, SubProduct)
-	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 2, @ProductPrefix = @ProductPrefix
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, bettype)
+	VALUES(255, 0)
+END	
 		
 IF @tdate >= @BalanceUpDate
 BEGIN
@@ -240,7 +269,7 @@ BEGIN
 			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 			,COUNT(transid) betcount
 		FROM	bettrans b WITH(NOLOCK) 
-				INNER JOIN @SportBettype t ON b.bettype = t.bettype
+				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 				AND StatusID NOT IN (0,1,101,102,103) 
 				AND srecommend IN (SELECT CustID FROM @TmpCust WHERE roleID = 4)	
@@ -264,7 +293,7 @@ BEGIN
 			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(acomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 			,COUNT(transid) betcount
 		FROM	bettrans b WITH(NOLOCK) 
-				INNER JOIN @SportBettype t ON b.bettype = t.bettype
+				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 				AND StatusID NOT IN (0,1,101,102,103) 
 				AND mrecommend IN (SELECT CustID FROM @TmpCust WHERE roleID = 3)		
@@ -287,7 +316,7 @@ BEGIN
 			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(comm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 			,COUNT(transid) betcount
 		FROM	bettrans b WITH(NOLOCK) 
-				INNER JOIN @SportBettype t ON b.bettype = t.bettype
+				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	b.winlostdate BETWEEN @fdate AND @tdate
 				AND b.StatusID NOT IN (0,1,101,102,103) 
 				AND recommend IN (SELECT CustID FROM @TmpCust WHERE roleID = 2)
@@ -310,7 +339,7 @@ BEGIN
 			,SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) +SUM(playercomm) company
 			,COUNT(transid) betcount
 		FROM	bettrans b WITH(NOLOCK) 
-				INNER JOIN @SportBettype t ON b.bettype = t.bettype
+				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 				AND StatusID NOT IN (0,1,101,102,103) 
 				AND b.custid IN (SELECT CustID FROM @TmpCust WHERE roleID = 1)
