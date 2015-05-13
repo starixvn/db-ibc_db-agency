@@ -208,7 +208,7 @@ BEGIN
 			FROM 
 				bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE 
 				b.mrecommend = @custid
@@ -446,7 +446,7 @@ BEGIN
 			FROM 
 				bettrans14 b WITH (NOLOCK, index=IX_bettrans4)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE 
 				b.mrecommend = @custid
