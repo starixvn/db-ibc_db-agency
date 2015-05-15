@@ -189,7 +189,7 @@ BEGIN
 			,b.custid
 			,bt.ProductId
 			,bt.EventType
-		FROM dbo.bettrans b WITH(nolock, index=CIX_recommend_matchid_bettype)
+		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
@@ -213,7 +213,7 @@ BEGIN
 			,b.custid
 			,bt.ProductId
 			,bt.EventType
-		FROM dbo.bettrans b WITH(nolock, index=CIX_recommend_matchid_bettype)
+		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN CteRecommend c
 			ON b.recommend = c.custid
 			INNER JOIN #BettypeMatrix bt
@@ -238,7 +238,7 @@ BEGIN
 			,b.custid
 			,bt.ProductId
 			,bt.EventType
-		FROM dbo.bettrans b WITH(nolock, index=CIX_recommend_matchid_bettype)
+		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN CteRecommend c
 			ON b.recommend = c.custid
 			INNER JOIN #BettypeMatrix bt
@@ -247,7 +247,7 @@ BEGIN
 			ON b.statusid	= stt.statusid
 		WHERE b.matchid		= @matchid
 	END
-
+	
 	/* normal tickets 
 		- SB		: ProductID = 1
 		- NG		: ProductID = 3
@@ -412,7 +412,6 @@ BEGIN
 		WHERE c.EventType 		= 2
 	END
 	
-
 	-- CHECK liveindicator & betteam
 	FetchResult:
 	SELECT b.*
@@ -453,13 +452,13 @@ BEGIN
 				bg.apositiontaking, 
 				bg.mpositiontaking, 
 				bg.spositiontaking,
+				bg.bettype,
 				bg.betteam  
 			FROM dbo.bettransg bg with (NOLOCK)
 				INNER JOIN #MemBetTicket b 
-				ON bg.custid	= b.custid
-				AND bg.refno 	= B.refno
+				ON bg.refno 	= B.refno
 				INNER JOIN #BettypeMatrix bt
-				ON b.bettype = bt.bettype
+				ON b.bettype 	= bt.bettype
 			WHERE bt.ProductId 	IN (4)
 		END
 		
@@ -474,11 +473,11 @@ BEGIN
 				bg.apositiontaking, 
 				bg.mpositiontaking, 
 				bg.spositiontaking,
+				bg.bettype,
 				bg.betteam  
 			FROM dbo.bettransg14 bg with (NOLOCK)
 				INNER JOIN #MemBetTicket b 
-				ON bg.custid	= b.custid
-				AND bg.refno 	= B.refno
+				ON bg.refno 	= B.refno
 				INNER JOIN #BettypeMatrix bt
 				ON b.bettype = bt.bettype
 			WHERE bt.ProductId 	IN (4)

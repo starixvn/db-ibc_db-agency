@@ -209,6 +209,7 @@ BEGIN
 	EXEC [bodb02].[dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 		@CustId 			= @CustId
 		, @username			= @username
+		, @Recommend		= @Recommend
 		, @FromDate			= @FromDate
 		, @ToDate 			= @ToDate
 		, @Language 		= @Language
@@ -253,12 +254,12 @@ BEGIN
 			, bm.betteam  
 		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
-			ON bm.custid 		= b.custid
-				AND bm.refno 	= b.transid
+			ON bm.refno 		= b.transid
 			INNER JOIN #BettypeMatrix bt 
 			ON b.bettype		= bt.Bettype
 				
-		WHERE bt.ProductID 		= 2 -- Racing
+		WHERE bm.CustId			= @CustId
+			AND bt.ProductID 	= 2 -- Racing
 		
 		UNION ALL
 		SELECT 
@@ -273,12 +274,11 @@ BEGIN
 			, bm.betteam  
 		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
-			ON bm.custid 		= b.custid
-				AND bm.refno 	= b.refno
+			ON bm.refno 		= b.refno
 			INNER JOIN #BettypeMatrix bt 
 			ON b.bettype		= bt.Bettype
-				
-		WHERE bt.ProductID 		= 5 -- VS
+		WHERE bm.CustId			= @CustId
+			AND bt.ProductID 	= 5 -- VS
 
 		-- GATHER bettransg
 		INSERT INTO @BettransDetail
@@ -294,11 +294,11 @@ BEGIN
 			, bg.betteam 
 		FROM bodb02.dbo.bettransg bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
-			ON bg.custid		= b.custid
-				AND bg.refno = b.refno
+			ON bg.refno 		= b.refno
 			INNER JOIN #BettypeMatrix bt 
 			ON b.bettype		= bt.Bettype
-		WHERE bt.ProductID  	= 4 -- Live Casino
+		WHERE bg.CustId			= @CustId
+			AND bt.ProductID  	= 4 -- Live Casino
 			
 		UNION ALL
 		SELECT 
@@ -313,13 +313,18 @@ BEGIN
 			, bg.betteam 
 		FROM bodb02.dbo.bettransg bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
-			ON bg.custid		= b.custid
-				AND bg.refno 	= b.transid 
+			ON bg.refno 		= b.transid 
 			INNER JOIN #BettypeMatrix bt 
 			ON b.bettype		= bt.Bettype
-		WHERE bt.ProductID 		= 12 -- Gold Delux
+		WHERE bg.CustId			= @CustId
+			AND bt.ProductID 	= 12 -- Gold Delux
 
 	END
+	
+	SELECT bd.* 
+	FROM @BettransDetail bd
+	
+	DROP TABLE #MemBetTicket;
 	
 	RETURN;
 END

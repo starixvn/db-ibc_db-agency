@@ -4,6 +4,7 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem14_SelBetTicket]
 (
 	-- MEM INFO
 	@CustId 			INT
+	, @UserName			NVARCHAR(30)
 	, @Recommend		INT
 	, @FromDate			DATE
 	, @ToDate 			DATE
@@ -121,7 +122,7 @@ BEGIN
 		- Keno					: ProductId = 8
 		- Gold Delux			: ProductId = 12
 	 */
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (0)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 0) )
 	BEGIN
 		INSERT INTO #Mem14BetTicket
 		SELECT
@@ -135,7 +136,7 @@ BEGIN
 			END							AS transid
 			, b.refno
 			, b.custid
-			, b.Username
+			, @UserName AS Username
 			, CASE	WHEN bt.ProductID = 9 THEN 253 
 					WHEN bt.ProductID = 6 THEN 251
 					WHEN bt.ProductID = 7 THEN 252
@@ -160,17 +161,14 @@ BEGIN
 						THEN b.hdp2 
 					ELSE 0 
 				END						AS hdp2
-			--, 0 AS OddsType
 			, CASE WHEN bt.ProductID = 8
 					THEN b.OddsType
 				ELSE 0
 			END		AS OddsType
-			--, b.Odds 
 			, CASE WHEN bt.ProductID IN ( 1, 8 )
 						THEN b.Odds 
 					ELSE 0 
 				END						AS Odds
-			--, b.modds
 			, CASE WHEN bt.ProductID IN ( 1, 8 )
 						THEN b.modds 
 					ELSE 0 
@@ -254,8 +252,7 @@ BEGIN
 		WHERE	b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND b.matchid		IN (0, 9, 29, 1000) 
-			AND (bt.ProductID	IN (1, 6, 7, 8, 9, 12) AND bt.EventType	= 0)
+			AND bt.EventType	= 0
 	END
 
 	/* normal tickets 
@@ -264,14 +261,14 @@ BEGIN
 		- LC		: ProductID = 4
 		- VS		: ProductID = 5
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (1)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 1) )
 	BEGIN
 		INSERT INTO #Mem14BetTicket
 		SELECT
 			b.transid
 			, b.refno
 			, b.custid
-			, b.username
+			, @UserName AS Username
 			, m.Sporttype
 			, b.Bettype
 			, ISNULL(b.BetID,0)
@@ -345,21 +342,21 @@ BEGIN
 		WHERE	b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND (bt.ProductID	IN (1, 3, 4, 5) AND bt.EventType	= 1)
+			AND bt.EventType	= 1
 	END
 
 	/* 
 		- SB outright	: ProductID = 1
 		- HR tickets	: ProductID = 2
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (2)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 2) )
 	BEGIN
 		INSERT INTO #Mem14BetTicket
 		SELECT
 			b.transid
 			, b.refno
 			, b.custid
-			, b.username
+			, @UserName AS Username
 			, l.sporttype
 			, b.bettype
 			, ISNULL(b.BetID,0)
@@ -424,20 +421,20 @@ BEGIN
 		WHERE	b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND (bt.ProductID	IN (1, 2) AND bt.EventType	= 2)
+			AND bt.EventType	= 2
 	END
 
 	/* VS tickets 
 		- VS			: ProductID = 3
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (3)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 3) )
 	BEGIN
 		INSERT INTO #Mem14BetTicket
 		SELECT
 			b.transid
 			, b.refno
 			, b.custid
-			, b.username 
+			, @UserName AS Username
 			, r.Sporttype
 			, b.Bettype
 			, ISNULL(b.BetID,0)
@@ -504,7 +501,7 @@ BEGIN
 		WHERE	b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND (bt.ProductID	IN (5) AND bt.EventType	= 3)
+			AND bt.EventType	= 3
 	END	
 	
 	-- RETURN main tickets

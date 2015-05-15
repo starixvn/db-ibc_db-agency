@@ -636,11 +636,11 @@ BEGIN
 			bg.apositiontaking, 
 			bg.mpositiontaking, 
 			bg.spositiontaking,
+			bg.bettype,
 			bg.betteam  
-		FROM dbo.bettransg 			AS bg WITH (NOLOCK)
+		FROM dbo.bettransg 	AS bg WITH (NOLOCK)
 			INNER JOIN #tempCust 	AS b 
-			ON bg.custid	= b.custid
-			AND bg.refno 	= b.refno
+			ON bg.refno 	= b.refno
 		WHERE b.ProductId 	IN (4)
 	END
 	

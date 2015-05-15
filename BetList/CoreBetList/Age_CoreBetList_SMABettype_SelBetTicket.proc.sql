@@ -520,11 +520,11 @@ BEGIN
 			bg.apositiontaking, 
 			bg.mpositiontaking, 
 			bg.spositiontaking,
+			bg.bettype,
 			bg.betteam  
 		FROM bodb02.dbo.bettransg bg with (NOLOCK)
 			INNER JOIN #MemBetTicket b 
-			ON bg.custid	= b.custid
-			AND bg.refno 	= b.refno
+			ON bg.refno 	= b.refno
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype = bt.bettype
 		WHERE bt.ProductId 	IN (4)

@@ -8,8 +8,9 @@ GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_MemRunning_SelBetTicket]
 (
 	-- MEM INFO
-	@CustId 			INT				= NULL
-	, @UserName			NVARCHAR(30) 	= NULL
+	@CustId 			INT
+	, @UserName			NVARCHAR(30)
+	, @Recommend		INT
 	, @FromDate			DATE
 	, @ToDate 			DATE
 	-- PRODUCT - BETTYPE - STATUS
@@ -125,7 +126,7 @@ BEGIN
 		- Keno					: ProductId = 8
 		- Gold Delux			: ProductId = 12
 	 */
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (0)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 0) )
 	BEGIN
 		INSERT INTO #MemRunningBetTicket
 		SELECT
@@ -160,17 +161,14 @@ BEGIN
 						THEN b.hdp2 
 					ELSE 0 
 				END						AS hdp2
-			--, 0 AS OddsType
 			, CASE WHEN bt.ProductID = 8
 					THEN b.OddsType
 				ELSE 0
 			END		AS OddsType
-			--, b.Odds 
 			, CASE WHEN bt.ProductID IN ( 1, 8 )
 						THEN b.Odds 
 					ELSE 0 
 				END						AS Odds
-			--, b.modds
 			, CASE WHEN bt.ProductID IN ( 1, 8 )
 						THEN b.modds 
 					ELSE 0 
@@ -240,10 +238,10 @@ BEGIN
 			INNER JOIN #TransStatus st
 			ON b.statusID		= st.StatusID
 		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
-			--AND	b.recommend		= @Recommend 
+			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
 			AND b.matchid		IN (0, 9, 29, 1000) 
-			AND (bt.ProductID	IN (1, 6, 7, 9) AND bt.EventType	= 0)
+			AND bt.EventType	= 0
 		
 		/* Keno & GoldDelux */
 		UNION ALL
@@ -321,7 +319,6 @@ BEGIN
 				) AS tmp
 			) AS fnc
 		WHERE b.transdate		BETWEEN @fromdate AND @todate 
-			--AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
 			AND (bt.ProductID	IN (8, 12) AND bt.EventType	= 0)
 			
@@ -333,7 +330,7 @@ BEGIN
 		- LC		: ProductID = 4
 		- VS		: ProductID = 5
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (1)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 1) )
 	BEGIN
 		INSERT INTO #MemRunningBetTicket
 		SELECT
@@ -416,16 +413,16 @@ BEGIN
 			INNER JOIN #TransStatus st
 			ON b.statusID		= st.StatusID
 		WHERE	b.transdate	BETWEEN @fromdate AND @todate 
-			--AND	b.recommend		= @Recommend 
+			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND (bt.ProductID	IN (1, 3, 4, 5) AND bt.EventType	= 1)
+			AND bt.EventType	= 1
 	END
 
 	/* 
 		- SB outright	: ProductID = 1
 		- HR tickets	: ProductID = 2
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (2)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 2) )
 	BEGIN
 		INSERT INTO #MemRunningBetTicket
 		SELECT
@@ -496,15 +493,15 @@ BEGIN
 			INNER JOIN #TransStatus st
 			ON b.statusID		= st.StatusID
 		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
-			--AND	b.recommend		= @Recommend 
+			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND (bt.ProductID	IN (1, 2) AND bt.EventType	= 2)
+			AND bt.EventType	= 2
 	END
 
 	/* VS tickets 
 		- VS			: ProductID = 3
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType IN (3)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix s WHERE s.EventType = 3) )
 	BEGIN
 		INSERT INTO #MemRunningBetTicket
 		SELECT
@@ -578,9 +575,9 @@ BEGIN
 			ON b.statusID		= st.StatusID
 
 		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
-			--AND	b.recommend		= @Recommend 
+			AND	b.recommend		= @Recommend 
 			AND	b.custid		= @CustID
-			AND (bt.ProductID	IN (5) AND bt.EventType	= 3)
+			AND bt.EventType	= 3
 	END
 	
 	
