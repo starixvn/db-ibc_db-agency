@@ -103,6 +103,28 @@ BEGIN
 	INSERT INTO #BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel_xtest @mode=4
 	
+	-- ADD exception bettype for pending funds tickets
+	;WITH CteExtBettype (ProductID, Bettype, EventType)
+	AS (
+		-- @ShowCasino
+		SELECT 6, 23001, 0
+		UNION ALL
+		SELECT 6, 23002, 0
+		@ShowP2P
+		UNION ALL
+		SELECT 9, 23101, 0
+		UNION ALL
+		SELECT 9, 23101, 0
+		--@ShowBI
+		UNION ALL
+		SELECT 7, 23201, 0
+		UNION ALL
+		SELECT 7, 23202, 0
+	)
+	INSERT INTO #BettypeMatrix
+	SELECT * 
+	FROm CteExtBettype
+	
 	-- DO filtering bettype by product
 	DELETE bt
 	FROM #BettypeMatrix bt

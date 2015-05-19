@@ -145,7 +145,7 @@ BEGIN
 						THEN b.TransID 
 						ELSE b.betid 
 					END
-				WHEN bt.ProductID = 6 THEN b.betid
+				--WHEN bt.ProductID = 6 THEN b.betid
 				ELSE b.transid
 			END							AS transid
 			, b.refno
@@ -195,7 +195,9 @@ BEGIN
 			, b.Status				
 			, b.Transdate
 			, b.winlostdate						
-			, (b.winlost-actual_stake)	AS winlost
+			, CASE WHEN b.bettype IN (23102, 23002, 23202) THEN 0 
+				ELSE (b.winlost-actual_stake) 
+			END	AS winlost
 			, b.awinlost
 			, b.mwinlost
 			, b.swinlost
@@ -607,3 +609,8 @@ BEGIN
 	
 	RETURN;
 END
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket] TO [bodbDownlineNetView]
+GO

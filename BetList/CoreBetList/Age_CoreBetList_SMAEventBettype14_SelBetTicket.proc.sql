@@ -371,4 +371,7 @@ BEGIN
 	RETURN;
 END
 GO
-
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMAEventBettype14_SelBetTicket] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMAEventBettype14_SelBetTicket] TO [bodbDownlineNetView]
+GO

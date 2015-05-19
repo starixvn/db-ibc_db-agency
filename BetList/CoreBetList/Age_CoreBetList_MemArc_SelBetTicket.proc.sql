@@ -148,7 +148,7 @@ BEGIN
 						THEN b.TransID 
 						ELSE b.betid 
 					END
-				WHEN bt.ProductID = 6 THEN b.betid
+				--WHEN bt.ProductID = 6 THEN b.betid
 				ELSE b.transid
 			END							AS transid
 			, b.refno
@@ -529,6 +529,9 @@ BEGIN
 	
 	RETURN;
 END
+
 GO
-
-
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_MemArc_SelBetTicket] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_MemArc_SelBetTicket] TO [bodbDownlineNetView]
+GO

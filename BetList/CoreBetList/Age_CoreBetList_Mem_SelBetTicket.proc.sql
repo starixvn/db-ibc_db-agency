@@ -199,7 +199,7 @@ BEGIN
 		, comstatus 		NVARCHAR(20)
 	)
 
-	IF ( @ToDate <= @MoveBetsDay )
+	IF ( @FromDate <= @MoveBetsDay )
 	BEGIN
 		INSERT INTO #MemBetTicket
 		EXEC [dbo].[Age_CoreBetList_Mem14_SelBetTicket] 
@@ -207,11 +207,11 @@ BEGIN
 			,@UserName		= @UserName
 			,@Recommend		= @Recommend
 			,@FromDate 		= @FromDate
-			,@ToDate 		= @ToDate		
+			,@ToDate 		= @MoveBetsDay		
 	END
 	
-	-- SELECT archived ticket
-	IF ( @FromDate < @BalanceupDay )
+	-- SELECT archived ticket - not supported yet
+	/*IF ( @FromDate < @BalanceupDay )
 	BEGIN	
 		DECLARE @bettypeMatrixInfo 	VARCHAR(MAX)
 			, @transStatusInfo		VARCHAR(250)
@@ -233,7 +233,7 @@ BEGIN
 			,@BettypeMatrix	= @bettypeMatrixInfo
 			,@TransStatus	= @transStatusInfo
 			
-	END
+	END*/
 	
 	-- do selecting from bettrans
 	IF ( @ToDate > @MoveBetsDay )
@@ -254,7 +254,7 @@ BEGIN
 							THEN b.TransID 
 							ELSE b.betid 
 						END
-					WHEN bt.ProductID = 6 THEN b.betid
+					--WHEN bt.ProductID = 6 THEN b.betid
 					ELSE b.transid
 				END							AS transid
 				, b.refno
@@ -823,7 +823,7 @@ BEGIN
 	END
 	
 	IF (EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN (2, 4, 5, 12)) 
-		AND @Todate <= @MoveBetsDay )
+		AND @FromDate <= @MoveBetsDay )
 	BEGIN
 		--SELECT bettransm
 		INSERT INTO @BettransDetail
@@ -996,3 +996,8 @@ BEGIN
 	
 	RETURN;
 END
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_Mem_SelBetTicket] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_Mem_SelBetTicket] TO [bodbDownlineNetView]
+GO

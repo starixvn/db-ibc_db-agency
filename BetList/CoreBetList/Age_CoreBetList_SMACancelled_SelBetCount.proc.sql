@@ -353,4 +353,7 @@ BEGIN
 	RETURN;
 END
 GO
-
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMACancelled_SelBetCount] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMACancelled_SelBetCount] TO [bodbDownlineNetView]
+GO

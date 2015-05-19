@@ -217,15 +217,15 @@ BEGIN
 						THEN b.TransID 
 						ELSE b.betid 
 					END
-				WHEN c.ProductID = 6 THEN b.betid
+				--WHEN c.ProductID = 6 THEN b.betid
 				ELSE b.transid
 			END							AS transid
 			, b.refno
 			, b.custid
 			, b.Username
-			, CASE	WHEN bt.ProductID = 9 THEN 253 
-					WHEN bt.ProductID = 6 THEN 251
-					WHEN bt.ProductID = 7 THEN 252
+			, CASE	WHEN c.ProductID = 9 THEN 253 
+					WHEN c.ProductID = 6 THEN 251
+					WHEN c.ProductID = 7 THEN 252
 					ELSE 0
 			END							AS Sporttype
 			
@@ -538,5 +538,8 @@ BEGIN
 	
 	RETURN;
 END
-
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMABettype_SelBetTicket] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMABettype_SelBetTicket] TO [bodbDownlineNetView]
 GO
