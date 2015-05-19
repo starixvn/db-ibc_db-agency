@@ -5,276 +5,373 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_SMAEventBettype14_SelBetTicket]
 	@CustId 			INT
 	, @RoleId			INT
 	, @MatchId 			INT
-	, @Bettype 			INT
-	, @Liveindicator 	INT
-	, @Betteam 			NVARCHAR(20)
-	
+	-- PRODUCT - BETTYPE - STATUS
+	, @BettypeMatrix	XML 			= NULL
+	, @TransStatus		VARCHAR(250) 	= NULL
 	, @Error			INT = 0
 	, @ErrorMsg			NVARCHAR(250) = NULL
 AS
 /*
-Created: 
-Task : Betlist
-DB: DBAGE.bodb02
-Original:BetsSelBetListMatchWinLoss_Ag
-Revisions:
-    - 200712/11@Phuc: For API
-    - 20080108: add leaguename,typenamee2,sportname
-    - 20080629@Viet: Remove Teamname, Leaguename, Sportname, TypeName
-    - 20090326@Phuc: get indexname for FI
-    - 20090406@HanhVu: remove refno
-    - 20090416@Minh: remove indexName
-	- 20090421@[HiepVo]: Include more columns: comm, acomm, scomm, awinlost, mwinlost, swinlost
-	- 20090505@HiepVo: Change formula of commission
-	- 20090618@AnhPham: Remove 'Customer' table
-	- 20090710@Phuc: unhide IP for TB currency.	
-	- 20101123@Jacob: Add column betid in select clause
-	- 20110408@Amy: Change function to get Odds value and showed odds type
-	- 20110809@Sophia: Add a new parametter @liveindicator
-	- 20110811@Sophia: Add new columns actual_stake and modds 
-	- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
-	- 20120112@Sophia:  Add refno, showtime for Table - Shoe - Hand of LiveCasino 
-						Add Sub table for Live Casino
-	- 20120926@Sophia: Get comstatus
-	- 20141016@Sophia: support Sporting solution-grouped bettype 
-	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
-	- 20150331@Cody: Aplly sport bettype matrix [Redmine: #30169]
+	Created: Bobby.Nguyen
+	Task : Aphla site - refactor betlist core 
+	DB: DB053.bodb02
+	Original: 
+
+	Revisions:
+		- 20150504@Bobby.Nguyen: Create new SP
+	
+	Param's Explanation:
+		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
+		- @TransStatus		: string formation (0,1,102,103,111,112,113)
+	
 */
 BEGIN
 	SET NOCOUNT ON;
 	
+	-- CHECK TransStatus
+	IF ( OBJECT_ID('tempdb..#TransStatus') IS NULL )
+	BEGIN
+		CREATE TABLE #TransStatus (
+			StatusID 		INT
+		);
+		INSERT INTO #TransStatus
+		SELECT CAST(t.Val AS INT) 
+		FROM [bodb02].[dbo].[Age_f_SplitString] (@TransStatus, ',') t
+	END
+	
+	-- CHECK BettypeMatrix
+	IF ( OBJECT_ID('tempdb..#BettypeMatrix') IS NULL )
+	BEGIN
+		CREATE TABLE #BettypeMatrix (
+			ProductID 		INT
+			, Bettype 		INT
+			, EventType 	INT
+		);
+		WITH CteBT (ProductID, Bettype, EventType)
+		AS (
+			SELECT bt.Col.value('@ProductID'	,'INT')
+				, bt.Col.value('@Bettype'		,'INT')
+				, bt.Col.value('@EventType'		,'INT')
+			FROM  @BettypeMatrix.nodes('//row') bt(Col)
+		)
+		INSERT INTO #BettypeMatrix
+		SELECT *
+		FROM CteBT bt
+	END
+	
+	CREATE TABLE #MemBet14Ticket
+	(
+		TransID 			BIGINT
+		, RefNO 			BIGINT	
+		, custid 			INT
+		, Username 			NVARCHAR(30)
+		, Sporttype 		SMALLINT
+		, Bettype 			SMALLINT
+		, BetID 			BIGINT
+		, Betteam 			NVARCHAR(20)
+		, hdp1 				SMALLMONEY
+		, hdp2 				SMALLMONEY 
+		, OddsType 			TINYINT
+		, Odds 				SMALLMONEY 
+		, modds 			SMALLMONEY
+		, Stake 			MONEY
+		, actual_stake 		MONEY
+		, Status 			NVARCHAR(10)
+		, transdate 		DATETIME
+		, winlostdate 		DATETIME
+		, winlost 			MONEY
+		, awinlost 			MONEY
+		, mwinlost 			MONEY
+		, swinlost 			MONEY
+		, playerComm		MONEY
+		, comm				MONEY
+		, acomm				MONEY
+		, scomm				MONEY
+		, APositiontaking	SMALLMONEY
+		, MPositiontaking	SMALLMONEY
+		, SPositiontaking	SMALLMONEY
+		, Adiscount 		SMALLMONEY
+		, Mdiscount 		SMALLMONEY
+		, Sdiscount 		SMALLMONEY
+		, liveindicator 	BIT
+		, livehomescore 	SMALLINT
+		, liveawayscore 	SMALLINT
+		, finalhomescore 	SMALLINT
+		, finalawayscore 	SMALLINT 
+		, hthomescore 		SMALLINT
+		, htawayscore 		SMALLINT 
+		, IP 				NVARCHAR(15)
+		, LeagueID 			INT
+		, MatchID 			INT
+		, MatchCode 		NVARCHAR(50)
+		, Race 				NVARCHAR(20)
+		, eventdate 		DATETIME
+		, HomeID 			INT
+		, AwayID 			INT 	
+		, Betstatus 		NVARCHAR(50)
+		, isNeutral 		BIT
+		, showtime 			NVARCHAR(50)
+		, betcheck 			NVARCHAR(50)
+		, comstatus 		NVARCHAR(20)
+	)
+
 	IF ( @roleid = 1 )
 	BEGIN
 		INSERT INTO #tempCust
 		SELECT b.transid
+			,b.refno
 			,b.custid
+			,bt.ProductId
+			,bt.EventType
 		FROM dbo.bettrans14 b WITH(nolock)
 			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype			
+			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE b.custid 		= @custid
 			AND b.matchid	= @matchid
-
 	END
 	
 	IF ( @roleid = 2 )
 	BEGIN
 		INSERT INTO #tempCust
 		SELECT b.transid
+			,b.refno
 			,b.custid
+			,bt.ProductId
+			,bt.EventType
 		FROM dbo.bettrans14 b WITH(nolock)
-			INNER JOIN dbo.Customer c WITH(NOLOCK)
-			ON b.recommend	= c.custid
 			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype			
+			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
-		WHERE c.custid  	= @custid
-			AND c.roleid 	= @roleid
+		WHERE b.recommend	= @custid
 			AND b.matchid	= @matchid
-			
 	END
 	
 	IF ( @roleid = 3 )
 	BEGIN
+		WITH CteRecommend ( custid )
+		AS (
+			SELECT custid
+			FROM dbo.Customer c WITH(NOLOCK)
+			WHERE c.mrecommend 	= @custid
+				AND c.roleid 	= 2
+		)
 		INSERT INTO #tempCust
 		SELECT b.transid
+			,b.refno
 			,b.custid
+			,bt.ProductId
+			,bt.EventType
 		FROM dbo.bettrans14 b WITH(nolock)
-			INNER JOIN dbo.Customer c WITH(NOLOCK)
-			ON b.mrecommend 	= c.custid
+			INNER JOIN CteRecommend c
+			ON b.recommend = c.custid
 			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype			
+			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
-		WHERE c.custid 	= @custid
-			AND c.roleid 	= @roleid
-			AND b.matchid	= @matchid
-			
+		WHERE b.matchid		= @matchid
 	END
 	
 	IF ( @roleid = 4 )
 	BEGIN
+		WITH CteRecommend ( custid )
+		AS (
+			SELECT custid
+			FROM dbo.Customer c WITH(NOLOCK)
+			WHERE c.srecommend 	= @custid
+				AND c.roleid 	= 2
+		)
 		INSERT INTO #tempCust
 		SELECT b.transid
+			,b.refno
 			,b.custid
+			,bt.ProductId
+			,bt.EventType
 		FROM dbo.bettrans14 b WITH(nolock)
-			INNER JOIN dbo.Customer c WITH(NOLOCK)
-			ON b.srecommend 	= c.custid
+			INNER JOIN CteRecommend c
+			ON b.recommend = c.custid
 			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype			
+			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
-		WHERE c.custid 	= @custid
-			AND c.roleid 	= @roleid
-			AND b.matchid	= @matchid
-			
+		WHERE b.matchid		= @matchid
 	END
 	
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE EventType = 1) )
+	/* normal tickets 
+		- SB		: ProductID = 1
+		- NG		: ProductID = 3
+		- LC		: ProductID = 4
+		- VS		: ProductID = 5
+	*/
+	IF( EXISTS(SELECT TOP 1 1 FROM #tempCust WHERE EventType = 1) )
 	BEGIN
-		--INSERT INTO #MemBetTicket
-		SELECT 
+		INSERT INTO #MemBetTicket
+		SELECT
 			b.transid
+			, b.refno
 			, b.custid
 			, b.username
-			, m.leagueID
-			, m.sporttype
-			, b.bettype
-			, b.matchid
-			, m.matchcode
-			, '' AS Race
-			, m.homeID
-			, m.awayID
-			, CONVERT(FLOAT, b.hdp1) AS hdp1
-			, CONVERT(FLOAT, b.hdp2) AS hdp2 
-			, b.odds
+			, m.Sporttype
+			, b.Bettype
+			, ISNULL(b.BetID,0)
+			, b.betteam
+			, CASE WHEN c.ProductID IN (4) THEN 0
+					ELSE b.hdp1
+			END		AS hdp1
+			, CASE WHEN c.ProductID IN (3, 4) THEN 0
+					ELSE b.hdp2
+			END		AS hdp2
+
+			, b.OddsType 
+			, b.odds 
 			, b.modds
+			, b.stake 
+			, b.actual_stake
 			, CASE WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 				ELSE b.status 
 			END AS status
-			, b.stake
-			, b.actual_stake
-			, (b.winlost-actual_stake) winlost
+			, b.transdate
+			, b.winlostdate			
+			, (b.winlost-actual_stake) AS winlost
 			, b.awinlost
 			, b.mwinlost
 			, b.swinlost
+			, b.PlayerComm
+			, (b.comm - b.playercomm) 	AS comm
+			, (b.acomm - b.comm) 		AS acomm
+			, (b.scomm - b.acomm) 		AS scomm
+			, b.APositiontaking
+			, b.MPositiontaking
+			, b.SPositiontaking
+				
+			, b.discount
+			, b.adiscount
+			, b.sdiscount
+				
+			, b.Liveindicator
+			, b.Livehomescore
+			, b.Liveawayscore
+			, m.finalhomescore 	
+			, m.finalawayscore 	 
+			, m.hthomescore 		
+			, m.htawayscore 		
 			
-			, b.playercomm
-			, (b.comm - b.playercomm) AS comm
-			, (b.acomm - b.comm) AS acomm 
-			, (b.scomm - b.acomm) AS scomm
-			
-			, b.transdate
-			, b.winlostdate
-			, b.betteam
-			, b.apositiontaking
-			, b.mpositiontaking
-			, b.spositiontaking	
-			, b.discount AS Adiscount
-			, b.adiscount AS Mdiscount
-			, b.sdiscount AS Sdiscount	
-			, b.liveindicator
-			, b.livehomescore
-			, b.liveawayscore
-			
-			, b.IP AS IP
-			, m.betstatus
+			, b.IP
+			, m.LeagueID
+			, m.MatchID	
+			, m.MatchCode
+			, '' AS Race
+			, m.eventdate
+			, m.HomeID
+			, m.AwayID 		
+			, m.Betstatus
 			, ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
-			, b.OddsType
-			, b.betid
-			, m.showtime
-			, b.refno
-			, b.betcheck
-			, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus 
+			, ISNULL(m.showtime,'') AS showtime
+			, CASE WHEN ( c.ProductID = 1 AND b.bettype IN (217, 216) )
+				THEN b.betcheck 
+				ELSE '' 
+			END		AS betcheck
+			, CASE WHEN b.comstatus = '1' 
+					THEN '1' 
+				ELSE '0' 
+			END		AS comstatus
 			
 		FROM dbo.bettrans14 b WITH(NOLOCK)
 			INNER JOIN #tempCust c
-			ON b.transid 	= c.transid
-			INNER JOIN dbo.macth14 m WITH (NOLOCK) 
-			ON b.matchid	= m.orid
+			ON b.transid 		= c.transid
+				AND b.custid 	= c.custid
+			INNER JOIN dbo.match14 m WITH (NOLOCK) 
+			ON b.matchid		= m.matchid
+			
+		WHERE c.EventType 		= 1
 	END
 	
-	IF( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE EventType = 2) )
+	/* 
+		- SB outright	: ProductID = 1
+		- HR tickets	: ProductID = 2
+	*/
+	IF( EXISTS(SELECT TOP 1 1 FROM #tempCust WHERE EventType = 2) )
 	BEGIN
-		--INSERT INTO #MemBetTicket
-		SELECT 
+		INSERT INTO #MemBetTicket
+		SELECT
 			b.transid
+			, b.refno
 			, b.custid
 			, b.username
-			, m.leagueID
 			, l.sporttype
 			, b.bettype
-			, 0 AS matchid
-			, m.matchcode
-			, m.GroupMatch AS Race
-			, m.TeamID AS HomeID
-			, 0 AS awayID
-			, 0 AS hdp1
+			, ISNULL(b.BetID,0)
+			, '' AS Betteam
+			, 0 AS hdp1 
 			, 0 AS hdp2 
-			, b.odds
+			, 0 AS OddsType
+			, b.Odds
 			, b.modds
-			, CASE WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
-				ELSE b.status 
-			END AS status
-			, b.stake
+			, b.Stake 
 			, b.actual_stake
-			, (b.winlost-actual_stake) winlost
+			, b.status				
+			, b.transdate
+			, b.winlostdate
+			, (b.winlost-actual_stake) AS winlost
 			, b.awinlost
 			, b.mwinlost
 			, b.swinlost
-			
-			, b.playercomm
+			, b.PlayerComm
 			, (b.comm - b.playercomm) AS comm
-			, (b.acomm - b.comm) AS acomm 
+			, (b.acomm - b.comm) AS acomm
 			, (b.scomm - b.acomm) AS scomm
-			
-			, b.transdate
-			, b.winlostdate
-			, '' AS betteam
-			, b.apositiontaking
-			, b.mpositiontaking
-			, b.spositiontaking	
-			, b.discount AS Adiscount
-			, b.adiscount AS Mdiscount
-			, b.sdiscount AS Sdiscount	
-			, 0 AS liveindicator
-			, 0 AS livehomescore
-			, 0 AS liveawayscore
-			
-			, b.IP AS IP
-			, m.betstatus
-			, isnull(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
-			, 0 AS OddsType
-			, b.betid
-			, 0 AS showtime
-			, b.refno
-			, b.betcheck
-			, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus 
+				
+			, b.APositiontaking			
+			, b.MPositiontaking			
+			, b.SPositiontaking
+				
+			, b.discount
+			, b.adiscount
+			, b.sdiscount
+				
+			, 0 AS LiveIndicator
+			, b.LiveHomescore
+			, b.LiveAwayscore
+			, 0 AS finalhomescore 	
+			, 0 AS finalawayscore 	 
+			, 0 AS hthomescore 		
+			, 0 AS htawayscore
+			, b.IP
+			, m.LeagueID
+			, m.OrId AS MatchID	
+			, m.MatchCode
+			, m.GroupMatch AS Race
+			, m.eventdate
+			, m.TeamID AS HomeID
+			, 0 AS AwayID		
+			, 0 AS Betstatus
+			, CONVERT(BIT,0) AS IsNeutral
+			, '' AS showtime
+			, '' AS betcheck
+			, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus	
 		FROM dbo.bettrans14 b WITH(NOLOCK)
 			INNER JOIN #tempCust c
-			ON b.transid 	= c.transid
+			ON b.transid 		= c.transid
+				AND b.custid 	= c.custid
 			INNER JOIN dbo.outright14 m WITH (NOLOCK) 
-			ON b.matchid	= m.orid
-			INNER JOIN league l WITH (NOLOCK) 
-			ON m.leagueid 	= l.leagueid
+			ON b.matchid		= m.orid
+			INNER JOIN dbo.league l WITH (NOLOCK) 
+			ON m.leagueid 		= l.leagueid
+			
+		WHERE c.EventType 		= 2
 	END
 	
 	-- FETCH result
-	SELECT m.*
-	FROM #MemBetTicket m 
-	WHERE (
-			(m.sporttype = 161 AND b.liveindicator = ISNULL(@liveindicator, b.liveindicator))
-			OR m.sporttype <> 161 
-		)
-		AND	( 
-			(LEN(b.betteam) > 0 AND m.sporttype = 161 AND b.betteam = @betteam)
-			OR LEN(b.betteam) = 0
-		)
+	SELECT b.*
+	FROM #MemBet14Ticket b 
 	
-	IF EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN( 4 ))
-	BEGIN
-
-		SELECT 
-			bg.refno, 
-			bg.odds, 
-			bg.stake,
-			bg.status ,
-			bg.apositiontaking, 
-			bg.mpositiontaking, 
-			bg.spositiontaking,
-			bg.betteam  
-		FROM dbo.bettransg14 bg with (NOLOCK)
-			INNER JOIN #MemBetTicket b 
-			ON bg.custid	= b.custid
-			AND bg.refno 	= B.refno
-			INNER JOIN #BettypeMatrix bt
-			ON b.bettype = bt.bettype
-		WHERE bt.ProductId 	IN (4)
-	END
-	
+	DROP TABLE #MemBet14Ticket
 	RETURN;
 END
 GO
-
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMAEventBettype14_SelBetTicket] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMAEventBettype14_SelBetTicket] TO [bodbDownlineNetView]
+GO

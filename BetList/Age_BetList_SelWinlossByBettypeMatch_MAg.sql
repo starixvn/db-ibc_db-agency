@@ -2,12 +2,12 @@
 GO
 
 ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossByBettypeMatch_MAg]
-	@matchid int,
-	@custid int=null, --masterID
-	@bettype int,
-	@Language varchar(2) = 'E',
-	@username varchar(50) = NULL, -- for API	
-	@liveindicator int = 0
+	@MatchID 			INT
+	, @custid 			INT	= NULL
+	, @username 		VARCHAR(50) = NULL
+	, @bettype 			INT
+	, @Language 		VARCHAR(2) = 'E'
+	, @liveindicator 	INT = 0
 AS
 /*
 Created: 
@@ -37,6 +37,7 @@ Revisions:
 	- 20141016@Sophia: support Sporting solution-grouped bettype 
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	- 20150331@Cody: Apply sport bettype matrix [Remine: #30169]
+	- 20150508@Bobby: Re-factor code and apply bettype matrix
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -47,7 +48,7 @@ BEGIN
 	);
 	INSERT INTO #TransStatus
 	SELECT StatusId
-	FROM dbo.All_f_TransStatus (1) stt	
+	FROM bodb02.dbo.All_f_TransStatus (1) stt	
 	
 	-- Gather BettypeMatrix
 	CREATE TABLE #BettypeMatrix (
@@ -65,7 +66,7 @@ BEGIN
 			LEFT JOIN (SELECT Bettype, GroupTypeId 
 				FROM [dbo].[f_GroupBettype]()
 			) AS  f 
-			ON f.bettype 		= b.bettype	
+			ON f.bettype 		= bt.bettype	
 		WHERE bt.bettype		= @bettype 
 			OR f.GroupTypeId 	= @bettype
 	)
@@ -75,187 +76,16 @@ BEGIN
 		ON bt.bettype = ct.bettype
 	WHERE ct.bettype IS NULL
 		
-	EXEC [dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
+	EXEC [bodb02].[dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
 		@CustId 			= @CustId
 		,@username			= @username
 		, @RoleId			= 3
 		, @MatchId 			= @MatchID
 		, @Liveindicator 	= @liveindicator
-		, @Betteam			= @Betteam
 		, @Language 		= @Language
 		
 	RETURN;
 END
-/*
-SET NOCOUNT ON
-if @custid is null
-	select @custid = custid from customer with (nolock) where username = @username
-
-IF exists(SELECT TOP 1 1 FROM Match WITH(NOLOCK) WHERE MatchID=@MatchID)
-BEGIN	
-	SELECT
-		m.sporttype,
-		b.username,
-		b.bettype,
-		m.leagueID,		
-		b.transid,
-		m.matchcode,
-		m.homeID,
-		m.awayID,
-		convert(float, b.hdp1) as hdp1, 
-		convert(float, b.hdp2) as hdp2, 
-		b.odds,
-		b.modds,
-		b.status,
-		b.stake,
-		b.actual_stake,
-		(b.winlost-actual_stake) winlost,
-		b.awinlost,
-		b.mwinlost,
-		b.swinlost,
-		
-		b.playercomm,
-		(b.comm - b.playercomm) as comm,
-		(b.acomm - b.comm) as acomm ,
-		(b.scomm - b.acomm) as scomm,
-		
-		b.transdate,
-		b.winlostdate,
-		b.betteam,
-		b.apositiontaking,
-		b.mpositiontaking,
-		b.spositiontaking,	
-		b.discount as Adiscount,
-		b.adiscount as Mdiscount,
-		b.sdiscount as Sdiscount,	
-		b.liveindicator,
-		b.livehomescore,
-		b.liveawayscore,
-		b.matchid, 
-		b.IP as IP,
-		m.betstatus,
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-		b.OddsType,
-		b.betid,
-		m.showtime,
-		b.refno,
-		b.betcheck,
-		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
-	FROM
-		bettrans b with (nolock) 
-		inner join match m with (nolock) on b.matchid=m.matchid 
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
-	WHERE
-		b.matchid=@matchid and 
-		b.mrecommend=@custid  and 		
-		(b.bettype=@bettype OR GroupTypeId = @bettype) and
-		b.Liveindicator = CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END 
-	ORDER BY
-		b.status, b.transid
-		
-	--IF @bettype between 1101 and 1199
-	IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
-	BEGIN
-		--get data from bettransg for bettype 1101
-		SELECT 
-			bg.refno, 
-			bg.odds, 
-			bg.stake,
-			bg.status ,
-			bg.apositiontaking, 
-			bg.mpositiontaking, 
-			bg.spositiontaking,
-			bg.betteam  
-		FROM bettransg bg with (NOLOCK)
-		INNER JOIN bettrans B ON bg.refno = B.refno
-		WHERE	bg.matchid=@matchid and 
-				b.mrecommend=@custid  and 		
-				b.bettype=@bettype 
-	END
-END
-ELSE
-BEGIN	
-	SELECT
-		m.sporttype,
-		b.username,
-		b.bettype,
-		m.leagueID,			
-		b.transid,
-		m.matchcode,
-		m.homeID,
-		m.awayID,
-		convert(float, b.hdp1) as hdp1, 
-		convert(float, b.hdp2) as hdp2, 
-		b.odds,
-		b.modds,
-		b.status,
-		b.stake,
-		b.actual_stake,
-		(b.winlost-actual_stake) winlost,
-		b.awinlost,
-		b.mwinlost,
-		b.swinlost,
-		
-		b.playercomm,
-		(b.comm - b.playercomm) as comm,
-		(b.acomm - b.comm) as acomm ,
-		(b.scomm - b.acomm) as scomm,
-		
-		b.transdate,
-		b.winlostdate,
-		b.betteam,
-		b.apositiontaking,
-		b.mpositiontaking,
-		b.spositiontaking,	
-		b.discount as Adiscount,
-		b.adiscount as Mdiscount,
-		b.sdiscount as Sdiscount,		
-		b.liveindicator,
-		b.livehomescore,
-		b.liveawayscore,
-		b.matchid, 
-		b.IP as IP,
-		m.betstatus,
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-		b.OddsType,
-		b.betid,
-		m.showtime,
-		b.refno,
-		b.betcheck,
-		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
-	FROM
-		bettrans14 b with (nolock) 
-		inner join match14 m with (nolock) on b.matchid=m.matchid 		
-		LEFT JOIN (SELECT Bettype, GroupTypeId FROM [dbo].[f_GroupBettype_xtest]()) f ON f.bettype = b.bettype
-	WHERE
-		b.matchid=@matchid and 
-		b.mrecommend=@custid  and 		
-		(b.bettype=@bettype OR GroupTypeId = @bettype) and
-		b.Liveindicator = CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END 
-	ORDER BY
-		b.status, b.transid		
-		
-	--IF @bettype between 1101 and 1199
-	IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
-	BEGIN
-		--get data from bettransg for bettype 1101
-		SELECT 
-			bg.refno, 
-			bg.odds, 
-			bg.stake,
-			bg.status ,
-			bg.apositiontaking, 
-			bg.mpositiontaking, 
-			bg.spositiontaking,
-			bg.betteam  
-		FROM bettransg14 bg with (NOLOCK)
-		INNER JOIN bettrans14 B ON bg.refno = B.refno
-		WHERE	bg.matchid=@matchid and 
-				b.mrecommend=@custid  and 		
-				b.bettype=@bettype 
-	END
-END
-*/
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelWinlossByBettypeMatch_MAg] TO [bodbDownlineNet]
 GO
