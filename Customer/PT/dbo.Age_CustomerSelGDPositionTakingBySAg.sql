@@ -1,4 +1,4 @@
- ALTER PROCEDURE [dbo].[Age_CustomerSelGDPositionTakingBySAg]
+ALTER PROCEDURE [dbo].[Age_CustomerSelGDPositionTakingBySAg]
 (
 	@SRecommend INT,
 	@PageIndex	INT = 1,
@@ -25,11 +25,11 @@ BEGIN
 
 	SELECT 
 		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-	FROM 
-		dbo.custinfo AS ci WITH (NOLOCK)		
-	WHERE 
-		ci.SRecommend = @SRecommend AND ci.roleid=3
-
+	FROM																									   
+		dbo.custinfo AS ci WITH (NOLOCK)
+		INNER JOIN dbo.CustSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
+	WHERE ci.SRecommend = @SRecommend AND ci.roleid=3 AND cg.sporttype = 255
+ 
 	SELECT *
 	FROM 
 	(
@@ -58,9 +58,4 @@ END
 
 
 
-GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelGDPositionTakingBySAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelGDPositionTakingBySAg] TO [bodbDownlineNetView]
-GO
- 
+

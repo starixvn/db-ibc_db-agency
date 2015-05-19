@@ -24,10 +24,10 @@ BEGIN
 
 	SELECT 
 		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-	FROM 
-		dbo.custinfo AS ci WITH (NOLOCK)		
-	WHERE 
-		ci.Recommend = @Recommend AND ci.roleid=1
+	FROM																									   
+		dbo.custinfo AS ci WITH (NOLOCK)
+		INNER JOIN dbo.CustSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
+	WHERE ci.Recommend = @Recommend AND ci.roleid=1 AND cg.sporttype = 255
 
 	SELECT *
 	FROM 
