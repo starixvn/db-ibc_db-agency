@@ -84,8 +84,6 @@ Revisions:
 BEGIN
 	SET NOCOUNT ON;
 	
-	DECLARE @Recommend		INT
-	
 	-- Gather Ticket status
 	CREATE TABLE #TransStatus (
 		StatusID 		INT
@@ -110,7 +108,7 @@ BEGIN
 		SELECT 6, 23001, 0
 		UNION ALL
 		SELECT 6, 23002, 0
-		@ShowP2P
+		--@ShowP2P
 		UNION ALL
 		SELECT 9, 23101, 0
 		UNION ALL
@@ -139,214 +137,13 @@ BEGIN
 		OR ProductID	= CASE WHEN @ShowP2P				= 0 	THEN 9 END
 		OR ProductID	= CASE WHEN @ShowGD					= 0 	THEN 12 END
 	
-	-- CHECK member info
-	IF( @CustID IS NULL
-		AND @UserName IS NOT NULL
-	)
-	BEGIN
-		SELECT @CustID 	= CustID
-		, @Recommend 	= Recommend 
-		FROM dbo.custinfo WITH(NOLOCK) 
-		WHERE UserName	= @UserName
-	END
-	
-	IF( @CustID > 0
-		AND (@Recommend IS NULL 
-			OR @UserName IS NULL
-		)
-	)
-	BEGIN
-		SELECT @Recommend 	= Recommend 
-		,@UserName			= UserName
-		FROM dbo.custinfo WITH(NOLOCK) 
-		WHERE CustID		= @CustID
-	END
-	
-	IF(@Recommend IS NULL)
-	BEGIN
-		SELECT @Error 	= 100
-			, @ErrorMsg	= 'The customer was not found.'
-			
-		RETURN;
-	END
-	
-	CREATE TABLE #MemBetTicket
-	(
-		TransID 			BIGINT
-		, RefNO 			BIGINT	
-		, custid 			INT
-		, Username 			NVARCHAR(30)
-		, Sporttype 		SMALLINT
-		, Bettype 			SMALLINT
-		, BetID 			BIGINT
-		, Betteam 			NVARCHAR(20)
-		, hdp1 				SMALLMONEY
-		, hdp2 				SMALLMONEY 
-		, OddsType 			TINYINT
-		, Odds 				SMALLMONEY 
-		, modds 			SMALLMONEY
-		, Stake 			MONEY
-		, actual_stake 		MONEY
-		, Status 			NVARCHAR(10)
-		, transdate 		DATETIME
-		, winlostdate 		DATETIME
-		, winlost 			MONEY
-		, awinlost 			MONEY
-		, mwinlost 			MONEY
-		, swinlost 			MONEY
-		, playerComm		MONEY
-		, comm				MONEY
-		, acomm				MONEY
-		, scomm				MONEY
-		, APositiontaking	SMALLMONEY
-		, MPositiontaking	SMALLMONEY
-		, SPositiontaking	SMALLMONEY
-		, Adiscount 		SMALLMONEY
-		, Mdiscount 		SMALLMONEY
-		, Sdiscount 		SMALLMONEY
-		, liveindicator 	BIT
-		, livehomescore 	SMALLINT
-		, liveawayscore 	SMALLINT
-		, finalhomescore 	SMALLINT
-		, finalawayscore 	SMALLINT 
-		, hthomescore 		SMALLINT
-		, htawayscore 		SMALLINT 
-		, IP 				NVARCHAR(15)
-		, LeagueID 			INT
-		, MatchID 			INT
-		, MatchCode 		NVARCHAR(50)
-		, Race 				NVARCHAR(20)
-		, eventdate 		DATETIME
-		, HomeID 			INT
-		, AwayID 			INT 	
-		, Betstatus 		NVARCHAR(50)
-		, isNeutral 		BIT
-		, showtime 			NVARCHAR(50)
-		, betcheck 			NVARCHAR(50)
-		, comstatus 		NVARCHAR(20)
-	)
-	
 	-- CALL to core bet list
-	INSERT INTO #MemBetTicket
 	EXEC [bodb02].[dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 		@CustId 			= @CustId
 		, @username			= @username
-		, @Recommend		= @Recommend
 		, @FromDate			= @FromDate
 		, @ToDate 			= @ToDate
-		, @Language 		= @Language
 	;
-	
-	SELECT *
-	FROM #MemBetTicket tk
-	ORDER BY tk.transid DESC
-	
-	/* get more detail ticket
-		- HR tickets	: ProductID = 2
-		- LC tickets	: ProductID = 4
-		- VS tickets	: ProductID = 5
-	*/
-	
-	DECLARE @BettransDetail TABLE
-	(  
-		refno 				BIGINT  
-		, odds 				SMALLMONEY
-		, stake 			MONEY
-		, status 			NVARCHAR(10)
-		, apositiontaking 	SMALLMONEY
-		, mpositiontaking 	SMALLMONEY
-		, spositiontaking 	SMALLMONEY
-		, bettype 			SMALLINT
-		, betteam 			NVARCHAR (10)
-	)   
-
-	IF ( EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN (2, 4, 5, 12)) )
-	BEGIN
-		-- GATHER bettransm
-		INSERT INTO @BettransDetail
-		SELECT 
-			bm.refno 
-			, bm.odds 
-			, bm.stake
-			, bm.status 
-			, bm.apositiontaking
-			, bm.mpositiontaking 
-			, bm.spositiontaking
-			, bm.bettype
-			, bm.betteam  
-		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-			INNER JOIN #MemBetTicket b 
-			ON bm.refno 		= b.transid
-			INNER JOIN #BettypeMatrix bt 
-			ON b.bettype		= bt.Bettype
-				
-		WHERE bm.CustId			= @CustId
-			AND bt.ProductID 	= 2 -- Racing
-		
-		UNION ALL
-		SELECT 
-			bm.refno 
-			, bm.odds 
-			, bm.stake
-			, bm.status 
-			, bm.apositiontaking
-			, bm.mpositiontaking 
-			, bm.spositiontaking
-			, bm.bettype
-			, bm.betteam  
-		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-			INNER JOIN #MemBetTicket b 
-			ON bm.refno 		= b.refno
-			INNER JOIN #BettypeMatrix bt 
-			ON b.bettype		= bt.Bettype
-		WHERE bm.CustId			= @CustId
-			AND bt.ProductID 	= 5 -- VS
-
-		-- GATHER bettransg
-		INSERT INTO @BettransDetail
-		SELECT 
-			bg.refno 
-			, bg.odds 
-			, bg.stake
-			, bg.status 
-			, bg.apositiontaking
-			, bg.mpositiontaking 
-			, bg.spositiontaking
-			, bg.bettype
-			, bg.betteam 
-		FROM bodb02.dbo.bettransg bg WITH (NOLOCK)
-			INNER JOIN #MemBetTicket b 
-			ON bg.refno 		= b.refno
-			INNER JOIN #BettypeMatrix bt 
-			ON b.bettype		= bt.Bettype
-		WHERE bg.CustId			= @CustId
-			AND bt.ProductID  	= 4 -- Live Casino
-			
-		UNION ALL
-		SELECT 
-			bg.refno 
-			, bg.odds 
-			, bg.stake
-			, bg.status 
-			, bg.apositiontaking
-			, bg.mpositiontaking 
-			, bg.spositiontaking
-			, bg.bettype
-			, bg.betteam 
-		FROM bodb02.dbo.bettransg bg WITH (NOLOCK)
-			INNER JOIN #MemBetTicket b 
-			ON bg.refno 		= b.transid 
-			INNER JOIN #BettypeMatrix bt 
-			ON b.bettype		= bt.Bettype
-		WHERE bg.CustId			= @CustId
-			AND bt.ProductID 	= 12 -- Gold Delux
-
-	END
-	
-	SELECT bd.* 
-	FROM @BettransDetail bd
-	
-	DROP TABLE #MemBetTicket;
 	
 	RETURN;
 END

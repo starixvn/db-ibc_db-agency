@@ -45,11 +45,7 @@ AS
 		
 	Wrapped SP List:
 		- Age_BetList_SelWinLossByDate_Mem
-		- Age_BetList_SelWinLossByDate_Mem_Old
-		- Age_BetList_SelRunningByDate_Mem
-		- Age_BetList_SelAllByDate_Mem
 		- Age_BetList_SelByDayAll_Mem
-		- Age_BetList_SelByDayAll_Mem_Old
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -207,7 +203,7 @@ BEGIN
 			,@UserName		= @UserName
 			,@Recommend		= @Recommend
 			,@FromDate 		= @FromDate
-			,@ToDate 		= @MoveBetsDay		
+			,@ToDate 		= @ToDate		
 	END
 	
 	-- SELECT archived ticket - not supported yet
@@ -301,7 +297,9 @@ BEGIN
 				, b.Status				
 				, b.Transdate
 				, b.winlostdate						
-				, (b.winlost-actual_stake)	AS winlost
+				, CASE WHEN b.bettype IN (23102, 23002, 23202) THEN 0 
+						ELSE (b.winlost-actual_stake) 
+					END	AS winlost
 				, b.awinlost
 				, b.mwinlost
 				, b.swinlost
@@ -378,7 +376,9 @@ BEGIN
 				AND bt.EventType 	= 0
 			
 			/* Keno & GoldDelux: running tickets */
-			IF (EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1)))
+			IF (EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1))
+				AND EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN (8,12))
+			)
 			BEGIN
 				
 				INSERT INTO #MemBetTicket
@@ -456,7 +456,7 @@ BEGIN
 						) AS tmp
 					) AS fnc
 				WHERE b.custid			= @CustID
-					AND b.transdate		BETWEEN @fromdate AND @todate 
+					AND b.winlostdate	BETWEEN @fromdate AND @todate 
 					AND (bt.ProductID	IN (8, 12) AND bt.EventType	= 0)
 			END
 		END
@@ -724,6 +724,7 @@ BEGIN
 		- HR tickets	: ProductID = 2
 		- LC tickets	: ProductID = 4
 		- VS tickets	: ProductID = 5
+		- GD tickets	: ProductID = 12
 	*/
 	
 	DECLARE @BettransDetail TABLE
@@ -737,6 +738,7 @@ BEGIN
 		, spositiontaking 	SMALLMONEY
 		, bettype 			SMALLINT
 		, betteam 			NVARCHAR (10)
+		, transdesc			VARCHAR (300)
 	)   
 
 	IF (EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN (2, 4, 5, 12)) 
@@ -754,6 +756,7 @@ BEGIN
 			, bm.spositiontaking
 			, bm.bettype
 			, bm.betteam  
+			, '' AS transdesc
 		FROM dbo.bettransm bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bm.refno			= b.transid
@@ -773,6 +776,7 @@ BEGIN
 			, bm.spositiontaking
 			, bm.bettype
 			, bm.betteam  
+			, '' AS transdesc
 		FROM dbo.bettransm bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bm.refno			= b.refno
@@ -793,6 +797,7 @@ BEGIN
 			, bg.spositiontaking
 			, bg.bettype
 			, bg.betteam 
+			, bg.transdesc
 		FROM dbo.bettransg bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bg.refno			= b.refno
@@ -812,6 +817,7 @@ BEGIN
 			, bg.spositiontaking
 			, bg.bettype
 			, bg.betteam 
+			, bg.transdesc
 		FROM dbo.bettransg bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bg.refno			= b.transid
@@ -837,6 +843,7 @@ BEGIN
 			, bm.spositiontaking
 			, bm.bettype
 			, bm.betteam  
+			, '' AS transdesc
 		FROM dbo.bettransm14 bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bm.refno			= b.transid
@@ -856,6 +863,7 @@ BEGIN
 			, bm.spositiontaking
 			, bm.bettype
 			, bm.betteam  
+			, '' AS transdesc
 		FROM dbo.bettransm14 bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bm.refno			= b.refno
@@ -876,6 +884,7 @@ BEGIN
 			, bg.spositiontaking
 			, bg.bettype
 			, bg.betteam 
+			, bg.transdesc
 		FROM dbo.bettransg14 bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bg.refno			= b.refno
@@ -895,6 +904,7 @@ BEGIN
 			, bg.spositiontaking
 			, bg.bettype
 			, bg.betteam 
+			, bg.transdesc
 		FROM dbo.bettransg14 bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bg.refno			= b.transid
@@ -920,6 +930,7 @@ BEGIN
 			, bm.spositiontaking
 			, bm.bettype
 			, bm.betteam  
+			, '' AS transdesc
 		FROM DBARC.bodb_archive.dbo.bettransm bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bm.refno			= b.transid
@@ -939,6 +950,7 @@ BEGIN
 			, bm.spositiontaking
 			, bm.bettype
 			, bm.betteam  
+			, '' AS transdesc
 		FROM DBARC.bodb_archive.dbo.bettransm bm WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bm.refno			= b.refno
@@ -959,6 +971,7 @@ BEGIN
 			, bg.spositiontaking
 			, bg.bettype
 			, bg.betteam 
+			, bg.transdesc
 		FROM DBARC.bodb_archive.dbo.bettransg bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bg.refno			= b.refno
@@ -978,6 +991,7 @@ BEGIN
 			, bg.spositiontaking
 			, bg.bettype
 			, bg.betteam 
+			, bg.transdesc
 		FROM DBARC.bodb_archive.dbo.bettransg bg WITH (NOLOCK)
 			INNER JOIN #MemBetTicket b 
 			ON bg.refno			= b.transid
