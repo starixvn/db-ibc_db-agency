@@ -1,0 +1,40 @@
+CREATE PROCEDURE [dbo].[All_BetList_MatchResultGDSel]
+	@TransId BIGINT 
+AS
+/*
+Created: 20150505@Sophia
+Task: Get Result from Betlist for Gold Delux 
+DB: DBAGE/bodb02; DBEXT/bodb02 
+
+Original:   
+  
+Revisions: 	 
+   			
+Param's Explanation: 
+	@TransID: TransId of Bettrans table
+
+*/
+
+BEGIN 
+	SET NOCOUNT ON 
+
+	SELECT	DISTINCT TransDesc
+	FROM	dbo.BettransG WITH (NOLOCK)
+	WHERE	RefNo = @TransId
+	
+END 
+
+GO 
+GRANT EXECUTE ON [dbo].[All_BetList_MatchResultGDSel] TO [bodbDownlineNet]
+GO 
+GRANT EXECUTE ON [dbo].[All_BetList_MatchResultGDSel] TO [bodbExtAccNet]
+GO 
+GRANT EXECUTE ON [dbo].[All_BetList_MatchResultGDSel] TO [bodbDownlineNetView]
+GO 
+GRANT EXECUTE ON [dbo].[All_BetList_MatchResultGDSel] TO [bodbAdminNet]
+GO 
+GRANT EXECUTE ON [dbo].[All_BetList_MatchResultGDSel] TO [bodbLicenseeNet]
+GO
+
+
+ 
