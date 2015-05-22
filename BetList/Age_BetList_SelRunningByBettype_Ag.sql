@@ -1,4 +1,6 @@
-﻿
+﻿USE bodb_AGE
+GO
+
 ALTER PROC [dbo].[Age_BetList_SelRunningByBettype_Ag]
 	@custid int,
 	@bettype int,
@@ -42,6 +44,8 @@ Revisions:
 	- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE
 	- 20140425@Dom: Group TB and FGLG
 	- 20140611@Dom: Support BetRadar  [Redmine: #17148]
+	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
+	- 20150407@Cody: Support 60 BetRadar bettype (186) [Redmine: #32734]
 */
 
 SET NOCOUNT ON
@@ -194,14 +198,24 @@ BEGIN
 	where 
 		b.Recommend=@custid
 		--and b.bettype=@bettype
-		and ( (@bettype=6 AND b.bettype IN(6,126)) OR (@bettype=14 and b.bettype IN(14,127)) OR (@bettype=24 and b.bettype IN(24,151)) OR (@bettype=26 and b.bettype IN(26,145,146)) OR bettype = @bettype )
+		and ( (@bettype=6 AND b.bettype IN(6,126)) 
+		OR (@bettype=14 and b.bettype IN(14,127)) 
+		OR (@bettype=24 and b.bettype IN(24,151,186)) 
+		OR (@bettype=26 and b.bettype IN(26,145,146,170,188)) 
+		OR bettype = @bettype )
 		--and b.status in ('waiting','running')
 		and b.statusID in (0,1)
 		
 	order by b.status, b.transid
 END
 
-IF @bettype between 1101 and 1199
+
+DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+INSERT INTO @SportBettype
+EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
+--IF @bettype between 1101 and 1199
+IF EXISTS(SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 4 AND bettype = @bettype)
 BEGIN
 	--get data from bettransg for bettype 1101
 	SELECT 

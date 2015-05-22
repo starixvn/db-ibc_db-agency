@@ -15,6 +15,8 @@ Revision:
  - 20130805@Lukas: hide live casino game
  - 20131121@Kathy: Add Virtual Greyhounds (182), Virtual Motor Racing (184) [Redmine:#7234]
  - 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185) 
+ - 20150414@Sophia: Support BetRadar
+ - 20150416@Sophia: Condition of showing Running match different between Sporting solution and BetRadar
 */  
   
 SET NOCOUNT ON  
@@ -34,12 +36,24 @@ FROM sports WITH (nolock)
 	
 		LEFT JOIN match_remark mr ON match.matchid = mr.matchid         
 		INNER JOIN league l with(nolock) on l.leagueid = match.leagueid
+		LEFT JOIN ( SELECT DISTINCT MatchID FROM dbo.ResultDetail R WITH (NOLOCK) WHERE SettlementStatusID > 0
+					UNION ALL  
+					SELECT DISTINCT MatchID FROM dbo.ResultDetail14 R WITH (NOLOCK) WHERE SettlementStatusID > 0
+					) SS
+				ON match.Matchid = SS.MatchId AND Match.sporttype = 5
+		LEFT JOIN ( SELECT DISTINCT MatchID FROM dbo.ResultDetail R WITH (NOLOCK) WHERE SettlementStatusID > 0 AND ResourceID NOT IN ('00','01','08')
+					UNION ALL  
+					SELECT DISTINCT MatchID FROM dbo.ResultDetail14 R WITH (NOLOCK) WHERE SettlementStatusID > 0 AND ResourceID NOT IN ('00','01','08')
+					) BR
+				ON match.Matchid = BR.MatchId AND Match.sporttype = 1
 WHERE   
 		match.eventdate >= @EventDate  
 		AND match.eventdate <= @toDate  
 		AND ( match.eventstatus NOT IN ('internal','closed','running')  
-		OR ( mr.IsPending=1 AND match.eventstatus IN ('running','closed') )  
-		OR ( mr.IsHTCal = 1 AND match.eventstatus ='running')  
+			OR ( mr.IsPending=1 AND match.eventstatus IN ('running','closed') )  
+			OR ( mr.IsHTCal = 1 AND match.eventstatus ='running')  
+			OR ( ISNULL(SS.MatchID,0) <> 0 AND match.eventstatus = 'running')  --- condition for Sportting Solution show running Match but settled least one type
+			OR ( ISNULL(BR.MatchID,0) <> 0 AND match.eventstatus = 'running')  --- condition for BetRadar show running Match but settled least one type
 		)  
 		AND sports.sporttype NOT IN (201,162)
 		AND l.isTest= CASE WHEN @isshowall = 1 THEN l.isTest ELSE @isshowall END 

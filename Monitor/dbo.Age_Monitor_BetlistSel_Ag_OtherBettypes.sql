@@ -14,8 +14,8 @@ BEGIN
 		- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
 		- 20120827@Jamie: Add actual_stake for System Parlay Bet list 
 		- 20130222@Elodie: Get custid value
-		- 20130222@Elodie: Get oddsid value to use for Virtual HR
-		
+		- 20130222@Elodie: Get oddsid value to use for Virtual HR		
+		- 20150302@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	Parameter's Explanation:
 		- @custid : agent's ID
 		- @transid: lastest transid 
@@ -51,7 +51,8 @@ BEGIN
 		b.betteam,				
 		b.IP,
 		CONVERT(BIT,0) AS isNeutral,			
-		b.oddstype
+		b.oddstype,
+		ISNULL(b.Betcheck,'') Betcheck
 	FROM dbo.bettrans b WITH(NOLOCK)				
 	WHERE b.recommend = @custid 
 		AND b.statusID BETWEEN 0 AND 1	

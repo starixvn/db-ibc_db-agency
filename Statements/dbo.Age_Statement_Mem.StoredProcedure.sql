@@ -55,25 +55,32 @@ DECLARE @ABSDate DATETIME
 SET @ABSDate = '2011-09-01'
 
 DECLARE @bet TABLE (  
-	winlostdate DATETIME, bettype SMALLINT, statusID TINYINT,  
-	transdate DATETIME, transdesc NVARCHAR(300),  
-	stake MONEY, actual_stake MONEY, winlost MONEY, playercomm MONEY) 
+	winlostdate		DATETIME
+	,bettype		SMALLINT
+	,statusID		TINYINT
+	,transdate		DATETIME
+	,transdesc		NVARCHAR(300)
+	,stake			MONEY
+	,actual_stake	MONEY
+	,winlost		MONEY
+	,playercomm		MONEY
+) 
 
 DECLARE @Data TABLE (
-	OrderKey	TINYINT, 
-	winlostdate DATETIME,  
-	transtype	NVARCHAR(10), 
-	transdesc	NVARCHAR(300),  
-	TurnOver	MONEY, 
-	totalAmt	MONEY, 	 --Debit < 0 and Credit >0  
-	Commission	MONEY
+	OrderKey		TINYINT
+	,winlostdate	DATETIME
+	,transtype		NVARCHAR(10)
+	,transdesc		NVARCHAR(300)  
+	,TurnOver		MONEY
+	,totalAmt		MONEY 	 --Debit < 0 and Credit >0  
+	,Commission		MONEY
 )  
 
-DECLARE @f_date DATETIME,
-		@t_date DATETIME
+DECLARE @f_date DATETIME
+		,@t_date DATETIME
 
-SELECT @f_date = @fromdate,
-		@t_date = @todate
+SELECT @f_date = @fromdate
+		,@t_date = @todate
 		
 IF @ToDate >= @BalanceUpDay
 BEGIN 

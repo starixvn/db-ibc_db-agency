@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossByBettypeMatch_Ag]
+﻿USE bodb02
+GO
+
+ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossByBettypeMatch_Ag]
 	@MatchID int,
 	@custid int=null, --agentID
 	@bettype int,
@@ -10,7 +13,7 @@ AS
 /*
 Created: 
 Task : Betlist
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Original:BetsSelBetListMatchWinLoss_Ag
 Revisions:
     - 200712/11@Phuc: For API
@@ -32,6 +35,8 @@ Revisions:
 						Add Sub table for Live Casino
 	- 20120926@Sophia: Get comstatus
 	- 20141016@Sophia: support Sporting solution-grouped bettype 
+	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
+	- 20150331@Cody: Aplly sport bettype matrix [Redmine: #30169]
 */
 
 
@@ -87,6 +92,7 @@ BEGIN
 		b.betid,
 		m.showtime,
 		b.refno,
+		b.betcheck,
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM
 		bettrans b with (nolock) 
@@ -101,7 +107,8 @@ BEGIN
 		b.status, b.transid
 		
 	 
-	IF @bettype between 1101 and 1199
+	-- IF @bettype between 1101 and 1199
+	IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)
 	BEGIN
 		--get data from bettransg for bettype 1101
 		SELECT 
@@ -169,6 +176,7 @@ BEGIN
 		b.betid,
 		m.showtime,
 		b.refno,
+		b.betcheck,
 		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 	FROM
 		bettrans14 b with (nolock) 
@@ -182,7 +190,8 @@ BEGIN
 	ORDER BY
 		b.status, b.transid
 		
-IF @bettype between 1101 and 1199
+--IF @bettype between 1101 and 1199
+IF EXISTS(SELECT TOP 1 1 FROM SportBettypeMatrix WITH(NOLOCK) WHERE ProductID = 4 AND bettype = @bettype)	
 	BEGIN
 		--get data from bettransg for bettype 1101
 		SELECT 

@@ -308,7 +308,8 @@ BEGIN
 	    ci.DisableHRFixedOdds,
 	    ci.HideKeno,
 	    ci.DisableEsports,
-		ci.DisableGoldDeluxe
+		ci.DisableGoldDeluxe,
+		ci.HideGoldDeluxe
     FROM customer c WITH (NOLOCK)
 	    INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
     WHERE c.custid = @custid
