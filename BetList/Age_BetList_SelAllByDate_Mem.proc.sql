@@ -6,7 +6,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem_xtest]
+ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
 	@custid int=null,
 	@AgID int=0,
 	@FromDate datetime,
@@ -94,7 +94,7 @@ BEGIN
 	
 	-- DO filtering bettype by product
 	DELETE bt
-	FROM #BettypeMatrix bt
+	FROM @SportBettype bt
 	WHERE ProductID		= CASE WHEN @ShowSB					= 0 	THEN 1 END
 		OR ProductID	= CASE WHEN @ShowRB					= 0 	THEN 2 END
 		OR ProductID	= CASE WHEN @ShowNG					= 0 	THEN 3 END
