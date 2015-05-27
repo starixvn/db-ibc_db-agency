@@ -132,14 +132,16 @@ BEGIN
 		ON b.bettype	= bt.bettype
 		INNER JOIN #TransStatus stt
 		ON b.statusid	= stt.statusid
-	WHERE	b.transdate		BETWEEN @fromdate AND @todate 
-			AND	b.recommend		= @Recommend 
-			AND	b.custid		= @CustID
+	WHERE b.transdate	BETWEEN @fromdate AND @todate 
+		AND	b.recommend	= @Recommend 
+		AND	b.custid	= @CustID
 	
-	/* Keno & GoldDelux: running tickets */
-	IF (EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1))
-		AND EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN (8,12))
-	)
+	/* running tickets
+		- Keno 			: ProductId = 8
+		- GoldDelux		: ProductId = 12
+		- Metric Gaming	: Bettype(801-899)
+	*/
+	IF (EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1)))
 	BEGIN
 		INSERT INTO #tempCust
 		SELECT 
@@ -156,7 +158,11 @@ BEGIN
 			ON b.statusID	= st.StatusID
 		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
 			AND	b.custid		= @CustID
-			AND	bt.ProductId	IN (8, 12)
+			AND	(
+				bt.ProductId	IN (8, 12) 
+				OR bt.bettype BETWEEN 801 AND 899
+			)
+				
 	END
 	
 	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
