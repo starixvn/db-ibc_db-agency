@@ -46,6 +46,11 @@ AS
 	Wrapped SP List:
 		- Age_BetList_SelWinLossByDate_Mem
 		- Age_BetList_SelByDayAll_Mem
+		
+	Scope of tickets:
+		- bettrans	: All products - all status
+		- translog	: Keno & GD - running status only
+		- bettrans14: [MoveBetDay] All product - all status
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -183,9 +188,13 @@ BEGIN
 			AND	b.recommend	= @Recommend 
 			AND	b.custid	= @CustID
 		
-		/* Keno & GoldDelux: running tickets */
-		IF (EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1))
-			AND EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN (8,12))
+		/* 	select running tickets
+			- Keno 			: ProductId = 8
+			- GoldDelux		: ProductId = 12
+			- Sportsbook	: Metric Gaming bettype(801-899)
+		*/
+		IF (
+			EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1))
 		)
 		BEGIN
 			INSERT INTO #tempCust
@@ -198,15 +207,18 @@ BEGIN
 				, 0 AS WhTicket
 			FROM dbo.translog AS b WITH (NOLOCK)
 				INNER JOIN #BettypeMatrix bt 
-				ON b.gameid		= bt.Bettype
+				ON b.gameid			= bt.Bettype
 				INNER JOIN #TransStatus st
-				ON b.statusID	= st.StatusID
+				ON b.statusID		= st.StatusID
 			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-				AND b.custid	= @CustID
+				AND b.custid		= @CustID
+				AND	(bt.ProductId	IN (8, 12)
+					OR bt.Bettype BETWEEN 801 AND 899
+				)
 		END
 	END
-	select @@ROWCOUNT
-	CREATE CLUSTERED INDEX [CIXtempCust] ON #tempCust (WhTicket,eventType)
+	
+	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
 	

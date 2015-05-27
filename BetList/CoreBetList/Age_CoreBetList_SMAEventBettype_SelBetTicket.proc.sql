@@ -94,6 +94,7 @@ BEGIN
 		, custid 		INT 
 		, productId 	INT 
 		, eventType		TINYINT 
+		, WhTicket		TINYINT
 	)
 	
 	CREATE TABLE #MemBetTicket
@@ -152,102 +153,194 @@ BEGIN
 		, comstatus 		NVARCHAR(20)
 	)
 	
-	IF( @IsBet14 = 1 )
+	IF( @IsBet14 = 1 ) -- from bettrans14
 	BEGIN
-		INSERT INTO #MemBetTicket
-		EXEC [dbo].[Age_CoreBetList_SMAEventBettype14_SelBetTicket]
-			@CustId				= @CustId
-			, @RoleId			= @RoleId
-			, @MatchId 			= @MatchId
+		IF ( @roleid = 1 )
+		BEGIN
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,2 AS WhTicket
+			FROM dbo.bettrans14 b WITH(nolock)
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.custid 		= @custid
+				AND b.matchid	= @matchid
+		END
 		
-		GOTO FetchResult;
+		IF ( @roleid = 2 )
+		BEGIN
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,2 AS WhTicket
+			FROM dbo.bettrans14 b WITH(nolock)
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.recommend	= @custid
+				AND b.matchid	= @matchid
+		END
+		
+		IF ( @roleid = 3 )
+		BEGIN
+			WITH CteRecommend ( custid )
+			AS (
+				SELECT custid
+				FROM dbo.Customer c WITH(NOLOCK)
+				WHERE c.mrecommend 	= @custid
+					AND c.roleid 	= 2
+			)
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,2 AS WhTicket
+			FROM dbo.bettrans14 b WITH(nolock)
+				INNER JOIN CteRecommend c
+				ON b.recommend = c.custid
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.matchid		= @matchid
+		END
+		
+		IF ( @roleid = 4 )
+		BEGIN
+			WITH CteRecommend ( custid )
+			AS (
+				SELECT custid
+				FROM dbo.Customer c WITH(NOLOCK)
+				WHERE c.srecommend 	= @custid
+					AND c.roleid 	= 2
+			)
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,2 AS WhTicket
+			FROM dbo.bettrans14 b WITH(nolock)
+				INNER JOIN CteRecommend c
+				ON b.recommend = c.custid
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.matchid		= @matchid
+		END
 		
 	END
-
-	IF ( @roleid = 1 )
+	ELSE -- from bettrans
 	BEGIN
-		INSERT INTO #tempCust
-		SELECT b.transid
-			,b.refno
-			,b.custid
-			,bt.ProductId
-			,bt.EventType
-		FROM dbo.bettrans b WITH(nolock)
-			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
-			ON b.statusid	= stt.statusid
-		WHERE b.custid 		= @custid
-			AND b.matchid	= @matchid
+		IF ( @roleid = 1 )
+		BEGIN
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,1 AS WhTicket
+			FROM dbo.bettrans b WITH(nolock)
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.custid 		= @custid
+				AND b.matchid	= @matchid
+		END
+		
+		IF ( @roleid = 2 )
+		BEGIN
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,1 AS WhTicket
+			FROM dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.recommend	= @custid
+				AND b.matchid	= @matchid
+		END
+		
+		IF ( @roleid = 3 )
+		BEGIN
+			WITH CteRecommend ( custid )
+			AS (
+				SELECT custid
+				FROM dbo.Customer c WITH(NOLOCK)
+				WHERE c.mrecommend 	= @custid
+					AND c.roleid 	= 2
+			)
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,1 AS WhTicket
+			FROM dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN CteRecommend c
+				ON b.recommend = c.custid
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.matchid		= @matchid
+		END
+		
+		IF ( @roleid = 4 )
+		BEGIN
+			WITH CteRecommend ( custid )
+			AS (
+				SELECT custid
+				FROM dbo.Customer c WITH(NOLOCK)
+				WHERE c.srecommend 	= @custid
+					AND c.roleid 	= 2
+			)
+			INSERT INTO #tempCust
+			SELECT b.transid
+				,b.refno
+				,b.custid
+				,bt.ProductId
+				,bt.EventType
+				,1 AS WhTicket
+			FROM dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN CteRecommend c
+				ON b.recommend = c.custid
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+				INNER JOIN #TransStatus stt
+				ON b.statusid	= stt.statusid
+			WHERE b.matchid		= @matchid
+		END
 	END
+	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
+	--CALL to get ticket info
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
 	
-	IF ( @roleid = 2 )
-	BEGIN
-		INSERT INTO #tempCust
-		SELECT b.transid
-			,b.refno
-			,b.custid
-			,bt.ProductId
-			,bt.EventType
-		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
-			ON b.statusid	= stt.statusid
-		WHERE b.recommend	= @custid
-			AND b.matchid	= @matchid
-	END
+	DROP TABLE #tempCust;
 	
-	IF ( @roleid = 3 )
-	BEGIN
-		WITH CteRecommend ( custid )
-		AS (
-			SELECT custid
-			FROM dbo.Customer c WITH(NOLOCK)
-			WHERE c.mrecommend 	= @custid
-				AND c.roleid 	= 2
-		)
-		INSERT INTO #tempCust
-		SELECT b.transid
-			,b.refno
-			,b.custid
-			,bt.ProductId
-			,bt.EventType
-		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN CteRecommend c
-			ON b.recommend = c.custid
-			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
-			ON b.statusid	= stt.statusid
-		WHERE b.matchid		= @matchid
-	END
-	
-	IF ( @roleid = 4 )
-	BEGIN
-		WITH CteRecommend ( custid )
-		AS (
-			SELECT custid
-			FROM dbo.Customer c WITH(NOLOCK)
-			WHERE c.srecommend 	= @custid
-				AND c.roleid 	= 2
-		)
-		INSERT INTO #tempCust
-		SELECT b.transid
-			,b.refno
-			,b.custid
-			,bt.ProductId
-			,bt.EventType
-		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN CteRecommend c
-			ON b.recommend = c.custid
-			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
-			ON b.statusid	= stt.statusid
-		WHERE b.matchid		= @matchid
-	END
-	
+	RETURN;
 	/* normal tickets 
 		- SB		: ProductID = 1
 		- NG		: ProductID = 3

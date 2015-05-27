@@ -192,6 +192,84 @@ BEGIN
 			AND b.ProductId		= 12
 	END
 	
+	
+	IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3))
+	BEGIN
+		--SELECT bettransm14
+		INSERT INTO #BettransDetail
+		SELECT 
+			bm.refno 
+			, bm.odds 
+			, bm.stake
+			, bm.status 
+			, bm.apositiontaking
+			, bm.mpositiontaking 
+			, bm.spositiontaking
+			, bm.bettype
+			, bm.betteam  
+			, '' AS transdesc
+		FROM bodb_archive.dbo.bettransm bm WITH (NOLOCK)
+			INNER JOIN #tempCust b 
+			ON bm.refno			= b.transid
+		WHERE bm.custid			= b.custid
+			AND b.ProductId		= 2
+			
+		UNION ALL
+		SELECT 
+			bm.refno 
+			, bm.odds 
+			, bm.stake
+			, bm.status 
+			, bm.apositiontaking
+			, bm.mpositiontaking 
+			, bm.spositiontaking
+			, bm.bettype
+			, bm.betteam  
+			, '' AS transdesc
+		FROM bodb_archive.dbo.bettransm bm WITH (NOLOCK)
+			INNER JOIN #tempCust b 
+			ON bm.refno			= b.refno
+		WHERE bm.custid			= b.custid
+			AND b.ProductId		= 5
+
+		-- SELECT bettransg14
+		INSERT INTO #BettransDetail
+		SELECT 
+			bg.refno 
+			, bg.odds 
+			, bg.stake
+			, bg.status 
+			, bg.apositiontaking
+			, bg.mpositiontaking 
+			, bg.spositiontaking
+			, bg.bettype
+			, bg.betteam 
+			, '' AS transdesc
+		FROM bodb_archive.dbo.bettransg14 bg WITH (NOLOCK)
+			INNER JOIN #tempCust b
+			ON bg.refno			= b.refno
+		WHERE bg.custid			= b.custid
+			AND b.ProductId		= 4
+
+		UNION ALL
+		SELECT 
+			bg.refno 
+			, bg.odds 
+			, bg.stake
+			, bg.status 
+			, bg.apositiontaking
+			, bg.mpositiontaking 
+			, bg.spositiontaking
+			, bg.bettype
+			, bg.betteam 
+			, bg.transdesc
+		FROM bodb_archive.dbo.bettransg14 bg WITH (NOLOCK)
+			INNER JOIN #tempCust b
+			ON bg.refno			= b.transid
+		WHERE bg.custid			= b.custid
+			AND b.ProductId		= 12
+	END
+	
 	RETURN;
 END
 GO

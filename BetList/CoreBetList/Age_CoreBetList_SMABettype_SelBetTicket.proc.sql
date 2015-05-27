@@ -66,79 +66,25 @@ BEGIN
 		SELECT *
 		FROM CteBT bt
 	END
-	
 	CREATE TABLE #tempCust 
 	( 
 		transid			BIGINT
+		, refno			BIGINT
 		, custid 		INT 
-		, ProductID		INT
-		, EventType		TINYINT
+		, productId 	INT 
+		, eventType		TINYINT
+		, WhTicket		TINYINT
 	)
-	
-	CREATE TABLE #MemBetTicket
-	(
-		TransID 			BIGINT
-		, RefNO 			BIGINT	
-		, custid 			INT
-		, Username 			NVARCHAR(30)
-		, Sporttype 		SMALLINT
-		, Bettype 			SMALLINT
-		, BetID 			BIGINT
-		, Betteam 			NVARCHAR(20)
-		, hdp1 				SMALLMONEY
-		, hdp2 				SMALLMONEY 
-		, OddsType 			TINYINT
-		, Odds 				SMALLMONEY 
-		, modds 			SMALLMONEY
-		, Stake 			MONEY
-		, actual_stake 		MONEY
-		, Status 			NVARCHAR(10)
-		, transdate 		DATETIME
-		, winlostdate 		DATETIME
-		, winlost 			MONEY
-		, awinlost 			MONEY
-		, mwinlost 			MONEY
-		, swinlost 			MONEY
-		, playerComm		MONEY
-		, comm				MONEY
-		, acomm				MONEY
-		, scomm				MONEY
-		, APositiontaking	SMALLMONEY
-		, MPositiontaking	SMALLMONEY
-		, SPositiontaking	SMALLMONEY
-		, Adiscount 		SMALLMONEY
-		, Mdiscount 		SMALLMONEY
-		, Sdiscount 		SMALLMONEY
-		, liveindicator 	BIT
-		, livehomescore 	SMALLINT
-		, liveawayscore 	SMALLINT
-		, finalhomescore 	SMALLINT
-		, finalawayscore 	SMALLINT 
-		, hthomescore 		SMALLINT
-		, htawayscore 		SMALLINT 
-		, IP 				NVARCHAR(15)
-		, LeagueID 			INT
-		, MatchID 			INT
-		, MatchCode 		NVARCHAR(50)
-		, Race 				NVARCHAR(20)
-		, eventdate 		DATETIME
-		, HomeID 			INT
-		, AwayID 			INT 	
-		, Betstatus 		NVARCHAR(50)
-		, isNeutral 		BIT
-		, showtime 			NVARCHAR(50)
-		, betcheck 			NVARCHAR(50)
-		, comstatus 		NVARCHAR(20)
-	)
-	
 	-- MEMBER
 	IF ( @roleid = 1 )
 	BEGIN
 		INSERT INTO #tempCust
-		SELECT b.transid
+		SELECT b.transid	
+			,b.refno
 			,b.custid
 			,bt.ProductId
 			,bt.EventType
+			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(nolock)			
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype	= bt.bettype
@@ -151,10 +97,12 @@ BEGIN
 	IF ( @roleid = 2 )
 	BEGIN
 		INSERT INTO #tempCust
-		SELECT b.transid
+		SELECT b.transid	
+			,b.refno
 			,b.custid
 			,bt.ProductId
 			,bt.EventType
+			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid	
@@ -169,10 +117,12 @@ BEGIN
 	IF ( @roleid = 3 )
 	BEGIN
 		INSERT INTO #tempCust
-		SELECT b.transid
+		SELECT b.transid	
+			,b.refno
 			,b.custid
 			,bt.ProductId
 			,bt.EventType
+			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(nolock)
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid	
@@ -187,10 +137,12 @@ BEGIN
 	IF ( @roleid = 4 )
 	BEGIN
 		INSERT INTO #tempCust
-		SELECT b.transid
+		SELECT b.transid	
+			,b.refno
 			,b.custid
 			,bt.ProductId
 			,bt.EventType
+			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(nolock)
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid	
@@ -201,6 +153,14 @@ BEGIN
 		WHERE c.srecommend 	= @custid
 			AND c.roleid 	= 2
 	END
+	
+	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
+	--CALL to get ticket info
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+	
+	DROP TABLE #tempCust;
+	
+	RETURN;
 	/*	- Mix & System Parlay	: ProductId = 1
 		- P2P tickets			: ProductId = 9
 		- Casino				: ProductId = 6
