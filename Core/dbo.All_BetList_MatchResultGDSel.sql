@@ -18,9 +18,26 @@ Param's Explanation:
 BEGIN 
 	SET NOCOUNT ON 
 
-	SELECT	DISTINCT TransDesc
-	FROM	dbo.BettransG WITH (NOLOCK)
-	WHERE	RefNo = @TransId
+	IF EXISTS (SELECT TOP 1 1 FROM dbo.Bettrans WITH (NOLOCK) WHERE TransId = @TransId)
+	BEGIN 
+		SELECT	DISTINCT TransDesc
+		FROM	dbo.BettransG WITH (NOLOCK)
+		WHERE	RefNo = @TransId
+		END 
+	ELSE 
+	IF EXISTS (SELECT TOP 1 1 FROM dbo.Bettrans14 WITH (NOLOCK) WHERE TransId = @TransId)
+	BEGIN
+		SELECT	DISTINCT TransDesc
+		FROM	dbo.BettransG14 WITH (NOLOCK)
+		WHERE	RefNo = @TransId
+	END
+	ELSE
+	IF EXISTS (SELECT TOP 1 1 FROM DBARC.bodb_archive.dbo.Bettrans_BK WITH (NOLOCK) WHERE TransId = @TransId)
+	BEGIN 
+		SELECT	DISTINCT TransDesc
+		FROM	DBARC.bodb_archive.dbo.BettransG WITH (NOLOCK)
+		WHERE	RefNo = @TransId
+	END
 	
 END 
 
