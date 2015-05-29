@@ -424,6 +424,7 @@ BEGIN
 		- HR tickets	: ProductID = 2
 		- LC tickets	: ProductID = 4
 		- VS tickets	: ProductID = 5
+		- GD tickets	: ProductID = 12
 	*/
 	
 	DECLARE @BettransDetail TABLE
@@ -437,6 +438,7 @@ BEGIN
 		, spositiontaking 	SMALLMONEY
 		, bettype 			SMALLINT
 		, betteam 			NVARCHAR (10)
+		, transdesc			VARCHAR (300)
 	)   
 	
 	IF EXISTS(SELECT TOP 1 1 FROM #BettypeMatrix WHERE ProductID IN( 4 ))
@@ -445,42 +447,82 @@ BEGIN
 		BEGIN
 			INSERT INTO @BettransDetail
 			SELECT 
-				bg.refno, 
-				bg.odds, 
-				bg.stake,
-				bg.status ,
-				bg.apositiontaking, 
-				bg.mpositiontaking, 
-				bg.spositiontaking,
-				bg.bettype,
-				bg.betteam  
+				bg.refno 
+				, bg.odds 
+				, bg.stake
+				, bg.status 
+				, bg.apositiontaking
+				, bg.mpositiontaking 
+				, bg.spositiontaking
+				, bg.bettype
+				, bg.betteam 
+				, '' AS transdesc
 			FROM dbo.bettransg bg with (NOLOCK)
 				INNER JOIN #MemBetTicket b 
 				ON bg.refno 	= B.refno
 				INNER JOIN #BettypeMatrix bt
 				ON b.bettype 	= bt.bettype
-			WHERE bt.ProductId 	IN (4)
+			WHERE bt.ProductId 	= 4
+			
+			UNION ALL
+			SELECT 
+				bg.refno 
+				, bg.odds 
+				, bg.stake
+				, bg.status 
+				, bg.apositiontaking
+				, bg.mpositiontaking 
+				, bg.spositiontaking
+				, bg.bettype
+				, bg.betteam 
+				, bg.transdesc
+			FROM dbo.bettransg bg with (NOLOCK)
+				INNER JOIN #MemBetTicket b 
+				ON bg.refno 	= b.transid
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype 	= bt.bettype
+			WHERE bt.ProductId 	= 12
 		END
 		
 		IF (@IsBet14 = 1)
 		BEGIN
 			INSERT INTO @BettransDetail
 			SELECT 
-				bg.refno, 
-				bg.odds, 
-				bg.stake,
-				bg.status ,
-				bg.apositiontaking, 
-				bg.mpositiontaking, 
-				bg.spositiontaking,
-				bg.bettype,
-				bg.betteam  
+				bg.refno 
+				, bg.odds 
+				, bg.stake
+				, bg.status 
+				, bg.apositiontaking
+				, bg.mpositiontaking 
+				, bg.spositiontaking
+				, bg.bettype
+				, bg.betteam 
+				, '' AS transdesc 
 			FROM dbo.bettransg14 bg with (NOLOCK)
 				INNER JOIN #MemBetTicket b 
-				ON bg.refno 	= B.refno
+				ON bg.refno 	= b.refno
 				INNER JOIN #BettypeMatrix bt
-				ON b.bettype = bt.bettype
-			WHERE bt.ProductId 	IN (4)
+				ON b.bettype 	= bt.bettype
+			WHERE bt.ProductId 	= 4
+			
+			UNION ALL
+			SELECT 
+				bg.refno 
+				, bg.odds 
+				, bg.stake
+				, bg.status 
+				, bg.apositiontaking
+				, bg.mpositiontaking 
+				, bg.spositiontaking
+				, bg.bettype
+				, bg.betteam 
+				, bg.transdesc
+			FROM dbo.bettransg14 bg with (NOLOCK)
+				INNER JOIN #MemBetTicket b 
+				ON bg.refno 	= transid
+				INNER JOIN #BettypeMatrix bt
+				ON b.bettype	= bt.bettype
+			WHERE bt.ProductId 	= 12
 		END
 	END
 	
