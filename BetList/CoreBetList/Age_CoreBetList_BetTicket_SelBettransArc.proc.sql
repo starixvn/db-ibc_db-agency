@@ -1,4 +1,4 @@
-USE [bodb02]
+USE [bodb_archive]
 GO
 /****** Object:  StoredProcedure [dbo].[Age_CoreBetList_Mem_SelBetTicket]    Script Date: 5/11/2015 10:31:30 AM ******/
 SET ANSI_NULLS ON
@@ -25,7 +25,18 @@ BEGIN
 	SET NOCOUNT ON;
 	
 	-- CHECK for existing table bettrans
-	IF (OBJECT_ID('bodb_archive.dbo.bettrans', 'U') IS NULL ) RETURN
+	IF (OBJECT_ID('bodb_archive.dbo.bettrans_bk', 'U') IS NULL ) RETURN
+	
+	CREATE TABLE #custInfo (
+		CustId 		INT
+		, Username 	NVARCHAR(30)
+	);
+	INSERT INTO #custInfo
+	SELECT c.CustId, c.Username
+	FROM bodb02.dbo.custinfo c WITH(NOLOCK)
+		INNER JOIN #tempCust t 
+		ON c.custid = t.custid
+	GROUP BY c.custid, c.username
 	
 	-- CHECK for selecting from betrans_bk
 	IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3))
@@ -50,7 +61,7 @@ BEGIN
 				END	AS transid
 				, b.refno
 				, b.custid
-				, b.Username
+				, ci.username
 				, CASE	WHEN c.ProductID = 9 THEN 253 
 						WHEN c.ProductID = 6 THEN 251
 						WHEN c.ProductID = 7 THEN 252
@@ -79,6 +90,7 @@ BEGIN
 						THEN b.OddsType
 					ELSE 0
 				END		AS OddsType
+				, b.oddsid				
 				, CASE WHEN c.ProductID IN ( 1, 8 )
 							THEN b.Odds 
 						ELSE 0 
@@ -106,7 +118,7 @@ BEGIN
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -140,7 +152,7 @@ BEGIN
 				, 0		AS AwayID		
 				, 0		AS Betstatus
 				, CONVERT(BIT,0) AS IsNeutral
-				
+				, '' AS Placing
 				, '' 	AS showtime
 				, CASE WHEN c.ProductID IN ( 9, 12 ) 
 							AND b.bettype IN ( 1000,1701,1702 )
@@ -166,6 +178,8 @@ BEGIN
 						SELECT '' AS GameId, '' AS ChoiceId 
 					) AS tmp
 				) AS fnc
+				INNER JOIN #custInfo ci
+				ON b.custid 		= ci.custid
 			WHERE	c.WhTicket 		= 3
 				AND c.EventType 	= 0
 		END
@@ -182,7 +196,7 @@ BEGIN
 				b.transid
 				, b.refno
 				, b.custid
-				, b.username
+				, ci.username
 				, m.Sporttype
 				, b.Bettype
 				, ISNULL(b.BetID,0)
@@ -195,6 +209,7 @@ BEGIN
 				END		AS hdp2
 
 				, b.OddsType 
+				, b.oddsid				
 				, b.odds 
 				, b.modds
 				, b.stake 
@@ -213,7 +228,7 @@ BEGIN
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -236,6 +251,7 @@ BEGIN
 				, m.AwayID 		
 				, m.Betstatus
 				, ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
+				, '' AS Placing
 				, ISNULL(m.showtime,'') AS showtime
 				, CASE WHEN (c.ProductId = 1 AND b.bettype IN (216,217)) 
 						THEN b.betcheck 
@@ -256,7 +272,8 @@ BEGIN
 				INNER JOIN #tempCust c 
 				ON b.transid		= c.transid
 					AND b.custid	= c.custid
-				
+				INNER JOIN #custInfo ci
+				ON b.custid 		= ci.custid
 			WHERE c.WhTicket 		= 3
 				AND c.EventType 	= 1
 		END
@@ -271,7 +288,7 @@ BEGIN
 				b.transid
 				, b.refno
 				, b.custid
-				, b.username
+				, ci.username
 				, l.sporttype
 				, b.bettype
 				, ISNULL(b.BetID,0)
@@ -279,6 +296,7 @@ BEGIN
 				, 0 AS hdp1 
 				, 0 AS hdp2 
 				, 0 AS OddsType
+				, b.oddsid				
 				, b.Odds
 				, b.modds
 				, b.Stake 
@@ -298,7 +316,7 @@ BEGIN
 				, b.APositiontaking			
 				, b.MPositiontaking			
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -320,6 +338,7 @@ BEGIN
 				, 0 AS AwayID		
 				, 0 AS Betstatus
 				, CONVERT(BIT,0) AS IsNeutral
+				, '' AS Placing
 				, '' AS showtime
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus				
@@ -333,6 +352,8 @@ BEGIN
 				INNER JOIN #tempCust c 
 				ON b.transid		= c.transid
 					AND b.custid	= c.custid
+				INNER JOIN #custInfo ci
+				ON b.custid 		= ci.custid
 			WHERE c.WhTicket 		= 3
 				AND c.EventType		= 2
 		END
@@ -344,7 +365,7 @@ BEGIN
 				b.transid
 				, b.refno
 				, b.custid
-				, b.username 
+				, ci.username 
 				, r.Sporttype
 				, b.Bettype
 				, ISNULL(b.BetID,0)
@@ -352,6 +373,7 @@ BEGIN
 				, b.hdp1
 				, b.hdp2
 				, 0 AS OddsType
+				, b.oddsid				
 				, b.odds
 				, b.modds
 				, b.Stake 
@@ -370,7 +392,7 @@ BEGIN
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -393,6 +415,7 @@ BEGIN
 				, 0 AS awayID		
 				, '' AS Betstatus
 				, CONVERT(BIT,0) AS IsNeutral	
+				, o.Placing
 				, r.EventTime AS showtime
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
@@ -406,7 +429,8 @@ BEGIN
 				INNER JOIN #tempCust c 
 				ON b.transid		= c.transid
 					AND b.custid	= c.custid
-
+				INNER JOIN #custInfo ci
+				ON b.custid 		= ci.custid
 			WHERE c.WhTicket 		= 3
 				AND c.EventType		= 3
 		END

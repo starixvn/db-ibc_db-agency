@@ -75,6 +75,7 @@ BEGIN
 						THEN b.OddsType
 					ELSE 0
 				END		AS OddsType
+				, b.oddsid				
 				, CASE WHEN c.ProductID IN ( 1, 8 )
 							THEN b.Odds 
 						ELSE 0 
@@ -102,7 +103,7 @@ BEGIN
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -136,7 +137,7 @@ BEGIN
 				, 0		AS AwayID		
 				, 0		AS Betstatus
 				, CONVERT(BIT,0) AS IsNeutral
-				
+				, '' AS Placing
 				, '' 	AS showtime
 				, CASE WHEN c.ProductID IN ( 9, 12 ) AND b.bettype IN ( 1000,1701,1702 )
 						THEN b.betcheck 
@@ -190,6 +191,7 @@ BEGIN
 				END		AS hdp2
 
 				, b.OddsType 
+				, b.oddsid				
 				, b.odds 
 				, b.modds
 				, b.stake 
@@ -210,7 +212,7 @@ BEGIN
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -233,6 +235,7 @@ BEGIN
 				, m.AwayID 		
 				, m.Betstatus
 				, ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
+				, '' AS Placing
 				, ISNULL(m.showtime,'') AS showtime
 				, CASE WHEN (c.ProductId = 1 AND b.bettype IN (154,155,156,216,217,1311,1312,1316,1317,1318,1324)) 
 						THEN b.betcheck 
@@ -276,6 +279,7 @@ BEGIN
 				, 0 AS hdp1 
 				, 0 AS hdp2 
 				, 0 AS OddsType
+				, b.oddsid				
 				, b.Odds
 				, b.modds
 				, b.Stake 
@@ -295,7 +299,7 @@ BEGIN
 				, b.APositiontaking			
 				, b.MPositiontaking			
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -317,6 +321,7 @@ BEGIN
 				, 0 AS AwayID		
 				, 0 AS Betstatus
 				, CONVERT(BIT,0) AS IsNeutral
+				, '' AS Placing
 				, '' AS showtime
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus				
@@ -349,6 +354,7 @@ BEGIN
 				, b.hdp1
 				, b.hdp2
 				, 0 AS OddsType
+				, b.oddsid				
 				, b.odds
 				, b.modds
 				, b.Stake 
@@ -367,7 +373,7 @@ BEGIN
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
-					
+				, b.TPositiontaking	
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -389,7 +395,8 @@ BEGIN
 				, o.RacerID AS homeID
 				, 0 AS awayID		
 				, '' AS Betstatus
-				, CONVERT(BIT,0) AS IsNeutral	
+				, CONVERT(BIT,0) AS IsNeutral
+				, o.Placing				
 				, r.EventTime AS showtime
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
