@@ -56,6 +56,7 @@ BEGIN
 				, 0				AS hdp1
 				, 0				AS hdp2
 				, 0 			AS OddsType
+				, 0 			AS oddsid
 				, b.Odds 
 				, 0 			AS modds
 				, b.Stake
@@ -75,7 +76,7 @@ BEGIN
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
-				
+				, b.TPositiontaking
 				,b.discount 	AS adiscount
 				,b.adiscount 	AS mdiscount
 				,b.sdiscount 	AS sdiscount
@@ -97,6 +98,7 @@ BEGIN
 				, 0		AS AwayID		
 				, 0		AS Betstatus
 				, CONVERT(BIT,0) AS IsNeutral
+				,'' AS Placing
 				, '' 	AS showtime
 				, CASE WHEN ( c.ProductID IN (12) AND b.gameid IN ( 1701,1702 )  )
 					THEN b.Gameid3rd 
@@ -139,6 +141,7 @@ BEGIN
 				, 0 AS hdp2
 
 				, 0 AS OddsType 
+				, 0 AS oddsid
 				, b.odds 
 				, 0 AS modds
 				, b.stake 
@@ -157,6 +160,7 @@ BEGIN
 				, b.apsitiontaking
 				, b.mpositiontaking
 				, b.spositiontaking
+				, b.TPositiontaking
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
@@ -178,6 +182,7 @@ BEGIN
 				, m.AwayID 		
 				, m.Betstatus
 				, ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral
+				,'' AS Placing
 				, ISNULL(m.showtime,'') AS showtime
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' 

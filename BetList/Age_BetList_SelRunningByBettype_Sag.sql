@@ -89,6 +89,42 @@ BEGIN
 		@CustId 			= @CustId
 		, @RoleId			= 4
 		, @Language 		= @Language
+		, @ColumnOutput		= 'sporttype,
+								username,				
+								bettype,
+								custid,
+								transid,
+								refno,
+								matchid,
+								matchcode,
+								homeID,
+								awayID,
+								hdp1,
+								hdp2,
+								odds,
+								modds,
+								status,
+								stake,
+								actual_stake,
+								transdate,		
+								betteam,
+								betID,
+								livehomescore, 
+								liveawayscore,
+								liveindicator ,
+								tpositiontaking,
+								spositiontaking,
+								mpositiontaking,
+								apositiontaking, 
+								Adiscount,
+								Mdiscount,
+								Sdiscount,
+								IP,
+								IsNeutral,
+								oddstype,
+								showtime,
+								comstatus,
+								transdesc'
 		
 	RETURN;
 END
