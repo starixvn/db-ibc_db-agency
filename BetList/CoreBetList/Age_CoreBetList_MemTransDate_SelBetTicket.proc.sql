@@ -15,6 +15,7 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 	-- PRODUCT - BETTYPE - STATUS
 	, @BettypeMatrix	XML 			= NULL
 	, @TransStatus		VARCHAR(250) 	= NULL
+	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	, @Error			INT = 0 OUTPUT
 	, @ErrorMsg			VARCHAR(250) = '' OUTPUT
 )
@@ -168,6 +169,7 @@ BEGIN
 	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+	@ColumnOutput = @ColumnOutput
 	
 	DROP TABLE #tempCust;
 	

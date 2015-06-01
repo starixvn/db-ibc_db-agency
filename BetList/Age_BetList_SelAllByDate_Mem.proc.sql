@@ -144,6 +144,53 @@ BEGIN
 		, @username			= @username
 		, @FromDate			= @FromDate
 		, @ToDate 			= @ToDate
+		, @ColumnOutput		= 'Username 
+								,Sporttype
+								,Bettype
+								,refno
+								,TransID
+								,BetID
+								,MatchCode
+								,MatchID
+								,Race
+								,HomeID
+								,AwayID 
+								,hdp1 
+								,hdp2 
+								,Odds 
+								,Modds 
+								,Status
+								,Stake 
+								,actual_stake
+								,Winlost
+								,awinlost
+								,mwinlost
+								,swinlost
+								,PlayerComm
+								,comm
+								,acomm
+								,scomm
+								,Transdate
+								,Winlostdate
+								,Betteam
+								,APositiontaking
+								,MPositiontaking
+								,SPositiontaking
+								,Adiscount
+								,Mdiscount
+								,Sdiscount
+								,LeagueID
+								,Liveindicator
+								,Livehomescore
+								,Liveawayscore
+								,IP
+								,Betstatus
+								,isNeutral
+								,oddstype
+								,showtime
+								,BetCheck
+								,comstatus
+								,transdesc'
 	;
 	
 	RETURN;

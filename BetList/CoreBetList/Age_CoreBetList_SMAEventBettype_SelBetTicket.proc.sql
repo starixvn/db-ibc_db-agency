@@ -12,6 +12,7 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
 	, @Language 		VARCHAR(2) 		= 'E'
 	, @Liveindicator 	INT 			= 0
 	, @Betteam 			NVARCHAR(20)	= NULL
+	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	, @Error			INT 			= 0
 	, @ErrorMsg			NVARCHAR(250) = NULL
 AS
@@ -281,9 +282,49 @@ BEGIN
 		
 	END
 	
+	IF(EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE ProductId = 3 AND eventType = 1 ) )
+	BEGIN
+		select @IsBet14, @liveindicator
+		IF( @IsBet14 = 0 ) 
+		BEGIN
+			DELETE c
+			FROM #tempCust c
+				INNER JOIN dbo.bettrans b with (nolock) 
+				ON c.transid 		= b.transid 
+				AND c.custid 		= b.custid
+			WHERE c.WhTicket 		= 1
+				AND c.ProductId 	= 3 
+				AND c.eventType 	= 1
+				AND (
+					((@liveindicator IS NOT NULL AND b.Liveindicator <> @liveindicator))
+					OR 
+					((LEN(@betteam) > 0 AND b.betteam <> @betteam))
+				 )
+		END
+		
+		IF( @IsBet14 = 1 ) 
+		BEGIN
+			DELETE c
+			FROM #tempCust c
+				INNER JOIN dbo.bettrans b with (nolock) 
+				ON c.transid 		= b.transid 
+				AND c.custid 		= b.custid
+			WHERE c.WhTicket 		= 2
+				AND c.ProductId 	= 3 
+				AND c.eventType 	= 1
+				AND (
+					((@liveindicator IS NOT NULL AND b.Liveindicator <> @liveindicator))
+					OR 
+					((LEN(@betteam) > 0 AND b.betteam <> @betteam))
+				 )
+		END
+	END
+	
+	
 	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+	@ColumnOutput = @ColumnOutput
 	
 	DROP TABLE #tempCust;
 	RETURN;

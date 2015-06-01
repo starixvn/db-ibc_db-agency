@@ -5,7 +5,7 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket_xpre]
+ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 (
 	-- MEM INFO
 	@CustId 			INT				= NULL
@@ -23,6 +23,7 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket_xpre]
 	, @Language 		VARCHAR(2) 		= 'E'
 	--OPTIONAL
 	, @SelDateType		TINYINT			= 0
+	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	-- OUTPUT INFO
 	, @TotalRows		INT 			= 0 OUTPUT
 	, @Error			INT 			= 0 OUTPUT
@@ -32,7 +33,7 @@ AS
 /*
 	Created: Bobby.Nguyen
 	Task : Re-factor core betlist and apply GD product
-	DB: DB053.bodb02
+	DB: DB0AGE.bodb02, DB0ARC.bodb_archive
 	Original: 
 
 	Revisions:
@@ -88,18 +89,18 @@ BEGIN
 		FROM CteBT bt
 	END
 	
-	-- RESET MoveBetsDay
+	-- CHECK for MoveBetsDay
 	IF( @MoveBetsDay IS NULL )
 	BEGIN
 		SELECT @MoveBetsDay = MAX(Winlostdate) 
-		FROM dbo.bettrans14 WITH (NOLOCK)
+		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 	END
 	
-	-- RESET BalanceupDay
+	-- CHECK for BalanceupDay
 	IF( @BalanceupDay IS NULL )
 	BEGIN
 		SELECT @BalanceupDay = MIN(Winlostdate) 
-		FROM dbo.bettrans14 WITH (NOLOCK)
+		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 	END
 	
 	-- RESTET output
@@ -114,7 +115,7 @@ BEGIN
 	BEGIN
 		SELECT @CustID 	= CustID
 		, @Recommend 	= Recommend 
-		FROM dbo.custinfo WITH(NOLOCK) 
+		FROM bodb02.dbo.custinfo WITH(NOLOCK) 
 		WHERE UserName	= @UserName
 	END
 	
@@ -126,7 +127,7 @@ BEGIN
 	BEGIN
 		SELECT @Recommend 	= Recommend 
 		,@UserName			= UserName
-		FROM dbo.custinfo WITH(NOLOCK) 
+		FROM bodb02.dbo.custinfo WITH(NOLOCK) 
 		WHERE CustID		= @CustID
 	END
 	
@@ -147,26 +148,6 @@ BEGIN
 		, eventType		TINYINT
 		, WhTicket		TINYINT
 	)
-
-	IF ( @FromDate <= @MoveBetsDay )
-	BEGIN
-		INSERT INTO #tempCust
-		SELECT 
-			b.transid
-			, b.refno
-			, b.custid
-			, bt.ProductId
-			, bt.EventType
-			, 2 AS WhTicket
-		FROM dbo.bettrans14 b WITH(nolock)
-			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
-			ON b.statusid	= stt.statusid
-		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-			AND	b.recommend	= @Recommend 
-			AND	b.custid	= @CustID
-	END
 		
 	-- do selecting from bettrans
 	IF ( @ToDate > @MoveBetsDay )
@@ -179,7 +160,7 @@ BEGIN
 			, bt.ProductId
 			, bt.EventType
 			, 1 AS WhTicket
-		FROM dbo.bettrans b WITH(nolock)
+		FROM bodb02.dbo.bettrans b WITH(nolock)
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
@@ -205,7 +186,7 @@ BEGIN
 				, bt.ProductId
 				, bt.EventType
 				, 0 AS WhTicket
-			FROM dbo.translog AS b WITH (NOLOCK)
+			FROM bodb02.dbo.translog AS b WITH (NOLOCK)
 				INNER JOIN #BettypeMatrix bt 
 				ON b.gameid			= bt.Bettype
 				INNER JOIN #TransStatus st
@@ -217,10 +198,56 @@ BEGIN
 				)
 		END
 	END
-	
+	-- CHECK for bettrans14
+	IF ( @FromDate <= @MoveBetsDay )
+	BEGIN
+		INSERT INTO #tempCust
+		SELECT 
+			b.transid
+			, b.refno
+			, b.custid
+			, bt.ProductId
+			, bt.EventType
+			, 2 AS WhTicket
+		FROM bodb02.dbo.bettrans14 b WITH(nolock)
+			INNER JOIN #BettypeMatrix bt
+			ON b.bettype	= bt.bettype
+			INNER JOIN #TransStatus stt
+			ON b.statusid	= stt.statusid
+		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
+			AND	b.recommend	= @Recommend 
+			AND	b.custid	= @CustID
+	END
+	-- CHECK for bettrans_bk
+	/*IF ( @FromDate < @BalanceupDay )
+	BEGIN
+		
+		DECLARE @bettypeMatrixInfo 	VARCHAR(MAX)
+			, @transStatusInfo		VARCHAR(250)
+
+		SET @bettypeMatrixInfo 	= CONVERT( VARCHAR(MAX)
+				, ( SELECT *
+					FROM #BettypeMatrix AS bt
+					FOR XML RAW, ROOT('BettypeMatrix')
+				) )
+		
+		SELECT @transStatusInfo = COALESCE(@transStatusInfo + ',', '') + CAST(t.StatusID AS VARCHAR(20)) + ''
+		FROM #TransStatus t		
+
+		INSERT INTO #tempCust
+		EXEC [DBARC].[bodb_archive].[dbo].[Age_CoreBetList_MemArc_SelBetTicket] 
+			@CustID			= @CustID 
+			,@FromDate 		= @FromDate
+			,@ToDate 		= @ToDate
+			,@BettypeMatrix	= @bettypeMatrixInfo
+			,@TransStatus	= @transStatusInfo
+		
+	END
+	*/
 	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+	@ColumnOutput = @ColumnOutput
 	
 	DROP TABLE #tempCust;
 	RETURN;

@@ -195,7 +195,6 @@ BEGIN
 		WHERE c.srecommend 	= @custid
 			AND c.roleid 	= 2
 	END
-	
 	/*	- Mix & System Parlay	: ProductId = 1
 		- P2P tickets			: ProductId = 9
 		- Casino				: ProductId = 6
@@ -215,6 +214,7 @@ BEGIN
 			
 		FROM #tempCust AS b
 		WHERE b.EventType 	= 0
+			AND b.ProductID IN (6, 7, 8, 9, 12)
 
 		GROUP BY b.custid
 			, b.recommend
@@ -248,8 +248,7 @@ BEGIN
 			INNER JOIN CteMatch AS m WITH (NOLOCK) 
 			ON b.matchid		= m.matchid 		
 			
-		WHERE b.ProductID 		IN (1, 3, 4, 5) 
-			AND b.EventType 	= 1
+		WHERE b.EventType 	= 1
 			
 		GROUP BY b.custid
 			, b.recommend
@@ -284,8 +283,7 @@ BEGIN
 			INNER JOIN dbo.League AS l WITH (NOLOCK) 
 			ON m.leagueID		= l.leagueID
 			
-		WHERE b.ProductID		IN (1, 2) 
-			AND b.EventType		= 2
+		WHERE b.EventType		= 2
 			
 		GROUP BY b.custid
 			, b.recommend
@@ -318,8 +316,7 @@ BEGIN
 			INNER JOIN CteVSOutright AS o with (NOLOCK) 
 			ON b.oddsid			= o.Orid
 			
-		WHERE b.ProductID		IN (5) 
-			AND b.EventType		= 3
+		WHERE b.EventType		= 3
 			
 		GROUP BY b.custid
 			, b.recommend

@@ -97,6 +97,38 @@ BEGIN
 		, @Liveindicator 	= @liveindicator
 		, @Betteam			= @Betteam
 		, @Language 		= @Language
+		, @ColumnOutput		= 'Sporttype,
+								Username,      		
+								Bettype,     
+								TransID,  
+								matchid,   
+								Matchcode, 
+								Race,
+								leagueid,
+								HomeID,
+								AwayID, 
+								hdp1,
+								hdp2,
+								odds,   
+								modds,
+								status, 
+								stake,  
+								actual_stake,
+								Transdate, 		
+								Betteam,
+								Liveindicator,
+								Livehomescore,
+								Liveawayscore, 		 				
+								APositiontaking,  		
+								Adiscount,
+								IP,
+								isNeutral,
+								oddstype,
+								betid,
+								showtime,
+								refno,
+								comstatus,
+								transdesc'
 		
 	RETURN;
 END

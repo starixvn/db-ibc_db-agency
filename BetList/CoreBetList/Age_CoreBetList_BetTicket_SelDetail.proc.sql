@@ -1,11 +1,4 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_CoreBetList_Mem_SelBetTicket]    Script Date: 5/11/2015 10:31:30 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelDetail]
+ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelDetail]
 AS
 /*
 Created: Bobby.Nguyen
@@ -60,6 +53,7 @@ BEGIN
 		)
 		BEGIN
 			--SELECT bettransm
+			EXEC sp_sqlexec N'
 			INSERT INTO #BettransDetail
 			SELECT 
 				bm.refno 
@@ -71,7 +65,7 @@ BEGIN
 				, bm.spositiontaking
 				, bm.bettype
 				, bm.betteam  
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM dbo.bettransm bm WITH (NOLOCK)
 				INNER JOIN #tempCust b 
 				ON bm.refno			= b.transid
@@ -89,7 +83,7 @@ BEGIN
 				, bm.spositiontaking
 				, bm.bettype
 				, bm.betteam  
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM dbo.bettransm bm WITH (NOLOCK)
 				INNER JOIN #tempCust b 
 				ON bm.refno			= b.refno
@@ -108,7 +102,7 @@ BEGIN
 				, bg.spositiontaking
 				, bg.bettype
 				, bg.betteam 
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM dbo.bettransg bg WITH (NOLOCK)
 				INNER JOIN #tempCust b
 				ON bg.refno			= b.refno
@@ -131,14 +125,15 @@ BEGIN
 				INNER JOIN #tempCust b
 				ON bg.refno			= b.transid
 			WHERE bg.custid			= b.custid
-				AND b.ProductId		= 12
+				AND b.ProductId		= 12'
 		END
-		
+
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2)
 			AND OBJECT_ID('bodb02.dbo.bettransm14', 'U') IS NOT NULL
 		)
 		BEGIN
 			--SELECT bettransm14
+			EXEC sp_sqlexec N'
 			INSERT INTO #BettransDetail
 			SELECT 
 				bm.refno 
@@ -150,7 +145,7 @@ BEGIN
 				, bm.spositiontaking
 				, bm.bettype
 				, bm.betteam  
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM dbo.bettransm14 bm WITH (NOLOCK)
 				INNER JOIN #tempCust b 
 				ON bm.refno			= b.transid
@@ -168,7 +163,7 @@ BEGIN
 				, bm.spositiontaking
 				, bm.bettype
 				, bm.betteam  
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM dbo.bettransm14 bm WITH (NOLOCK)
 				INNER JOIN #tempCust b 
 				ON bm.refno			= b.refno
@@ -187,7 +182,7 @@ BEGIN
 				, bg.spositiontaking
 				, bg.bettype
 				, bg.betteam 
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM dbo.bettransg14 bg WITH (NOLOCK)
 				INNER JOIN #tempCust b
 				ON bg.refno			= b.refno
@@ -210,15 +205,17 @@ BEGIN
 				INNER JOIN #tempCust b
 				ON bg.refno			= b.transid
 			WHERE bg.custid			= b.custid
-				AND b.ProductId		= 12
+				AND b.ProductId		= 12'
 		END
 		
 		
+
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3)
 			AND OBJECT_ID('bodb_archive.dbo.bettransm', 'U') IS NOT NULL
 		)
 		BEGIN
-			--SELECT bettransm14
+			--SELECT bettransm from archive
+			EXEC sp_sqlexec N'
 			INSERT INTO #BettransDetail
 			SELECT 
 				bm.refno 
@@ -230,7 +227,7 @@ BEGIN
 				, bm.spositiontaking
 				, bm.bettype
 				, bm.betteam  
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM bodb_archive.dbo.bettransm bm WITH (NOLOCK)
 				INNER JOIN #tempCust b 
 				ON bm.refno			= b.transid
@@ -248,7 +245,7 @@ BEGIN
 				, bm.spositiontaking
 				, bm.bettype
 				, bm.betteam  
-				, '' AS transdesc
+				, '''' AS transdesc
 			FROM bodb_archive.dbo.bettransm bm WITH (NOLOCK)
 				INNER JOIN #tempCust b 
 				ON bm.refno			= b.refno
@@ -267,8 +264,8 @@ BEGIN
 				, bg.spositiontaking
 				, bg.bettype
 				, bg.betteam 
-				, '' AS transdesc
-			FROM bodb_archive.dbo.bettransg14 bg WITH (NOLOCK)
+				, '''' AS transdesc
+			FROM bodb_archive.dbo.bettransg bg WITH (NOLOCK)
 				INNER JOIN #tempCust b
 				ON bg.refno			= b.refno
 			WHERE bg.custid			= b.custid
@@ -286,14 +283,14 @@ BEGIN
 				, bg.bettype
 				, bg.betteam 
 				, bg.transdesc
-			FROM bodb_archive.dbo.bettransg14 bg WITH (NOLOCK)
+			FROM bodb_archive.dbo.bettransg bg WITH (NOLOCK)
 				INNER JOIN #tempCust b
 				ON bg.refno			= b.transid
 			WHERE bg.custid			= b.custid
-				AND b.ProductId		= 12
+				AND b.ProductId		= 12'
 		END
 	END
-	
+
 	-- OUTPUT ticket detail
 	SELECT * 
 	FROM #BettransDetail d

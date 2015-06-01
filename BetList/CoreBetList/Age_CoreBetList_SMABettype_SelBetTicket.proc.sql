@@ -9,8 +9,9 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_SMABettype_SelBetTicket]
 	-- PRODUCT - BETTYPE - STATUS
 	, @BettypeMatrix	XML 			= NULL
 	, @TransStatus		VARCHAR(250) 	= NULL
-	, @Error			INT 			= 0
-	, @ErrorMsg			NVARCHAR(250) 	= ''
+	, @ColumnOutput		VARCHAR(MAX) 	= NULL
+	, @Error			INT 			= 0 OUTPUT
+	, @ErrorMsg			NVARCHAR(250) 	= '' OUTPUT
 AS
 /*
 	Created: Bobby.Nguyen
@@ -171,15 +172,18 @@ BEGIN
 			ON b.oddsid		= vs.Orid
 			AND c.EventType	= 3
 		WHERE b.statusid IN (101, 102)
-			AND (m.eventdate 	<= @EventDate
-				OR o.eventdate 	<= @EventDate
-				OR vs.eventdate <= @EventDate
+			AND (
+				(	m.eventdate 	<= @EventDate
+					OR o.eventdate 	<= @EventDate
+					OR vs.eventdate <= @EventDate
+				) OR b.bettype IN (9, 29) --exclude parlay tickets
 			)
 	END
 	
 	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] 
+	@ColumnOutput = @ColumnOutput
 	
 	DROP TABLE #tempCust;
 	RETURN;

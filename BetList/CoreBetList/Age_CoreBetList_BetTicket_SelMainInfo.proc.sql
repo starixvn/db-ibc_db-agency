@@ -1,11 +1,6 @@
-USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_CoreBetList_Mem_SelBetTicket]    Script Date: 5/11/2015 10:31:30 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo](
+	@ColumnOutput		VARCHAR(MAX) 	= NULL
+)
 AS
 /*
 Created: Bobby.Nguyen
@@ -58,6 +53,7 @@ BEGIN
 		, hdp1 				SMALLMONEY
 		, hdp2 				SMALLMONEY 
 		, OddsType 			TINYINT
+		, oddsid			INT
 		, Odds 				SMALLMONEY 
 		, modds 			SMALLMONEY
 		, Stake 			MONEY
@@ -76,6 +72,7 @@ BEGIN
 		, apositiontaking	SMALLMONEY
 		, mpositiontaking	SMALLMONEY
 		, spositiontaking	SMALLMONEY
+		, tpositiontaking	SMALLMONEY
 		, adiscount 		SMALLMONEY
 		, mdiscount 		SMALLMONEY
 		, sdiscount 		SMALLMONEY
@@ -96,6 +93,7 @@ BEGIN
 		, AwayId 			INT 	
 		, Betstatus 		NVARCHAR(50)
 		, isNeutral 		BIT
+		, Placing 			NVARCHAR(20)
 		, showtime 			NVARCHAR(50)
 		, betcheck 			NVARCHAR(50)
 		, comstatus 		NVARCHAR(20)
@@ -105,31 +103,44 @@ BEGIN
 	-- CHECK for selecting from translog
 	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 0))
 	BEGIN
-		EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog]
+		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog]'
 	END
 	
 	-- CHECK for selecting from bettrans
 	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 1))
 	BEGIN
-		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans]
+		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans]'
 	END
 	
 	-- CHECK for selecting from bettrans14
 	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2))
 	BEGIN
-		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans14]
+		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans14]'
 	END
 	
 	-- CHECK for selecting from bettrans_bk
 	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3))
 	BEGIN
-		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettransArc]
+		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettransArc]'
 	END
 	
 	-- OUTPUT main ticket
-	SELECT *
-	FROM #MemBetTicket t
-	ORDER BY t.transid DESC
+	IF (@ColumnOutput IS NULL)
+	BEGIN
+		SELECT *
+		FROM #MemBetTicket t
+		ORDER BY t.transid DESC
+	END
+	ELSE
+	BEGIN 
+		DECLARE @queryOutput NVARCHAR(MAX)
+		SET @queryOutput = 'SELECT' 
+							+ ' ' + @ColumnOutput 
+							+ ' FROM #MemBetTicket t'
+							+ '	ORDER BY t.transid DESC '
+		
+		EXEC sp_sqlexec @queryOutput
+	END
 	
 	DROP TABLE #MemBetTicket;
 	

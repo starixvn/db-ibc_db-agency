@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_MemArc_SelBetTicket]
 	-- PAGING
 	, @PageIndex			INT	= 1
 	, @PageSize				INT	= 1000
+	, @ColumnOutput			VARCHAR(MAX) 	= NULL
 	-- OUTPUT INFO
 	, @Error				INT = 0 OUTPUT
 	, @ErrorMsg				VARCHAR(250) = '' OUTPUT
@@ -124,6 +125,7 @@ BEGIN
 	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+	@ColumnOutput = @ColumnOutput
 	
 	DROP TABLE #tempCust;
 	RETURN;
