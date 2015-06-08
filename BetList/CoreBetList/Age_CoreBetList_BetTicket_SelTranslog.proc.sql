@@ -24,7 +24,7 @@ Dependences:
 BEGIN
 	SET NOCOUNT ON;	
 	-- CHECK for existing table bettrans
-	IF (OBJECT_ID('bodb02.dbo.translog', 'U') IS NULL ) RETURN
+	-- IF (OBJECT_ID('bodb02.dbo.translog', 'U') IS NULL ) RETURN
 	
 	/* 	CHECK for selecting from translog
 		- Keno			: ProductId = 8
@@ -73,7 +73,7 @@ BEGIN
 				, 0 AS acomm 
 				, 0 AS scomm
 					
-				, b.APositiontaking
+				, 0 AS APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
 				, b.TPositiontaking
@@ -121,6 +121,7 @@ BEGIN
 				) AS fnc
 			WHERE c.WhTicket 		= 0
 				AND c.EventType		= 0
+				AND b.StatusID		IN (0,1)
 		END
 		/*	
 			- SportsBook		: ProductId = 1 -> Metric Gaming bettype(801-899)
@@ -157,7 +158,7 @@ BEGIN
 				, 0 AS comm
 				, 0 AS acomm
 				, 0 AS scomm
-				, b.apsitiontaking
+				, 0 AS apsitiontaking
 				, b.mpositiontaking
 				, b.spositiontaking
 				, b.TPositiontaking
@@ -185,10 +186,7 @@ BEGIN
 				,'' AS Placing
 				, ISNULL(m.showtime,'') AS showtime
 				, '' AS betcheck
-				, CASE WHEN b.comstatus = '1' 
-						THEN '1' 
-					ELSE '0' 
-				END		AS comstatus
+				, 0 AS comstatus
 				,b.transdesc
 				
 			FROM dbo.translog AS b WITH (NOLOCK)
@@ -199,6 +197,7 @@ BEGIN
 				ON b.eventid		= m.matchid
 			WHERE c.WhTicket 		= 0
 				AND c.EventType		= 1
+				AND b.StatusID		IN (0,1)
 		END
 	END
 	
