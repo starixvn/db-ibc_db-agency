@@ -49,7 +49,7 @@ BEGIN
 	)
 	BEGIN
 		IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 1)
-			AND OBJECT_ID('bodb02.dbo.bettransm', 'U') IS NOT NULL
+			--AND OBJECT_ID('bodb02.dbo.bettransm', 'U') IS NOT NULL
 		)
 		BEGIN
 			--SELECT bettransm
@@ -129,7 +129,7 @@ BEGIN
 		END
 
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2)
-			AND OBJECT_ID('bodb02.dbo.bettransm14', 'U') IS NOT NULL
+			--AND OBJECT_ID('bodb02.dbo.bettransm14', 'U') IS NOT NULL
 		)
 		BEGIN
 			--SELECT bettransm14
@@ -211,7 +211,7 @@ BEGIN
 		
 
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3)
-			AND OBJECT_ID('bodb_archive.dbo.bettransm', 'U') IS NOT NULL
+			--AND OBJECT_ID('bodb_archive.dbo.bettransm', 'U') IS NOT NULL
 		)
 		BEGIN
 			--SELECT bettransm from archive

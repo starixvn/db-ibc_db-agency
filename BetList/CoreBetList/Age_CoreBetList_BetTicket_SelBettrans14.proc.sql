@@ -25,7 +25,7 @@ BEGIN
 	SET NOCOUNT ON;
 	
 	-- CHECK for existing table bettrans
-	IF (OBJECT_ID('bodb02.dbo.bettrans14', 'U') IS NULL ) RETURN
+	-- IF (OBJECT_ID('bodb02.dbo.bettrans14', 'U') IS NULL ) RETURN
 	
 	-- CHECK for selecting from betrans_bk
 	IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2))
@@ -37,11 +37,7 @@ BEGIN
 		BEGIN
 			INSERT INTO #MemBetTicket
 			SELECT
-				CASE WHEN c.ProductID = 1 THEN 
-						CASE WHEN ISNULL(b.betid,0) = 0 
-							THEN b.TransID 
-							ELSE b.betid 
-						END
+				CASE WHEN (b.bettype = 29 AND ISNULL(b.betid, 0) > 0) THEN b.betid
 					ELSE b.transid
 				END	AS transid
 				, b.refno

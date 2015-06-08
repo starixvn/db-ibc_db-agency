@@ -196,6 +196,7 @@ BEGIN
 				AND	(bt.ProductId	IN (8, 12)
 					OR bt.Bettype BETWEEN 801 AND 899
 				)
+				AND b.statusID IN (0, 1)
 		END
 	END
 	-- CHECK for bettrans14

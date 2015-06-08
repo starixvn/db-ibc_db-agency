@@ -163,7 +163,7 @@ BEGIN
 				bt.ProductId	IN (8, 12) 
 				OR bt.bettype BETWEEN 801 AND 899
 			)
-				
+			AND b.statusID IN (0, 1)
 	END
 	
 	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
