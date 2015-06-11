@@ -1,3 +1,12 @@
+USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerSelWinLimitList_Ag]    Script Date: 06/11/2015 11:19:52 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerSelWinLimitList_Ag    Script Date: 12/5/2013 4:35:17 PM ******/
+
 ALTER PROCEDURE [dbo].[Age_CustomerSelWinLimitList_Ag]
 	@CustID int,
 	@PageSize int=500,
@@ -20,6 +29,8 @@ Revisions:
 	- 20130708@Viet: create new param @_username to resolve parameter sniffing's issue.
 	- 20131108@Elodie: Splitting bodb02 into CustDB (Call BalanceCreditGame, BalanceDebitGame by link database)
 	- 20140905@Lukas: change the order of queries to reduce IO on custinfo 
+	- 20141203@Lukas: use maxdop to avoid parallel processing -> reduce cpu resource
+	
 Param's Explanation:
 • @CustID: AgentID
 */
@@ -111,7 +122,7 @@ JOIN
 		LEFT JOIN bodb02.dbo.BalanceDebitGame b WITH (NOLOCK) ON b.custid=ci.custid	
 	GROUP BY ci.custid
 ) Debit ON credit.custid=debit.custid
-
+option (maxdop 1)
 
 
 SELECT * FROM 
@@ -129,8 +140,6 @@ WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 
 drop table #GameBalance
 drop table #tmp_customer
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelWinLimitList_Ag] TO [bodbDownlineNet] AS [dbo]
