@@ -34,6 +34,8 @@ Revisions:
 					  - modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
     - 20140822@Logan:   Add status for Esports [Redmine: #20661]			  
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
+	- 20150612@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
+
 
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -139,9 +141,9 @@ BEGIN
 	     WHERE custID = @mrecommend
 
 	    --Member itself
-	    SELECT @Credit_AllOtherMember = ISNULL(SUM(credit), 0) FROM custinfo AS ci WITH (NOLOCK) WHERE recommend = @recommend AND RoleID = 1 AND CustID <> @CustID
+	    SELECT @Credit_AllOtherMember = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci WITH (NOLOCK) WHERE recommend = @recommend AND RoleID = 1 AND CustID <> @CustID
     	
-	    SELECT @MaxCredit_Mem = ISNULL(maxcredit,0) FROM CustAgent (NOLOCK) WHERE CustID = @recommend
+	    SELECT @MaxCredit_Mem = ISNULL(maxcredit,0) FROM DBCUST.CustDB.dbo.CustAgent WITH(NOLOCK) WHERE CustID = @recommend
     	
 	    SELECT @Credit_Ag_Bal = ISNULL(@Credit_Ag,0) - ISNULL(@Credit_AllOtherMember,0)
 	    ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -172,7 +174,7 @@ BEGIN
 	     WHERE custID = @mrecommend		
 
 	    --Agent Itself		
-	    SELECT @Credit_AllOtherAgent = ISNULL(SUM(credit), 0) FROM custinfo AS ci (NOLOCK) WHERE mrecommend = @mrecommend AND RoleID = 2 AND Custid <> @custID
+	    SELECT @Credit_AllOtherAgent = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK) WHERE mrecommend = @mrecommend AND RoleID = 2 AND Custid <> @custID
     	
 	    SELECT @Credit_Ag_Max = ISNULL(@Credit_MAg,0) - ISNULL(@Credit_AllOtherAgent,0)	
 	    SELECT @Credit_Ag_Min = ISNULL(SUM(credit),0), 
@@ -182,7 +184,7 @@ BEGIN
 	    FROM custinfo (NOLOCK) 
 	    WHERE recommend = @custID AND RoleID=1
     		
-	    SELECT @Credit_Mem_Min = ISNULL(MAX(credit),0) FROM custinfo (NOLOCK)
+	    SELECT @Credit_Mem_Min = ISNULL(MAX(credit),0) FROM DBCUST.CustDB.dbo.custinfo with(NOLOCK)
 	    WHERE recommend = @CustID AND Roleid=1
     END
     ELSE IF @roleID = 3 --for master
@@ -208,7 +210,7 @@ BEGIN
 
 
 	    --Master Itself
-	    SELECT @Credit_AllOtherMaster = ISNULL(SUM(credit), 0) FROM custinfo AS ci (NOLOCK) WHERE srecommend = @Srecommend AND RoleID = 3 AND custid <> @CustId
+	    SELECT @Credit_AllOtherMaster = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci (NOLOCK) WHERE srecommend = @Srecommend AND RoleID = 3 AND custid <> @CustId
 	    SELECT @Credit_MAg_Max = ISNULL(@Credit_SAg,0) - ISNULL(@Credit_AllOtherMaster,0)	
     	
 	    SELECT @Credit_MAg_Min = ISNULL(SUM(CASE WHEN RoleID=2 THEN credit ELSE 0 END),0),
@@ -237,7 +239,7 @@ BEGIN
     -------------------------------------------------------------------------
     --Updater Info
     DECLARE @TransferOption VARCHAR(8)
-    EXEC Acc_CustomerSelTransferOption @uplineid, @TransferOption OUTPUT
+    EXEC DBCUST.CustDB.dbo.Acc_CustomerSelTransferOption @uplineid, @TransferOption OUTPUT
     SELECT closed, -- redundant value
 	    reject AS suspended, -- redundant value
 	    DisableOutright, -- redundant value
@@ -417,12 +419,12 @@ BEGIN
     ELSE IF @roleid = 2
     BEGIN
 	    SELECT @UsedCredit = SUM(credit)  
-	    FROM custinfo WITH(NOLOCK) 
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=1 
 		     AND recommend = @custid
     		 
 	    --Maxcredit 
-	    SELECT @Mem_MaxCredit = ISNULL(maxcredit,0) FROM CustAgent WITH (NOLOCK) 
+	    SELECT @Mem_MaxCredit = ISNULL(maxcredit,0) FROM DBCUST.CustDB.dbo.CustAgent WITH (NOLOCK) 
 	    WHERE  custid=@CustID 
 
 	    SELECT 	@todayAgentCash = ISNULL(SUM(awinlost+comm-playercomm),0),
@@ -488,7 +490,7 @@ BEGIN
     ELSE IF @roleid = 3
     BEGIN
 	    SELECT @UsedCredit = SUM(credit)  
-	    FROM custinfo WITH(NOLOCK) 
+	    FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) 
 	    WHERE roleid=2 
 		    AND mrecommend = @custid
     				
