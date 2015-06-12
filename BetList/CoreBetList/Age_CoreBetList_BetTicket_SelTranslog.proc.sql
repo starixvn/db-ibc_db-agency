@@ -22,10 +22,7 @@ Dependences:
 	- Age_CoreBetList_BetTicket_SelMainInfo
 */
 BEGIN
-	SET NOCOUNT ON;	
-	-- CHECK for existing table bettrans
-	-- IF (OBJECT_ID('bodb02.dbo.translog', 'U') IS NULL ) RETURN
-	
+	SET NOCOUNT ON;		
 	/* 	CHECK for selecting from translog
 		- Keno			: ProductId = 8
 		- GoldDelux		: ProductId = 12
@@ -90,7 +87,10 @@ BEGIN
 				, 0 	AS htawayscore 		 
 				, b.IP	AS IP
 				, 0		AS LeagueID
-				, CASE WHEN c.ProductID = 8 THEN fnc.GameId ELSE 0 END AS MatchID
+				,CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
+						WHEN c.ProductID = 12 	THEN 255
+					ELSE 0
+				END		AS MatchID
 				, ''	AS MatchCode
 				, ''	AS Race
 				, b.winlostdate AS eventdate
@@ -116,8 +116,9 @@ BEGIN
 						SELECT GameId, ChoiceId 
 						FROM [dbo].[f_ParseTransDesc](b.transdesc, b.gameid)
 						UNION
-						SELECT '' AS GameId, '' AS ChoiceId 
+						SELECT 0 AS GameId, '' AS ChoiceId 
 					) AS tmp
+					ORDER BY GameId DESC
 				) AS fnc
 			WHERE c.WhTicket 		= 0
 				AND c.EventType		= 0
@@ -140,8 +141,7 @@ BEGIN
 				, '' AS betteam
 				, 0 AS hdp1
 				, 0 AS hdp2
-
-				, 0 AS OddsType 
+				, CASE WHEN b.gameid IN (801,803,804,805,806) THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType 
 				, 0 AS oddsid
 				, b.odds 
 				, 0 AS modds
