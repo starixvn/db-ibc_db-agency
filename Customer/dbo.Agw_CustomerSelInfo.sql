@@ -6,7 +6,7 @@ AS
 /*
 	Created: 20080909@QuiNV
 	Task: Get basic information of a customer (belonging have been checked on web already)
-	DB: DB05.bodb02
+	DB: DBCUST.CustDB
 	Original:
 
 
@@ -23,6 +23,8 @@ AS
 		- 20140303@Kathy: Get HideKeno [Redmine:#12691]
 		- 20140822@Logan: Get Esports status [Redmine: #21007]
 		- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
+		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+
 */
 BEGIN
     SET NOCOUNT ON

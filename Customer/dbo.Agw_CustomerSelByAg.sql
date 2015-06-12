@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Agw_CustomerSelByAg]
+ALTER PROCEDURE  [dbo].[Agw_CustomerSelByAg]
 	@Recommend int,
 	@Keyword nvarchar(30)='%',
 	@PageSize int=50,
@@ -9,8 +9,10 @@ AS
 
 Created: 20080909@QuiNV
 Task: Get all member of agent custid=@recommend
-DB: DB05.bodb02
+DB: DBCUST.CustDB
 Original:
+Revisions:
+	- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
 
 
 
@@ -44,9 +46,7 @@ WHERE recommend=@Recommend AND roleid=1 and username like @Keyword
 
 WHERE RowNum between @RowStart and @RowEnd
 
-
 GO
-GRANT EXECUTE ON [dbo].[Agw_CustomerSelByAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_CustomerSelByAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelByAg] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelByAg] TO [vnteam] AS [dbo]

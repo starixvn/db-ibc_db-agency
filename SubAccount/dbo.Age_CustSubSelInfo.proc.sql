@@ -1,18 +1,14 @@
-﻿SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-
-ALTER PROCEDURE [dbo].[Age_CustSubSelInfo]
+﻿ALTER PROCEDURE  [dbo].[Age_CustSubSelInfo]
 	@custid int,
 	@subaccid int
 
 AS
-
---Task :  
---DB: DB02.bodb02
+/*
+	DB: DBCUST.CustDB
+	 Revisions:
+		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+*/
 --original SP: CustSubSelInfo
-
 SET NOCOUNT ON
 
 
@@ -22,18 +18,9 @@ where custid = @custid
 	and subaccid = @subaccid
 order by closed, username
 
-
-
-
 GO
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[Age_CustSubSelInfo] TO [bodbDownlineNet] AS [dbo]
 GO
-SET ANSI_NULLS ON 
+GRANT EXECUTE ON [dbo].[Age_CustSubSelInfo] TO [bodbDownlineNetView] AS [dbo]
 GO
-
-GRANT  EXECUTE  ON [dbo].[Age_CustSubSelInfo]  TO [bodbDownlineNet]
-GO
-
-GRANT  EXECUTE  ON [dbo].[Age_CustSubSelInfo]  TO [bodbDownlineNetView]
-GO
-
+GRANT VIEW DEFINITION ON [dbo].[Age_CustSubSelInfo] TO [vnteam] AS [dbo]

@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Agw_CustomerSelMinMaxBetHR]
+﻿ALTER PROC [dbo].[Agw_CustomerSelMinMaxBetHR]
  @CustID int  
 AS  
 
@@ -7,12 +6,14 @@ AS
 
 Created: 20090326@QuiNV
 Task: Select minbet, maxbet, max per match for Horseracing 
-DB: DB05.bodb02
+DB: DBCUST.CustDB
 Original:
 Revisions:
 	- 20091204@Kiwi: Retrieve data from CustSetting3rd.
 	- 20100513@Terry: Get Minbet, MaxBet, MaxPerMatch Opentote	
 	- 20110303@Lukas: get Minbet, MaxBet, MaxPerMatch AU Horse racing, Greyhound racing, Harness racing
+	- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+	
 Note:
 	- 31 : Sa Tote
 	- 41 : UK Tote
@@ -260,10 +261,9 @@ SELECT
 
 --//---
 
-
-
 GO
-GRANT EXECUTE ON [dbo].[Agw_CustomerSelMinMaxBetHR] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_CustomerSelMinMaxBetHR] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelMinMaxBetHR] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Agw_CustomerSelMinMaxBetHR] TO [bodbDownlineNet] AS [dbo]
 GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelMinMaxBetHR] TO [vnteam] AS [dbo]

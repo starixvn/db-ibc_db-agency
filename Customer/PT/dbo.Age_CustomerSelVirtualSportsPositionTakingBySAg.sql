@@ -11,7 +11,7 @@ AS
 	Created: 20120809@Sophia
 	Date:  
 	Task : Select Virtual Sports for PT List from custsettinggame
-	DB: DBAGE/bodb02
+	DB: DBCUST.CustDB
 	Original: Age_CustomerSelPositionTakingBySAg
 
 
@@ -20,6 +20,8 @@ AS
 		- 20130305@Johnson: add virtual horse racing setting (sporttype: 181)
 		- 20131126@Kathy: Add Virtual Greyhounds/Motor Racing (182, 184) [Redmine:#7234]
 		- 20140402@Dom: Add Virtual Speedway/ Cycling setting (sporttype: 183,185)
+		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
 */
@@ -68,12 +70,9 @@ BEGIN
 
 END
 
-
-
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingBySAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingBySAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingBySAg] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingBySAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingBySAg] TO [VNTeam]
-GO  
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingBySAg] TO [vnteam] AS [dbo]

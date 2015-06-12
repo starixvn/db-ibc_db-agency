@@ -1,20 +1,18 @@
-﻿USE [bodb02]
-GO
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE  [dbo].[Agw_CheckExistedUserName]
+﻿ALTER PROCEDURE  [dbo].[Agw_CheckExistedUserName]
 	@custid int,
 	@username nvarchar(30)=null,
 	@subfix nvarchar(3) output,
 	@isExisted bit output
 AS
 /*
-DBAGE.bodb02
+DBCUST.CustDB
 Creator: QuiNV
 Date: 08/01/2009
 Task: Check a member username is existed or not, if it is existed, output max subfix username
+
+Revisions:
+	- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+
 */
 SET NOCOUNT ON
 
@@ -39,5 +37,7 @@ WHERE recommend = @custid and roleid = 1
 
 GO
 GRANT EXECUTE ON [dbo].[Agw_CheckExistedUserName] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Agw_CheckExistedUserName] TO [bodbDownlineNetView] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Agw_CheckExistedUserName] TO [vnteam] AS [dbo]

@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Agw_SelCustomerGivenCreditByAg]
+﻿ALTER PROCEDURE  [dbo].[Agw_SelCustomerGivenCreditByAg]
 	@Recommend int ,
 	@Keyword nvarchar(30)='%',
 	@PageSize int=50,
@@ -10,8 +10,10 @@ AS
 
 Created: 20081025@QuiNV
 Task: Get all member's given credit of agent custid=@Recommend
-DB: DB05.bodb02
+DB: DBCUST.custDB
 Original:
+Revisions
+	- 20150612@Kathy: Move sp from DB05.bodb02 to DBCUST.CustDB [Redmine:#36216]
 
 */
 
@@ -43,9 +45,7 @@ where recommend=@Recommend and roleid=1 and username like @Keyword
 
 WHERE RowNum between @RowStart and @RowEnd
 
-
 GO
-GRANT EXECUTE ON [dbo].[Agw_SelCustomerGivenCreditByAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_SelCustomerGivenCreditByAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_SelCustomerGivenCreditByAg] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_SelCustomerGivenCreditByAg] TO [vnteam] AS [dbo]
