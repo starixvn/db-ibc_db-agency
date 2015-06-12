@@ -1,6 +1,6 @@
 ﻿ALTER PROCEDURE [dbo].[Age_CustomerSelLiveCSPositionTakingByAg]
 (
-	@Recommend INT,
+	@Recommend	INT,
 	@PageIndex	INT = 1,
 	@PageSize	INT = 10000,
 	@TotalPages	INT = 0 OUTPUT
@@ -10,10 +10,11 @@ AS
 	Created: 20120201@Sophia
 	Date:  
 	Task : Select Live Casino for PT List from custsettinggame
-	DB: DB053.bodb02
+	DB: DBCUST.CustDB
 	Original: Age_CustomerSelPositionTakingByAg
 
 	Revisions: 
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 	
 	Param's Explanation:
 	• @Recommend: Agent ID
@@ -24,36 +25,45 @@ BEGIN
 
 	SELECT 
 		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-	FROM 
-		custinfo AS ci WITH (NOLOCK)		
-	WHERE 
-		ci.Recommend = @Recommend AND ci.roleid=1
+	FROM custinfo AS ci WITH (NOLOCK)
+	WHERE ci.Recommend = @Recommend AND ci.roleid=1
 
 	SELECT *
 	FROM 
 	(
 		SELECT 
-			ROW_NUMBER() OVER (ORDER BY CASE WHEN ISNULL(ci.enabled,0) = 0 THEN 3 
-											WHEN ISNULL(ci.closed,0) = 1 THEN 2 
-											WHEN ISNULL(ci.reject,0) = 1 THEN 1 
+			ROW_NUMBER() OVER (ORDER BY CASE WHEN ISNULL(ci.enabled, 0) = 0 THEN 3 
+											WHEN ISNULL(ci.closed, 0) = 1 THEN 2 
+											WHEN ISNULL(ci.reject, 0) = 1 THEN 1 
 											ELSE 0 
 										END, ci.username) AS RowNumber,
-			ci.closed, ci.enabled, 
-			ci.DisableLiveCasino, ci.SyncLiveCasino,
-			ISNULL(ci.reject,0) AS suspended,
+			ci.closed, 
+			ci.enabled, 
+			ci.DisableLiveCasino, 
+			ci.SyncLiveCasino,
+			ISNULL(ci.reject, 0) AS suspended,
 			ci.username, 
 			ci.custid,
-			MAX(CASE WHEN cg.sporttype=162 THEN cg.spositiontaking ELSE 0 END) v162spositiontaking,
-			MAX(CASE WHEN cg.sporttype=162 THEN cg.mpositiontaking ELSE 0 END) v162mpositiontaking,
-			MAX(CASE WHEN cg.sporttype=162 THEN cg.apositiontaking ELSE 0 END) v162apositiontaking 
-		FROM																									   
+			MAX(CASE WHEN cg.sporttype = 162 THEN cg.spositiontaking ELSE 0 END) v162spositiontaking,
+			MAX(CASE WHEN cg.sporttype = 162 THEN cg.mpositiontaking ELSE 0 END) v162mpositiontaking,
+			MAX(CASE WHEN cg.sporttype = 162 THEN cg.apositiontaking ELSE 0 END) v162apositiontaking 
+		FROM
 			custinfo AS ci WITH (NOLOCK)
 			INNER JOIN CustSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
-		WHERE ci.Recommend = @Recommend AND ci.roleid=1 AND cg.sporttype = 162
+		WHERE 
+			ci.Recommend = @Recommend 
+			AND ci.roleid = 1 
+			AND cg.sporttype = 162
 		GROUP BY
-			ci.enabled, ci.closed, ci.DisableLiveCasino, ci.SyncLiveCasino, ci.reject, ci.username, ci.custid
+			ci.enabled, 
+			ci.closed, 
+			ci.DisableLiveCasino, 
+			ci.SyncLiveCasino, 
+			ci.reject, 
+			ci.username, 
+			ci.custid
 	) t 
-	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize
+	WHERE RowNumber >= (@PageIndex - 1) * @PageSize + 1 AND RowNumber <= @PageIndex * @PageSize
 	
 END
 

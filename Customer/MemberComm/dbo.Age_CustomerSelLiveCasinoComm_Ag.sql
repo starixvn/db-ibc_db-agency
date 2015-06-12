@@ -1,37 +1,54 @@
-﻿
-
-CREATE PROCEDURE [dbo].[Age_CustomerSelLiveCasinoComm_Ag]
-	@Recommend int
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelLiveCasinoComm_Ag]
+	@Recommend INT
 AS
 
 /*
 	Created: 20120201@Sophia
 	Task : Select member commission information for Live Casino
-	DB: DB053.bodb02
+	DB: DBCUST.CustDB
 	Original: CustomerSelCommByAg
 	Revisions: 
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 */
 
 SET NOCOUNT ON
+
 SELECT 
-	ci.closed,ci.enabled, isnull(ci.reject,0) as suspended, m.username, m.custid, m.ugroup, 
-	m.firstname, m.lastname, ci.credit,	
-
-	max(case when cs.sporttype=162 then cs.adiscount else 0 end)*100 as adiscount,
-	max(case when cs.sporttype=162 then cs.discount else 0 end)*100 as discount,
-	max(case when cs.sporttype=162 then cs.playerdiscount else 0 end)*100 as playerdiscount
-
+	ci.closed,
+	ci.enabled, 
+	ISNULL(ci.reject, 0) AS suspended, 
+	m.username, 
+	m.custid, 
+	m.ugroup, 
+	m.firstname, 
+	m.lastname, 
+	ci.credit,
+	MAX(CASE WHEN cs.sporttype = 162 THEN cs.adiscount ELSE 0 END) * 100 AS adiscount,
+	MAX(CASE WHEN cs.sporttype = 162 THEN cs.discount ELSE 0 END) * 100 AS discount,
+	MAX(CASE WHEN cs.sporttype = 162 THEN cs.playerdiscount ELSE 0 END) * 100 AS playerdiscount
 FROM 
-	customer AS m with (NOLOCK)
-	INNER JOIN CustInfo as ci with (NOLOCK) on m.CustID = ci.CustID
-	INNER JOIN CustSettingGame as cs with (NOLOCK) on m.CustID = cs.CustID
-WHERE m.Recommend = @Recommend and m.roleid=1 
+	customer AS m WITH (NOLOCK)
+	INNER JOIN CustInfo AS ci WITH (NOLOCK) ON m.CustID = ci.CustID
+	INNER JOIN CustSettingGame AS cs WITH (NOLOCK) ON m.CustID = cs.CustID
+WHERE m.Recommend = @Recommend and m.roleid = 1 
 GROUP BY
-	ci.enabled, ci.closed, ci.reject, m.username, m.custid, m.ugroup, 
-	m.firstname, m.lastname, ci.credit
+	ci.enabled, 
+	ci.closed, 
+	ci.reject, 
+	m.username, 
+	m.custid, 
+	m.ugroup, 
+	m.firstname, 
+	m.lastname, 
+	ci.credit
 ORDER BY 
-case when isnull(ci.enabled,0) = 0 then 3 when isnull(ci.closed,0) = 1 then 2 when isnull(ci.reject,0) = 1 then 1 else 0 end, 
-m.username
+	CASE 
+		WHEN ISNULL(ci.enabled, 0) = 0 THEN 3 
+		WHEN ISNULL(ci.closed, 0) = 1 THEN 2 
+		WHEN ISNULL(ci.reject, 0) = 1 THEN 1 
+		ELSE 0 
+	END, 
+	m.username
 
 
 

@@ -1,22 +1,27 @@
-﻿ 
- 
+﻿
 ALTER PROCEDURE [dbo].[Age_CustomerSelRBComm_Ag]
-	@Recommend int
+	@Recommend INT
 AS
 /*
-Created: 20110311@Lukas
-Task : Select member commission information
-DB: DB052.bodb02
-Original: [Age_CustomerSelComm_Ag]
-Revisions:	
+	Created: 20110311@Lukas
+	Task : Select member commission information
+	DB: DBCUST.CustDB
+	Original: [Age_CustomerSelComm_Ag]
+	Revisions:
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 */
 BEGIN
-		
-	SET NOCOUNT ON
-	
+	SET NOCOUNT ON	
+
 	SELECT 
-		ci.enabled, ci.closed, isnull(ci.reject,0) as suspended, m.username, m.custid, m.ugroup, 
-		m.firstname, m.lastname,			
+		ci.enabled, 
+		ci.closed, 
+		isnull(ci.reject, 0) as suspended, 
+		m.username, 
+		m.custid, 
+		m.ugroup, 
+		m.firstname, 
+		m.lastname,
 		
 		max(case when cs3rd.bettype = 31 and cs3rd.sporttype=151 then cs3rd.adiscount else 0 end)*100		as v151adiscount_31,
 		max(case when cs3rd.bettype = 31 and cs3rd.sporttype=151 then cs3rd.discount else 0 end)*100		as v151discount_31,
@@ -49,15 +54,28 @@ BEGIN
 		INNER JOIN CustSetting3rd as cs3rd with (NOLOCK) on m.custID = cs3rd.CustID 
 	WHERE 
 		m.Recommend = @recommend 
-		and m.roleid=1 AND cs3rd.sporttype BETWEEN 151 AND 153
+		AND m.roleid = 1 
+		AND cs3rd.sporttype BETWEEN 151 AND 153
 	group by
-	ci.enabled, ci.closed, ci.reject, m.username, m.custid, m.ugroup, 
-	m.firstname, m.lastname,ci.credit
+		ci.enabled, 
+		ci.closed, 
+		ci.reject, 
+		m.username, 
+		m.custid, 
+		m.ugroup, 
+		m.firstname, 
+		m.lastname,
+		ci.credit
 	ORDER BY 
-	case when isnull(ci.enabled,0) = 0 then 3 when isnull(ci.closed,0) = 1 then 2 when isnull(ci.reject,0) = 1 then 1 else 0 end, 
-	m.username
-
+		CASE 
+			when isnull(ci.enabled, 0) = 0 then 3 
+			when isnull(ci.closed, 0) = 1 then 2 
+			when isnull(ci.reject, 0) = 1 then 1 
+			else 0 
+		end, 
+		m.username
 END
+
 
 
 GO

@@ -8,7 +8,7 @@
 AS
 /*
 	Task : Select Master Agent PT List
-	DB: DBAGE/bodb02, DBTXN/bodb02
+	DB: DBCUST.CustDB
 
 	Revisions:
 		- 20090331@Kiwi: Improve Reads by removing inner join customer
@@ -20,6 +20,7 @@ AS
 		- 20111128@Lukas: Add paging
 		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 		- 20140630@Logan: Add BetRadar(9999) for Soccer and Tennis [Redmine: #18413]
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
@@ -136,6 +137,7 @@ BEGIN
  
 	
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelPositionTakingBySAg] TO [bodbDownlineNet]

@@ -11,11 +11,12 @@ AS
 /*
 	Created: 20100904@Kiwi
 	Task : Select Number Game for PT List from custsetting3rd
-	DB: DB053.bodb02	
+	DB: DBCUST.CustDB
 
 	Revisions:
 		- 20110801@Sophia: Add bettype 88,89,90
 		- 20111128@Lukas: Add paging
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
@@ -25,23 +26,21 @@ BEGIN
 	SET NOCOUNT ON
 
 	SELECT 
-		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-	FROM 
-		custinfo AS ci WITH (NOLOCK)		
-	WHERE 
-		ci.MRecommend = @MRecommend AND ci.roleid=2 
+		@TotalPages = COUNT(ci.custid),@TotalPages = @TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
+	FROM custinfo AS ci WITH (NOLOCK)
+	WHERE ci.MRecommend = @MRecommend AND ci.roleid = 2 
 
 	SELECT * 
 	FROM 
 	(
 		SELECT 
-			ROW_NUMBER() OVER (ORDER BY CASE WHEN ISNULL(ci.enabled,0) = 0 THEN 3 
-											WHEN ISNULL(ci.closed,0) = 1 THEN 2 
-											WHEN ISNULL(ci.reject,0) = 1 THEN 1 
+			ROW_NUMBER() OVER (ORDER BY CASE WHEN ISNULL(ci.enabled, 0) = 0 THEN 3 
+											WHEN ISNULL(ci.closed, 0) = 1 THEN 2 
+											WHEN ISNULL(ci.reject, 0) = 1 THEN 1 
 											ELSE 0 
 										END, ci.username) AS RowNumber,
 			ci.closed, ci.enabled, 
-			ISNULL(ci.reject,0) suspended,
+			ISNULL(ci.reject, 0) suspended,
 			ci.username, 
 			ci.custid, 
 				
@@ -70,8 +69,6 @@ BEGIN
 			MAX(CASE WHEN cs3rd.bettype = 87 AND cs3rd.sporttype=161 THEN cs3rd.mlivepositiontaking ELSE 0 END) AS v161mlivepositiontaking_87,
 			MAX(CASE WHEN cs3rd.bettype = 89 AND cs3rd.sporttype=161 THEN cs3rd.mlivepositiontaking ELSE 0 END) AS v161mlivepositiontaking_89,
 			MAX(CASE WHEN cs3rd.bettype = 90 AND cs3rd.sporttype=161 THEN cs3rd.mlivepositiontaking ELSE 0 END) AS v161mlivepositiontaking_90
-
-
 		FROM 
 			custinfo AS ci WITH (NOLOCK)
 			INNER JOIN CustSetting3rd AS cs3rd WITH (NOLOCK) ON ci.custid = cs3rd.custid 
@@ -85,6 +82,7 @@ BEGIN
 	) t
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize
 END
+
 
 
 

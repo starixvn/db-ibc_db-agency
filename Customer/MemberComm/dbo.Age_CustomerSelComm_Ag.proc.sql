@@ -1,10 +1,10 @@
 ﻿ALTER PROCEDURE [dbo].[Age_CustomerSelComm_Ag]
-@Recommend int
+	@Recommend INT
 AS
 /*
 Created: 
 Task : Select member commission information
-DB: DBAGE/bodb02, DBTXN/bodb02
+DB: DBCUST.CustDB
 Original: CustomerSelCommByAg
 Revisions:
 	- 20091204@Kiwi: Retrieve data from CustSetting3rd for Financials.
@@ -72,6 +72,7 @@ m.firstname, m.lastname,ci.credit,ci.DoubleCommLosing
 ORDER BY 
 case when isnull(ci.enabled,0) = 0 then 3 when isnull(ci.closed,0) = 1 then 2 when isnull(ci.reject,0) = 1 then 1 else 0 end, 
 m.username
+
 
 
 GO
