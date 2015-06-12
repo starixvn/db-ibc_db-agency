@@ -24,10 +24,7 @@ Dependences:
 */
 BEGIN
 	SET NOCOUNT ON;	
-	
-	-- CHECK for existing table bettrans
-	-- IF (OBJECT_ID('bodb02.dbo.bettrans', 'U') IS NULL ) RETURN
-	
+		
 	-- CHECK for selecting from bettrans
 	IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 1))
 	BEGIN
@@ -77,7 +74,7 @@ BEGIN
 					ELSE 0
 				END		AS OddsType
 				, b.oddsid
-				, CASE WHEN c.ProductID IN ( 1, 8 )
+				, CASE WHEN c.ProductID IN ( 1, 8, 12 )
 							THEN b.Odds 
 						ELSE 0 
 					END						AS Odds
@@ -127,8 +124,8 @@ BEGIN
 				, 0 	AS htawayscore 		 
 				, b.IP	AS IP
 				, 0		AS LeagueID
-				,CASE WHEN c.ProductID = 8 
-						THEN fnc.GameId
+				,CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
+						WHEN c.ProductID = 12 	THEN 255
 					ELSE 0
 				END		AS MatchID
 				, ''	AS MatchCode
@@ -159,8 +156,9 @@ BEGIN
 						SELECT GameId, ChoiceId 
 						FROM [dbo].[f_ParseTransDesc](b.transdesc, b.bettype)
 						UNION
-						SELECT '' AS GameId, '' AS ChoiceId 
+						SELECT 0 AS GameId, '' AS ChoiceId 
 					) AS tmp
+					ORDER BY GameId DESC
 				) AS fnc
 			WHERE	c.WhTicket 		= 1
 				AND c.EventType 	= 0

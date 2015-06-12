@@ -306,7 +306,7 @@ BEGIN
 		BEGIN
 			DELETE c
 			FROM #tempCust c
-				INNER JOIN dbo.bettrans b with (nolock) 
+				INNER JOIN dbo.bettrans14 b with (nolock) 
 				ON c.transid 		= b.transid 
 				AND c.custid 		= b.custid
 			WHERE c.WhTicket 		= 2

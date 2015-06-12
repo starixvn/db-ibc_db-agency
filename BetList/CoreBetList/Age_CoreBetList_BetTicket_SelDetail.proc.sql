@@ -1,3 +1,6 @@
+USE bodb02
+--USE bodb_archive
+GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelDetail]
 AS
 /*
@@ -12,7 +15,15 @@ Revisions:
 Param's Explanation:
 	
 Dependences:
-	- Age_CoreBetList_BetTicket_SelMainInfo
+	- CREATE TABLE #tempCust 
+	( 
+		transid			BIGINT
+		, refno			BIGINT
+		, custid 		INT 
+		, productId 	INT 
+		, eventType		TINYINT
+		, WhTicket		TINYINT
+	)
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -48,9 +59,7 @@ BEGIN
 		)
 	)
 	BEGIN
-		IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 1)
-			--AND OBJECT_ID('bodb02.dbo.bettransm', 'U') IS NOT NULL
-		)
+		IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 1))
 		BEGIN
 			--SELECT bettransm
 			EXEC sp_sqlexec N'
@@ -128,9 +137,7 @@ BEGIN
 				AND b.ProductId		= 12'
 		END
 
-		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2)
-			--AND OBJECT_ID('bodb02.dbo.bettransm14', 'U') IS NOT NULL
-		)
+		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2))
 		BEGIN
 			--SELECT bettransm14
 			EXEC sp_sqlexec N'
@@ -210,9 +217,7 @@ BEGIN
 		
 		
 
-		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3)
-			--AND OBJECT_ID('bodb_archive.dbo.bettransm', 'U') IS NOT NULL
-		)
+		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3))
 		BEGIN
 			--SELECT bettransm from archive
 			EXEC sp_sqlexec N'

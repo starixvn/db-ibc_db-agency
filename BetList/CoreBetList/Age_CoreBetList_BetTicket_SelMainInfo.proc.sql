@@ -1,4 +1,5 @@
-ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo](
+ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+(
 	@ColumnOutput		VARCHAR(MAX) 	= NULL
 )
 AS
