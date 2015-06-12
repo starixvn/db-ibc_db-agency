@@ -1,11 +1,11 @@
-﻿ALTER PROCEDURE  [dbo].[Age_CustomerSelBetSetting]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelBetSetting]
 	@custid int,
 	@userid int
 AS
 /*
 Created: 20090211@nqminh
 Task : Select customer bet settings
-DB: DBAGE/bodb02, DBTXN/bodb02
+DB: DBCUST.CustDB
 Original:
 
 Revisions:
