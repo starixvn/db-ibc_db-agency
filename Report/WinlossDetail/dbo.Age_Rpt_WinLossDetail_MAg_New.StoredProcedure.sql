@@ -1,5 +1,13 @@
-﻿USE bodb02
+﻿USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_MAg_New]    Script Date: 06/15/2015 05:14:36 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 5/19/2015 3:17:10 AM ******/
+/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 5/11/2015 1:37:23 PM ******/
+/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 4/27/2015 10:34:40 AM ******/
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	@custid			 INT = NULL --mrecommend
@@ -65,6 +73,7 @@ Revisions:
 	                    2.Code aligning
 	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
 	- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
+	- 20150613@Francis: Change to use temporary table instead of table variable to improve performance
 */
 
 
@@ -77,8 +86,27 @@ SELECT @PageIndex = @PageIndex - 1
        ,@RowStart = @PageSize * @PageIndex + 1
        ,@RowEnd = @RowStart + @PageSize - 1
 
+/*
+DECLARE #MAgWinLossDetails TABLE
+(
+    CustID			INT
+    ,TurnOver		MONEY
+    ,GrossComm		MONEY
+    ,MemberWinLost	MONEY
+	,PlayerComm		MONEY
+	,MemberTotal	MONEY
+	,AgWinLost		MONEY
+	,AgComm			MONEY
+	,AgTotal		MONEY
+	,MAgWinLost		MONEY
+	,MAgComm		MONEY
+	,MAgTotal		MONEY
+	,Company		MONEY
+	,NoOfTicket		INT
+)
+*/
 
-DECLARE @MAgWinLossDetails TABLE
+CREATE TABLE #MAgWinLossDetails
 (
     CustID			INT
     ,TurnOver		MONEY
@@ -172,7 +200,7 @@ EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
 IF @Todate >= @BalanceUpDay
 BEGIN 
-    INSERT INTO @MAgWinLossDetails
+    INSERT INTO #MAgWinLossDetails
 	    SELECT Recommend,			
 			   SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
 		    --SUM(acomm/(1-apositiontaking-mpositiontaking)) as GrossComm,
@@ -225,7 +253,7 @@ BEGIN
 	IF @BalanceUpDay < @FromDate
 	    SELECT @BalanceUpDay = @FromDate
 	
-    INSERT INTO @MAgWinLossDetails
+    INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
 		       SUM(grosscomm) AS GrossComm,
@@ -255,7 +283,7 @@ BEGIN
 	IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)
 		SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDay)
 	
-    INSERT INTO @MAgWinLossDetails
+    INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
 		       SUM(grosscomm) AS GrossComm,
@@ -298,7 +326,7 @@ BEGIN
 	       SUM(MAgTotal) AS MAgTotal,
 	       SUM(Company) AS Company,
 	       SUM(NoOfTicket) AS NoOfTicket
-      FROM @MAgWinLossDetails w INNER JOIN Customer c WITH(NOLOCK)
+      FROM #MAgWinLossDetails w INNER JOIN Customer c WITH(NOLOCK)
         ON w.CustID = c.CustID 
   GROUP BY w.CustID, c.UserName
   ORDER BY c.Username
@@ -311,7 +339,7 @@ IF @TotalRows = 0
 BEGIN  
     SELECT @TotalRows = count(tmp.CustID)
       FROM (SELECT CustID
-              FROM @MAgWinLossDetails
+              FROM #MAgWinLossDetails
           GROUP BY CustID
            ) tmp
  
@@ -334,21 +362,24 @@ SELECT wl.*
 	           SUM(Company) AS Company,
 	           SUM(NoOfTicket) AS NoOfTicket,
 	           ROW_NUMBER() OVER (ORDER BY c.UserName) AS RowNum
-          FROM @MAgWinLossDetails w INNER JOIN Customer c WITH(NOLOCK)
+          FROM #MAgWinLossDetails w INNER JOIN Customer c WITH(NOLOCK)
             ON w.CustID = c.CustID 
       GROUP BY w.CustID, c.UserName
        ) wl
  WHERE 1 = 1
    AND wl.RowNum BETWEEN @RowStart AND @RowEnd
 
+DROP TABLE #MAgWinLossDetails
+
+
 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet]
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam] AS [dbo]
