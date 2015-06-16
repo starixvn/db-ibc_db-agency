@@ -20,7 +20,7 @@ BEGIN
 	EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countryCode OUTPUT, @countryLONG = @countryLONG OUTPUT
 	
 	--hardcode for testing on local
-	IF @IP IN ('10.21.10.38','10.21.10.31')
+	IF @IP IN ('10.21.10.38')
 		SELECT @CountryCode = 'SG'
 	
 END
