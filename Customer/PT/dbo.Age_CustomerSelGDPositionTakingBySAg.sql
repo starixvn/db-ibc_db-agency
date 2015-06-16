@@ -57,5 +57,11 @@ BEGIN
 END
 
 
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerSelGDPositionTakingBySAg] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerSelGDPositionTakingBySAg] TO [bodbDownlineNetView]
+GO 
+
 
 
