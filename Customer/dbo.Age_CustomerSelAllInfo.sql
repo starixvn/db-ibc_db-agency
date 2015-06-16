@@ -103,6 +103,7 @@ BEGIN
           , @uplineDisableHRFixedOdds   BIT
           , @uplineDisableEsports       BIT
 		  , @uplineDisableGoldDeluxe	BIT
+		  , @HasDownline BIT = 0
 
     DECLARE @DisableAutoMPT BIT
     		
@@ -173,6 +174,7 @@ BEGIN
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @mrecommend		
 
+		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE recommend = @custid AND roleid = 1
 	    --Agent Itself		
 	    SELECT @Credit_AllOtherAgent = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK) WHERE mrecommend = @mrecommend AND RoleID = 2 AND Custid <> @custID
     	
@@ -208,7 +210,7 @@ BEGIN
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @srecommend
 
-
+		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
 	    --Master Itself
 	    SELECT @Credit_AllOtherMaster = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci (NOLOCK) WHERE srecommend = @Srecommend AND RoleID = 3 AND custid <> @CustId
 	    SELECT @Credit_MAg_Max = ISNULL(@Credit_SAg,0) - ISNULL(@Credit_AllOtherMaster,0)	
@@ -281,7 +283,8 @@ BEGIN
 	    ISNULL(@uplineDisableHRFixedOdds,0) AS [uplineDisableHRFixedOdds],
 	    ISNULL(@uplineDisableEsports, 0) AS uplineDisableEsports,
 		ISNULL(@uplineDisableGoldDeluxe, 0) AS uplineDisableGoldDeluxe,
-    	
+    	@HasDownline AS HasDownline,
+
 	    @Credit_MAg_Min AS [MasterCredit_Min],
 	    @Credit_MAg_Max AS [MasterCredit_Max],
 	    @Credit_Ag_Min AS [AgentCredit_Min],
