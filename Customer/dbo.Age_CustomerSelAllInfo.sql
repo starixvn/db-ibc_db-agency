@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_CustomerSelAllInfo]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
 	@isInternalAgent BIT = 0
@@ -101,6 +101,7 @@ BEGIN
           , @uplineDisableHRFixedOdds   BIT
           , @uplineDisableEsports       BIT
 		  , @uplineDisableGoldDeluxe	BIT
+		  , @HasDownline BIT = 0
 
     DECLARE @DisableAutoMPT BIT
     		
@@ -171,6 +172,7 @@ BEGIN
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @mrecommend		
 
+		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE recommend = @custid AND roleid = 1
 	    --Agent Itself		
 	    SELECT @Credit_AllOtherAgent = ISNULL(SUM(credit), 0) FROM custinfo AS ci (NOLOCK) WHERE mrecommend = @mrecommend AND RoleID = 2 AND Custid <> @custID
     	
@@ -206,6 +208,7 @@ BEGIN
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @srecommend
 
+		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
 
 	    --Master Itself
 	    SELECT @Credit_AllOtherMaster = ISNULL(SUM(credit), 0) FROM custinfo AS ci (NOLOCK) WHERE srecommend = @Srecommend AND RoleID = 3 AND custid <> @CustId
@@ -279,7 +282,8 @@ BEGIN
 	    ISNULL(@uplineDisableHRFixedOdds,0) AS [uplineDisableHRFixedOdds],
 	    ISNULL(@uplineDisableEsports, 0) AS uplineDisableEsports,
 		ISNULL(@uplineDisableGoldDeluxe, 0) AS uplineDisableGoldDeluxe,
-    	
+    	@HasDownline AS HasDownline,
+
 	    @Credit_MAg_Min AS [MasterCredit_Min],
 	    @Credit_MAg_Max AS [MasterCredit_Max],
 	    @Credit_Ag_Min AS [AgentCredit_Min],
@@ -556,6 +560,7 @@ BEGIN
     	
     END
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
 GO
