@@ -312,8 +312,8 @@ BEGIN
 	    ci.DisableHRFixedOdds,
 	    ci.HideKeno,
 	    ci.DisableEsports,
-		ci.DisableGoldDeluxe,
-		ci.HideGoldDeluxe
+		ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
+		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe
     FROM customer c WITH (NOLOCK)
 	    INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
     WHERE c.custid = @custid
@@ -560,6 +560,8 @@ BEGIN
     	
     END
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]

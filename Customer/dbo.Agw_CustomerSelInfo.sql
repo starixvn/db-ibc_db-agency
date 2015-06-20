@@ -1,4 +1,4 @@
-ALTER PROCEDURE [Agw_CustomerSelInfo]
+ALTER PROCEDURE [dbo].[Agw_CustomerSelInfo]
 	@CustID int
 
 AS
@@ -84,8 +84,8 @@ BEGIN
          , ci.DoubleCommLosing
          , ci.HideKeno
          , ci.DisableEsports
-		 , ci.DisableGoldDeluxe
-         , ci.HideGoldDeluxe
+		 , ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe
+		 , ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe
       FROM Customer c WITH(NOLOCK)
 INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
      WHERE c.CustID = @CustID
