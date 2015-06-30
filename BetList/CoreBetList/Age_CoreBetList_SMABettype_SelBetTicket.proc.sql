@@ -37,36 +37,10 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	
-	-- CHECK TransStatus
-	IF ( OBJECT_ID('tempdb..#TransStatus') IS NULL )
-	BEGIN
-		CREATE TABLE #TransStatus (
-			StatusID 		INT
-		);
-		INSERT INTO #TransStatus
-		SELECT CAST(t.Val AS INT) 
-		FROM [bodb02].[dbo].[Age_f_SplitString] (@TransStatus, ',') t
-	END
-	
-	-- CHECK BettypeMatrix
-	IF ( OBJECT_ID('tempdb..#BettypeMatrix') IS NULL )
-	BEGIN
-		CREATE TABLE #BettypeMatrix (
-			ProductID 		INT
-			, Bettype 		INT
-			, EventType 	INT
-		);
-		WITH CteBT (ProductID, Bettype, EventType)
-		AS (
-			SELECT bt.Col.value('@ProductID'	,'INT')
-				, bt.Col.value('@Bettype'		,'INT')
-				, bt.Col.value('@EventType'		,'INT')
-			FROM  @BettypeMatrix.nodes('//row') bt(Col)
-		)
-		INSERT INTO #BettypeMatrix
-		SELECT *
-		FROM CteBT bt
-	END
+	-- RESTET output
+	SELECT @Error			= 0
+		,@ErrorMsg			= ''
+		
 	CREATE TABLE #tempCust 
 	( 
 		transid			BIGINT
@@ -133,6 +107,7 @@ BEGIN
 			ON b.statusid	= stt.statusid
 		WHERE c.mrecommend 	= @custid
 			AND c.roleid 	= 2
+
 	END
 	--SUPER
 	IF ( @roleid = 4 )
@@ -153,8 +128,9 @@ BEGIN
 			ON b.statusid	= stt.statusid
 		WHERE c.srecommend 	= @custid
 			AND c.roleid 	= 2
+
 	END
-	
+		
 	-- CHECK for cancelling tickets
 	IF( @EventDate IS NOT NULL )
 	BEGIN

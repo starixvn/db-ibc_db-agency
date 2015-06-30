@@ -49,35 +49,6 @@ BEGIN
 	
 	DECLARE @Recommend 	INT
 		, @Username		NVARCHAR(30)
-		
-	IF ( OBJECT_ID('tempdb..#TransStatus') IS NULL )
-	BEGIN
-		CREATE TABLE #TransStatus (
-			StatusID 		INT
-		);
-
-		INSERT INTO #TransStatus
-		SELECT CAST(t.Val AS INT)
-		FROM bodb02.[dbo].[Age_f_SplitString] (null, ',') t
-	END
-
-	IF(OBJECT_ID('tempdb..#BettypeMatrix') IS NULL )
-	BEGIN
-		DECLARE @BettypeMatrix XML
-		CREATE TABLE #BettypeMatrix (
-			ProductID 			INT
-			, Bettype 			INT
-			, EventType 		INT
-		);
-		-- CAST to XML formation
-		SET @BettypeMatrix = CAST (@BettypeMatrixInfo AS XML)
-		-- GATHER bettypes
-		INSERT INTO #BettypeMatrix
-		SELECT bt.Col.value('@ProductID', 'INT')	AS ProductID  
-			, bt.Col.value('@Bettype', 'INT')	AS Bettype
-			, bt.Col.value('@EventType', 'INT') AS EventType
-		FROM  @BettypeMatrix.nodes('//row') bt(Col)
-	END
 	
 	SELECT @Error		= 0
 		,@ErrorMsg		= ''

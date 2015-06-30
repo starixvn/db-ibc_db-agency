@@ -43,36 +43,9 @@ BEGIN
 	
 	DECLARE @IsBet14	BIT
 	
-	-- CHECK TransStatus
-	IF ( OBJECT_ID('tempdb..#TransStatus') IS NULL )
-	BEGIN
-		CREATE TABLE #TransStatus (
-			StatusID 		INT
-		);
-		INSERT INTO #TransStatus
-		SELECT CAST(t.Val AS INT) 
-		FROM [bodb02].[dbo].[Age_f_SplitString] (@TransStatus, ',') t
-	END
-	
-	-- CHECK BettypeMatrix
-	IF ( OBJECT_ID('tempdb..#BettypeMatrix') IS NULL )
-	BEGIN
-		CREATE TABLE #BettypeMatrix (
-			ProductID 		INT
-			, Bettype 		INT
-			, EventType 	INT
-		);
-		WITH CteBT (ProductID, Bettype, EventType)
-		AS (
-			SELECT bt.Col.value('@ProductID'	,'INT')
-				, bt.Col.value('@Bettype'		,'INT')
-				, bt.Col.value('@EventType'		,'INT')
-			FROM  @BettypeMatrix.nodes('//row') bt(Col)
-		)
-		INSERT INTO #BettypeMatrix
-		SELECT *
-		FROM CteBT bt
-	END
+	-- RESTET output
+	SELECT @Error			= 0
+		,@ErrorMsg			= ''
 	
 	--CHECK bettrans14
 	SELECT TOP 1 @IsBet14 = CAST(1 AS BIT) 
@@ -117,6 +90,7 @@ BEGIN
 				ON b.statusid	= stt.statusid
 			WHERE b.custid 		= @custid
 				AND b.matchid	= @matchid
+	
 		END
 		
 		IF ( @roleid = 2 )
@@ -135,6 +109,7 @@ BEGIN
 				ON b.statusid	= stt.statusid
 			WHERE b.recommend	= @custid
 				AND b.matchid	= @matchid
+				
 		END
 		
 		IF ( @roleid = 3 )
@@ -161,6 +136,7 @@ BEGIN
 				INNER JOIN #TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.matchid		= @matchid
+				
 		END
 		
 		IF ( @roleid = 4 )
@@ -187,6 +163,7 @@ BEGIN
 				INNER JOIN #TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.matchid		= @matchid
+				
 		END
 	END
 	

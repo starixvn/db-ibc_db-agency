@@ -58,37 +58,6 @@ BEGIN
 	
 	DECLARE @Recommend 	INT
 	
-	-- CHECK TransStatus
-	IF ( OBJECT_ID('tempdb..#TransStatus') IS NULL )
-	BEGIN
-		CREATE TABLE #TransStatus (
-			StatusID 		INT
-		);
-		INSERT INTO #TransStatus
-		SELECT CAST(t.Val AS INT) 
-		FROM [bodb02].[dbo].[Age_f_SplitString] (@TransStatus, ',') t
-	END
-	
-	-- CHECK BettypeMatrix
-	IF ( OBJECT_ID('tempdb..#BettypeMatrix') IS NULL )
-	BEGIN
-		CREATE TABLE #BettypeMatrix (
-			ProductID 		INT
-			, Bettype 		INT
-			, EventType 	INT
-		);
-		WITH CteBT (ProductID, Bettype, EventType)
-		AS (
-			SELECT bt.Col.value('@ProductID'	,'INT')
-				, bt.Col.value('@Bettype'		,'INT')
-				, bt.Col.value('@EventType'		,'INT')
-			FROM  @BettypeMatrix.nodes('//row') bt(Col)
-		)
-		INSERT INTO #BettypeMatrix
-		SELECT *
-		FROM CteBT bt
-	END
-	
 	-- CHECK for MoveBetsDay
 	IF( @MoveBetsDay IS NULL )
 	BEGIN
@@ -165,9 +134,16 @@ BEGIN
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
+			LEFT JOIN [dbo].[SportBettypeMatrix] sp
+			ON bt.ProductId = sp.ProductId 
+			AND bt.bettype 	= sp.bettype
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
 			AND	b.custid	= @CustID
+			--exclude running tickets of MetricGaming
+			AND (sp.SubProduct IS NULL 
+				OR (sp.SubProduct IN('MG-SuperLive') AND b.statusID NOT IN (0, 1))
+			) 
 		
 		/* 	select running tickets
 			- Keno 			: ProductId = 8
