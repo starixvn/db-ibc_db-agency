@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelUserInfo]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerSelUserInfo]    Script Date: 6/20/2015 3:41:53 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerSelUserInfo    Script Date: 5/18/2015 5:02:25 PM ******/
+ALTER PROCEDURE [dbo].[Age_CustomerSelUserInfo]
 	@custid int
 AS
 /*
@@ -17,6 +25,8 @@ Revisions:
 	- 20120726@Johnson: add bingo
 	- 20140520@Logan:   1.Retrieve remark for SAg, MAg, Ag from CustSuper, CustMaster & CustAgent
 	                    2.Code aligning
+	- 20150420@Elodie: Add Gold Deluxe Product
+
 Param's Explanation:
 • @custid: custid that need to be viewed.   
 */
@@ -77,6 +87,8 @@ SELECT Customer.custid,
 	   ci.disablelivecasino,
 	   ci.DisableBingo,
 	   ci.synclivecasino,
+	   ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
+	   ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
 	   ci.credit,
 	   e.currency as currencyname,
 	   @remark as remark
