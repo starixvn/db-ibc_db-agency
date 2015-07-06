@@ -15,6 +15,7 @@ BEGIN
 		- 20120827@Jamie: Add actual_stake for System Parlay Bet list 
 		- 20130222@Elodie: Get custid value
 		- 20130222@Elodie: Get oddsid value to use for Virtual HR
+		- 20150706@Bobby: Exclude Metric Gaming running ticket
 		
 	Parameter's Explanation:
 		- @custid : agent's ID
@@ -58,7 +59,9 @@ BEGIN
 		AND b.statusID BETWEEN 0 AND 1	
 		AND b.bettype NOT IN (1,3,7,8)	
 		AND b.bettype < 19001
-		AND b.transid > @transid		
+		AND b.transid > @transid
+		AND b.bettype NOT BETWEEN 801 AND 806 				
+		
 	ORDER BY b.transid DESC
 END
 

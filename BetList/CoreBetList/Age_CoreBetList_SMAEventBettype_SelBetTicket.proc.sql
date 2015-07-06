@@ -261,7 +261,7 @@ BEGIN
 	
 	IF(EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE ProductId = 3 AND eventType = 1 ) )
 	BEGIN
-		select @IsBet14, @liveindicator
+	
 		IF( @IsBet14 = 0 ) 
 		BEGIN
 			DELETE c
