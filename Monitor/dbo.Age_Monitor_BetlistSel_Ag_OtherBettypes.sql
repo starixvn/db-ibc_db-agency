@@ -1,4 +1,4 @@
-﻿USE [bodb02]
+USE [bodb02]
 GO
 /****** Object:  StoredProcedure [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]    Script Date: 8/27/2015 3:59:56 PM ******/
 SET ANSI_NULLS ON
