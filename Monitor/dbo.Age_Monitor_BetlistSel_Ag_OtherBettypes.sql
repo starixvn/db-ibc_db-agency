@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]
+ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]
  @custid	INT, 
  @transid BIGINT = 0,
  @LimitRowCount int = 20 
