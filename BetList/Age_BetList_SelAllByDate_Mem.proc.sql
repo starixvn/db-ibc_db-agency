@@ -78,6 +78,7 @@ Revisions:
 	- 20141103@Dom: Apply sport bettype matrix
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	- 20150522@Bobby: Add GD product
+	- 20150706@Bobby: #39097 - Fixing bug for showing Keno's bettype info
 */
 BEGIN
 	SET NOCOUNT ON
@@ -960,16 +961,7 @@ BEGIN
 		FROM
 			dbo.bettrans AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-			--CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype) fnc
-			CROSS APPLY (
-				SELECT TOP 1 GameId, ChoiceId
-				FROM (
-					SELECT GameId, ChoiceId 
-					FROM [dbo].[f_ParseTransDesc](b.transdesc, b.bettype)
-					UNION
-					SELECT '' AS GameId, '' AS ChoiceId 
-				) AS tmp
-			) AS fnc
+			OUTER APPLY dbo.f_ParseTransDesc(b.transdesc, b.bettype) fnc
 		WHERE
 			b.transdate BETWEEN @fromdate AND @todate AND
 			b.recommend = @Recommend AND  
@@ -1041,16 +1033,8 @@ BEGIN
 		FROM
 			dbo.translog AS b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON s.Bettype = b.gameID
-			--CROSS APPLY dbo.f_ParseTransDesc(b.transdesc, b.gameid) fnc
-			CROSS APPLY (
-				SELECT TOP 1 GameId, ChoiceId
-				FROM (
-					SELECT GameId, ChoiceId 
-					FROM [dbo].[f_ParseTransDesc](b.transdesc, b.gameid)
-					UNION
-					SELECT '' AS GameId, '' AS ChoiceId 
-				) AS tmp
-			) AS fnc
+			OUTER APPLY dbo.f_ParseTransDesc(b.transdesc, b.gameid) fnc
+			
 		WHERE
 			b.transdate BETWEEN @fromdate AND @todate AND
 			b.recommend = @Recommend AND  
