@@ -17,6 +17,7 @@ DB: DBAGE.bodb02
 
 Original:
 	-20140403@Dom: Add Betcredit field
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 */
 
 SET NOCOUNT ON
@@ -58,6 +59,11 @@ BEGIN
 			IsNull(sum(case when ruben=1 then winlost - actual_stake + playercomm else 0 end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE recommend = @Recommend
+			and (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 		GROUP BY custid
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
@@ -112,6 +118,11 @@ BEGIN
 			IsNull(sum(case when ruben=1 then winlost - actual_stake + playercomm else 0 end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE recommend = @Recommend
+			and (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 		GROUP BY custid
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
@@ -167,6 +178,11 @@ BEGIN
 			IsNull(sum(case when ruben=1 then winlost - actual_stake + playercomm else 0 end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE recommend = @Recommend AND recommend <> custid
+			and (
+				(bettrans.bettype NOT IN (801,802,803,804,805,806)
+				AND ruben =0)
+				OR ruben <> 0
+				)
 		GROUP BY custid
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
