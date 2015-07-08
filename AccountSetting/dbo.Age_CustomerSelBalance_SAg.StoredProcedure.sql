@@ -45,6 +45,7 @@ Revisions:
                        Delete @ABSDate= 2011-9-1 param and condition to check WinLossDate > @ABSDate
 					   Remove bettype = 23101 in total Casino Outstanding
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 
 */
 SET NOCOUNT ON
@@ -106,6 +107,11 @@ SELECT
 			
 FROM bettrans WITH (NOLOCK)  
 WHERE srecommend=@CustID 
+	AND (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 /*
 SELECT 
 	@Yesterday_CashBalance=IsNull(sum(case when custid=srecommend then winlost-actual_stake else swinlost+scomm-acomm end),0),  
@@ -128,6 +134,11 @@ FROM
 		FROM bettrans WITH (NOLOCK)  
 		WHERE srecommend=@CustID  and ruben = 1 and bettype <= 19000
 			and bettrans.winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)
+			AND (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 	 )today_balance 
 
 

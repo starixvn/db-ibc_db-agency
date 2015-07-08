@@ -39,6 +39,7 @@ Revisions:
 
 	- 20110823@Sophia: Count Negative stake as positive turnover
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 
 Param's Explanation:
 
@@ -105,6 +106,11 @@ AS (
 					END), 0) AS turnover
 	FROM bettrans WITH (NOLOCK)
 	WHERE recommend = @custid
+		AND (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 	GROUP BY custid
 	
 	UNION ALL
@@ -137,6 +143,11 @@ SELECT custid
 	,sum(winlost - actual_stake + playercomm) balance
 FROM bettrans WITH (NOLOCK)
 WHERE recommend = @CustID AND ruben = 1 AND bettype < 19001 AND winlostdate >= convert(VARCHAR(10), current_timestamp, 120)
+	AND (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 GROUP BY custid
 
 --Filter user
