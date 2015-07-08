@@ -18,6 +18,7 @@ Revisions:
 	-20110321@Kaden.Trinh: Rename @Keyword to @Username
 	-20110321@Kaden.Trinh: add parameter status(Enabled, Closed, Suspended), so that we can search for it.  
 	-20140403@Dom: Add Betcredit field
+	-20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 */
 
 SET NOCOUNT ON
@@ -59,6 +60,11 @@ BEGIN
 			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE srecommend = @SRecommend
+			and (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 		GROUP BY mrecommend
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
@@ -115,6 +121,11 @@ BEGIN
 			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE srecommend = @SRecommend
+			and (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 		GROUP BY mrecommend
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
@@ -171,6 +182,11 @@ BEGIN
 			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
 		FROM bettrans with (NOLOCK)
 		WHERE srecommend = @SRecommend
+			and (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 		GROUP BY mrecommend
 	) as t ON t.custid = c.custid
 	LEFT JOIN 

@@ -18,6 +18,7 @@ AS
 		- 20110709@Johnson: Change to use new server BD053 instead DB052
 		- 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
 		- 20130218@Dan: Change linked server DB03 to DBPOLICY, DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
+		- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 */
 
 SET NOCOUNT ON
@@ -81,7 +82,11 @@ BEGIN
 	select  @TotalAmt = sum(winlost-actual_stake+playercomm)
     from bettrans with (nolock)
     where custid = @CustID
-    
+		and (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
     select @TotalAmt = isnull(@TotalAmt, 0)
 	
 	Update custinfo with (ROWLOCK, UPDLOCK) 
