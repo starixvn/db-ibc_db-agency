@@ -1,13 +1,5 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_Statement_Mem]    Script Date: 10/02/2014 09:17:15 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Age_Statement_Mem    Script Date: 3/18/2014 3:18:56 AM ******/
-/****** Object:  Stored Procedure dbo.Age_Statement_Mem    Script Date: 3/7/2014 3:34:56 PM ******/
-
 
 ALTER PROCEDURE [dbo].[Age_Statement_Mem]
 	@CustID 		INT,
@@ -41,6 +33,7 @@ Revisions:
 	- 20140214@Lukas: exclude bingo transfer & bingo pending transactions
 	- 20140305@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 	- 20140930@Daniel: fix bug wrong Accu row in case cannot find any BU row before @fromDate
+	- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
 
 Param's Explanation:	
 • @ErrCode:
@@ -107,6 +100,7 @@ BEGIN
 		FROM bettrans (NOLOCK)  
 		WHERE custid = @custid
 			AND winlostdate BETWEEN @f_Date AND @t_Date 
+			AND CASE WHEN bettype BETWEEN 801 AND 899 AND StatusID IN (0,1) THEN 0 ELSE 1 END = 1 
 		GROUP BY winlostdate, bettype,  
 			CASE   
 				WHEN statusID IN (102,101) THEN 102
@@ -114,7 +108,9 @@ BEGIN
 			ELSE 131 END,
 			CASE WHEN bettype <= 19999 THEN NULL ELSE transdate END,  
 			CASE WHEN bettype <= 19999 THEN '' ELSE transdesc END 
-	
+
+		 
+		  
 		UNION ALL
 		SELECT winlostdate, 
 				gameid as bettype,  

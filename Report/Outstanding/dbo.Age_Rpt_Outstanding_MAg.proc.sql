@@ -5,7 +5,7 @@ AS
 /*
 Created: 
 Task : Report Outstanding
-DB: DB053.bodb02
+DB: DBAGE.bodb02
 Revisions:
     - 20090227@Hiep: Get more result for Casino Integration	
     - 20090422@Tuan: Two more columns ("CasinoTransfer" & "CasinoOustanding") for Casino
@@ -18,12 +18,10 @@ Revisions:
 					2. Remove parameter @ABSDate ('2011-09-01')
 					3. Remove betype 23101 in CasinoOutstanding    
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]   
+	- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
 */
 SET NOCOUNT ON
-/*
-DECLARE @ABSDate DATETIME
-SET @ABSDate = '2011-09-01'
-*/
+ 
 ;with rt 
 AS (
 	SELECT	recommend,  
@@ -36,8 +34,9 @@ AS (
 		SUM(CASE when bettype = 23102 then actual_stake END) P2POutstanding,
 		SUM(case when bettype = 23201 then actual_stake end) BingoTransfer,
 		SUM(case when bettype = 23202 then actual_stake end) BingoOutstanding
-	FROM bettrans with (nolock) 
+	FROM	bettrans with (nolock) 
 	WHERE	ruben=0
+			AND bettype NOT BETWEEN 801 AND 899
 			AND mrecommend =  @CustID
 	GROUP BY recommend
 
