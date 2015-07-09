@@ -110,16 +110,8 @@ BEGIN
 				INNER JOIN #tempCust c 
 				ON b.translogid		= c.transid
 					AND b.custid	= c.custid
-				CROSS APPLY (
-					SELECT TOP 1 GameId, ChoiceId
-					FROM (
-						SELECT GameId, ChoiceId 
-						FROM [dbo].[f_ParseTransDesc](b.transdesc, b.gameid)
-						UNION
-						SELECT 0 AS GameId, '' AS ChoiceId 
-					) AS tmp
-					ORDER BY GameId DESC
-				) AS fnc
+				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.gameid) fnc
+				
 			WHERE c.WhTicket 		= 0
 				AND c.EventType		= 0
 				AND b.StatusID		IN (0,1)
