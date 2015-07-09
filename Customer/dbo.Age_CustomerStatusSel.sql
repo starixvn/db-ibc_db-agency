@@ -8,16 +8,23 @@ AS
 		Date: 2015-02-27
 		Task: check status of account(sub account& main account login)
 				 at currently is closed or not
-		DB: DBAGE/BODB02
+		DB: DBCUST.CustDB
 		
 		Revisions:
 			- 20150303@Johnson: check status of sub-account by main account also
+			- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+
 		Parameter's Explanation:
 			- @custid: id of main account
 			- @subAccID: id of sub-account
 	*/
 BEGIN
 	SET NOCOUNT ON
+	
+	-- SELECT @isActive  = 1
+	-- return 
+	
+	
 	--check sub-account status
 	IF @subAccID <> 0
 	BEGIN
@@ -42,8 +49,9 @@ BEGIN
 	END
 	
 	SELECT @isActive = ISNULL(@isActive,0)
-END	
+END
+
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerStatusSel] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerStatusSel] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerStatusSel] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_CustomerStatusSel] TO [bodbDownlineNetView] AS [dbo]

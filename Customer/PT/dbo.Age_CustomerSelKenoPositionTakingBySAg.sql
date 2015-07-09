@@ -7,21 +7,33 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelKenoPositionTakingBySAg]
 )
 AS
 /*
-
 	Created: 20140611@Logan - [Redmine:#17174]
 	Date:  
 	Task : Select Keno PT Info of Masters
-	DB: DBAGE\bodb02
+	DB: DBCUST.CustDB
 	Original: Age_CustomerSelLiveCSPositionTakingBySAg
-
 
 	Revisions: 
 		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
 */
 BEGIN
 	SET NOCOUNT ON
+
+	----- 20150610@Kos -------------------
+	DECLARE @tmp_GameType TABLE (GameTypeID INT, GameTypeName NVARCHAR(50), IsDisabled BIT, IBCBettypeID INT)	
+
+	BEGIN TRY
+		INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+		SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBAGE.bodb02.dbo.GameType WITH (NOLOCK)
+	END TRY
+	BEGIN CATCH
+		INSERT INTO @tmp_GameType (GameTypeID, GameTypeName, IsDisabled, IBCBettypeID)
+		SELECT GameTypeID, GameTypeName, IsDisabled, IBCBettypeID FROM DBTXN.bodb02.dbo.GameType WITH (NOLOCK)
+	END CATCH
+	-----20150610@Kos -------------------
 
 	SELECT @TotalPages = COUNT(ci.custid),
 	       @TotalPages = @TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
@@ -58,7 +70,7 @@ BEGIN
 	          FROM custinfo ci with(nolock)
         inner join CustSettingGame cg with(nolock) on ci.custid = cg.custid
         inner join CustGameType ct with(nolock) on ci.custid = ct.CustID
-        inner join GameType gt with(nolock) on gt.GameTypeID = ct.GameTypeID and gt.IBCBetTypeID = cg.Bettype
+        inner join @tmp_GameType gt on gt.GameTypeID = ct.GameTypeID and gt.IBCBetTypeID = cg.Bettype
 		     WHERE 1 = 1
 		       and ci.SRecommend = @SRecommend
 		       AND ci.roleid = 3
@@ -69,6 +81,7 @@ BEGIN
 	   AND RowNumber <= @PageIndex * @PageSize
 
 END
+
 
 
 

@@ -9,7 +9,7 @@ AS
 
 /*
 	Task : Select Agent PT List
-	DB: DBAGE/bodb02, DBTXN/bodb02
+	DB: DBCUST.CustDB
 	Revisions:
 		- 20090331@Kiwi: Improve Reads by removing inner join customer
 		- 20091204@Kiwi: Retrieve data from CustSetting3rd.
@@ -20,6 +20,7 @@ AS
 		- 20111128@Lukas: Add paging
 		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 		- 20140630@Logan: Add BetRadar(9999) for Soccer and Tennis [Redmine: #18413]
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
@@ -198,6 +199,7 @@ BEGIN
 	) t
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize
 END
+
 
 
 GO

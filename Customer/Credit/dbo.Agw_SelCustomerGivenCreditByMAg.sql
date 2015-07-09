@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Agw_SelCustomerGivenCreditByMAg]
+﻿ALTER PROCEDURE  [dbo].[Agw_SelCustomerGivenCreditByMAg]
 	@MRecommend int ,
 	@Keyword nvarchar(30)='%',
 	@PageSize int=50,
@@ -10,9 +10,10 @@ AS
 
 Created: 20081025@QuiNV
 Task: Get all agent's given credit of master custid=@MRecommend
-DB: DB05.bodb02
+DB: DBCUST.custDB
 Original:
-
+Revisions: 
+	- 20150612@Kathy: Move sp from DB05.bodb02 to DBCUST.CustDB [Redmine:#36216]
 
 */
 
@@ -45,9 +46,7 @@ where mrecommend=@MRecommend and roleid=2 and username like @Keyword
 
 WHERE RowNum between @RowStart and @RowEnd
 
-
 GO
-GRANT EXECUTE ON [dbo].[Agw_SelCustomerGivenCreditByMAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_SelCustomerGivenCreditByMAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_SelCustomerGivenCreditByMAg] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_SelCustomerGivenCreditByMAg] TO [vnteam] AS [dbo]

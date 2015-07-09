@@ -7,14 +7,13 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelGDPositionTakingBySAg]
 )
 AS
 /*
-
 	Created: 20150507@Sophia
 	Task : Select Gold Deluxe of Masters
-	DB: DBAGE/bodb02
+	DB: DBCUST.CustDB
 	Original: Age_CustomerSelLiveCSPositionTakingBySAg
 
-
 	Revisions: 
+		- 20150616@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
@@ -25,7 +24,7 @@ BEGIN
 
 	SELECT 
 		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-	FROM																									   
+	FROM
 		dbo.custinfo AS ci WITH (NOLOCK)
 		INNER JOIN dbo.CustSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
 	WHERE ci.SRecommend = @SRecommend AND ci.roleid=3 AND cg.sporttype = 255
@@ -45,7 +44,7 @@ BEGIN
 			ci.username, 
 			ci.custid,
 			MAX(CASE WHEN cg.sporttype=255 THEN cg.spositiontaking ELSE 0 END) v255spositiontaking
-		FROM																									   
+		FROM
 			dbo.custinfo AS ci WITH (NOLOCK)
 			INNER JOIN dbo.CustSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
 		WHERE ci.SRecommend = @SRecommend AND ci.roleid=3 AND cg.sporttype = 255
@@ -58,4 +57,9 @@ END
 
 
 
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerSelGDPositionTakingBySAg] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerSelGDPositionTakingBySAg] TO [bodbDownlineNetView]
+GO 
 

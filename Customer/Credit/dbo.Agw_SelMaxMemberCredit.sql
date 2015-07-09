@@ -1,15 +1,25 @@
-﻿ALTER PROCEDURE [dbo].[Agw_SelMaxMemberCredit]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Agw_SelMaxMemberCredit]    Script Date: 06/12/2015 10:51:43 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+/****** Object:  Stored Procedure dbo.Agw_SelMaxMemberCredit    Script Date: 6/12/2009 10:28:09 AM ******/
+ALTER PROCEDURE [dbo].[Agw_SelMaxMemberCredit]
 	@custid int, -- Agent custid
 	@maxMemberCredit float output
 AS
 /*
 Created: 20090114@QuiNV
 Task: Ouput max credit which new member can have
-DB: DB05.bodb02
+DB: DBCUST.custDB
 Original:
 
 Revisions:
 	- 20090521@PhuongDao: Get maxcredit from CustAgent 
+	- 20150612@Kathy: Move sp from DB05.bodb02 to DBCUST.CustDB [Redmine:#36216]
 
 */
 SET NOCOUNT ON
@@ -40,16 +50,8 @@ SELECT @maxMemberCredit = case when (@maxMemberCredit < @agentMaxMemberCredit or
 
 
 GO
-GRANT EXECUTE ON [dbo].[Agw_SelMaxMemberCredit] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_SelMaxMemberCredit] TO [bodbAdminNet] AS [dbo]
 GO
-
-
+GRANT EXECUTE ON [dbo].[Agw_SelMaxMemberCredit] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Agw_SelMaxMemberCredit] TO [bodbAdminNet]
-GO
-
-
-
-GRANT VIEW DEFINITION ON [dbo].[Agw_SelMaxMemberCredit] TO [vnteam]
-
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_SelMaxMemberCredit] TO [vnteam] AS [dbo]

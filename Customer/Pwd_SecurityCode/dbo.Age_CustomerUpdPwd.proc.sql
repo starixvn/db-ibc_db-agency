@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerUpdPwd]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerUpdPwd]    Script Date: 06/11/2015 12:44:21 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerUpdPwd    Script Date: 5/8/2015 5:41:00 PM ******/
+ALTER PROCEDURE [dbo].[Age_CustomerUpdPwd]
     @CustID INT ,
     @UserPwd NVARCHAR(50) ,
     @UserID INT ,
@@ -25,6 +33,9 @@ Revisions:
 	- 20110907@Sophia: Change Linked Server from DB052 to DB053	
 	- 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
 	- 20130311@Dan: Change linked server DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
+	- 20150508@Johnson: Check sub-account not allow to update main account password [Redmine: #35551]
+	- 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
+	
 Param's Explanation:
 • @ErrCode:
     = 0: Transaction recorded successfully.
@@ -40,7 +51,7 @@ Param's Explanation:
 	declare @duration int
 	set @startRun = getdate()
 --Check disable user
-    EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid,
+    EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid,
         @ErrCode = @ErrCode OUTPUT, @ErrMsg = @ErrMsg OUTPUT
     IF @ErrCode <> 0 
         RETURN
@@ -65,6 +76,13 @@ Param's Explanation:
                     @ErrCode = 100
             RETURN
         END
+    
+    IF EXISTS (SELECT 1 FROM custSub WITH(NOLOCK) WHERE custid = @custid AND subaccID = @SubAccID)
+	 BEGIN
+            SELECT  @ErrMsg ='You dont have permission to do this action.',
+                    @ErrCode = 101
+            RETURN
+        END	
 
 	SELECT	@OldPwd	= userpwd
 	FROM	Customer WITH (NOLOCK) 
@@ -128,8 +146,10 @@ Param's Explanation:
 			@TrackingValue = @LogData	,
 			@duration = @duration	
 	END CATCH
+
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdPwd] TO [bodbDownlineNet]
-GO 
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdPwd] TO [VNTeam]
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdPwd] TO [bodbDownlineNet] AS [dbo]
 GO
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdPwd] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdPwd] TO [vnteam] AS [dbo]

@@ -1,23 +1,26 @@
 ﻿ALTER PROCEDURE [dbo].[Acc_SelCustomerGivenCredit]
-@CustID int
-
+	@CustID INT
 AS
 
 /*
-
-Created: 20081024@QuiNV
-Task: Get given credit of a customer (belonging have been checked on web already). Returns: username, givencredit
-DB: DB05.bodb02
-Original:
-
+	Created: 20081024@QuiNV
+	Task: Get given credit of a customer (belonging have been checked on web already). Returns: username, givencredit
+	DB: DBCUST.CustDB
+	Original:
+	Revisions:
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 */
 
 SET NOCOUNT ON
-SELECT c.username as username, 
-		c.roleid as roleid,
-		credit as givencredit  
-FROM Customer c with(nolock) INNER JOIN Custinfo ci with(nolock) ON c.CustID = ci.CustID
-WHERE c.CustID = @CustID  
+
+SELECT 
+	c.username AS username, 
+	c.roleid AS roleid,
+	credit AS givencredit
+FROM Customer c WITH (NOLOCK) 
+	INNER JOIN Custinfo ci WITH (NOLOCK) ON c.CustID = ci.CustID
+WHERE c.CustID = @CustID
+
 
 
 GO

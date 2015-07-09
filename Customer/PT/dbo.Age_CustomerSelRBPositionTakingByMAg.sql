@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_CustomerSelRBPositionTakingByMAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelRBPositionTakingByMAg]
 (
 	@MRecommend INT,
 	@PageIndex	INT = 1,
@@ -12,12 +11,13 @@ AS
 	Created: 20110311@Lukas
 	Date: 20110311
 	Task : Select Racebook for PT List from custsetting3rd
-	DB: DB053.bodb02
+	DB: DBCUST.CustDB
 	Original: DB052.bodb02.dbo.Age_CustomerSelPositionTakingByMAg
 
 	Revisions: 
 		- 20111128@Lukas: Add paging
-
+		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+		
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
 */
@@ -83,14 +83,9 @@ BEGIN
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize
 END
 
-
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelRBPositionTakingByMAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelRBPositionTakingByMAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelRBPositionTakingByMAg] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelRBPositionTakingByMAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelRBPositionTakingByMAg] TO [VNTeam]
-GO 
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelRBPositionTakingByMAg] TO [vnteam] AS [dbo]

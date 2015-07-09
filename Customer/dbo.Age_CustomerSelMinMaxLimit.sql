@@ -1,4 +1,4 @@
-﻿ALTER PROC [dbo].[Age_CustomerSelMinMaxLimit]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelMinMaxLimit]
 	@custid int,
 	@userid int,
 	@MinBet_Max money output, @MaxBet_Min money output, @MaxPerMatch_Min money = 0 output, @MaxPerMatch_Max money output,
@@ -16,11 +16,11 @@ AS
 /*
 Created: 20090714@nqminh
 Task : Select customer minbet_max, maxbet_min, maxpermatch_min, maxpermatch_max 
-DB: DBAGE/bodb02, DBTXN/bodb02
+DB: DBCUST.CustDB
 Original:
 
 Revisions:
-    	- 20090122@[Reviewer]: [Description of revision]    
+	- 20090122@[Reviewer]: [Description of revision]
 	- 20100919@Terry: Add Number Game and Mixed Sport
 	- 20101029@Johnson: Include max per ball for number game
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]

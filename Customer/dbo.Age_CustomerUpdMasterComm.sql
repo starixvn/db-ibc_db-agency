@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerUpdMasterComm]	
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerUpdMasterComm]    Script Date: 06/11/2015 12:38:11 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerUpdMasterComm    Script Date: 12/5/2013 4:35:18 PM ******/
+ALTER PROCEDURE [dbo].[Age_CustomerUpdMasterComm]	
 	@custid int, --customer to be updated
 	@groupa decimal(9,8),
 	@groupb decimal(9,8),
@@ -29,7 +37,8 @@ Revisions:
 	- 20100918@Terry: Add number game
 	- 20110907@Sophia: Change Linked Server from DB052 to DB053	
 	- 20130311@Dan: Change linked server DB053 to DBAGE
-	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
+	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505] 
+	 - 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
 	
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -50,7 +59,7 @@ Param's Explanation:
 SET NOCOUNT ON
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 if @ErrCode <>0 return
 --end
 
@@ -106,8 +115,7 @@ begin
 		@IP = @IP,
 		@ErrCode = @ErrCode OUTPUT,
 		@ErrMsg = @ErrMsg OUTPUT
-end	
-
+end
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerUpdMasterComm] TO [bodbDownlineNet] AS [dbo]

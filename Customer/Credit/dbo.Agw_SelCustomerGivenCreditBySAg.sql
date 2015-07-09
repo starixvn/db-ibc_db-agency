@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Agw_SelCustomerGivenCreditBySAg]
+﻿ALTER PROCEDURE  [dbo].[Agw_SelCustomerGivenCreditBySAg]
 	@SRecommend int ,
 	@Keyword nvarchar(30)='%',
 	@PageSize int=50,
@@ -9,9 +9,12 @@ AS
 /*
 Created: 20081025@QuiNV
 Task: Get all master's given credit of super custid=@SRecommend
-DB: DB05.bodb02
+DB: DBCUST.custDB
 Original:
 
+Revisions:
+	- 20150612@Kathy: Move sp from DB05.bodb02 to DBCUST.CustDB [Redmine:#36216]
+	
 */
 
 SET NOCOUNT ON
@@ -44,9 +47,7 @@ where srecommend=@SRecommend and roleid=3 and username like @Keyword
 
 WHERE RowNum between @RowStart and @RowEnd
 
-
 GO
-GRANT EXECUTE ON [dbo].[Agw_SelCustomerGivenCreditBySAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_SelCustomerGivenCreditBySAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_SelCustomerGivenCreditBySAg] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_SelCustomerGivenCreditBySAg] TO [vnteam] AS [dbo]

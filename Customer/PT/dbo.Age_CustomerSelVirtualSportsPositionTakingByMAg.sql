@@ -1,4 +1,4 @@
-﻿ ALTER PROCEDURE [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg]
 (
 	@MRecommend INT,
 	@PageIndex	INT = 1,
@@ -11,7 +11,7 @@ AS
 	Created: 20120809@Sophia
 	Date:  
 	Task : Select Virtual Sports for PT List from custsettinggame
-	DB: DBAGE/bodb02
+	DB: DBCUST.CustDB
 	Original: Age_CustomerSelPositionTakingByMAg
 
 	Revisions: 
@@ -19,6 +19,8 @@ AS
 		- 20130305@Johnson: add virtual horse racing setting (sporttype: 181)
 		- 20131126@Kathy: Add Virtual Greyhounds/Motor Racing (182, 184) [Redmine:#7234]
 		- 20140402@Dom: Add Virtual Speedway/ Cycling setting (sporttype: 183,185)
+		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
 */
@@ -79,14 +81,9 @@ BEGIN
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize
 END
 
-
-
-
-
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg] TO [VNTeam]
-GO  
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelVirtualSportsPositionTakingByMAg] TO [vnteam] AS [dbo]

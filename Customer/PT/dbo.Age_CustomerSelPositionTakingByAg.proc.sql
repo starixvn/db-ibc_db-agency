@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByAg]  
+﻿
+ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByAg]
 (
 	@Recommend INT,
 	@PageIndex	INT = 1,
@@ -8,7 +9,7 @@
 AS
 /*  
 	Task : Select Member PT List  
-	DB: DBAGE/bodb02, DBTXN/bodb02
+	DB: DBCUST.CustDB
 
 	Revisions:  
 		- UPDATED 02/22/2006: remove refno  
@@ -23,6 +24,7 @@ AS
 		- 20111128@Lukas: Add paging
 		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 		- 20140630@Logan: Add BetRadar(9999) for Soccer and Tennis [Redmine: #18413]
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 	Param's Explanation:  
 	• @Recommend: AgentID  
 */  
@@ -307,6 +309,7 @@ BEGIN
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize	
 
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelPositionTakingByAg] TO [bodbDownlineNet]

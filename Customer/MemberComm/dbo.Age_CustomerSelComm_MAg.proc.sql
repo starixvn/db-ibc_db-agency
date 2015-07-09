@@ -5,7 +5,7 @@ AS
 /*
 Created: 
 Task : Select member commission information
-DB: DBAGE/bodb02, DBTXN/bodb02
+DB: DBCUST.CustDB
 Original: CustomerSelCommByMAg
 Revisions:
 	- 20091204@Kiwi: Retrieve data from CustSetting3rd for Financials.
@@ -17,6 +17,7 @@ Revisions:
 */
 
 SET NOCOUNT ON
+
 SELECT 
 	ci.closed,ci.enabled, isnull(ci.reject,0) as suspended, m.username, m.custid, m.ugroup, 
 	m.firstname, m.lastname, ci.credit, ci.DoubleCommLosing,

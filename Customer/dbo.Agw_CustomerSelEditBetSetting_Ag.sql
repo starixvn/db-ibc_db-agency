@@ -5,7 +5,7 @@ AS
 /*
 Created: 20090203@QuiNV
 Task : Select member bet setting information
-DB: DBAGE/bodb02
+DB: DBCUST.CustDB
 Original:
 Revisions:
 	- 20091204@Kiwi: Retrieve data from CustSetting3rd for Financials.
@@ -16,7 +16,9 @@ Revisions:
 	- 20121204@Tom: Add  virtual tennis setting (sporttype : 186 , bettype : 1220)
 	- 20130305@Johnson: Add virtual horse racing setting (sporttype: 181)
 	- 20140402@Dom: Add Virtual Speedway/ Cycling setting (sporttype: 183,185)
+	- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
 */
+
     
 SET NOCOUNT ON
 Declare @MinBet_Max money, 
@@ -479,9 +481,8 @@ group by
  ci.maxpermatch185,
  ci.maxpermatch186,
  ci.currency
-   
+
 GO
-GRANT EXECUTE ON [dbo].[Agw_CustomerSelEditBetSetting_Ag] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_CustomerSelEditBetSetting_Ag] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelEditBetSetting_Ag] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelEditBetSetting_Ag] TO [vnteam] AS [dbo]

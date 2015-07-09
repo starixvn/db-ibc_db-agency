@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerUpdSecurityCode]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerUpdSecurityCode]    Script Date: 06/11/2015 12:46:37 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerUpdSecurityCode    Script Date: 10/14/2014 1:37:32 AM ******/
+/****** Object:  Stored Procedure dbo.Age_CustomerUpdSecurityCode    Script Date: 10/13/2014 10:29:50 AM ******/
+ALTER PROCEDURE [dbo].[Age_CustomerUpdSecurityCode]
 	@custid		INT,
 	@userid		INT,
 	@subaccID	INT = 0,
@@ -18,6 +27,8 @@
 		Revisions:
 			- 20140514@viet: also check sub-account's security code
 			- 20141008@Johnson: write log in case of updating own security code
+			- 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
+			
 		Parameter's Explanation:
 	*/
 SET NOCOUNT ON
@@ -34,7 +45,7 @@ SET NOCOUNT ON
 	SET @startRun = GETDATE()
 	
 	--Check disable user
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 	if @ErrCode <>0 return
 
 	SELECT @roleid = roleid,
@@ -200,8 +211,6 @@ SET NOCOUNT ON
 	END
 
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdSecurityCode] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdSecurityCode] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdSecurityCode] TO [bodbDownlineNetView]
-
-
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdSecurityCode] TO [bodbDownlineNetView] AS [dbo]

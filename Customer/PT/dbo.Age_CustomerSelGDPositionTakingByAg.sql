@@ -10,10 +10,11 @@ AS
 	Created: 20150507@Sophia
 	Date:  
 	Task : Select Gold Deluxe PT or Member Infomation 
-	DB: DBAGE/bodb02
+	DB: DBCUST.CustDB
 	Original: Age_CustomerSelLiveCSPositionTakingByAg
 
 	Revisions: 
+		- 20150616@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 	
 	Param's Explanation:
 	• @Recommend: Agent ID
@@ -24,10 +25,10 @@ BEGIN
 
 	SELECT 
 		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-	FROM																									   
+	FROM
 		dbo.custinfo AS ci WITH (NOLOCK)
 		INNER JOIN dbo.CustSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
-	WHERE ci.Recommend = @Recommend AND ci.roleid=1 AND cg.sporttype = 255
+	WHERE ci.Recommend = @Recommend AND ci.roleid = 1 AND cg.sporttype = 255
 
 	SELECT *
 	FROM 
@@ -46,7 +47,7 @@ BEGIN
 			MAX(CASE WHEN cg.sporttype=255 THEN cg.spositiontaking ELSE 0 END) v255spositiontaking,
 			MAX(CASE WHEN cg.sporttype=255 THEN cg.mpositiontaking ELSE 0 END) v255mpositiontaking,
 			MAX(CASE WHEN cg.sporttype=255 THEN cg.apositiontaking ELSE 0 END) v255apositiontaking 
-		FROM																									   
+		FROM
 			dbo.custinfo AS ci WITH (NOLOCK)
 			INNER JOIN dbo.CustSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
 		WHERE ci.Recommend = @Recommend AND ci.roleid=1 AND cg.sporttype = 255

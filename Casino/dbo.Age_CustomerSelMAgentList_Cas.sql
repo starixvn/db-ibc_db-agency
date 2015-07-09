@@ -1,19 +1,32 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelMAgentList_Cas]
-@SRecommend int
+﻿
+ALTER PROCEDURE [dbo].[Age_CustomerSelMAgentList_Cas]
+	@SRecommend INT
 AS
+
 /*
-Original: sp CustomerSelMAgentList
-Task : List UserNames are allowed to play Casino
-DB: DB05.bodb02
-Create: 20090310@Tuan
+	Created: 
+	Date:  
+	Task : 
+	DB: DBCUST.CustDB
+	Revisions: 
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+
+	Param's Explanation:
+	• @SRecommend: Super Agent ID
 */
 
+--Original: CustomerSelMAgentList
 SET NOCOUNT ON
+
 SELECT username, CustID 
-from custInfo with (nolock) 
-where roleid = 3 and SRecommend = @SRecommend
-	and DisableCasino=0 and SyncCasino=1
-order by username
+FROM custInfo WITH (NOLOCK) 
+WHERE 
+	roleid = 3 
+	AND SRecommend = @SRecommend
+	AND DisableCasino = 0 
+	AND SyncCasino = 1
+ORDER BY username
+
 
 
 GO

@@ -1,9 +1,4 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Age_Transfer_CheckTotalBalanceTransfer]
+﻿ALTER PROCEDURE  [dbo].[Age_Transfer_CheckTotalBalanceTransfer]
 	@CustID                 int,
 	@SuperIDsTransferTotal  varchar(200),
 	@IsAllowed              bit = null OUTPUT
@@ -11,9 +6,11 @@ AS
     /*
     Created: 20090422@AnhPham
     Task: check if a account is allowed to transfer total balance
-    DB: DB05.bodb02
+    DB: DBCUST.CustDB
     Original:
     Revisions:
+		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+
     
     Param's Explanation:
         . @CustID:
@@ -34,10 +31,9 @@ BEGIN
         
 END
 
-
 GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [vnteam] AS [dbo]

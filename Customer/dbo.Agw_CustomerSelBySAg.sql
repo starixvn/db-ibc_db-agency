@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Agw_CustomerSelBySAg]
+ALTER PROCEDURE  [dbo].[Agw_CustomerSelBySAg]
 	@SRecommend int ,
 	@Keyword nvarchar(30)='%',
 	@PageSize int=50,
@@ -10,8 +10,11 @@ AS
 
 Created: 20080909@QuiNV
 Task: Get all master of super custid=@SRecommend
-DB: DB05.bodb02
+DB: DBCUST.CustDB
 Original:
+Revisions:
+	- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+
 
 */
 
@@ -43,9 +46,7 @@ where srecommend=@SRecommend and roleid=3 and username like @Keyword
 
 WHERE RowNum between @RowStart and @RowEnd
 
-
 GO
-GRANT EXECUTE ON [dbo].[Agw_CustomerSelBySAg] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Agw_CustomerSelBySAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelBySAg] TO [vnteam]
-GO
+GRANT VIEW DEFINITION ON [dbo].[Agw_CustomerSelBySAg] TO [vnteam] AS [dbo]

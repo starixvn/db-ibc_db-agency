@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]	
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerUpdMemBetSetting]    Script Date: 06/11/2015 12:39:54 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerUpdMemBetSetting    Script Date: 12/5/2013 4:35:18 PM ******/
+ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]	
 	@CustId int,	
 	@UpdateMinMaxBet BIT = 1,	
 	@UpdateMinMaxBetv2 BIT = 1,	
@@ -93,6 +101,7 @@ Revisions:
     - 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
     - 20130311@Dan: Change linked server DB053 to DBAGE, DB03 to DBONUSER; Write more log on DBTXN server in case of DBLOG server failure
     - 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
+    - 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable, Age_CustomerSelMinMaxLimit to DBCUST.CustDB) [Redmine:#36216]
     
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -118,7 +127,7 @@ declare @duration int
 set @startRun = getdate()
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
 if @ErrCode <>0 return
 --end
 
@@ -413,7 +422,7 @@ BEGIN
 END
 --------------------------------------------------------------
 
-	EXEC DBAGE.BODB02.DBO.Age_CustomerSelMinMaxLimit @custid, @userid, 
+	EXEC dbo.Age_CustomerSelMinMaxLimit @custid, @userid, 
 		@MinBet_Max = @MinMinBet output, @MaxBet_Min = @MaxMaxBet output, @MaxPerMatch_Max = @MaxMaxperMatch output,
 		@MinBetv2_Max = @MinMinBetv2 output, @MaxBetv2_Min = @MaxMaxBetv2 output, @MaxPerMatchv2_Max = @MaxMaxPerMatchv2 output,
 		@MinBetv3_Max = @MinMinBetv3 output, @MaxBetv3_Min = @MaxMaxBetv3 output, @MaxPerMatchv3_Max = @MaxMaxPerMatchv3 output,
@@ -1372,11 +1381,13 @@ BEGIN CATCH
 		@TrackingValue = @LogSPData,
 		@TrackingValue2 = @TrackingValue2,
 		@duration = @duration
-END CATCH		
-GO
+END CATCH
 
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdMemBetSetting] TO [bodbDownlineNet]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdMemBetSetting]  TO [bodbExtAccNet]
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdMemBetSetting] TO [bodbAdminNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdMemBetSetting] TO [vnteam]
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdMemBetSetting] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdMemBetSetting] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdMemBetSetting] TO [vnteam] AS [dbo]

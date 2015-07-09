@@ -1,4 +1,13 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerUpdUserInfo]  
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerUpdUserInfo]    Script Date: 06/11/2015 12:53:25 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerUpdUserInfo    Script Date: 6/3/2014 3:25:38 AM ******/
+/****** Object:  Stored Procedure dbo.Age_CustomerUpdUserInfo    Script Date: 6/3/2014 11:33:37 AM ******/
+ALTER PROCEDURE [dbo].[Age_CustomerUpdUserInfo]  
     @custid         int , --customer to be updated  
     @firstname      nvarchar(50),
     @lastname       nvarchar(50),
@@ -36,6 +45,8 @@ Revisions:
  - 20130311@Dan: Change linked server DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure  
  - 20140520@Logan:   1.Update remark for SAg, MAg, Ag and member.  
                      2.Code aligning  
+ - 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
+                      
 Param's Explanation:  
 • @custid: custid that need to be viewed.     
 */  
@@ -56,7 +67,7 @@ Declare @Old_firstname NVARCHAR(50),
         @roleid tinyint
 
 --Check disable user
-EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCheckEnable
+EXEC dbo.Acc_CustomerSelCheckEnable
         @custid = @custid,
         @ErrCode = @errorcode OUTPUT,
         @ErrMsg = @errormsg OUTPUT
@@ -252,3 +263,10 @@ EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP
     @TrackingValue2 = @TrackingValue2,
     @duration = @duration
 END CATCH
+
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdUserInfo] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdUserInfo] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdUserInfo] TO [vnteam] AS [dbo]

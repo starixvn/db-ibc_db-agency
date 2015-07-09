@@ -10,10 +10,11 @@ AS
 
 	Created: 20150507@Sophia  
 	Task :	Select Gold Deluxe of Agents
-	DB:		DBAGE/bodb02
+	DB:		DBCUST.CustDB
 	Original: Age_CustomerSelLiveCSPositionTakingByMAg
 
 	Revisions: 
+		- 20150616@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
@@ -24,12 +25,11 @@ BEGIN
 
 	SELECT 
 		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
-	FROM																									   
+	FROM
 		dbo.custinfo AS ci WITH (NOLOCK)
 		INNER JOIN dbo.custSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
-	WHERE ci.MRecommend = @MRecommend AND ci.roleid=2 AND cg.sporttype = 255
-
-
+	WHERE ci.MRecommend = @MRecommend AND ci.roleid = 2 AND cg.sporttype = 255
+	
 	SELECT * 
 	FROM 
 	(
@@ -48,7 +48,7 @@ BEGIN
 			MAX(CASE WHEN cg.sporttype=255 THEN cg.mpositiontaking ELSE 0 END) v255mpositiontaking,
 			MAX(CASE WHEN cg.sporttype=255 THEN cg.apositiontaking ELSE 0 END) v255apositiontaking
 			
-		FROM																									   
+		FROM
 			dbo.custinfo AS ci WITH (NOLOCK)
 			INNER JOIN dbo.custSettingGame AS cg WITH (NOLOCK) ON ci.custid = cg.custid	
 		WHERE ci.MRecommend = @MRecommend AND ci.roleid=2 AND cg.sporttype = 255
@@ -57,6 +57,7 @@ BEGIN
 	) t 
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize
 END
+
 
 
 

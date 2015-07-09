@@ -1,12 +1,24 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelMAgentList]
-@SRecommend int
+﻿ALTER PROCEDURE  [dbo].[Age_CustomerSelMAgentList]
+	@SRecommend INT
 AS
+/*
+	Created: 
+	Date:  
+	Task : 
+	DB: DBCUST.CustDB
+	Revisions: 
+		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+
+	Param's Explanation:
+	• @SRecommend: Super Agent ID
+*/
+
 --Original: CustomerSelMAgentList
-SET NOCOUNT ON
 SELECT username, CustID 
-from customer with (nolock) 
-where roleid = 3 and SRecommend = @SRecommend
-order by username
+FROM customer WITH (NOLOCK) 
+WHERE roleid = 3 and SRecommend = @SRecommend
+ORDER BY username
+
 
 
 
