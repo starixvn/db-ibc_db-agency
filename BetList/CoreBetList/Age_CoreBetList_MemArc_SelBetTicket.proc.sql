@@ -26,7 +26,7 @@ AS
 /*
 Created: Bobby.Nguyen
 Task : Aphla site - refactor betlist core 
-DB: DB053.bodb02
+DB: DB0ARC.bodb_archive
 Original: 
 
 Revisions:

@@ -33,7 +33,7 @@ AS
 /*
 	Created: Bobby.Nguyen
 	Task : Re-factor core betlist and apply GD product
-	DB: DB0AGE.bodb02, DB0ARC.bodb_archive
+	DB: DB0AGE.bodb02
 	Original: 
 
 	Revisions:
