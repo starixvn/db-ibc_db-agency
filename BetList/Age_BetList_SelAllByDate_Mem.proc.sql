@@ -79,6 +79,7 @@ Revisions:
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	- 20150522@Bobby: Add GD product
 	- 20150706@Bobby: #39097 - Fixing bug for showing Keno's bettype info
+	- 20150710@Bobby: #39381 - Fixing bug for showing Casino Draw tickets
 */
 BEGIN
 	SET NOCOUNT ON
@@ -494,7 +495,7 @@ BEGIN
 			b.recommend=@Recommend
 			--and b.status in ('WON','LOSE','RUNNING')
 			and bettype IN (71,23002)
-			and b.statusID IN (112,113,0)
+			and b.statusID IN (111,112,113,0)
 			and b.transdate>=@FromDate and b.transdate<=@ToDate
 			
 	END
