@@ -143,11 +143,7 @@ SELECT custid
 	,sum(winlost - actual_stake + playercomm) balance
 FROM bettrans WITH (NOLOCK)
 WHERE recommend = @CustID AND ruben = 1 AND bettype < 19001 AND winlostdate >= convert(VARCHAR(10), current_timestamp, 120)
-	AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
-			AND ruben =0)
-			OR ruben <> 0
-			)
+	 
 GROUP BY custid
 
 --Filter user
