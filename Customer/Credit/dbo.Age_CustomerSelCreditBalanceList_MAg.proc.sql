@@ -105,11 +105,7 @@ SELECT
 FROM bettrans with (NOLOCK)
 WHERE mrecommend=@CustID AND ruben = 1 AND bettype < 19001
 	AND bettrans.winlostdate >= convert(varchar(10), current_timestamp, 120)  	
-	AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
-			AND ruben =0)
-			OR ruben <> 0
-			)
+	 
 GROUP BY recommend
 
 SET @Username = isnull(@Username, '')
