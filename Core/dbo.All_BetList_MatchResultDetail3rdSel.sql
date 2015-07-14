@@ -58,7 +58,7 @@ BEGIN
 				,M.awayid
 				,M.Leagueid
 		FROM	dbo.ResultDetail3rd14 R WITH (NOLOCK)
-		INNER JOIN dbo.Match M WITH (NOLOCK) 
+		INNER JOIN dbo.Match14 M WITH (NOLOCK) 
 			ON	M.MatchId = R.MatchId
 		WHERE R.ResultID = @BetId
 	END
@@ -80,7 +80,7 @@ BEGIN
 				,M.awayid
 				,M.Leagueid
 		FROM	DBARC.bodb_archive.dbo.ResultDetail3rd_bk R WITH (NOLOCK)
-		INNER JOIN dbo.Match M WITH (NOLOCK) 
+		INNER JOIN DBARC.bodb_archive.dbo.Match_bk M WITH (NOLOCK) 
 			ON	M.MatchId = R.MatchId
 		WHERE R.ResultID = @BetId
 	END
