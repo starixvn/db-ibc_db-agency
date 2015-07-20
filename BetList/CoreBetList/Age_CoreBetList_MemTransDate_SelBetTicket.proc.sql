@@ -23,7 +23,7 @@ AS
 /*
 	Created: Bobby.Nguyen
 	Task : Aphla site - refactor betlist core 
-	DB: DB053.bodb02
+	DB: DBAGE.bodb02
 	Original: 
 
 	Revisions:
@@ -110,7 +110,7 @@ BEGIN
 		AND	b.recommend	= @Recommend 
 		AND	b.custid	= @CustID
 		--exclude running tickets of MetricGaming
-		AND (sp.SubProduct IS NULL 
+		AND (sp.SubProduct IS NULL OR sp.SubProduct NOT IN('MG-SuperLive')
 			OR (sp.SubProduct IN('MG-SuperLive') AND b.statusID NOT IN (0, 1))
 		) 
 	

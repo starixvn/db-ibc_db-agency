@@ -79,8 +79,10 @@ Revisions:
 	- 20140907@Dom:	[Redmine #22012] remove duplicate VS transaction id in bet list feature
 	- 20141103@Dom: Apply sport bettype matrix
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
-	- 20150522@Bobby: Rollback code caused by holding core bet list
-	- 20150526@Bobby: Re-factor core betlist and apply GD product
+	- 20150522@Bobby: Add GD product
+	- 20150526@Bobby: Re-factor core betlist and apply GD and Metric Game product
+	- 20150706@Bobby: #39097 - Fixing bug for showing Keno's bettype info
+	- 20150710@Bobby: #39381 - Fixing bug for showing Casino Draw tickets
 */
 BEGIN
 	SET NOCOUNT ON;
