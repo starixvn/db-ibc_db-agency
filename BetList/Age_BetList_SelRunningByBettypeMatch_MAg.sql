@@ -42,7 +42,7 @@ Revisions:
 	- 20140425@Dom: Group TB and FGLG
 	- 20150416@Tom: Integrate new 60 bet types from BetRadar (32734)
 	- 20150522@Bobby: Rollback code caused by holding core bet list
-	- 20150526@Bobby: Re-factor code and apply bettype matrix
+	- 20150526@Bobby: Implement betlist core
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -61,9 +61,10 @@ BEGIN
 		ProductID 		INT
 		, Bettype 		INT
 		, EventType 	INT
+		, SubProduct 	VARCHAR(500)
 	);
 	INSERT INTO #BettypeMatrix
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	;WITH CteBettype (bettype)
 	AS (

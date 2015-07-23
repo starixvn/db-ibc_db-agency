@@ -47,7 +47,7 @@ Revisions:
 	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20150407@Cody: Support 60 BetRadar bettype (186) [Redmine: #32734]
 	- 20150522@Bobby: Rollback code caused by holding core bet list
-	- 20150526@Bobby: Re-factor code and apply bettype matrix
+	- 20150526@Bobby: Implement bet list core
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -65,9 +65,10 @@ BEGIN
 		ProductID 		INT
 		, Bettype 		INT
 		, EventType 	INT
+		, SubProduct 	VARCHAR(500)
 	);
 	INSERT INTO #BettypeMatrix
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	;WITH CteBettype (bettype)
 	AS (

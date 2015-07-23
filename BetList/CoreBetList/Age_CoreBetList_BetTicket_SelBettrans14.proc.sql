@@ -146,7 +146,7 @@ BEGIN
 				INNER JOIN #tempCust c 
 				ON b.transid		= c.transid
 					AND b.custid	= c.custid
-				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.gameid) fnc
+				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.bettype) fnc
 				
 			WHERE	c.EventType 	= 0
 				AND c.WhTicket 		= 2
