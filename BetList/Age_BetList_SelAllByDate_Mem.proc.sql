@@ -80,7 +80,7 @@ Revisions:
 	- 20141103@Dom: Apply sport bettype matrix
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	- 20150522@Bobby: Add GD product
-	- 20150526@Bobby: Re-factor core betlist and apply GD and Metric Game product
+	- 20150526@Bobby: Implement bet list core
 	- 20150706@Bobby: #39097 - Fixing bug for showing Keno's bettype info
 	- 20150710@Bobby: #39381 - Fixing bug for showing Casino Draw tickets
 */
@@ -100,9 +100,10 @@ BEGIN
 		ProductID 		INT
 		, Bettype 		INT
 		, EventType 	INT
+		, SubProduct 	VARCHAR(500)
 	);
 	INSERT INTO #BettypeMatrix
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	-- ADD exception bettype for pending funds tickets
 	;WITH CteExtBettype (ProductID, Bettype, EventType)
@@ -123,7 +124,7 @@ BEGIN
 		SELECT 7, 23202, 0
 	)
 	INSERT INTO #BettypeMatrix
-	SELECT * 
+	SELECT ProductID, Bettype, EventType, '' AS  SubProduct
 	FROm CteExtBettype
 	
 	-- DO filtering bettype by product
