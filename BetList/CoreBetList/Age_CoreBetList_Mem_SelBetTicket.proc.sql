@@ -22,7 +22,6 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 	, @PageSize			INT				= 5000
 	, @Language 		VARCHAR(2) 		= 'E'
 	--OPTIONAL
-	, @SelDateType		TINYINT			= 0
 	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	-- OUTPUT INFO
 	, @TotalRows		INT 			= 0 OUTPUT
@@ -43,7 +42,6 @@ AS
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
-		- @SelDateType		: 0 - winlosdate | 1 - transdate
 		
 	Wrapped SP List:
 		- Age_BetList_SelWinLossByDate_Mem
@@ -135,16 +133,13 @@ BEGIN
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
-			LEFT JOIN [dbo].[SportBettypeMatrix] sp
-			ON bt.ProductId = sp.ProductId 
-			AND bt.bettype 	= sp.bettype
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
 			AND	b.custid	= @CustID
 			--exclude running tickets of MetricGaming
-			AND (sp.SubProduct IS NULL OR sp.SubProduct NOT IN('MG-SuperLive')
-				OR (sp.SubProduct IN('MG-SuperLive') AND b.statusID NOT IN (0, 1))
-			) 
+			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
+				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
+			)
 		
 		/* 	select running tickets
 			- Keno 			: ProductId = 8

@@ -21,6 +21,7 @@ AS
 
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
+		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -66,6 +67,10 @@ BEGIN
 			INNER JOIN #TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE b.custid 		= @custid
+			--exclude running tickets of MetricGaming
+			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
+				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
+			)
 		
 	END
 	-- AGENT
@@ -87,6 +92,10 @@ BEGIN
 			ON b.statusid	= stt.statusid
 		WHERE c.recommend 	= @custid
 			AND c.roleid 	= 2
+			--exclude running tickets of MetricGaming
+			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
+				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
+			)
 	END
 	-- MASTER
 	IF ( @roleid = 3 )
@@ -107,6 +116,10 @@ BEGIN
 			ON b.statusid	= stt.statusid
 		WHERE c.mrecommend 	= @custid
 			AND c.roleid 	= 2
+			--exclude running tickets of MetricGaming
+			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
+				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
+			)
 
 	END
 	--SUPER
@@ -128,6 +141,10 @@ BEGIN
 			ON b.statusid	= stt.statusid
 		WHERE c.srecommend 	= @custid
 			AND c.roleid 	= 2
+			--exclude running tickets of MetricGaming
+			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
+				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
+			)
 
 	END
 		

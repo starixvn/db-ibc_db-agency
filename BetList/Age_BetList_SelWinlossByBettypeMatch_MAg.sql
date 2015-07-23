@@ -38,7 +38,7 @@ Revisions:
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	- 20150331@Cody: Apply sport bettype matrix [Remine: #30169]
 	- 20150522@Bobby: Rollback code caused by holding core bet list
-	- 20150526@Bobby: Re-factor code and apply bettype matrix
+	- 20150526@Bobby: Implement betlist core
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -50,15 +50,17 @@ BEGIN
 	INSERT INTO #TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt	
-	
+	WHERE statusid IN (111, 112, 113)
+		
 	-- Gather BettypeMatrix
 	CREATE TABLE #BettypeMatrix (
 		ProductID 		INT
 		, Bettype 		INT
 		, EventType 	INT
+		, SubProduct 	VARCHAR(500)
 	);
 	INSERT INTO #BettypeMatrix
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	;WITH CteBettype (bettype)
 	AS (

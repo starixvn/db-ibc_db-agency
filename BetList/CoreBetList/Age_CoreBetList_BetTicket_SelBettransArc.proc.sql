@@ -164,7 +164,7 @@ BEGIN
 					AND b.custid	= c.custid
 				INNER JOIN #custInfo ci
 				ON b.custid 		= ci.custid
-				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.gameid) fnc
+				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.bettype) fnc
 				
 			WHERE	c.WhTicket 		= 3
 				AND c.EventType 	= 0
