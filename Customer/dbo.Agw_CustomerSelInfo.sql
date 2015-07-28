@@ -1,4 +1,4 @@
-ALTER PROCEDURE [Agw_CustomerSelInfo]
+ALTER PROCEDURE [dbo].[Agw_CustomerSelInfo]
 	@CustID int
 
 AS

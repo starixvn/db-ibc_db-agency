@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_CustomerSelAllInfo]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
 	@isInternalAgent BIT = 0
@@ -561,6 +561,9 @@ BEGIN
     	
     END
 END
+
+
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNet] AS [dbo]
 GO
