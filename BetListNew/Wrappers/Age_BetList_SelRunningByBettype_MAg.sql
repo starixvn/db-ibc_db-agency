@@ -1,0 +1,141 @@
+﻿USE bodb_AGE
+GO
+
+ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettype_MAg]
+	@CustID			INT
+	, @Bettype		INT
+	, @Language		VARCHAR(2) = 'E'
+ AS
+/*
+Created: 
+Task : Betlist
+DB: DBAGE/bodb_AGE
+Original:BetsSelBetList_MAg
+Revisions:
+    - 20080104@Vinh: include mix parlay
+    - 20080105: Add typenamee2,sportname 
+    - 20080629@Viet: Remove Teamname, Leaguename, Sportname, TypeName
+    - 20090326@Phuc: get indexname for FI
+    - 20090406@HanhVu: remove refno
+    - 20090416@Minh: remove indexName
+    - 20090618@AnhPham: Remove 'Customer' table
+	- 20090710@Phuc: unhide IP for TB currency.
+   	- 20090930@Phuc: get oddstype.
+   	- 20091208@Henry: Add 1 more column: refno for calling Mix Parlay SP
+   	-- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
+   	- 20100611@Henry: Change mix-parlay match from 0 to 9
+   	- 20110408@Amy: Change function to get Odds value and showed odds type
+   	- 20110516@Johnson: Apply new arrange bettype
+   	- 20110801@Sophia: Add new bettype = 29 : Combination mix parlay
+	- 20110802@Lukas: get 'waiting' tickets for mix parlay - support live-mix parlay
+	- 20110809@Sophia: Not to use function f_GetChoice to get betteam ( Bettype <> 14, 16)
+	- 20110811@Sophia: Add new columns actual_stake and modds 
+	- 20110829@Sophia: Add new columns BetID
+	- 20110930@Johnson: Get column matchid into betlist
+	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
+	- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
+	- 20120119@Sophia:  Add showtime for Table - Shoe - Hand of LiveCasino 
+						Add Sub table for Live Casino
+	- 20120424@Lukas: Get more column custid
+	- 20120705@Sophia: Get sporttype for outright
+	- 20120926@Sophia: Get Comstatus
+	- 20130107@Dan: merge code from production
+	- 20130121@Dan: Move sp from DB053/bodb02 to DBAGE/bodb_AGE
+	- 20140425@Dom: Group TB and FGLG
+	- 20140611@Dom: Support BetRadar [Redmine: #17148]
+	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
+	- 20150407@Cody: Support 60 BetRadar bettype (186) [Redmine: 32734]
+	- 20150522@Bobby: Rollback code caused by holding core bet list
+	- 20150526@Bobby: Implement bet list core
+*/
+BEGIN
+	SET NOCOUNT ON;
+	
+	-- Gather Ticket status
+	CREATE TABLE #TransStatus (
+		StatusID 		INT
+	);
+	INSERT INTO #TransStatus
+	SELECT StatusId
+	FROM bodb02.dbo.All_f_TransStatus (1) stt
+	WHERE stt.statusId IN (0, 1)	
+	
+	-- Gather BettypeMatrix
+	CREATE TABLE #BettypeMatrix (
+		ProductID 		INT
+		, Bettype 		INT
+		, EventType 	INT
+		, SubProduct 	VARCHAR(500)
+	);
+	INSERT INTO #BettypeMatrix
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
+	
+	;WITH CteBettype (bettype)
+	AS (
+		SELECT bt.bettype
+		FROM #BettypeMatrix bt
+		WHERE (bt.ProductId 	= 1 AND bt.EventType = 0) 	-- mix-parlay
+			OR (bt.EventType 	= 1)						-- macth event
+			OR (bt.ProductId 	= 1 AND bt.EventType = 2)	-- outright
+	)
+	DELETE bt
+	FROM #BettypeMatrix bt
+		LEFT JOIN CteBettype ct 
+		ON bt.bettype = ct.bettype
+	WHERE ct.bettype IS NULL
+		OR (@bettype NOT IN (6, 14, 24, 26) AND bt.bettype  NOT IN (@bettype))
+		OR (@bettype = 6 	AND bt.bettype NOT IN(6,126) )
+		OR (@bettype = 14 	AND bt.bettype NOT IN(14,127) )
+		OR (@bettype = 24 	AND bt.bettype NOT IN(24,151,186)) 
+		OR (@bettype = 26 	AND bt.bettype NOT IN(26,145,146,170,188))
+	
+	EXEC [bodb02].[dbo].[Age_CoreBetList_SMABettype_SelBetTicket]
+		@CustId 			= @CustId
+		, @RoleId			= 3
+		, @Language 		= @Language
+		, @ColumnOutput		= 'sporttype,
+								username,					
+								bettype,
+								custid,
+								transid,
+								refno,
+								matchid,
+								matchcode,
+								homeID,
+								awayID,
+								hdp1,
+								hdp2,
+								odds,
+								modds,
+								status,
+								stake,
+								actual_stake,
+								transdate,		
+								betteam,
+								betID,
+								livehomescore, 
+								liveawayscore,
+								liveindicator ,
+								tpositiontaking,
+								spositiontaking,
+								mpositiontaking,
+								apositiontaking, 
+								adiscount,
+								mdiscount,
+								sdiscount,
+								IP,
+								IsNeutral,
+								OddsType,
+								showtime,
+								comstatus,
+								transdesc'
+		
+	RETURN;
+END
+GO
+GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_MAg] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_MAg] TO [bodbDownlineNetView]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettype_MAg] TO vnteam
+GO
