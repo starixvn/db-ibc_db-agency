@@ -1,4 +1,12 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelUserInfo]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CustomerSelUserInfo]    Script Date: 6/20/2015 3:41:53 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_CustomerSelUserInfo    Script Date: 5/18/2015 5:02:25 PM ******/
+ALTER PROCEDURE [dbo].[Age_CustomerSelUserInfo]
 	@custid int
 AS
 /*
@@ -6,19 +14,18 @@ Created: 20090211@nqminh
 Updated: 20090227@Shifu
 	-- get more customer information from custinfo
 Task : Select customer information
-DB: DBCUST.CustDB
+DB: DB05.bodb02
 Original:
 
 Revisions:
-	- 20090122@[Reviewer]: [Description of revision]    
-	- 20090603@[Lee]: Add given credit info   
-	- 20100901@[Henry]: Add SyncBingo
-	- 20120202@Johnson: Add live casino
+    - 20090122@[Reviewer]: [Description of revision]    
+    - 20090603@[Lee]: Add given credit info   
+    - 20100901@[Henry]: Add SyncBingo
+    - 20120202@Johnson: Add live casino
 	- 20120726@Johnson: add bingo
 	- 20140520@Logan:   1.Retrieve remark for SAg, MAg, Ag from CustSuper, CustMaster & CustAgent
-						2.Code aligning
+	                    2.Code aligning
 	- 20150420@Elodie: Add Gold Deluxe Product
-	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -91,7 +98,6 @@ SELECT Customer.custid,
  INNER JOIN Exchange as e with (NOLOCK)
          ON Customer.currency = e.exchangeid
  WHERE Customer.custid = @custid
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelUserInfo] TO [bodbAdminNet]
