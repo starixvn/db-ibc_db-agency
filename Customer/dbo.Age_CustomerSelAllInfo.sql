@@ -35,6 +35,7 @@ Revisions:
     - 20140822@Logan:   Add status for Esports [Redmine: #20661]			  
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 	- 20150612@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
+	- 20150803@Elodie: Get DisableDownlinesGoldDeluxe field [Redmine:#38741]
 
 
 Param's Explanation:
@@ -103,7 +104,8 @@ BEGIN
           , @uplineDisableHRFixedOdds   BIT
           , @uplineDisableEsports       BIT
 		  , @uplineDisableGoldDeluxe	BIT
-		  , @HasDownline BIT = 0
+		  , @HasDownline				BIT = 0
+		  , @DisableDownlinesGoldDeluxe	BIT = 0
 
     DECLARE @DisableAutoMPT BIT
     		
@@ -175,6 +177,9 @@ BEGIN
 	     WHERE custID = @mrecommend		
 
 		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE recommend = @custid AND roleid = 1
+
+		 SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE recommend = @custid AND roleid = 1 AND DisableGoldDeluxe = 1
+
 	    --Agent Itself		
 	    SELECT @Credit_AllOtherAgent = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK) WHERE mrecommend = @mrecommend AND RoleID = 2 AND Custid <> @custID
     	
@@ -211,6 +216,8 @@ BEGIN
 	     WHERE custID = @srecommend
 
 		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
+		 SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableGoldDeluxe = 1
+
 	    --Master Itself
 	    SELECT @Credit_AllOtherMaster = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci (NOLOCK) WHERE srecommend = @Srecommend AND RoleID = 3 AND custid <> @CustId
 	    SELECT @Credit_MAg_Max = ISNULL(@Credit_SAg,0) - ISNULL(@Credit_AllOtherMaster,0)	
@@ -237,6 +244,10 @@ BEGIN
 	    */
 
     END
+	ELSE IF @roleID = 4 --for super
+	BEGIN
+		SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableGoldDeluxe = 1
+	END
 
     -------------------------------------------------------------------------
     --Updater Info
@@ -284,6 +295,7 @@ BEGIN
 	    ISNULL(@uplineDisableEsports, 0) AS uplineDisableEsports,
 		ISNULL(@uplineDisableGoldDeluxe, 0) AS uplineDisableGoldDeluxe,
     	@HasDownline AS HasDownline,
+		@DisableDownlinesGoldDeluxe AS DisableDownlinesGoldDeluxe,
 
 	    @Credit_MAg_Min AS [MasterCredit_Min],
 	    @Credit_MAg_Max AS [MasterCredit_Max],
@@ -561,7 +573,6 @@ BEGIN
     	
     END
 END
-
 
 
 GO
