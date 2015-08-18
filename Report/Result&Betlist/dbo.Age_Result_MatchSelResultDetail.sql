@@ -10,6 +10,7 @@ DB:  DBAGE/bodb02
 Revisions: 
 	- 20141218@Sophia: Not to use Betstatus to get REFUND status of Tennis anymore
 	- 20150324@Sophia: Support to get BetRadar
+	- 20150810@Sophia: Hardcode to exclude ResultDetail of bettype 216, 217 for a temporary time [#40991]
 
 */
 BEGIN 
@@ -69,7 +70,7 @@ BEGIN
 		FROM	dbo.ResultDetail R WITH (NOLOCK)
 		WHERE	MatchID = @MatchId
 				AND SettlementStatusID > 0
-				AND ((@Sporttype = 1 AND R.ResourceId NOT IN ( '00', '01', '08'))
+				AND ((@Sporttype = 1 AND R.ResourceId NOT IN ( '00', '01', '08') AND ( R.ResourceID NOT LIKE '217%' AND R.ResourceID NOT LIKE '216%'))
 						OR @Sporttype = 5
 						)
 		ORDER BY  MatchID, R.ResourceId 
@@ -127,7 +128,7 @@ BEGIN
 		FROM	dbo.ResultDetail14 R WITH (NOLOCK)
 		WHERE	MatchID = @MatchId
 				AND SettlementStatusID > 0
-				AND ((@Sporttype = 1 AND R.ResourceId NOT IN ( '00', '01', '08'))
+				AND ((@Sporttype = 1 AND R.ResourceId NOT IN ( '00', '01', '08') AND ( R.ResourceID NOT LIKE '217%' AND R.ResourceID NOT LIKE '216%'))
 						OR @Sporttype = 5
 						)
 		ORDER BY  MatchID, R.ResourceId 

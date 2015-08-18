@@ -43,197 +43,198 @@ Revisions:
 	- 20140611@Dom: Support BetRadar [Redmine: #17148]
 	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20150407@Cody: Support 60 BetRadar bettype (186) [Redmine: 32734]
+	- 20150522@Bobby: Rollback code caused by holding core bet list
 */
-
-SET NOCOUNT ON
-IF @bettype IN ( 9, 29)--inlcude mix parlay and Combination mix parlay
 BEGIN
-	select 
-		0 as sporttype,
-		b.username,				
-		b.bettype,
-		b.custid,
-		b.transid,
-		b.refno,
-		0 as matchid,
-		'' matchcode,
-		0 as homeID,
-		0 as awayID,
-		'' hdp1,
-		'' hdp2,
-		b.odds,
-		b.modds,
-		b.status,
-		b.stake,
-		b.actual_stake,
-		b.transdate,		
-		b.betteam,
-		b.betID,
-		0 AS livehomescore, 
-		0 AS liveawayscore,
-		0 AS liveindicator ,
-		b.tpositiontaking,
-		b.spositiontaking,
-		b.mpositiontaking,
-		b.apositiontaking, 
-		b.discount as Adiscount,
-		b.adiscount as Mdiscount,
-		b.sdiscount as Sdiscount,
-		IP as IP,
-		CONVERT(BIT,0) as IsNeutral,
-		0 as oddstype,
-		'' as showtime,
-		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
-	from bettrans b with (nolock)
-	where
-		b.SRecommend=@custid and 
-		b.bettype = @bettype and 
-		--b.matchid = 0 and
-		b.matchid = @bettype and 
-		--b.status='running' and
-		b.statusID between 0 and 1 and
-		b.ruben=0  
-		
-	order by b.status, b.transid
-	RETURN
+
+	SET NOCOUNT ON
+	IF @bettype IN ( 9, 29)--inlcude mix parlay and Combination mix parlay
+	BEGIN
+		select 
+			0 as sporttype,
+			b.username,				
+			b.bettype,
+			b.custid,
+			b.transid,
+			b.refno,
+			0 as matchid,
+			'' matchcode,
+			0 as homeID,
+			0 as awayID,
+			'' hdp1,
+			'' hdp2,
+			b.odds,
+			b.modds,
+			b.status,
+			b.stake,
+			b.actual_stake,
+			b.transdate,		
+			b.betteam,
+			b.betID,
+			0 AS livehomescore, 
+			0 AS liveawayscore,
+			0 AS liveindicator ,
+			b.tpositiontaking,
+			b.spositiontaking,
+			b.mpositiontaking,
+			b.apositiontaking, 
+			b.discount as Adiscount,
+			b.adiscount as Mdiscount,
+			b.sdiscount as Sdiscount,
+			IP as IP,
+			CONVERT(BIT,0) as IsNeutral,
+			0 as oddstype,
+			'' as showtime,
+			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+		from bettrans b with (nolock)
+		where
+			b.SRecommend=@custid and 
+			b.bettype = @bettype and 
+			--b.matchid = 0 and
+			b.matchid = @bettype and 
+			--b.status='running' and
+			b.statusID between 0 and 1 and
+			b.ruben=0  
+			
+		order by b.status, b.transid
+		RETURN
+	END
+
+	if @bettype=10 -- Outright
+	BEGIN
+		select 
+			l.sporttype,
+			b.username,
+			b.bettype,
+			b.custid,					
+			b.transid,
+			b.refno,
+			0 as matchid,
+			m.matchcode,
+			m.teamID as homeID,
+			0 as awayID,
+			convert(float, b.hdp1) as hdp1, 
+			convert(float, b.hdp2) as hdp2, 
+			b.odds,
+			b.modds,
+			b.status,
+			b.stake,
+			b.actual_stake,
+			b.transdate,		
+			b.betteam,
+			b.betID,
+			b.spositiontaking,
+			b.mpositiontaking,
+			b.apositiontaking,
+			b.discount as Adiscount,
+			b.adiscount as Mdiscount,
+			b.sdiscount as Sdiscount,
+			m.LeagueID,
+			b.livehomescore,
+			b.liveawayscore,
+			b.liveindicator, 
+			IP as IP,
+			CONVERT(BIT,0) as IsNeutral,
+			0 as oddstype,
+			'' as showtime,
+			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+		from 
+			bettrans b with (nolock)
+			INNER JOIN outright as m with (nolock) on  b.matchid=m.orid 
+			INNER JOIN league l with (nolock) on m.leagueid = l.leagueid			
+		where 
+			b.SRecommend=@custid  
+			and b.bettype=@bettype
+			--and b.status='running' 
+			and b.statusID=0		
+		order by b.status, b.transid
+		RETURN
+	END
+
+	if @bettype<19001
+	BEGIN
+		select 
+			m.sporttype,
+			b.username,
+			m.leagueID, 
+			b.bettype,	
+			b.custid,	
+			b.transid,
+			b.refno,
+			m.matchid,
+			m.matchcode,
+			m.homeID,
+			m.awayID,
+			convert(float, b.hdp1) as hdp1, 
+			convert(float, b.hdp2) as hdp2, 
+			b.odds,
+			b.modds,
+			CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+					 ELSE b.status 
+					 END as status,
+			b.stake,
+			b.actual_stake,
+			b.transdate,		
+			b.betteam,
+			b.betID,
+			b.spositiontaking,
+			b.mpositiontaking,
+			b.apositiontaking,
+			b.discount as Adiscount,
+			b.adiscount as Mdiscount,
+			b.sdiscount as Sdiscount,
+			b.livehomescore,
+			b.liveawayscore,
+			b.liveindicator, 
+			IP as IP,
+			isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+			b.OddsType,
+			m.showtime,
+			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+		from 
+			bettrans b with (nolock)
+			inner join match m with (nolock) on  b.matchid=m.matchid 
+		where 
+			b.SRecommend=@custid
+			--and b.bettype=@bettype
+			--and b.bettype=@bettype
+			and ( (@bettype=6 AND b.bettype IN(6,126)) 
+			OR (@bettype=14 and b.bettype IN(14,127)) 
+			OR (@bettype=24 and b.bettype IN(24,151,186)) 
+			OR (@bettype=26 and b.bettype IN(26,145,146,170,188)) 
+			OR bettype = @bettype )
+			--and b.status in ('waiting','running')
+			and b.statusID in (0,1)
+			
+		order by b.status, b.transid
+	END
+
+
+	DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+
+	--IF @bettype between 1101 and 1199
+	IF EXISTS(SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 4 AND bettype = @bettype)
+	BEGIN
+		--get data from bettransg for bettype 1101
+		SELECT 
+			bg.refno, 
+			bg.odds, 
+			bg.stake,
+			bg.status ,
+			bg.apositiontaking, 
+			bg.mpositiontaking, 
+			bg.spositiontaking,
+			bg.betteam  
+		FROM bettransg bg with (NOLOCK)
+		INNER JOIN bettrans B ON bg.refno = B.refno
+		WHERE	b.srecommend=@custid  and 		
+				b.bettype=@bettype and 
+				b.statusID in (0,1)
+	END
+
 END
-
-if @bettype=10 -- Outright
-BEGIN
-	select 
-		l.sporttype,
-		b.username,
-		b.bettype,
-		b.custid,					
-		b.transid,
-		b.refno,
-		0 as matchid,
-		m.matchcode,
-		m.teamID as homeID,
-		0 as awayID,
-		convert(float, b.hdp1) as hdp1, 
-		convert(float, b.hdp2) as hdp2, 
-		b.odds,
-		b.modds,
-		b.status,
-		b.stake,
-		b.actual_stake,
-		b.transdate,		
-		b.betteam,
-		b.betID,
-		b.spositiontaking,
-		b.mpositiontaking,
-		b.apositiontaking,
-		b.discount as Adiscount,
-		b.adiscount as Mdiscount,
-		b.sdiscount as Sdiscount,
-		m.LeagueID,
-		b.livehomescore,
-		b.liveawayscore,
-		b.liveindicator, 
-		IP as IP,
-		CONVERT(BIT,0) as IsNeutral,
-		0 as oddstype,
-		'' as showtime,
-		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
-	from 
-		bettrans b with (nolock)
-		INNER JOIN outright as m with (nolock) on  b.matchid=m.orid 
-		INNER JOIN league l with (nolock) on m.leagueid = l.leagueid			
-	where 
-		b.SRecommend=@custid  
-		and b.bettype=@bettype
-		--and b.status='running' 
-		and b.statusID=0		
-	order by b.status, b.transid
-	RETURN
-END
-
-if @bettype<19001
-BEGIN
-	select 
-		m.sporttype,
-		b.username,
-		m.leagueID, 
-		b.bettype,	
-		b.custid,	
-		b.transid,
-		b.refno,
-		m.matchid,
-		m.matchcode,
-		m.homeID,
-		m.awayID,
-		convert(float, b.hdp1) as hdp1, 
-		convert(float, b.hdp2) as hdp2, 
-		b.odds,
-		b.modds,
-		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
-				 ELSE b.status 
-				 END as status,
-		b.stake,
-		b.actual_stake,
-		b.transdate,		
-		b.betteam,
-		b.betID,
-		b.spositiontaking,
-		b.mpositiontaking,
-		b.apositiontaking,
-		b.discount as Adiscount,
-		b.adiscount as Mdiscount,
-		b.sdiscount as Sdiscount,
-		b.livehomescore,
-		b.liveawayscore,
-		b.liveindicator, 
-		IP as IP,
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-		b.OddsType,
-		m.showtime,
-		CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
- 	from 
-		bettrans b with (nolock)
-		inner join match m with (nolock) on  b.matchid=m.matchid 
-	where 
-		b.SRecommend=@custid
-		--and b.bettype=@bettype
-		--and b.bettype=@bettype
-		and ( (@bettype=6 AND b.bettype IN(6,126)) 
-		OR (@bettype=14 and b.bettype IN(14,127)) 
-		OR (@bettype=24 and b.bettype IN(24,151,186)) 
-		OR (@bettype=26 and b.bettype IN(26,145,146,170,188)) 
-		OR bettype = @bettype )
-		--and b.status in ('waiting','running')
-		and b.statusID in (0,1)
-		
-	order by b.status, b.transid
-END
-
-
-DECLARE @SportBettype TABLE(ProductID INT, Bettype INT,EventType INT)
-INSERT INTO @SportBettype
-EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
-
---IF @bettype between 1101 and 1199
-IF EXISTS(SELECT TOP 1 1 FROM @SportBettype WHERE ProductID = 4 AND bettype = @bettype)
-BEGIN
-	--get data from bettransg for bettype 1101
-	SELECT 
-		bg.refno, 
-		bg.odds, 
-		bg.stake,
-		bg.status ,
-		bg.apositiontaking, 
-		bg.mpositiontaking, 
-		bg.spositiontaking,
-		bg.betteam  
-	FROM bettransg bg with (NOLOCK)
-	INNER JOIN bettrans B ON bg.refno = B.refno
-	WHERE	b.srecommend=@custid  and 		
-			b.bettype=@bettype and 
-			b.statusID in (0,1)
-END
-
-
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_SAg] TO [bodbDownlineNet]
@@ -242,4 +243,3 @@ GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_SAg] TO [bodbDownlineNet
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_BetList_SelRunningByBettype_SAg] TO vnteam
 GO
-
