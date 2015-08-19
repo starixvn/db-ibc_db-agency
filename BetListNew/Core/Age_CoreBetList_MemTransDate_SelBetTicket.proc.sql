@@ -10,8 +10,8 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 	-- MEM INFO
 	@CustId 			INT
 	, @Username			NVARCHAR(30)
-	, @FromDate			DATE
-	, @ToDate 			DATE
+	, @FromDate			DATETIME
+	, @ToDate 			DATETIME
 	-- PRODUCT - BETTYPE - STATUS
 	, @BettypeMatrix	XML 			= NULL
 	, @TransStatus		VARCHAR(250) 	= NULL
@@ -29,6 +29,7 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
+		- 20150814@Bobby: #41600 - Update time range to datetime formation
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
