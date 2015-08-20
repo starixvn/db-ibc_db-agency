@@ -4,11 +4,12 @@ AS
 
 /*
 	Created: 20150622@Sophia
-	Task: Get Result from Betlist for Mertric Gaming
+	Task: Get Result from Betlist for Metric Gaming
 	DB: DBAGE/bodb02; DBEXT/bodb02 
 
 	Original:   
 		-20150622@Sophia : Initial - Get Result from Betlist for Mertric Gaming [#36469]
+		-20150819@Sophia: Harcode OtherInfo = '' when gameId = 806
 	Revisions: 	 
    			
 	Param's Explanation: 
@@ -31,7 +32,7 @@ BEGIN
 				,R.ResultStatusID
 				,R.SettlementStatusID
 				,R.GameResult
-				,R.OtherInfo
+				,CASE WHEN R.GameID = 806 THEN '' ELSE R.OtherInfo END AS OtherInfo
 				,M.homeid
 				,M.awayid
 				,M.Leagueid
@@ -53,7 +54,7 @@ BEGIN
 				,R.ResultStatusID
 				,R.SettlementStatusID
 				,R.GameResult
-				,R.OtherInfo
+				,CASE WHEN R.GameID = 806 THEN '' ELSE R.OtherInfo END AS OtherInfo
 				,M.homeid
 				,M.awayid
 				,M.Leagueid
@@ -75,7 +76,7 @@ BEGIN
 				,R.ResultStatusID
 				,R.SettlementStatusID
 				,R.GameResult
-				,R.OtherInfo
+				,CASE WHEN R.GameID = 806 THEN '' ELSE R.OtherInfo END AS OtherInfo
 				,M.homeid
 				,M.awayid
 				,M.Leagueid
