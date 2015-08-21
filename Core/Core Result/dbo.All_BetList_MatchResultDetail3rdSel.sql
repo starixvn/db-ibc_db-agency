@@ -1,3 +1,11 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[All_BetList_MatchResultDetail3rdSel]    Script Date: 8/19/2015 1:22:43 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.All_BetList_MatchResultDetail3rdSel    Script Date: 7/15/2015 3:58:42 PM ******/
 ALTER PROCEDURE [dbo].[All_BetList_MatchResultDetail3rdSel]
 	@BetId BIGINT 
 AS
@@ -9,7 +17,8 @@ AS
 
 	Original:   
 		-20150622@Sophia : Initial - Get Result from Betlist for Mertric Gaming [#36469]
-		-20150819@Sophia: Harcode OtherInfo = '' when gameId = 806
+		-20150819@Sophia: Harcode OtherInfo = '' when GameId = 806
+		-20150821@Sophia: Hardcode % for GameId = 805
 	Revisions: 	 
    			
 	Param's Explanation: 
@@ -26,13 +35,18 @@ BEGIN
 				,R.VendorID
 				,R.MatchID
 				,R.GameID
-				,R.Custom1
+				,CASE WHEN R.GameID = 805 AND ISNULL (R.Custom1 ,'') <> '' THEN R.Custom1 + '%' 
+					ELSE R.Custom1 END AS Custom1
 				,R.Custom2
 				,R.Custom3
 				,R.ResultStatusID
 				,R.SettlementStatusID
 				,R.GameResult
-				,CASE WHEN R.GameID = 806 THEN '' ELSE R.OtherInfo END AS OtherInfo
+				,CASE WHEN R.GameID = 805 AND ISNULL (R.OtherInfo ,'') <> '' THEN R.OtherInfo + '%'
+						ELSE CASE WHEN R.GameID = 806 THEN ''	 				
+							ELSE R.OtherInfo 
+							END 
+						END AS OtherInfo
 				,M.homeid
 				,M.awayid
 				,M.Leagueid
@@ -48,13 +62,18 @@ BEGIN
 				,R.VendorID
 				,R.MatchID
 				,R.GameID
-				,R.Custom1
+				,CASE WHEN R.GameID = 805 AND ISNULL (R.Custom1 ,'') <> '' THEN R.Custom1 + '%' 
+					ELSE R.Custom1 END AS Custom1
 				,R.Custom2
 				,R.Custom3
 				,R.ResultStatusID
 				,R.SettlementStatusID
 				,R.GameResult
-				,CASE WHEN R.GameID = 806 THEN '' ELSE R.OtherInfo END AS OtherInfo
+				,CASE WHEN R.GameID = 805 AND ISNULL (R.OtherInfo ,'') <> '' THEN R.OtherInfo + '%'
+						ELSE CASE WHEN R.GameID = 806 THEN ''	 				
+							ELSE R.OtherInfo 
+							END 
+						END AS OtherInfo
 				,M.homeid
 				,M.awayid
 				,M.Leagueid
@@ -70,13 +89,18 @@ BEGIN
 				,R.VendorID
 				,R.MatchID
 				,R.GameID
-				,R.Custom1
+				,CASE WHEN R.GameID = 805 AND ISNULL (R.Custom1 ,'') <> '' THEN R.Custom1 + '%' 
+					ELSE R.Custom1 END AS Custom1
 				,R.Custom2
 				,R.Custom3
 				,R.ResultStatusID
 				,R.SettlementStatusID
 				,R.GameResult
-				,CASE WHEN R.GameID = 806 THEN '' ELSE R.OtherInfo END AS OtherInfo
+				,CASE WHEN R.GameID = 805 AND ISNULL (R.OtherInfo ,'') <> '' THEN R.OtherInfo + '%'
+						ELSE CASE WHEN R.GameID = 806 THEN ''	 				
+							ELSE R.OtherInfo 
+							END 
+						END AS OtherInfo
 				,M.homeid
 				,M.awayid
 				,M.Leagueid
@@ -87,19 +111,3 @@ BEGIN
 	END
 
 END
-
-GO 
-GRANT EXECUTE ON [dbo].[All_BetList_MatchResultDetail3rdSel] TO [bodbDownlineNet]
-GO 
-GRANT EXECUTE ON [dbo].[All_BetList_MatchResultDetail3rdSel] TO [bodbExtAccNet]
-GO 
-GRANT EXECUTE ON [dbo].[All_BetList_MatchResultDetail3rdSel] TO [bodbDownlineNetView]
-GO 
-GRANT EXECUTE ON [dbo].[All_BetList_MatchResultDetail3rdSel] TO [bodbAdminNet]
-GO 
-GRANT EXECUTE ON [dbo].[All_BetList_MatchResultDetail3rdSel] TO [bodbLicenseeNet]
-GO
-
-
- 
-  
