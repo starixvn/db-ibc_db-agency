@@ -2,51 +2,54 @@
 GO
 
 ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]
- @custid	INT
- ,@transid BIGINT = 0
- ,@LimitRowCount INT = 20 
- WITH RECOMPILE
+	@custid			INT,
+	@transid		BIGINT	= 0,
+	@LimitRowCount	INT		= 20 
+WITH RECOMPILE
 AS
-BEGIN
-/*	
-Created	: Johnson
-Task: Monitor lastest bets list( all bettypes and all sports)
-Date: 28/06/2011
-DB: DBAGE.BODB02
-Revision:
-	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
-	- 20120827@Jamie: Add actual_stake for System Parlay Bet list 
-	- 20130222@Elodie: Get custid value
-	- 20130222@Elodie: Get oddsid value to use for Virtual HR
-	- 20150318@Cody: Apply sporttype bettype matrix
-	- 20150706@Bobby: Exclude Metric Gaming running ticket
-	
-Parameter's Explanation:
-	- @custid : agent's ID
-	- @transid: lastest transid 
-	- @LimitRowCount: max record return.
+
+/*
+	Created	: Johnson
+	Task: Monitor lastest bets list( all bettypes and all sports)
+	Date: 28/06/2011
+	DB: DBAGE.BODB02
+	Revision:
+		- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
+		- 20120827@Jamie: Add actual_stake for System Parlay Bet list 
+		- 20130222@Elodie: Get custid value
+		- 20130222@Elodie: Get oddsid value to use for Virtual HR
+		- 20150318@Cody: Apply sporttype bettype matrix
+		- 20150706@Bobby: Exclude Metric Gaming running ticket
+		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
+
+	Parameter's Explanation:
+		- @custid : agent's ID
+		- @transid: lastest transid 
+		- @LimitRowCount: max record return.
 */ 
+
+BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE @SportBettype TABLE(
-			ProductID INT
-			,Bettype INT
-			,EventType INT
+			ProductID	INT
+			,Bettype	INT
+			,EventType	INT
 		)
 		
 	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
 	SELECT TOP(@LimitRowCount)
 		b.custid,
 		0 AS sporttype,
-		b.matchid,	
-		0 AS leagueid,			
-		b.Username,				
+		b.matchid,
+		0 AS leagueid,
+		b.Username,
 		b.bettype,
 		b.transid,
-		b.refno,		
-		b.transdate,				
+		b.refno,
+		b.transdate,
 		'' AS matchcode,
 		0 AS homeid,
 		0 AS awayid,
@@ -60,24 +63,27 @@ Parameter's Explanation:
 		b.odds,
 		b.stake,
 		b.actual_stake, 
-		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
-				 ELSE b.status 
-				 END as status,    
-		b.betteam,				
+		CASE 
+			WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 and ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+			ELSE b.status
+		 END AS status,
+		b.betteam,
 		b.IP,	
-		CONVERT(BIT,0) AS isNeutral, 		
+		CONVERT(BIT, 0) AS isNeutral,
 		b.oddstype,
-		ISNULL(b.Betcheck,'') Betcheck
-	FROM dbo.bettrans b WITH(NOLOCK)
-		INNER JOIN @SportBettype s ON b.bettype = s.BetType			
+		ISNULL(b.Betcheck, '') Betcheck,
+		ISNULL(b.oddsspread, 0) AS OddsSpread
+	FROM dbo.bettrans AS b WITH(NOLOCK)
+		INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
 	WHERE b.recommend = @custid 
 		AND b.transid > @transid
 		--AND b.bettype < 19001
 		AND b.statusID BETWEEN 0 AND 1
-		AND b.bettype NOT BETWEEN 801 AND 806 				
-		
+		AND b.bettype NOT BETWEEN 801 AND 806
 	ORDER BY b.transid DESC
+
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [bodbDownlineNet]

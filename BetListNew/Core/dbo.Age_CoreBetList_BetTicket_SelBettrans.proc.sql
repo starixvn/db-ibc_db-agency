@@ -8,19 +8,19 @@ GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelBettrans]
 AS
 /*
-Created: Bobby.Nguyen
-Task : Re-factor core bet list
-DB: DBAGE.bodb02
-Original: 
+	Created: Bobby.Nguyen
+	Task : Re-factor core bet list
+	DB: DBAGE.bodb02
+	Original: 
 
-Revisions:
-	- 20150504@Bobby.Nguyen: Create new SP - Re-factor bet list
+	Revisions:
+		- 20150504@Bobby.Nguyen: Create new SP - Re-factor bet list
+		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 
-Param's Explanation:
+	Param's Explanation:
 	
-	
-Dependences:
-	- Age_CoreBetList_BetTicket_SelMainInfo
+	Dependences:
+		- Age_CoreBetList_BetTicket_SelMainInfo
 */
 BEGIN
 	SET NOCOUNT ON;	
@@ -55,38 +55,32 @@ BEGIN
 				
 				, b.bettype
 				, ISNULL(b.BetID,0)
-				, CASE WHEN c.ProductID = 1
-							THEN b.Betteam 
-						WHEN c.ProductID = 8
-							THEN fnc.ChoiceId 
-						ELSE '' 
-					END						AS Betteam 
-				, CASE WHEN c.ProductID = 1
-							THEN b.hdp1 
+				, CASE 
+					WHEN c.ProductID = 1 THEN b.Betteam 
+					WHEN c.ProductID = 8 THEN fnc.ChoiceId 
+					ELSE '' 
+				END							AS Betteam 
+				, CASE WHEN c.ProductID = 1 THEN b.hdp1 
 						ELSE 0
 					END						AS hdp1
-				, CASE WHEN c.ProductID = 1
-							THEN b.hdp2 
+				, CASE WHEN c.ProductID = 1 THEN b.hdp2 
 						ELSE 0 
 					END						AS hdp2
-				, CASE WHEN c.ProductID = 8
-						THEN b.OddsType
+				, CASE WHEN c.ProductID = 8 THEN b.OddsType
 					ELSE 0
 				END		AS OddsType
 				, b.oddsid
-				, CASE WHEN c.ProductID IN ( 1, 8, 12 )
-							THEN b.Odds 
+				, CASE WHEN c.ProductID IN ( 1, 8, 12 ) THEN b.Odds 
 						ELSE 0 
 					END						AS Odds
-				, CASE WHEN c.ProductID IN ( 1 )
-							THEN b.modds 
+				, CASE WHEN c.ProductID IN ( 1 ) THEN b.modds 
 						ELSE 0 
 					END						AS modds
 				, b.Stake
 				, b.actual_stake 
-				, b.Status				
+				, b.Status
 				, b.Transdate
-				, b.winlostdate						
+				, b.winlostdate
 				, CASE WHEN b.bettype IN (23102, 23002, 23202) THEN 0 
 						ELSE (b.winlost - b.actual_stake) 
 					END	AS winlost
@@ -97,7 +91,6 @@ BEGIN
 				, (b.comm - b.playercomm)	AS comm
 				, (b.acomm - b.comm)		AS acomm 
 				, (b.scomm - b.acomm)		AS scomm
-					
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
@@ -146,12 +139,12 @@ BEGIN
 						ELSE '0' 
 				END		AS comstatus
 				, '' AS transdesc
+				, 0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
 				ON b.transid		= c.transid
 					AND b.custid	= c.custid
 				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.bettype) fnc
-				
 			WHERE	c.WhTicket 		= 1
 				AND c.EventType 	= 0
 		END
@@ -236,6 +229,7 @@ BEGIN
 					ELSE '0' 
 				END		AS comstatus
 				, CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc
+				, ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN dbo.match AS m WITH (NOLOCK) 
 				ON b.matchid		= m.matchid 		
@@ -312,7 +306,7 @@ BEGIN
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus				
 				, '' AS transdesc
-				
+				, 0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN dbo.Outright AS m WITH (NOLOCK) 
 				ON b.matchid		= m.orid
@@ -387,7 +381,7 @@ BEGIN
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 				, '' AS transdesc
-				
+				, 0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN dbo.VSOutright o WITH (NOLOCK) 
 				ON b.oddsid			= o.Orid
@@ -396,13 +390,13 @@ BEGIN
 				INNER JOIN #tempCust c 
 				ON b.transid		= c.transid
 					AND b.custid	= c.custid
-
 			WHERE c.EventType		= 3
 				AND c.WhTicket 		= 1
 		END
 	END
 	RETURN;
 END
+
 GO
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelBettrans] TO [bodbDownlineNet]

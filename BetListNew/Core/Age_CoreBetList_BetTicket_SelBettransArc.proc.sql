@@ -5,22 +5,26 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelBettransArc]
 AS
+
 /*
-Created: Bobby.Nguyen
-Task : Re-factor core betlist and apply GD product
-DB: DBARC.bodb_archive
-Original: 
+	Created: Bobby.Nguyen
+	Task : Re-factor core betlist and apply GD product
+	DB: DBARC.bodb_archive
+	Original: 
 
-Revisions:
-	- 20150504@Bobby.Nguyen: Create new SP
+	Revisions:
+		- 20150504@Bobby.Nguyen: Create new SP
+		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 
-Param's Explanation:
+	Param's Explanation:
 	
-Dependences:
-	- Age_CoreBetList_BetTicket_SelMainInfo
+	Dependences:
+		- Age_CoreBetList_BetTicket_SelMainInfo
 */
+
 BEGIN
 	SET NOCOUNT ON;
 	
@@ -28,6 +32,7 @@ BEGIN
 		CustId 		INT
 		, Username 	NVARCHAR(30)
 	);
+
 	INSERT INTO #custInfo
 	SELECT c.CustId, c.Username
 	FROM bodb02.dbo.custinfo c WITH(NOLOCK)
@@ -43,7 +48,7 @@ BEGIN
 			- Casino				: ProductId = 6
 			- Bingo					: ProductId = 7
 			- Keno					: ProductId = 8
-			- Gold Delux			: ProductId = 12
+			- Gold Deluxe			: ProductId = 12
 		*/
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3 AND EventType = 0))
 		BEGIN
@@ -62,7 +67,6 @@ BEGIN
 						WHEN c.ProductID = 12 THEN 255
 						ELSE 0
 				END							AS Sporttype
-				
 				, b.bettype
 				, ISNULL(b.BetID,0)
 				, CASE WHEN c.ProductID = 1
@@ -94,9 +98,9 @@ BEGIN
 					END						AS modds
 				, b.Stake
 				, b.actual_stake 
-				, b.Status				
+				, b.Status
 				, b.Transdate
-				, b.winlostdate						
+				, b.winlostdate
 				, CASE WHEN b.bettype IN (23102, 23002, 23202) THEN 0 
 						ELSE (b.winlost - b.actual_stake) 
 					END	AS winlost
@@ -115,7 +119,6 @@ BEGIN
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
-					
 				, CASE WHEN c.ProductID = 1
 						THEN b.Liveindicator
 					ELSE 0
@@ -157,7 +160,7 @@ BEGIN
 						ELSE '0' 
 				END		AS comstatus
 				, '' AS transdesc
-				
+				, 0 AS OddsSpread
 			FROM dbo.bettrans_bk AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
 				ON b.transid		= c.transid
@@ -165,7 +168,6 @@ BEGIN
 				INNER JOIN #custInfo ci
 				ON b.custid 		= ci.custid
 				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.bettype) fnc
-				
 			WHERE	c.WhTicket 		= 3
 				AND c.EventType 	= 0
 		END
@@ -193,7 +195,6 @@ BEGIN
 				, CASE WHEN c.ProductID IN (3, 4) THEN 0
 						ELSE b.hdp2
 				END		AS hdp2
-
 				, b.OddsType 
 				, b.oddsid				
 				, b.odds 
@@ -251,7 +252,7 @@ BEGIN
 					WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc -- metric gaming
 					ELSE '' 
 				END AS transdesc
-				
+				, ISNULL(b.oddsspread, 0) AS OddsSpread
 			FROM dbo.bettrans_bk AS b WITH (NOLOCK)
 				INNER JOIN dbo.match_bk AS m WITH (NOLOCK) 
 				ON b.matchid		= m.matchid 		
@@ -329,7 +330,7 @@ BEGIN
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus				
 				, '' AS transdesc
-				
+				, 0 AS OddsSpread
 			FROM dbo.bettrans_bk AS b WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.Outright_bk AS m WITH (NOLOCK) 
 				ON b.matchid		= m.orid
@@ -382,7 +383,6 @@ BEGIN
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
-					
 				, 0 AS Liveindicator
 				, b.Livehomescore
 				, b.Liveawayscore
@@ -390,7 +390,6 @@ BEGIN
 				, 0 AS finalawayscore 	 
 				, 0 AS hthomescore 		
 				, 0 AS htawayscore
-				
 				, b.IP
 				, r.LeagueID
 				, b.MatchID	
@@ -406,7 +405,7 @@ BEGIN
 				, '' AS betcheck
 				, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 				, '' AS transdesc
-				
+				, 0 AS OddsSpread
 			FROM dbo.bettrans_bk AS b WITH (NOLOCK)
 				INNER JOIN bodb02.dbo.VSOutright_bk o WITH (NOLOCK) 
 				ON b.oddsid			= o.Orid
@@ -424,6 +423,8 @@ BEGIN
 	
 	RETURN
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelBettransArc] TO [bodbDownlineNet]
 GO

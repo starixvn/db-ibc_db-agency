@@ -8,18 +8,19 @@ GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelTranslog]
 AS
 /*
-Created: Bobby.Nguyen
-Task : Re-factor core bet list
-DB: DBAGE.bodb02
-Original: 
+	Created: Bobby.Nguyen
+	Task : Re-factor core bet list
+	DB: DBAGE.bodb02
+	Original: 
 
-Revisions:
-	- 20150504@Bobby.Nguyen: Create new SP
+	Revisions:
+		- 20150504@Bobby.Nguyen: Create new SP
+		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 
-Param's Explanation:
+	Param's Explanation:
 	
-Dependences:
-	- Age_CoreBetList_BetTicket_SelMainInfo
+	Dependences:
+		- Age_CoreBetList_BetTicket_SelMainInfo
 */
 BEGIN
 	SET NOCOUNT ON;		
@@ -31,8 +32,8 @@ BEGIN
 	*/	
 	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 0))
 	BEGIN
-		/*	- Keno				: ProductId = 8
-			- Gold Delux		: ProductId = 12
+		/*	- Keno			: ProductId = 8
+			- Gold Delux	: ProductId = 12
 		*/
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 0 AND EventType = 0))
 		BEGIN
@@ -106,12 +107,12 @@ BEGIN
 				END AS betcheck
 				, 0	AS comstatus
 				, '' AS transdesc
+				, 0 AS OddsSpread
 			FROM dbo.translog AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
 				ON b.translogid		= c.transid
 					AND b.custid	= c.custid
 				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.gameid) fnc
-				
 			WHERE c.WhTicket 		= 0
 				AND c.EventType		= 0
 				AND b.StatusID		IN (0,1)
@@ -164,7 +165,6 @@ BEGIN
 				, m.finalawayscore 	 
 				, m.hthomescore 		
 				, m.htawayscore 		
-				
 				, b.IP
 				, m.LeagueID
 				, m.MatchID	
@@ -180,7 +180,7 @@ BEGIN
 				, '' AS betcheck
 				, 0 AS comstatus
 				,b.transdesc
-				
+				, 0 AS OddsSpread
 			FROM dbo.translog AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
 				ON b.translogid		= c.transid
@@ -195,6 +195,7 @@ BEGIN
 	
 	RETURN;
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelTranslog] TO [bodbDownlineNet]
 GO

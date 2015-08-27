@@ -1,6 +1,6 @@
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
 (
-	@ColumnOutput		VARCHAR(MAX) 	= NULL
+	@ColumnOutput VARCHAR(MAX) = NULL
 )
 AS
 /*
@@ -12,9 +12,9 @@ Original:
 Revisions:
 	- 20150504@Bobby.Nguyen: Create new SP - Apply GD product
 	- 20150526@Bobby.Nguyen: Apply metric-gaming bettype
+	- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 
 Param's Explanation:
-	
 	
 Dependences:
 	- CREATE TABLE #tempCust 
@@ -99,6 +99,7 @@ BEGIN
 		, betcheck 			NVARCHAR(50)
 		, comstatus 		NVARCHAR(20)
 		, transdesc			NVARCHAR(300)
+		, OddsSpread		SMALLMONEY
 	);
 	
 	-- CHECK for selecting from translog
