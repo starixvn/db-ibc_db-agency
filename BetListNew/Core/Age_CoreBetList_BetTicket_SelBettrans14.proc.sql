@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
+		- 20150831@Kos.Nguyen: Support Colossus Bet
 
 	Param's Explanation:
 	
@@ -32,6 +33,7 @@ BEGIN
 	BEGIN
 		/*CHECK for selecting from bettrans14
 			- Copy from bettrans query and just replace table and WhTicket
+			- CB		: ProductID = 15
 		*/
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2 AND EventType = 0))
 		BEGIN
@@ -48,11 +50,11 @@ BEGIN
 						WHEN c.ProductID = 7 THEN 252
 						WHEN c.ProductID = 8 THEN 202
 						WHEN c.ProductID = 12 THEN 255
+						WHEN c.ProductID = 15 THEN 204
 						ELSE 0
 				END							AS Sporttype
-				
 				, b.bettype
-				, ISNULL(b.BetID,0)
+				, ISNULL(b.BetID, 0)
 				, CASE WHEN c.ProductID = 1 THEN b.Betteam 
 						WHEN c.ProductID = 8 THEN fnc.ChoiceId 
 						ELSE '' 
@@ -141,7 +143,10 @@ BEGIN
 							THEN '1' 
 						ELSE '0' 
 				END		AS comstatus
-				, '' AS transdesc
+				, CASE WHEN c.ProductID = 15
+						THEN b.transdesc
+					ELSE 0
+				END		AS transdesc
 				, 0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
@@ -400,6 +405,7 @@ BEGIN
 	END
 	RETURN;
 END
+
 
 
 GO

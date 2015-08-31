@@ -5,6 +5,7 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 (
 	-- MEM INFO
@@ -32,12 +33,13 @@ AS
 /*
 	Created: Bobby.Nguyen
 	Task : Re-factor core betlist and apply GD product
-	DB: DB0AGE.bodb02
+	DB: DBAGE.bodb02
 	Original: 
 
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
+		- 20150831@Kos: Support Colossus Bet
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -143,7 +145,8 @@ BEGIN
 		
 		/* 	select running tickets
 			- Keno 			: ProductId = 8
-			- GoldDelux		: ProductId = 12
+			- Gold Deluxe	: ProductId = 12
+			- Colossus Bet	: ProductId = 15
 			- Sportsbook	: Metric Gaming bettype(801-899)
 		*/
 		IF (
@@ -165,7 +168,7 @@ BEGIN
 				ON b.statusID		= st.StatusID
 			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 				AND b.custid		= @CustID
-				AND	(bt.ProductId	IN (8, 12)
+				AND	(bt.ProductId	IN (8, 12, 15)
 					OR bt.Bettype BETWEEN 801 AND 899
 				)
 				AND b.statusID IN (0, 1)

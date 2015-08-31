@@ -7,25 +7,26 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
-	@custid 			INT = NULL
-	, @AgID 			INT = 0
+	@custid 			INT				= NULL
+	, @AgID 			INT				= 0
 	, @FromDate 		DATETIME
 	, @ToDate 			DATETIME
-	, @Language 		VARCHAR(2) = 'E'
-	, @username 		VARCHAR(50) = NULL -- for API
+	, @Language 		VARCHAR(2)		= 'E'
+	, @username 		VARCHAR(50)		= NULL -- for API
 	, @ShowSB 			BIT = 1
 	, @ShowCasino 		BIT = 0
 	, @ShowP2P 			BIT = 0
 	, @ShowRB 			BIT = 0
 	, @ShowFI 			BIT = 0
 	, @ShowNG 			BIT = 0
-	, @ShowBI 			BIT = 0	
-	, @ShowLiveCasino 	BIT = 0
+	, @ShowBI 			BIT = 0
+	, @ShowLiveCasino	BIT = 0
 	, @ShowVS 			BIT = 0
 	, @ShowKeno 		BIT = 0
 	, @ShowGD 			BIT = 0
+	, @ShowCB 			BIT = 0
 	, @Error			INT 			= 0
-	, @ErrorMsg			NVARCHAR(250) = NULL
+	, @ErrorMsg			NVARCHAR(250)	= NULL
 AS
 
 /*
@@ -85,6 +86,7 @@ AS
 		- 20150706@Bobby: #39097 - Fixing bug for showing Keno's bettype info
 		- 20150710@Bobby: #39381 - Fixing bug for showing Casino Draw tickets
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
+		- 20150828@Kos: Support Colossus Bet
 */
 
 BEGIN
@@ -145,6 +147,7 @@ BEGIN
 		OR ProductID	= CASE WHEN @ShowKeno		= 0 	THEN 8 END
 		OR ProductID	= CASE WHEN @ShowP2P		= 0 	THEN 9 END
 		OR ProductID	= CASE WHEN @ShowGD			= 0 	THEN 12 END
+		OR ProductID	= CASE WHEN @ShowCB			= 0 	THEN 15 END
 	
 	-- CALL to core bet list
 	EXEC [bodb02].[dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
@@ -204,6 +207,7 @@ BEGIN
 	
 	RETURN;
 END
+
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNet]
 GO
