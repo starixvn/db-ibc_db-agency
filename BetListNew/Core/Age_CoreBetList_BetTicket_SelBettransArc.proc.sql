@@ -18,6 +18,7 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
+		- 20150831@Bobby.Nguyen: Bug#42652 - Update for joining with outright_bk and VSOutright_bk
 
 	Param's Explanation:
 	
@@ -332,7 +333,7 @@ BEGIN
 				, '' AS transdesc
 				, 0 AS OddsSpread
 			FROM dbo.bettrans_bk AS b WITH (NOLOCK)
-				INNER JOIN bodb02.dbo.Outright_bk AS m WITH (NOLOCK) 
+				INNER JOIN dbo.Outright_bk AS m WITH (NOLOCK) 
 				ON b.matchid		= m.orid
 				INNER JOIN bodb02.dbo.League AS l WITH (NOLOCK) 
 				ON m.leagueID		= l.leagueID
@@ -407,7 +408,7 @@ BEGIN
 				, '' AS transdesc
 				, 0 AS OddsSpread
 			FROM dbo.bettrans_bk AS b WITH (NOLOCK)
-				INNER JOIN bodb02.dbo.VSOutright_bk o WITH (NOLOCK) 
+				INNER JOIN dbo.VSOutright_bk o WITH (NOLOCK) 
 				ON b.oddsid			= o.Orid
 				INNER JOIN bodb02.dbo.VSRaceInfo r WITH (NOLOCK) 
 				ON r.EventID		= o.EventID
