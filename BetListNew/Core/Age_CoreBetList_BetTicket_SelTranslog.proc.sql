@@ -7,6 +7,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelTranslog]
 AS
+
 /*
 	Created: Bobby.Nguyen
 	Task : Re-factor core bet list
@@ -16,24 +17,28 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
+		- 20150831@Kos.Nguyen: Support Colossus Bet
 
 	Param's Explanation:
 	
 	Dependences:
 		- Age_CoreBetList_BetTicket_SelMainInfo
 */
+
 BEGIN
 	SET NOCOUNT ON;		
 	/* 	CHECK for selecting from translog
 		- Keno			: ProductId = 8
-		- GoldDelux		: ProductId = 12
+		- Gold Deluxe	: ProductId = 12
+		- Colossus Bet	: ProductId = 15
 		- SportsBook	: ProductId = 1 
 			+ Metric Gaming bettype(801-899)
 	*/	
 	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 0))
 	BEGIN
 		/*	- Keno			: ProductId = 8
-			- Gold Delux	: ProductId = 12
+			- Gold Deluxe	: ProductId = 12
+			- Colossus Bet	: ProductId = 15
 		*/
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 0 AND EventType = 0))
 		BEGIN
@@ -45,6 +50,7 @@ BEGIN
 				, b.UserName
 				, CASE 	WHEN c.ProductID = 8 THEN 202
 						WHEN c.ProductID = 12 THEN 255
+						WHEN c.ProductID = 15 THEN 204
 						ELSE 0
 				END	AS Sporttype
 				, b.GameId 		AS bettype
@@ -59,9 +65,9 @@ BEGIN
 				, 0 			AS modds
 				, b.Stake
 				, b.actual_stake 
-				, b.Status				
+				, b.Status
 				, b.transdate
-				, b.winlostdate						
+				, b.winlostdate
 				, 0	AS Winlost
 				, 0 AS awinlost
 				, 0 AS mwinlost
@@ -70,25 +76,23 @@ BEGIN
 				, 0 AS comm
 				, 0 AS acomm 
 				, 0 AS scomm
-					
 				, 0 AS APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
 				, b.TPositiontaking
-				,b.discount 	AS adiscount
-				,b.adiscount 	AS mdiscount
-				,b.sdiscount 	AS sdiscount
-					
+				, b.discount 	AS adiscount
+				, b.adiscount 	AS mdiscount
+				, b.sdiscount 	AS sdiscount
 				, 0		AS Liveindicator
 				, 0		AS Livehomescore
 				, 0		AS Liveawayscore
-				, 0 	AS finalhomescore 	
-				, 0 	AS finalawayscore 	 
-				, 0 	AS hthomescore 		
-				, 0 	AS htawayscore 		 
+				, 0 	AS finalhomescore
+				, 0 	AS finalawayscore
+				, 0 	AS hthomescore
+				, 0 	AS htawayscore
 				, b.IP	AS IP
 				, 0		AS LeagueID
-				,CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
+				, CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
 						WHEN c.ProductID = 12 	THEN 255
 					ELSE 0
 				END		AS MatchID
@@ -106,16 +110,18 @@ BEGIN
 					ELSE '' 
 				END AS betcheck
 				, 0	AS comstatus
-				, '' AS transdesc
+				, CASE 	WHEN c.ProductID = 15 	THEN b.transdesc
+					ELSE ''
+				END		AS transdesc
 				, 0 AS OddsSpread
 			FROM dbo.translog AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
 				ON b.translogid		= c.transid
 					AND b.custid	= c.custid
 				OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.gameid) fnc
-			WHERE c.WhTicket 		= 0
-				AND c.EventType		= 0
-				AND b.StatusID		IN (0,1)
+			WHERE c.WhTicket 	= 0
+				AND c.EventType	= 0
+				AND b.StatusID	IN (0,1)
 		END
 		/*	
 			- SportsBook		: ProductId = 1 -> Metric Gaming bettype(801-899)
@@ -195,6 +201,7 @@ BEGIN
 	
 	RETURN;
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelTranslog] TO [bodbDownlineNet]

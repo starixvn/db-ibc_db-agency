@@ -19,6 +19,7 @@ AS
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 		- 20150831@Bobby.Nguyen: Bug#42652 - Update for joining with outright_bk and VSOutright_bk
+		- 20150831@Kos.Nguyen: Support Colossus Bet
 
 	Param's Explanation:
 	
@@ -50,6 +51,7 @@ BEGIN
 			- Bingo					: ProductId = 7
 			- Keno					: ProductId = 8
 			- Gold Deluxe			: ProductId = 12
+			- Colossus Bet			: ProductId = 15
 		*/
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3 AND EventType = 0))
 		BEGIN
@@ -66,6 +68,7 @@ BEGIN
 						WHEN c.ProductID = 7 THEN 252
 						WHEN c.ProductID = 8 THEN 202
 						WHEN c.ProductID = 12 THEN 255
+						WHEN c.ProductID = 15 THEN 204
 						ELSE 0
 				END							AS Sporttype
 				, b.bettype
@@ -112,7 +115,6 @@ BEGIN
 				, (b.comm - b.playercomm)	AS comm
 				, (b.acomm - b.comm)		AS acomm 
 				, (b.scomm - b.acomm)		AS scomm
-					
 				, b.APositiontaking
 				, b.MPositiontaking
 				, b.SPositiontaking
@@ -148,7 +150,7 @@ BEGIN
 				, 0		AS HomeID
 				, 0		AS AwayID		
 				, 0		AS Betstatus
-				, CONVERT(BIT,0) AS IsNeutral
+				, CONVERT(BIT, 0) AS IsNeutral
 				, '' AS Placing
 				, '' 	AS showtime
 				, CASE WHEN c.ProductID IN ( 9, 12 ) 
@@ -160,7 +162,10 @@ BEGIN
 							THEN '1' 
 						ELSE '0' 
 				END		AS comstatus
-				, '' AS transdesc
+				, CASE WHEN c.ProductID = 15 
+						THEN b.transdesc
+					ELSE ''
+				END		AS transdesc
 				, 0 AS OddsSpread
 			FROM dbo.bettrans_bk AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
@@ -424,6 +429,7 @@ BEGIN
 	
 	RETURN
 END
+
 
 
 GO

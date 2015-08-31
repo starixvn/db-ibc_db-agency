@@ -145,7 +145,7 @@ BEGIN
 				END		AS comstatus
 				, CASE WHEN c.ProductID = 15
 						THEN b.transdesc
-					ELSE 0
+					ELSE ''
 				END		AS transdesc
 				, 0 AS OddsSpread
 			FROM dbo.bettrans14 AS b WITH (NOLOCK)

@@ -16,6 +16,7 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP - Re-factor bet list
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
+		- 20150831@Kos.Nguyen: Support Colossus Bet
 
 	Param's Explanation:
 	
@@ -33,7 +34,8 @@ BEGIN
 			- Casino				: ProductId = 6
 			- Bingo					: ProductId = 7
 			- Keno					: ProductId = 8
-			- Gold Delux			: ProductId = 12
+			- Gold Deluxe			: ProductId = 12
+			- Colossus Bet			: ProductId = 15
 		*/
 		IF (EXISTS ( SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 1 AND EventType = 0))
 		BEGIN
@@ -50,6 +52,7 @@ BEGIN
 						WHEN c.ProductID = 7 THEN 252
 						WHEN c.ProductID = 8 THEN 202
 						WHEN c.ProductID = 12 THEN 255
+						WHEN c.ProductID = 15 THEN 204
 						ELSE 0
 				END							AS Sporttype
 				
@@ -98,7 +101,6 @@ BEGIN
 				, b.discount
 				, b.adiscount
 				, b.sdiscount
-					
 				, CASE WHEN c.ProductID = 1
 						THEN b.Liveindicator
 					ELSE 0
@@ -117,7 +119,7 @@ BEGIN
 				, 0 	AS htawayscore 		 
 				, b.IP	AS IP
 				, 0		AS LeagueID
-				,CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
+				, CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
 						WHEN c.ProductID = 12 	THEN 255
 					ELSE 0
 				END		AS MatchID
@@ -138,7 +140,10 @@ BEGIN
 							THEN '1' 
 						ELSE '0' 
 				END		AS comstatus
-				, '' AS transdesc
+				, CASE WHEN c.ProductID = 15 
+						THEN b.transdesc
+					ELSE ''
+				END		AS transdesc
 				, 0 AS OddsSpread
 			FROM dbo.bettrans AS b WITH (NOLOCK)
 				INNER JOIN #tempCust c 
@@ -396,6 +401,7 @@ BEGIN
 	END
 	RETURN;
 END
+
 
 GO
 GO
