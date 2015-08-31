@@ -12,6 +12,7 @@
 	@showVS			BIT = 0,
 	@showKeno		BIT = 0,
 	@showGD			BIT = 0,
+	@showCB 		BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -34,6 +35,7 @@ AS
 	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
 	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
 	- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
+	- 20150831@Winnie: Include CB [Redmine: #42409]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -225,6 +227,19 @@ BEGIN
 		--Sum_winloss
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(255, 0)
+	END	
+
+	IF @showCB = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	204 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 15
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(204, 0)
 	END	
 
 	IF @ToDate >= @BalanceUpDate
