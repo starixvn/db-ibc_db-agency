@@ -40,13 +40,14 @@ AS
 		- 20150522@Bobby: Rollback code caused by holding core bet list
 		- 20150526@Bobby: Implement betlist core
 		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
+		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
 */
 BEGIN
 	SET NOCOUNT ON;
 	
 	-- Gather Ticket status
 	CREATE TABLE #TransStatus (
-		StatusID 		INT
+		StatusID 		TINYINT
 	);
 	INSERT INTO #TransStatus
 	SELECT StatusId
@@ -55,9 +56,9 @@ BEGIN
 		
 	-- Gather BettypeMatrix
 	CREATE TABLE #BettypeMatrix (
-		ProductID 		INT
-		, Bettype 		INT
-		, EventType 	INT
+		ProductID 		TINYINT
+		, Bettype 		SMALLINT
+		, EventType 	TINYINT
 		, SubProduct 	VARCHAR(500)
 	);
 	INSERT INTO #BettypeMatrix

@@ -31,6 +31,7 @@ Original:
 
 Revisions:
 	- 20150504@Bobby.Nguyen: Create new SP
+	- 20150504@Bobby.Nguyen: Due to performence, we should use index hint (IX_custid) on bettrans_bk
 
 Param's Explanation:
 	- @BettypeMatrix	: 
@@ -85,7 +86,7 @@ BEGIN
 		, bt.ProductId
 		, bt.EventType
 		, 3 AS WhTicket
-	FROM dbo.bettrans_bk b WITH(nolock)
+	FROM dbo.bettrans_bk b WITH(NOLOCK, INDEX=IX_custid)		
 		INNER JOIN #BettypeMatrix bt
 		ON b.bettype	= bt.bettype
 		INNER JOIN #TransStatus stt

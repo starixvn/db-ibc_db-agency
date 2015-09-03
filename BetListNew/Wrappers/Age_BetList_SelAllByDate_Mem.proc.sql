@@ -87,6 +87,7 @@ AS
 		- 20150710@Bobby: #39381 - Fixing bug for showing Casino Draw tickets
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
+		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
 */
 
 BEGIN
@@ -94,7 +95,7 @@ BEGIN
 	
 	-- Gather Ticket status
 	CREATE TABLE #TransStatus (
-		StatusID INT
+		StatusID 		TINYINT
 	);
 
 	INSERT INTO #TransStatus
@@ -103,9 +104,9 @@ BEGIN
 	
 	-- Gather BettypeMatrix
 	CREATE TABLE #BettypeMatrix (
-		ProductID 		INT
-		, Bettype 		INT
-		, EventType 	INT
+		ProductID 		TINYINT
+		, Bettype 		SMALLINT
+		, EventType 	TINYINT
 		, SubProduct 	VARCHAR(500)
 	);
 
