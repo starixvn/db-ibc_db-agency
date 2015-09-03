@@ -39,6 +39,7 @@ Revisions:
 	- 20150407@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20150407@Cody: Apply 60 New Bettypes - BetRadar Phase II [Redmine: #32734]
 	- 20150511@Sophia: Apply Gold Deluxe and Metric Gaming [Redmine: #35278]
+	- 20150903@Winnie: Add column MO_comm for Myanmar odd [Redmine: #42813]
 */
 
 SET NOCOUNT ON
@@ -157,7 +158,8 @@ SELECT pvt.recommend, c.username,
 	---Keno_comm
 	ISNULL([1501],0) +
 	---Gold Deluxe_Comm
-	ISNULL([1701],0) + ISNULL([1702],0) + ISNULL([1703],0) AS Casino_comm
+	ISNULL([1701],0) + ISNULL([1702],0) + ISNULL([1703],0) AS Casino_comm,
+	ISNULL([301],0) + ISNULL([302],0) + ISNULL([303],0) + ISNULL([304],0) AS MO_comm
 	
 FROM #tmp AS p
 PIVOT
@@ -180,7 +182,8 @@ PIVOT
 					[157], [159], [160], [161], [162], [163], [164], [165], [166], [167], [168], [169], [170], [171], [172],
 					[173], [174], [175], [176], [177], [178], [179], [180], [181], [182], [183], [184], [185], [186], [187], 
 					[188], [189], [190], [191], [192], [193], [194], [195], [196], [197], [198], [199], [200], [201], [202], 
-					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217]
+					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217],
+					[301],[302],[303],[304]
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.recommend 
