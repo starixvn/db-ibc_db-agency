@@ -36,6 +36,7 @@ Revisions:
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 	- 20150612@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 	- 20150803@Elodie: Get DisableDownlinesGoldDeluxe field [Redmine:#38741]
+	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 
 
 Param's Explanation:
@@ -106,6 +107,9 @@ BEGIN
 		  , @uplineDisableGoldDeluxe	BIT
 		  , @HasDownline				BIT = 0
 		  , @DisableDownlinesGoldDeluxe	BIT = 0
+		  , @uplineDisableColossusBet	BIT
+		  , @DisableDownlinesColossusBet BIT = 0
+		  
 
     DECLARE @DisableAutoMPT BIT
     		
@@ -135,6 +139,7 @@ BEGIN
 	         , @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds, 0)
 	         , @uplineDisableEsports = ISNULL(DisableEsports, 0)
 			 , @uplineDisableGoldDeluxe = ISNULL(DisableGoldDeluxe, 0)
+			 , @uplineDisableColossusBet = ISNULL(DisableColossusBet, 0)
 	         , @Credit_Ag = ISNULL(credit, 0)
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @recommend	
@@ -172,6 +177,7 @@ BEGIN
 	         , @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds, 0)
 		     , @uplineDisableEsports = ISNULL(DisableEsports, 0)
 			 , @uplineDisableGoldDeluxe = ISNULL(DisableGoldDeluxe, 0)
+			 , @uplineDisableColossusBet = ISNULL(DisableColossusBet, 0)
 		     , @Credit_MAg = ISNULL(credit, 0)
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @mrecommend		
@@ -179,6 +185,8 @@ BEGIN
 		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE recommend = @custid AND roleid = 1
 
 		 SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE recommend = @custid AND roleid = 1 AND DisableGoldDeluxe = 1
+		 
+		 SELECT TOP 1 @DisableDownlinesColossusBet = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE recommend = @custid AND roleid = 1 AND DisableColossusBet = 1
 
 	    --Agent Itself		
 	    SELECT @Credit_AllOtherAgent = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci WITH(NOLOCK) WHERE mrecommend = @mrecommend AND RoleID = 2 AND Custid <> @custID
@@ -211,13 +219,15 @@ BEGIN
 	         , @uplineDisableHRFixedOdds = ISNULL(DisableHRFixedOdds, 0)
 		     , @uplineDisableEsports = ISNULL(DisableEsports, 0)
 			 , @uplineDisableGoldDeluxe = ISNULL(DisableGoldDeluxe, 0)
-		     , @Credit_SAg = ISNULL(credit, 0)
+			 , @uplineDisableColossusBet = ISNULL(DisableColossusBet, 0)
+			 , @Credit_SAg = ISNULL(credit, 0)
 	      FROM custinfo WITH(NOLOCK)
 	     WHERE custID = @srecommend
 
 		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
 		 SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableGoldDeluxe = 1
-
+		 SELECT TOP 1 @DisableDownlinesColossusBet = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableColossusBet = 1
+		
 	    --Master Itself
 	    SELECT @Credit_AllOtherMaster = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci (NOLOCK) WHERE srecommend = @Srecommend AND RoleID = 3 AND custid <> @CustId
 	    SELECT @Credit_MAg_Max = ISNULL(@Credit_SAg,0) - ISNULL(@Credit_AllOtherMaster,0)	
@@ -247,6 +257,8 @@ BEGIN
 	ELSE IF @roleID = 4 --for super
 	BEGIN
 		SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableGoldDeluxe = 1
+		SELECT TOP 1 @DisableDownlinesColossusBet = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableColossusBet = 1
+		
 	END
 
     -------------------------------------------------------------------------
@@ -294,9 +306,10 @@ BEGIN
 	    ISNULL(@uplineDisableHRFixedOdds,0) AS [uplineDisableHRFixedOdds],
 	    ISNULL(@uplineDisableEsports, 0) AS uplineDisableEsports,
 		ISNULL(@uplineDisableGoldDeluxe, 0) AS uplineDisableGoldDeluxe,
+		ISNULL(@uplineDisableColossusBet, 0) AS uplineDisableColossusBet,
     	@HasDownline AS HasDownline,
 		@DisableDownlinesGoldDeluxe AS DisableDownlinesGoldDeluxe,
-
+		@DisableDownlinesColossusBet AS DisableDownlinesColossusBet,
 	    @Credit_MAg_Min AS [MasterCredit_Min],
 	    @Credit_MAg_Max AS [MasterCredit_Max],
 	    @Credit_Ag_Min AS [AgentCredit_Min],
@@ -326,7 +339,9 @@ BEGIN
 	    ci.HideKeno,
 	    ci.DisableEsports,
 		ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
-		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe
+		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
+		ISNULL(ci.DisableColossusBet,1) AS DisableColossusBet,
+		ISNULL(ci.HideColossusBet,1) AS HideColossusBet
     FROM customer c WITH (NOLOCK)
 	    INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
     WHERE c.custid = @custid

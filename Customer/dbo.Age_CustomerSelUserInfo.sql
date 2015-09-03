@@ -19,6 +19,7 @@ Revisions:
 						2.Code aligning
 	- 20150420@Elodie: Add Gold Deluxe Product
 	- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -82,6 +83,10 @@ SELECT Customer.custid,
 	   ci.synclivecasino,
 	   ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe,
 	   ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
+	   
+	   ISNULL(ci.DisableColossusBet,1) AS DisableColossusBet,
+	   ISNULL(ci.HideColossusBet,1) AS HideColossusBet,
+	   
 	   ci.credit,
 	   e.currency as currencyname,
 	   @remark as remark

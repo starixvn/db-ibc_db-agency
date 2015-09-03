@@ -24,6 +24,7 @@ AS
 		- 20140822@Logan: Get Esports status [Redmine: #21007]
 		- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+		- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 
 */
 BEGIN
@@ -88,8 +89,12 @@ BEGIN
          , ci.DisableEsports
 		 , ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe
 		 , ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe
+		 
+		 , ISNULL(ci.DisableColossusBet,1) AS DisableColossusBet
+		 , ISNULL(ci.HideColossusBet,1) AS HideColossusBet
+		 
       FROM Customer c WITH(NOLOCK)
-INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
+		INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
      WHERE c.CustID = @CustID
 END
 
