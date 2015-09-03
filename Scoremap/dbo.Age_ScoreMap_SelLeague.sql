@@ -14,7 +14,7 @@ AS
 		- 20140417@Dom: Add new bettype 126
 		- 20140814@Dom: [Redmine: #19661] Offering 11 new bettypes		
 		- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
-		
+		- 20150828@Winnie: Myanmar odds
 	Parameter's Explanations:
 
 */
@@ -28,9 +28,9 @@ BEGIN
 	DECLARE @tblBetType TABLE(BetType INT)
 
 	INSERT INTO @tblBetType(BetType)
-	SELECT val AS BetType FROM strSplit('7,8,12,15,21,126,136,138,167,179,181,182,188,191',',') --BETTYPE HT
+	SELECT val AS BetType FROM strSplit('7,303,8,304,12,15,21,126,136,138,167,179,181,182,188,191',',') --BETTYPE HT
 	UNION ALL
-	SELECT val AS BetType FROM strSplit('1,2,3,4,5,6,13,20,24,25,26,27,28,30,121,122,123,131,132,137,139,151,157,159,161,162,170',',') --BETTYPE FT
+	SELECT val AS BetType FROM strSplit('1,301,2,3,302,4,5,6,13,20,24,25,26,27,28,30,121,122,123,131,132,137,139,151,157,159,161,162,170',',') --BETTYPE FT
 
 	IF @roleid = 4
 	BEGIN
