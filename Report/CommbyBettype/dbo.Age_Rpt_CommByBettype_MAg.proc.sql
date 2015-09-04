@@ -40,6 +40,7 @@ Revisions:
 	- 20150407@Cody: Apply 60 New Bettypes - BetRadar Phase II [Redmine: #32734]
 	- 20150511@Sophia: Apply Gold Deluxe and Metric Gaming [Redmine: #35278]
 	- 20150903@Winnie: Add column MO_comm for Myanmar odd [Redmine: #42813]
+	- 20150904@Winnie: Exclude CB
 */
 
 SET NOCOUNT ON
@@ -73,7 +74,7 @@ BEGIN
 		winlostdate between @FDate and @ToDate 
 		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype NOT BETWEEN 1501 AND 1599 
-		AND s.ProductID NOT IN(2, 8)
+		AND s.ProductID NOT IN(2, 8,15)
 	GROUP BY recommend, b.bettype
 
 	INSERT INTO #tmp
@@ -102,7 +103,7 @@ BEGIN
 		winlostdate between @FromDate and @TDate 
 		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype not BETWEEN 1501 AND 1599
-		AND s.ProductID NOT IN(2, 8)
+		AND s.ProductID NOT IN(2, 8,15)
 	GROUP BY recommend, b.bettype
 
 	INSERT INTO #tmp
