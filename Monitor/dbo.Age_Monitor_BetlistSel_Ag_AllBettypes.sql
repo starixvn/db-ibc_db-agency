@@ -21,6 +21,7 @@ AS
 		- 20150318@Cody: Apply sporttype bettype matrix
 		- 20150706@Bobby: Exclude Metric Gaming running ticket
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
+		- 20150904@Kos: Correct data type of temp table
 
 	Parameter's Explanation:
 		- @custid : agent's ID
@@ -32,9 +33,9 @@ BEGIN
 	SET NOCOUNT ON
 	
 	DECLARE @SportBettype TABLE(
-			ProductID	INT
-			,Bettype	INT
-			,EventType	INT
+			ProductID	TINYINT
+			, Bettype	SMALLINT
+			, EventType	TINYINT
 		)
 		
 	INSERT INTO @SportBettype
