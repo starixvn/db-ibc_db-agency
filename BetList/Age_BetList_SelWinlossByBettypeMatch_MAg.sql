@@ -1,4 +1,4 @@
-USE bodb02
+﻿USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossByBettypeMatch_MAg]

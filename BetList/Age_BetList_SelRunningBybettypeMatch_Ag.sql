@@ -2,12 +2,12 @@
 GO
 
 ALTER PROCEDURE [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag]
-	@MatchID			INT
-	, @CustID			INT
-	, @Bettype			INT
-	, @Language			VARCHAR(2) = 'E'
-	, @liveindicator	INT = 0
-	, @Betteam			NVARCHAR(20) = NULL
+	@MatchID int,
+	@CustID int,
+	@Bettype int,
+	@Language varchar(2) = 'E',
+	@liveindicator int = 0,
+	@Betteam nvarchar(20) = NULL
 AS
 
 /*
@@ -43,96 +43,138 @@ Revisions:
 	- 20140425@Dom: Group TB and FGLG
 	- 20150416@Tom: Integrate new 60 bet types from BetRadar (32734)
 	- 20150522@Bobby: Rollback code caused by holding core bet list
-	- 20150526@Bobby: Implement betlist core
 */
 BEGIN
-	SET NOCOUNT ON;
-	
-	-- Gather Ticket status
-	CREATE TABLE #TransStatus (
-		StatusID 		INT
-	);
-	INSERT INTO #TransStatus
-	SELECT StatusId
-	FROM bodb02.dbo.All_f_TransStatus (1) stt
-	WHERE stt.statusId IN (0, 1)	
-	
-	-- Gather BettypeMatrix
-	CREATE TABLE #BettypeMatrix (
-		ProductID 		INT
-		, Bettype 		INT
-		, EventType 	INT
-		, SubProduct 	VARCHAR(500)
-	);
-	INSERT INTO #BettypeMatrix
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
-	
-	;WITH CteBettype (bettype)
-	AS (
-		SELECT bt.bettype
-		FROM #BettypeMatrix bt
-		WHERE (bt.EventType 	= 1)						-- macth event
-			OR (bt.ProductId 	= 1 AND bt.EventType = 2)	-- outright
-	)
-	DELETE bt
-	FROM #BettypeMatrix bt
-		LEFT JOIN CteBettype ct 
-		ON bt.bettype = ct.bettype
-	WHERE ct.bettype IS NULL
-		OR (@bettype NOT IN (6, 14, 2, 15) AND bt.bettype  NOT IN (@bettype))
-		OR (@bettype = 6 	AND bt.bettype NOT IN(6,159,161,162,126,179,181,182) )
-		OR (@bettype = 14 	AND bt.bettype NOT IN(14,127) )
-		OR (@bettype = 2 	AND bt.bettype NOT IN(2,157)) 
-		OR (@bettype = 15 	AND bt.bettype NOT IN(15,167))
-		/*
-		(@bettype=6 AND b.bettype IN(6,159,161,162,126,179,181,182)) 
-			OR (@bettype=14 and b.bettype IN(14,127)) 
-			OR (@bettype=2 and b.bettype IN(2,157)) 
-			OR (@bettype=15 and b.bettype IN(15,167)) 
-			OR bettype = @bettype
-		*/
-	EXEC [bodb02].[dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
-		@CustId 			= @CustId
-		, @RoleId			= 2
-		, @MatchId 			= @MatchID
-		, @Liveindicator 	= @liveindicator
-		, @Betteam			= @Betteam
-		, @Language 		= @Language
-		, @ColumnOutput		= 'Sporttype,
-								Username,      		
-								Bettype,     
-								TransID,  
-								matchid,   
-								Matchcode, 
-								Race,
-								leagueid,
-								HomeID,
-								AwayID, 
-								hdp1,
-								hdp2,
-								odds,   
-								modds,
-								status, 
-								stake,  
-								actual_stake,
-								Transdate, 		
-								Betteam,
-								Liveindicator,
-								Livehomescore,
-								Liveawayscore, 		 				
-								APositiontaking,  		
-								Adiscount,
-								IP,
-								isNeutral,
-								oddstype,
-								betid,
-								showtime,
-								refno,
-								comstatus,
-								transdesc'
-		
-	RETURN;
+	SET NOCOUNT ON
+	if @bettype in (10)
+	BEGIN
+		SELECT 
+			l.Sporttype,
+			b.Username,      		
+			b.Bettype,     
+			b.TransID,  
+			0 as matchid,   
+			m.Matchcode, 
+			m.GroupMatch as Race,
+			m.leagueid,
+			m.TeamID as HomeID,
+			0 as AwayID, 
+			0 as hdp1,--hdp1, 
+			0 as hdp2,--hdp2, 
+			b.odds,   
+			b.modds,
+			b.status, 
+			b.stake,  
+			b.actual_stake,
+			b.Transdate, 		
+			'' as Betteam,--Betteam,    
+			0 as Liveindicator,--b.Liveindicator,
+			0 as Livehomescore,--b.Livehomescore, 
+			0 as Liveawayscore, 		 				
+			b.APositiontaking,  		
+			b.discount as Adiscount, --Agent
+			b.IP as IP,
+			CONVERT(BIT,0) as isNeutral,
+			0 as oddstype,
+			b.betid,
+			'' as showtime,
+			b.refno,
+			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+		FROM 
+			Bettrans b with (nolock)
+			INNER JOIN outright m with (nolock) on b.matchid=m.orid
+			INNER JOIN league l with (nolock) on m.leagueid = l.leagueid		
+		WHERE
+			b.Recommend=@custid  
+			and b.matchid=@matchid 
+			and b.bettype=@bettype 
+			--b.status='running'  
+			and b.statusID = 0		
+		ORDER BY
+			b.status, b.transid
+		RETURN
+	END
+	if @bettype< 19001
+	BEGIN
+		SELECT 
+			m.sporttype,
+			b.Username,      		
+			b.Bettype,     
+			b.TransID,     
+			m.matchid,
+			m.Matchcode,   
+			'' as Race,
+			m.leagueid, 
+			m.HomeID,
+			m.AwayID, 
+			convert(float, b.hdp1) as hdp1, 
+			convert(float, b.hdp2) as hdp2, 
+			b.odds,
+			b.modds,
+			CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+					 ELSE b.status 
+					 END as status,    
+			b.stake,  
+			b.actual_stake,
+			b.Transdate,   		
+			b.Betteam,    
+			b.Liveindicator,
+			b.Livehomescore, 
+			b.Liveawayscore, 		 	
+			b.APositiontaking,  
+			b.discount as Adiscount, --Agent
+			b.IP as IP,
+			isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
+			b.OddsType,
+			b.betid,
+			m.showtime,
+			b.refno,
+			CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+		FROM 
+			Bettrans b with (nolock) 
+			inner join Match m with (nolock) on b.matchid=m.matchid 	
+		WHERE
+			b.Recommend=@custid  
+			and b.matchid=@matchid 
+			and ( 
+				(@bettype=6 AND b.bettype IN(6,159,161,162,126,179,181,182)) 
+				OR (@bettype=14 and b.bettype IN(14,127)) 
+				OR (@bettype=2 and b.bettype IN(2,157)) 
+				OR (@bettype=15 and b.bettype IN(15,167)) 
+				OR bettype = @bettype 
+				)
+			--b.status in ('waiting','running') and
+			 and b.statusID in (0,1) 
+			 and b.Liveindicator= CASE WHEN m.sporttype = 161 THEN @liveindicator ELSE b.liveindicator END AND
+			ISNULL(b.betteam,'') = CASE WHEN m.sporttype = 161 AND ISNULL(@Betteam, '') <> '' THEN @betteam ELSE ISNULL(b.betteam,'') END
+			
+		ORDER BY
+			status, b.transid
+	END
+
+	---Live Casino
+	IF @Bettype BETWEEN 1101 AND 1199
+	BEGIN 
+		SELECT 
+			bg.refno, 
+			bg.odds, 
+			bg.stake,
+			bg.status ,
+			bg.apositiontaking, 
+			bg.mpositiontaking, 
+			bg.spositiontaking,
+			bg.betteam  
+		FROM bettransg bg with (NOLOCK)
+		INNER JOIN bettrans B with (NOLOCK)ON bg.refno = B.refno
+		WHERE	bg.matchid=@matchid and 
+				b.Recommend=@custid  and 
+				b.statusID in (0,1) and 		
+				b.bettype=@bettype 
+				
+
+	END 
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettypeMatch_Ag] TO [bodbDownlineNet]
 GO
