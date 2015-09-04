@@ -26,6 +26,7 @@ Revisions:
 	- 20110512@Johnson: Change column bettype in temporary table from tinyint to smallint
 	- 20120927@Sophia: Get comstatus
 	- 20130306@Elodie: Add bet list of Virtual HR
+	- 20150904@Bobby: Correct master level's custid on betrans14
 */
 
 
@@ -245,7 +246,7 @@ BEGIN
 			inner join VSOutright14 o with (nolock) on b.oddsid=o.orid   
 			inner join VSRaceInfo r with (nolock) on r.EventID = o.EventID
 		WHERE  
-			b.Recommend=@CustID AND  
+			b.MRecommend=@CustID AND  
 			b.Winlostdate>=@FromDate AND  
 			b.Winlostdate<=@ToDate AND  
 			b.matchid = @Race AND  
