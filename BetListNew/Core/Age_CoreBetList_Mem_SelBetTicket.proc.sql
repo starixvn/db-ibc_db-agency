@@ -18,6 +18,7 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 	-- PRODUCT - BETTYPE - STATUS
 	, @BettypeMatrix	XML 			= NULL
 	, @TransStatus		VARCHAR(250) 	= NULL
+	, @TransType		INT 			= 0
 	-- PAGING
 	, @PageIndex		INT				= 1
 	, @PageSize			INT				= 5000
@@ -40,10 +41,12 @@ AS
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150831@Kos: Support Colossus Bet
+		- 20150909@Kos: Add TransType params to support Colossus Bet Grand Prize ticket
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
+		- @TransType		: 4: Grand Prize ticket, Others: normal ticket
 		
 	Wrapped SP List:
 		- Age_BetList_SelWinLossByDate_Mem
@@ -74,9 +77,9 @@ BEGIN
 	END
 	
 	-- RESTET output
-	SELECT @TotalRows		= 0
-		,@Error				= 0
-		,@ErrorMsg			= ''
+	SELECT @TotalRows	= 0
+		,@Error			= 0
+		,@ErrorMsg		= ''
 	
 	-- CHECK member info
 	IF( @CustID IS NULL
@@ -84,7 +87,7 @@ BEGIN
 	)
 	BEGIN
 		SELECT @CustID 	= CustID
-		, @Recommend 	= Recommend 
+			, @Recommend = Recommend 
 		FROM bodb02.dbo.custinfo WITH(NOLOCK) 
 		WHERE UserName	= @UserName
 	END
@@ -96,7 +99,7 @@ BEGIN
 	)
 	BEGIN
 		SELECT @Recommend 	= Recommend 
-		,@UserName			= UserName
+			,@UserName		= UserName
 		FROM bodb02.dbo.custinfo WITH(NOLOCK) 
 		WHERE CustID		= @CustID
 	END
@@ -130,11 +133,11 @@ BEGIN
 			, bt.ProductId
 			, bt.EventType
 			, 1 AS WhTicket
-		FROM bodb02.dbo.bettrans b WITH(nolock)
+		FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN #BettypeMatrix bt
-			ON b.bettype	= bt.bettype
+				ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
-			ON b.statusid	= stt.statusid
+				ON b.statusid	= stt.statusid
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
 			AND	b.custid	= @CustID
@@ -142,6 +145,10 @@ BEGIN
 			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
 				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
 			)
+			AND ( @TransType <> 4
+				OR EXISTS (	SELECT 1 
+							FROM bettransm AS bm WITH (NOLOCK) 
+							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
 		
 		/* 	select running tickets
 			- Keno 			: ProductId = 8
@@ -172,6 +179,7 @@ BEGIN
 					OR bt.Bettype BETWEEN 801 AND 899
 				)
 				AND b.statusID IN (0, 1)
+				AND @TransType <> 4
 		END
 	END
 	-- CHECK for bettrans14
@@ -185,7 +193,7 @@ BEGIN
 			, bt.ProductId
 			, bt.EventType
 			, 2 AS WhTicket
-		FROM bodb02.dbo.bettrans14 b WITH(nolock)
+		FROM bodb02.dbo.bettrans14 b WITH (NOLOCK)
 			INNER JOIN #BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 			INNER JOIN #TransStatus stt
@@ -193,6 +201,10 @@ BEGIN
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
 			AND	b.custid	= @CustID
+			AND ( @TransType <> 4
+				OR EXISTS (	SELECT 1 
+							FROM bettransm14 AS bm WITH (NOLOCK) 
+							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
 	END
 	-- CHECK for bettrans_bk
 	/*IF ( @FromDate < @BalanceupDay )
@@ -228,6 +240,7 @@ BEGIN
 	DROP TABLE #tempCust;
 	RETURN;
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_Mem_SelBetTicket] TO [bodbDownlineNet]
 GO
