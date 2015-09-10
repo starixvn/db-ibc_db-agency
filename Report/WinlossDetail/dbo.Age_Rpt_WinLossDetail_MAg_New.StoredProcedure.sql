@@ -75,10 +75,7 @@ Revisions:
 	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
 	- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20150613@Francis: Change to use temporary table instead of table variable to improve performance
-<<<<<<< HEAD
-=======
 	- 20150615@Sophia: Apply Gold Deluxe [Redmine: #35278]
->>>>>>> remotes/origin/34847_Gold_Deluxe_Betlist
 */
 
 
@@ -111,28 +108,6 @@ DECLARE #MAgWinLossDetails TABLE
 )
 */
 
-<<<<<<< HEAD
-=======
---DECLARE @MAgWinLossDetails TABLE
---(
---    CustID			INT
---    ,TurnOver		MONEY
---    ,GrossComm		MONEY
---    ,MemberWinLost	MONEY
---	,PlayerComm		MONEY
---	,MemberTotal	MONEY
---	,AgWinLost		MONEY
---	,AgComm			MONEY
---	,AgTotal		MONEY
---	,MAgWinLost		MONEY
---	,MAgComm		MONEY
---	,MAgTotal		MONEY
---	,Company		MONEY
---	,NoOfTicket		INT
---)
-
-
->>>>>>> remotes/origin/34847_Gold_Deluxe_Betlist
 CREATE TABLE #MAgWinLossDetails
 (
     CustID			INT
@@ -217,8 +192,6 @@ BEGIN
 	VALUES(202, 0) 
 END
 
-<<<<<<< HEAD
-=======
 IF @showGD = 1
 BEGIN 
 	--Sum_winloss  
@@ -226,7 +199,6 @@ BEGIN
 	VALUES(255, 0) 
 END
 
->>>>>>> remotes/origin/34847_Gold_Deluxe_Betlist
 DECLARE @SportBettype TABLE(
 	ProductID INT
 	,Bettype INT
@@ -268,10 +240,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showLiveCasino = 1 THEN 4 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showVS = 1 THEN 5 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
-<<<<<<< HEAD
-=======
 					OR s.ProductID = CASE WHEN @showGD = 1 THEN 12 ELSE 0 END
->>>>>>> remotes/origin/34847_Gold_Deluxe_Betlist
 				)
 				-- and (bettype < case when @showSB = 1 then 31 else 0 end
 				--OR bettype between 121 and case when @showSB = 1 then 999 else 0 end

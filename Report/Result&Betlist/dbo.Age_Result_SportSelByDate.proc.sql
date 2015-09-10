@@ -17,6 +17,7 @@ Revision:
  - 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185) 
  - 20150414@Sophia: Support BetRadar
  - 20150416@Sophia: Condition of showing Running match different between Sporting solution and BetRadar
+ - 20150810@Sophia: Hardcode to exclude ResultDetail of bettype 216, 217 for a temporary time [#40991]
 */  
   
 SET NOCOUNT ON  
@@ -41,9 +42,9 @@ FROM sports WITH (nolock)
 					SELECT DISTINCT MatchID FROM dbo.ResultDetail14 R WITH (NOLOCK) WHERE SettlementStatusID > 0
 					) SS
 				ON match.Matchid = SS.MatchId AND Match.sporttype = 5
-		LEFT JOIN ( SELECT DISTINCT MatchID FROM dbo.ResultDetail R WITH (NOLOCK) WHERE SettlementStatusID > 0 AND ResourceID NOT IN ('00','01','08')
+		LEFT JOIN ( SELECT DISTINCT MatchID FROM dbo.ResultDetail R WITH (NOLOCK) WHERE SettlementStatusID > 0 AND ResourceID NOT IN ('00','01','08') AND ( R.ResourceID NOT LIKE '217%' AND R.ResourceID NOT LIKE '216%')
 					UNION ALL  
-					SELECT DISTINCT MatchID FROM dbo.ResultDetail14 R WITH (NOLOCK) WHERE SettlementStatusID > 0 AND ResourceID NOT IN ('00','01','08')
+					SELECT DISTINCT MatchID FROM dbo.ResultDetail14 R WITH (NOLOCK) WHERE SettlementStatusID > 0 AND ResourceID NOT IN ('00','01','08') AND ( R.ResourceID NOT LIKE '217%' AND R.ResourceID NOT LIKE '216%')
 					) BR
 				ON match.Matchid = BR.MatchId AND Match.sporttype = 1
 WHERE   
