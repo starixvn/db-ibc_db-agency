@@ -7,8 +7,8 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_SMABettype_SelBetTicket]
 	, @EventDate		DATETIME		= NULL
 	, @Language			VARCHAR(2) = 'E'
 	-- PRODUCT - BETTYPE - STATUS
-	, @BettypeMatrix	XML 			= NULL
-	, @TransStatus		VARCHAR(250) 	= NULL
+	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
+	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
 	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	, @Error			INT 			= 0 OUTPUT
 	, @ErrorMsg			NVARCHAR(250) 	= '' OUTPUT
@@ -22,6 +22,7 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -38,33 +39,37 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	
+	DECLARE @tempCust		dbo.TVP_TicketSportBettype
+	
 	-- RESTET output
 	SELECT @Error			= 0
 		,@ErrorMsg			= ''
-		
-	CREATE TABLE #tempCust 
+	
+	CREATE TABLE #tempRawData
 	( 
 		transid			BIGINT
 		, refno			BIGINT
 		, custid 		INT 
-		, productId 	INT 
+		, productId 	TINYINT 
+		, bettype		SMALLINT
 		, eventType		TINYINT
 		, WhTicket		TINYINT
 	)
 	-- MEMBER
 	IF ( @roleid = 1 )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid	
 			,b.refno
 			,b.custid
 			,bt.ProductId
+			,b.bettype
 			,bt.EventType
 			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(nolock)			
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE b.custid 		= @custid
 			--exclude running tickets of MetricGaming
@@ -76,19 +81,20 @@ BEGIN
 	-- AGENT
 	IF ( @roleid = 2 )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid	
 			,b.refno
 			,b.custid
 			,bt.ProductId
+			,b.bettype
 			,bt.EventType
 			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid	
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE c.recommend 	= @custid
 			AND c.roleid 	= 2
@@ -100,19 +106,20 @@ BEGIN
 	-- MASTER
 	IF ( @roleid = 3 )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid	
 			,b.refno
 			,b.custid
 			,bt.ProductId
+			,b.bettype
 			,bt.EventType
 			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(nolock)
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid	
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype			
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE c.mrecommend 	= @custid
 			AND c.roleid 	= 2
@@ -125,19 +132,20 @@ BEGIN
 	--SUPER
 	IF ( @roleid = 4 )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid	
 			,b.refno
 			,b.custid
 			,bt.ProductId
+			,b.bettype
 			,bt.EventType
 			,1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH(nolock)
 			INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid	
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype			
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE c.srecommend 	= @custid
 			AND c.roleid 	= 2
@@ -152,7 +160,7 @@ BEGIN
 	IF( @EventDate IS NOT NULL )
 	BEGIN
 		DELETE c
-		FROM #tempCust c
+		FROM #tempRawData c
 			INNER JOIN dbo.bettrans b (NOLOCK)
 			ON c.transid 	= b.transid
 			LEFT JOIN dbo.match m WITH(NOLOCK)
@@ -173,12 +181,19 @@ BEGIN
 			)
 	END
 	
-	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
-	--CALL to get ticket info
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] 
-	@ColumnOutput = @ColumnOutput
+	INSERT INTO @tempCust
+	SELECT TransID
+		, Refno
+		, CustID
+		, ProductID
+		, Bettype
+		, EventType
+		, WhTicket
+	FROM #tempRawData
 	
-	DROP TABLE #tempCust;
+	--CALL to get ticket info
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] @tempCust = @tempCust, @ColumnOutput = @ColumnOutput
+	
 	RETURN;
 END
 GO

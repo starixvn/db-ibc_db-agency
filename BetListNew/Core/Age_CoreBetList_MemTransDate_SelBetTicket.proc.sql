@@ -13,11 +13,11 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 	, @FromDate			DATETIME
 	, @ToDate 			DATETIME
 	-- PRODUCT - BETTYPE - STATUS
-	, @BettypeMatrix	XML 			= NULL
-	, @TransStatus		VARCHAR(250) 	= NULL
+	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
+	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
 	, @ColumnOutput		VARCHAR(MAX) 	= NULL
-	, @Error			INT = 0 OUTPUT
-	, @ErrorMsg			VARCHAR(250) = '' OUTPUT
+	, @Error			INT 			= 0 OUTPUT
+	, @ErrorMsg			VARCHAR(250) 	= '' OUTPUT
 )
 AS
 /*
@@ -30,6 +30,7 @@ AS
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150814@Bobby: #41600 - Update time range to datetime formation
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -47,6 +48,7 @@ BEGIN
 	SET NOCOUNT ON;
 	
 	DECLARE @Recommend		INT
+		, @tempCust			dbo.TVP_TicketSportBettype
 	
 	SELECT @Error			= 0
 		, @ErrorMsg			= ''
@@ -81,27 +83,20 @@ BEGIN
 			
 		RETURN;
 	END
-	CREATE TABLE #tempCust 
-	( 
-		transid			BIGINT
-		, refno			BIGINT
-		, custid 		INT 
-		, productId 	INT 
-		, eventType		TINYINT
-		, WhTicket		TINYINT
-	)
-	INSERT INTO #tempCust
+	
+	INSERT INTO @tempCust
 	SELECT 
 		b.transid
 		, b.refno
 		, b.custid
 		, bt.ProductId
+		, b.bettype
 		, bt.EventType
 		, 1 AS WhTicket
 	FROM dbo.bettrans b WITH(nolock)
-		INNER JOIN #BettypeMatrix bt
+		INNER JOIN @BettypeMatrix bt
 		ON b.bettype	= bt.bettype
-		INNER JOIN #TransStatus stt
+		INNER JOIN @TransStatus stt
 		ON b.statusid	= stt.statusid
 	WHERE b.transdate	BETWEEN @fromdate AND @todate 
 		AND	b.recommend	= @Recommend 
@@ -116,20 +111,21 @@ BEGIN
 		- GoldDelux		: ProductId = 12
 		- Metric Gaming	: Bettype(801-899)
 	*/
-	IF (EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1)))
+	IF (EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1)))
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO @tempCust
 		SELECT 
 			b.translogid	AS transid
 			, b.translogid 	AS refno
 			, b.custid
 			, bt.ProductId
+			, b.gameid
 			, bt.EventType
 			, 0 AS WhTicket
 		FROM dbo.translog AS b WITH (NOLOCK)
-			INNER JOIN #BettypeMatrix bt 
+			INNER JOIN @BettypeMatrix bt 
 			ON b.gameid		= bt.Bettype
-			INNER JOIN #TransStatus st
+			INNER JOIN @TransStatus st
 			ON b.statusID	= st.StatusID
 		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
 			AND	b.custid		= @CustID
@@ -140,12 +136,10 @@ BEGIN
 			AND b.statusID IN (0, 1)
 	END
 	
-	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
-	@ColumnOutput = @ColumnOutput
-	
-	DROP TABLE #tempCust;
+		@tempCust 		= @tempCust
+		,@ColumnOutput 	= @ColumnOutput
 	
 	RETURN;
 END

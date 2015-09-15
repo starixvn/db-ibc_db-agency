@@ -39,33 +39,28 @@ Revisions:
 	- 20150331@Cody: Apply sport bettype matrix [Remine: #30169]
 	- 20150522@Bobby: Rollback code caused by holding core bet list
 	- 20150526@Bobby: Implement betlist core
+	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 */
 BEGIN
 	SET NOCOUNT ON;
 	
+	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
+		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
+	
 	-- Gather Ticket status
-	CREATE TABLE #TransStatus (
-		StatusID 		INT
-	);
-	INSERT INTO #TransStatus
+	INSERT INTO @TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt	
 	WHERE statusid IN (111, 112, 113)
 		
 	-- Gather BettypeMatrix
-	CREATE TABLE #BettypeMatrix (
-		ProductID 		INT
-		, Bettype 		INT
-		, EventType 	INT
-		, SubProduct 	VARCHAR(500)
-	);
-	INSERT INTO #BettypeMatrix
+	INSERT INTO @BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	;WITH CteBettype (bettype)
 	AS (
 		SELECT bt.bettype
-		FROM #BettypeMatrix bt
+		FROM @BettypeMatrix bt
 			LEFT JOIN (SELECT Bettype, GroupTypeId 
 				FROM [dbo].[f_GroupBettype]()
 			) AS  f 
@@ -74,7 +69,7 @@ BEGIN
 			OR f.GroupTypeId 	= @bettype
 	)
 	DELETE bt
-	FROM #BettypeMatrix bt
+	FROM @BettypeMatrix bt
 		LEFT JOIN CteBettype ct 
 		ON bt.bettype = ct.bettype
 	WHERE ct.bettype IS NULL
@@ -86,6 +81,8 @@ BEGIN
 		, @MatchId 			= @MatchID
 		, @Liveindicator 	= @liveindicator
 		, @Language 		= @Language
+		, @TransStatus		= @TransStatus
+		, @BettypeMatrix	= @BettypeMatrix
 		, @ColumnOutput		= 'sporttype,
 								username,
 								bettype,

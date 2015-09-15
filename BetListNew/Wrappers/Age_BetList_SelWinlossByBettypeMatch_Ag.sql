@@ -38,33 +38,28 @@ Revisions:
 	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 	- 20150331@Cody: Aplly sport bettype matrix [Redmine: #30169]
 	- 20150526@Bobby: Implement betlist core
+	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 */
 BEGIN
 	SET NOCOUNT ON;
 	
+	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
+		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
+	
 	-- Gather Ticket status
-	CREATE TABLE #TransStatus (
-		StatusID 		INT
-	);
-	INSERT INTO #TransStatus
+	INSERT INTO @TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt
 	WHERE statusid IN (111, 112, 113)
 	
 	-- Gather BettypeMatrix
-	CREATE TABLE #BettypeMatrix (
-		ProductID 		INT
-		, Bettype 		INT
-		, EventType 	INT
-		, SubProduct 	VARCHAR(500)
-	);
-	INSERT INTO #BettypeMatrix
+	INSERT INTO @BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	;WITH CteBettype (bettype)
 	AS (
 		SELECT bt.bettype
-		FROM #BettypeMatrix bt
+		FROM @BettypeMatrix bt
 			LEFT JOIN (SELECT Bettype, GroupTypeId 
 				FROM [dbo].[f_GroupBettype]()
 			) AS  f 
@@ -73,7 +68,7 @@ BEGIN
 			OR f.GroupTypeId 	= @bettype
 	)
 	DELETE bt
-	FROM #BettypeMatrix bt
+	FROM @BettypeMatrix bt
 		LEFT JOIN CteBettype ct 
 		ON bt.bettype = ct.bettype
 	WHERE ct.bettype IS NULL
@@ -85,6 +80,8 @@ BEGIN
 		, @MatchId 			= @MatchID
 		, @Liveindicator 	= @liveindicator
 		, @Language 		= @Language
+		, @TransStatus		= @TransStatus
+		, @BettypeMatrix	= @BettypeMatrix
 		, @ColumnOutput		= 'sporttype,
 								username,
 								bettype,

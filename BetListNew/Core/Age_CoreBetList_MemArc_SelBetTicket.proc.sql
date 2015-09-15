@@ -12,8 +12,8 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_MemArc_SelBetTicket]
 	, @FromDate				DATE
 	, @ToDate 				DATE
 	-- PRODUCT - BETTYPE - STATUS
-	, @BettypeMatrixInfo	VARCHAR(MAX) = NULL
-	, @TransStatus			VARCHAR(250) = NULL
+	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
+	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
 	-- PAGING
 	, @PageIndex			INT	= 1
 	, @PageSize				INT	= 1000
@@ -49,6 +49,7 @@ BEGIN
 	
 	DECLARE @Recommend 	INT
 		, @Username		NVARCHAR(30)
+		, @tempCust		dbo.TVP_TicketSportBettype
 	
 	SELECT @Error		= 0
 		,@ErrorMsg		= ''
@@ -67,38 +68,26 @@ BEGIN
 		
 	END
 	
-	CREATE TABLE #tempCust 
-	( 
-		transid			BIGINT
-		, refno			BIGINT
-		, custid 		INT 
-		, productId 	INT 
-		, eventType		TINYINT
-		, WhTicket		TINYINT
-	)
-	
-	INSERT INTO #tempCust
+	INSERT INTO @tempCust
 	SELECT 
 		b.transid
 		, b.refno
 		, b.custid
 		, bt.ProductId
+		, b.bettype
 		, bt.EventType
 		, 3 AS WhTicket
-	FROM dbo.bettrans_bk b WITH(nolock)
-		INNER JOIN #BettypeMatrix bt
+	FROM dbo.bettrans_bk b WITH(nolock, INDEX=IX_custid)
+		INNER JOIN @BettypeMatrix bt
 		ON b.bettype	= bt.bettype
-		INNER JOIN #TransStatus stt
+		INNER JOIN @TransStatus stt
 		ON b.statusid	= stt.statusid
 	WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 		AND	b.custid	= @CustID
 	
-	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
-	@ColumnOutput = @ColumnOutput
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfoArc] @tempCust = @tempCust, @ColumnOutput = @ColumnOutput
 	
-	DROP TABLE #tempCust;
 	RETURN;
 END
 

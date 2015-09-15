@@ -47,39 +47,27 @@ Revisions:
 	- 20150407@Cody: Support 60 BetRadar bettype (186) [Redmine: 32734]
 	- 20150522@Bobby: Rollback code caused by holding core bet list
 	- 20150526@Bobby: Implement bet list core
+	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 */
 BEGIN
 	SET NOCOUNT ON;
 	
-	-- Gather Ticket status
-	CREATE TABLE #TransStatus (
-		StatusID 		INT
-	);
-	INSERT INTO #TransStatus
-	SELECT StatusId
-	FROM bodb02.dbo.All_f_TransStatus (1) stt
-	WHERE stt.statusId IN (0, 1)	
-	
+	DECLARE	 @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
+			
 	-- Gather BettypeMatrix
-	CREATE TABLE #BettypeMatrix (
-		ProductID 		INT
-		, Bettype 		INT
-		, EventType 	INT
-		, SubProduct 	VARCHAR(500)
-	);
-	INSERT INTO #BettypeMatrix
+	INSERT INTO @BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	;WITH CteBettype (bettype)
 	AS (
 		SELECT bt.bettype
-		FROM #BettypeMatrix bt
+		FROM @BettypeMatrix bt
 		WHERE (bt.ProductId 	= 1 AND bt.EventType = 0) 	-- mix-parlay
 			OR (bt.EventType 	= 1)						-- macth event
 			OR (bt.ProductId 	= 1 AND bt.EventType = 2)	-- outright
 	)
 	DELETE bt
-	FROM #BettypeMatrix bt
+	FROM @BettypeMatrix bt
 		LEFT JOIN CteBettype ct 
 		ON bt.bettype = ct.bettype
 	WHERE ct.bettype IS NULL
@@ -89,10 +77,11 @@ BEGIN
 		OR (@bettype = 24 	AND bt.bettype NOT IN(24,151,186)) 
 		OR (@bettype = 26 	AND bt.bettype NOT IN(26,145,146,170,188))
 	
-	EXEC [bodb02].[dbo].[Age_CoreBetList_SMABettype_SelBetTicket]
+	EXEC [dbo].[Age_CoreBetList_Running_SelBetTicket]
 		@CustId 			= @CustId
 		, @RoleId			= 3
 		, @Language 		= @Language
+		, @BettypeMatrix	= @BettypeMatrix
 		, @ColumnOutput		= 'sporttype,
 								username,					
 								bettype,

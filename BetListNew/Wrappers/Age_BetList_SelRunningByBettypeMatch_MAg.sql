@@ -43,38 +43,33 @@ Revisions:
 	- 20150416@Tom: Integrate new 60 bet types from BetRadar (32734)
 	- 20150522@Bobby: Rollback code caused by holding core bet list
 	- 20150526@Bobby: Implement betlist core
+	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 */
 BEGIN
 	SET NOCOUNT ON;
 	
+	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
+		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
+		
 	-- Gather Ticket status
-	CREATE TABLE #TransStatus (
-		StatusID 		INT
-	);
-	INSERT INTO #TransStatus
+	INSERT INTO @TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt
 	WHERE stt.statusId IN (0, 1)	
 	
 	-- Gather BettypeMatrix
-	CREATE TABLE #BettypeMatrix (
-		ProductID 		INT
-		, Bettype 		INT
-		, EventType 	INT
-		, SubProduct 	VARCHAR(500)
-	);
-	INSERT INTO #BettypeMatrix
+	INSERT INTO @BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
 	
 	;WITH CteBettype (bettype)
 	AS (
 		SELECT bt.bettype
-		FROM #BettypeMatrix bt
+		FROM @BettypeMatrix bt
 		WHERE (bt.EventType 	= 1)						-- macth event
 			OR (bt.ProductId 	= 1 AND bt.EventType = 2)	-- outright
 	)
 	DELETE bt
-	FROM #BettypeMatrix bt
+	FROM @BettypeMatrix bt
 		LEFT JOIN CteBettype ct 
 		ON bt.bettype = ct.bettype
 	WHERE ct.bettype IS NULL
@@ -100,6 +95,8 @@ BEGIN
 		, @Liveindicator 	= @liveindicator
 		, @Betteam			= @Betteam
 		, @Language 		= @Language
+		, @TransStatus		= @TransStatus
+		, @BettypeMatrix	= @BettypeMatrix
 		, @ColumnOutput		= 'Sporttype,
 								Username,      		
 								Bettype,     
