@@ -1,23 +1,26 @@
+USE bodb02
+GO
+
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
 (
-	@ColumnOutput VARCHAR(MAX) = NULL
+	@tempCust			TVP_TicketSportBettype READONLY
+	,@ColumnOutput		VARCHAR(MAX) 	= NULL
 )
 AS
 /*
 Created: Bobby.Nguyen
 Task : Re-factor core bet list
-DB: DBAGE.bodb02 & DBARC.bodb_archive
+DB: DBAGE.bodb02
 Original: 
 
 Revisions:
 	- 20150504@Bobby.Nguyen: Create new SP - Apply GD product
 	- 20150526@Bobby.Nguyen: Apply metric-gaming bettype
 	- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
+	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 
 Param's Explanation:
-	
-Dependences:
-	- CREATE TABLE #tempCust 
+	- @tempCust  AS TABLE
 	( 
 		transid			BIGINT
 		, refno			BIGINT
@@ -30,16 +33,6 @@ Dependences:
 BEGIN
 	SET NOCOUNT ON;
 	
-	-- CHECK dependences tables 
-	IF ( OBJECT_ID('tempdb..#tempCust') IS NULL )
-	BEGIN
-		RAISERROR(
-			N'The table input of bet list detail was not found.'
-			, 10
-			, 1
-		);
-		RETURN;
-	END
 	-- CREATE output main info ticket
 	CREATE TABLE #MemBetTicket
 	(
@@ -103,31 +96,30 @@ BEGIN
 	);
 	
 	-- CHECK for selecting from translog
-	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 0))
+	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 0))
 	BEGIN
-		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog]'
+		INSERT INTO #MemBetTicket
+		EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog] @tempCust = @tempCust
 	END
 	
 	-- CHECK for selecting from bettrans
-	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 1))
+	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 1))
 	BEGIN
-		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans]'
+		
+		INSERT INTO #MemBetTicket
+		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans] @tempCust = @tempCust
 	END
 	
 	-- CHECK for selecting from bettrans14
-	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 2))
+	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 2))
 	BEGIN
-		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans14]'
-	END
-	
-	-- CHECK for selecting from bettrans_bk
-	IF (EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE WhTicket = 3))
-	BEGIN
-		EXEC sp_sqlexec N'EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettransArc]'
+		
+		INSERT INTO #MemBetTicket
+		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans14] @tempCust = @tempCust
 	END
 	
 	-- OUTPUT main ticket
-	IF (@ColumnOutput IS NULL)
+	/*IF (@ColumnOutput IS NULL)
 	BEGIN
 		SELECT *
 		FROM #MemBetTicket t
@@ -142,13 +134,17 @@ BEGIN
 							+ '	ORDER BY t.transid DESC '
 		
 		EXEC sp_sqlexec @queryOutput
-	END
+	END*/
 	
-	DROP TABLE #MemBetTicket;
+	SELECT *
+	FROM #MemBetTicket t
+	ORDER BY t.transid DESC
 	
 	-- 	OUTPUT ticket in detail
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelDetail]
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelDetail] @tempCust 	= @tempCust
+		
 	RETURN;
+	
 END
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] TO [bodbDownlineNet]

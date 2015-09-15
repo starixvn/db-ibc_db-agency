@@ -6,8 +6,8 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_SMACancelled_SelBetCount]
 	, @Username 		NVARCHAR(30) 	= NULL
 	, @RoleId			INT
 	-- PRODUCT - BETTYPE - STATUS
-	, @BettypeMatrix	XML 			= NULL
-	, @TransStatus		VARCHAR(250) 	= NULL
+	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
+	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
 	, @Language 		VARCHAR(2) 		= 'E'
 	, @Error			INT 			= 0
 	, @ErrorMsg			NVARCHAR(250) 	= NULL
@@ -21,7 +21,8 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150831@Kos.Nguyen: Support Colossus Bet
-	
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
@@ -35,36 +36,9 @@ BEGIN
 
 	SET NOCOUNT ON;
 	
-	-- CHECK TransStatus
-	IF ( OBJECT_ID('tempdb..#TransStatus') IS NULL )
-	BEGIN
-		CREATE TABLE #TransStatus (
-			StatusID 		INT
-		);
-		INSERT INTO #TransStatus
-		SELECT CAST(t.Val AS INT) 
-		FROM [bodb02].[dbo].[Age_f_SplitString] (@TransStatus, ',') t
-	END
-	
-	-- CHECK BettypeMatrix
-	IF ( OBJECT_ID('tempdb..#BettypeMatrix') IS NULL )
-	BEGIN
-		CREATE TABLE #BettypeMatrix (
-			ProductID 		INT
-			, Bettype 		INT
-			, EventType 	INT
-		);
-		WITH CteBT (ProductID, Bettype, EventType)
-		AS (
-			SELECT bt.Col.value('@ProductID'	,'INT')
-				, bt.Col.value('@Bettype'		,'INT')
-				, bt.Col.value('@EventType'		,'INT')
-			FROM  @BettypeMatrix.nodes('//row') bt(Col)
-		)
-		INSERT INTO #BettypeMatrix
-		SELECT *
-		FROM CteBT bt
-	END
+	-- RESTET output
+	SELECT @Error			= 0
+		,@ErrorMsg			= ''
 	
 	IF ( @custid IS NULL )
 	BEGIN
@@ -74,16 +48,16 @@ BEGIN
 			AND roleid = @roleid
 	END
 	
-	CREATE TABLE #MemBetCount
+	DECLARE @MemBetCount	TABLE
 	(
-		custid 			INT 
-		, recommend		INT
-		, mrecommend	INT
-		, srecommend	INT
-		, betcount		INT
+		custid 				INT 
+		, recommend			INT
+		, mrecommend		INT
+		, srecommend		INT
+		, betcount			INT
 	);
 	
-	CREATE TABLE #tempCust 
+	CREATE TABLE #tempRawData 
 	( 
 		transid 		BIGINT 
 		, custid		INT 
@@ -97,10 +71,10 @@ BEGIN
 	)
 	
 	-- CHECK for supporting cancelled ticket only
-	IF( NOT EXISTS (SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN(101,102)) )
+	IF( NOT EXISTS (SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN(101,102)) )
 	BEGIN
 		SELECT tk.* 
-		FROM #MemBetCount tk
+		FROM @MemBetCount tk
 		
 		RETURN;
 	END
@@ -108,7 +82,7 @@ BEGIN
 	-- MEMBER
 	IF ( @roleid = 1 )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid
 			,b.custid
 			,b.recommend
@@ -119,9 +93,9 @@ BEGIN
 			,bt.ProductId
 			,bt.EventType
 		FROM dbo.bettrans b WITH(nolock)			
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE b.custid 		= @custid
 		
@@ -129,7 +103,7 @@ BEGIN
 	-- AGENT
 	IF ( @roleid = 2 )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid
 			,b.custid
 			,b.recommend
@@ -142,9 +116,9 @@ BEGIN
 		FROM dbo.bettrans b WITH(nolock)
 			INNER JOIN dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE c.custid	 	= @custid
 			AND c.roleid 	= 2
@@ -153,7 +127,7 @@ BEGIN
 	IF ( @roleid = 3 )
 	BEGIN
 		
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid
 			,b.custid
 			,b.recommend
@@ -166,9 +140,9 @@ BEGIN
 		FROM dbo.bettrans b WITH(nolock)
 			INNER JOIN dbo.Customer c WITH(NOLOCK)
 			ON b.recommend 	= c.custid
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype			
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE c.mrecommend	= @custid
 			AND c.roleid 	= 2
@@ -176,7 +150,7 @@ BEGIN
 	--SUPER
 	IF ( @roleid = 4 )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO #tempRawData
 		SELECT b.transid
 			,b.custid
 			,b.recommend
@@ -189,9 +163,9 @@ BEGIN
 		FROM dbo.bettrans b WITH(nolock)
 			INNER JOIN dbo.Customer c WITH(NOLOCK)
 			ON b.recommend	= c.custid
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE c.srecommend 	= @custid
 			AND c.roleid 	= 2
@@ -204,9 +178,9 @@ BEGIN
 		- Gold Deluxe			: ProductId = 12
 		- Colossus Bet			: ProductId = 15
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #tempCust WHERE EventType IN (0)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #tempRawData WHERE EventType IN (0)) )
 	BEGIN
-		INSERT INTO #MemBetCount
+		INSERT INTO @MemBetCount
 		SELECT
 			b.custid
 			, b.recommend
@@ -214,7 +188,7 @@ BEGIN
 			, b.srecommend
 			, COUNT(1) AS betcount
 			
-		FROM #tempCust AS b
+		FROM #tempRawData AS b
 		WHERE b.EventType 	= 0
 			AND b.ProductID IN (6, 7, 8, 9, 12, 15)
 
@@ -230,7 +204,7 @@ BEGIN
 		- LC		: ProductID = 4
 		- VS		: ProductID = 5
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #tempCust s WHERE s.EventType IN (1)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #tempRawData s WHERE s.EventType IN (1)) )
 	BEGIN
 		WITH CteMatch 
 		AS(
@@ -238,7 +212,7 @@ BEGIN
 			FROM dbo.match (nolock) 
 			WHERE eventdate > DATEADD(day,-3,CURRENT_TIMESTAMP)
 		)
-		INSERT INTO #MemBetCount
+		INSERT INTO @MemBetCount
 		SELECT
 			b.custid
 			, b.recommend
@@ -246,7 +220,7 @@ BEGIN
 			, b.srecommend
 			, COUNT(1) AS betcount
 			
-		FROM #tempCust AS b
+		FROM #tempRawData AS b
 			INNER JOIN CteMatch AS m WITH (NOLOCK) 
 			ON b.matchid		= m.matchid
 			
@@ -263,7 +237,7 @@ BEGIN
 		- SB outright	: ProductID = 1
 		- HR tickets	: ProductID = 2
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #tempCust s WHERE s.EventType IN (2)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #tempRawData s WHERE s.EventType IN (2)) )
 	BEGIN
 		WITH CteOutright 
 		AS(
@@ -271,7 +245,7 @@ BEGIN
 			FROM dbo.outright (nolock) 
 			WHERE eventdate > DATEADD(day,-3,CURRENT_TIMESTAMP)
 		)
-		INSERT INTO #MemBetCount
+		INSERT INTO @MemBetCount
 		SELECT
 			b.custid
 			, b.recommend
@@ -279,7 +253,7 @@ BEGIN
 			, b.srecommend
 			, COUNT(1) AS betcount				
 			
-		FROM #tempCust AS b
+		FROM #tempRawData AS b
 			INNER JOIN CteOutright AS m WITH (NOLOCK) 
 			ON b.matchid		= m.orid
 			INNER JOIN dbo.League AS l WITH (NOLOCK) 
@@ -296,7 +270,7 @@ BEGIN
 	/* VS tickets 
 		- VS			: ProductID = 3
 	*/
-	IF( EXISTS(SELECT TOP 1 1 FROM #tempCust s WHERE s.EventType IN (3)) )
+	IF( EXISTS(SELECT TOP 1 1 FROM #tempRawData s WHERE s.EventType IN (3)) )
 	BEGIN
 		WITH CteVSOutright 
 		AS(
@@ -306,7 +280,7 @@ BEGIN
 				ON r.EventID = o.EventID 						
 			WHERE EventDate > DATEADD(day,-3,CURRENT_TIMESTAMP)
 		)
-		INSERT INTO #MemBetCount
+		INSERT INTO @MemBetCount
 		SELECT
 			b.custid
 			, b.recommend
@@ -314,7 +288,7 @@ BEGIN
 			, b.srecommend
 			, COUNT(1) AS betcount
 			
-		FROM #tempCust AS b
+		FROM #tempRawData AS b
 			INNER JOIN CteVSOutright AS o with (NOLOCK) 
 			ON b.oddsid			= o.Orid
 			
@@ -334,7 +308,7 @@ BEGIN
 				ELSE b.custid 
 			END	AS custid
 			, SUM(b.betcount) AS betcount
-		FROM #MemBetCount b
+		FROM @MemBetCount b
 			
 		GROUP BY 
 			CASE WHEN @roleid = 3 THEN b.recommend 

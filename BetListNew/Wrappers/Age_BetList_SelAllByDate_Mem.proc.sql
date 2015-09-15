@@ -88,29 +88,24 @@ AS
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
 		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 */
 
 BEGIN
 	SET NOCOUNT ON;
 	
-	-- Gather Ticket status
-	CREATE TABLE #TransStatus (
-		StatusID 		TINYINT
-	);
+	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
+		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
+		
+	-- Gather Ticket status	
+	INSERT INTO @TransStatus
 
-	INSERT INTO #TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt
 	
 	-- Gather BettypeMatrix
-	CREATE TABLE #BettypeMatrix (
-		ProductID 		TINYINT
-		, Bettype 		SMALLINT
-		, EventType 	TINYINT
-		, SubProduct 	VARCHAR(500)
-	);
+	INSERT INTO @BettypeMatrix
 
-	INSERT INTO #BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
 	-- ADD exception bettype for pending funds tickets
@@ -131,13 +126,47 @@ BEGIN
 		UNION ALL
 		SELECT 7, 23202, 0
 	)
-	INSERT INTO #BettypeMatrix
+	INSERT INTO @BettypeMatrix
 	SELECT ProductID, Bettype, EventType, '' AS SubProduct
 	FROM CteExtBettype
 	
 	-- DO filtering bettype by product
+	DECLARE @ProductFilter TABLE 
+	( 
+		ProductID 		TINYINT 
+	)
+	IF(@ShowSB = 1)
+		INSERT INTO @ProductFilter VALUES (1)
+	IF(@ShowRB = 1)
+		INSERT INTO @ProductFilter VALUES (2)
+	IF(@ShowNG = 1)
+		INSERT INTO @ProductFilter VALUES (3)
+	IF(@ShowLiveCasino = 1)
+		INSERT INTO @ProductFilter VALUES (4)
+	IF(@ShowVS = 1)
+		INSERT INTO @ProductFilter VALUES (5)
+	IF(@ShowCasino = 1)
+		INSERT INTO @ProductFilter VALUES (6)
+	IF(@ShowBI = 1)
+		INSERT INTO @ProductFilter VALUES (7)
+	IF(@ShowKeno = 1)
+		INSERT INTO @ProductFilter VALUES (8)
+	IF(@ShowP2P = 1)
+		INSERT INTO @ProductFilter VALUES (9)
+	IF(@ShowGD = 1)
+		INSERT INTO @ProductFilter VALUES (12)
+	IF(@ShowCB = 1)
+		INSERT INTO @ProductFilter VALUES (15)
+		
+	-- DELETE bettypes 
 	DELETE bt
-	FROM #BettypeMatrix bt
+	FROM @BettypeMatrix bt
+		LEFT JOIN @ProductFilter p 
+		ON bt.ProductID = p.ProductID
+	WHERE p.ProductID IS NULL
+	
+	/*DELETE bt
+	FROM @BettypeMatrix bt
 	WHERE ProductID		= CASE WHEN @ShowSB			= 0 	THEN 1 END
 		OR ProductID	= CASE WHEN @ShowRB			= 0 	THEN 2 END
 		OR ProductID	= CASE WHEN @ShowNG			= 0 	THEN 3 END
@@ -149,6 +178,7 @@ BEGIN
 		OR ProductID	= CASE WHEN @ShowP2P		= 0 	THEN 9 END
 		OR ProductID	= CASE WHEN @ShowGD			= 0 	THEN 12 END
 		OR ProductID	= CASE WHEN @ShowCB			= 0 	THEN 15 END
+	*/
 	
 	-- CALL to core bet list
 	EXEC [bodb02].[dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
@@ -156,6 +186,8 @@ BEGIN
 		, @username			= @username
 		, @FromDate			= @FromDate
 		, @ToDate 			= @ToDate
+		, @TransStatus		= @TransStatus
+		, @BettypeMatrix	= @BettypeMatrix
 		, @ColumnOutput		= 'Username 
 								,Sporttype
 								,Bettype

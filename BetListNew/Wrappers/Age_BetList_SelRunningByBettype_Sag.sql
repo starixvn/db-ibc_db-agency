@@ -47,42 +47,37 @@ AS
 		- 20150526@Bobby: Implement bet list core
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 */
 
 BEGIN
 	SET NOCOUNT ON;
 	
+	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
+		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
+	
 	-- Gather Ticket status
-	CREATE TABLE #TransStatus (
-		StatusID 		TINYINT
-	);
+	INSERT INTO @TransStatus
 
-	INSERT INTO #TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt
 	WHERE stt.statusId IN (0, 1)	
 	
 	-- Gather BettypeMatrix
-	CREATE TABLE #BettypeMatrix (
-		ProductID 		TINYINT
-		, Bettype 		SMALLINT
-		, EventType 	TINYINT
-		, SubProduct 	VARCHAR(500)
-	);
+	INSERT INTO @BettypeMatrix
 
-	INSERT INTO #BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
 	;WITH CteBettype (bettype)
 	AS (
 		SELECT bt.bettype
-		FROM #BettypeMatrix bt
+		FROM @BettypeMatrix bt
 		WHERE (bt.ProductId = 1 AND bt.EventType = 0) 	-- mix-parlay
 			OR (bt.EventType = 1)						-- macth event
 			OR (bt.ProductId = 1 AND bt.EventType = 2)	-- outright
 	)
 	DELETE bt
-	FROM #BettypeMatrix bt
+	FROM @BettypeMatrix bt
 		LEFT JOIN CteBettype ct ON bt.bettype = ct.bettype
 	WHERE ct.bettype IS NULL
 		OR (@bettype NOT IN (6, 14, 24, 26, 1, 3, 7, 8) AND bt.bettype NOT IN (@bettype))
@@ -99,6 +94,8 @@ BEGIN
 		@CustId 			= @CustId
 		, @RoleId			= 4
 		, @Language 		= @Language
+		, @TransStatus		= @TransStatus
+		, @BettypeMatrix	= @BettypeMatrix
 		, @ColumnOutput		= 'sporttype,
 								username,
 								bettype,

@@ -16,8 +16,8 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 	, @MoveBetsDay 		DATE			= NULL
 	, @BalanceupDay		DATE			= NULL
 	-- PRODUCT - BETTYPE - STATUS
-	, @BettypeMatrix	XML 			= NULL
-	, @TransStatus		VARCHAR(250) 	= NULL
+	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
+	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
 	, @TransType		INT 			= 0
 	-- PAGING
 	, @PageIndex		INT				= 1
@@ -60,8 +60,9 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	
-	DECLARE @Recommend 	INT
-	
+	DECLARE @Recommend 		INT
+		, @tempCust			dbo.TVP_TicketSportBettype
+		
 	-- CHECK for MoveBetsDay
 	IF( @MoveBetsDay IS NULL )
 	BEGIN
@@ -111,32 +112,23 @@ BEGIN
 			
 		RETURN;
 	END
-	
-	CREATE TABLE #tempCust 
-	( 
-		transid			BIGINT
-		, refno			BIGINT
-		, custid 		INT 
-		, productId 	INT 
-		, eventType		TINYINT
-		, WhTicket		TINYINT
-	)
 		
 	-- do selecting from bettrans
 	IF ( @ToDate > @MoveBetsDay )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO @tempCust
 		SELECT 
 			b.transid
 			, b.refno
 			, b.custid
 			, bt.ProductId
+			, b.bettype
 			, bt.EventType
 			, 1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH (NOLOCK)
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
@@ -157,21 +149,22 @@ BEGIN
 			- Sportsbook	: Metric Gaming bettype(801-899)
 		*/
 		IF (
-			EXISTS(SELECT TOP 1 1 FROM #TransStatus WHERE StatusId IN (0,1))
+			EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1))
 		)
 		BEGIN
-			INSERT INTO #tempCust
+			INSERT INTO @tempCust
 			SELECT 
 				b.translogid	AS transid
 				, b.translogid 	AS refno
 				, b.custid
 				, bt.ProductId
+				, b.gameid
 				, bt.EventType
 				, 0 AS WhTicket
 			FROM bodb02.dbo.translog AS b WITH (NOLOCK)
-				INNER JOIN #BettypeMatrix bt 
+				INNER JOIN @BettypeMatrix bt 
 				ON b.gameid			= bt.Bettype
-				INNER JOIN #TransStatus st
+				INNER JOIN @TransStatus st
 				ON b.statusID		= st.StatusID
 			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 				AND b.custid		= @CustID
@@ -185,18 +178,19 @@ BEGIN
 	-- CHECK for bettrans14
 	IF ( @FromDate <= @MoveBetsDay )
 	BEGIN
-		INSERT INTO #tempCust
+		INSERT INTO @tempCust
 		SELECT 
 			b.transid
 			, b.refno
 			, b.custid
 			, bt.ProductId
+			, b.bettype
 			, bt.EventType
 			, 2 AS WhTicket
 		FROM bodb02.dbo.bettrans14 b WITH (NOLOCK)
-			INNER JOIN #BettypeMatrix bt
+			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
-			INNER JOIN #TransStatus stt
+			INNER JOIN @TransStatus stt
 			ON b.statusid	= stt.statusid
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
@@ -206,38 +200,10 @@ BEGIN
 							FROM bettransm14 AS bm WITH (NOLOCK) 
 							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
 	END
-	-- CHECK for bettrans_bk
-	/*IF ( @FromDate < @BalanceupDay )
-	BEGIN
-		
-		DECLARE @bettypeMatrixInfo 	VARCHAR(MAX)
-			, @transStatusInfo		VARCHAR(250)
-
-		SET @bettypeMatrixInfo 	= CONVERT( VARCHAR(MAX)
-				, ( SELECT *
-					FROM #BettypeMatrix AS bt
-					FOR XML RAW, ROOT('BettypeMatrix')
-				) )
-		
-		SELECT @transStatusInfo = COALESCE(@transStatusInfo + ',', '') + CAST(t.StatusID AS VARCHAR(20)) + ''
-		FROM #TransStatus t		
-
-		INSERT INTO #tempCust
-		EXEC [DBARC].[bodb_archive].[dbo].[Age_CoreBetList_MemArc_SelBetTicket] 
-			@CustID			= @CustID 
-			,@FromDate 		= @FromDate
-			,@ToDate 		= @ToDate
-			,@BettypeMatrix	= @bettypeMatrixInfo
-			,@TransStatus	= @transStatusInfo
-		
-	END
-	*/
-	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
-	--CALL to get ticket info
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
-	@ColumnOutput = @ColumnOutput
 	
-	DROP TABLE #tempCust;
+	--CALL to get ticket info
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] @tempCust = @tempCust, @ColumnOutput = @ColumnOutput
+	
 	RETURN;
 END
 

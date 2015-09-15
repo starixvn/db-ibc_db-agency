@@ -7,8 +7,9 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_SMAEventBettype_SelBetTicket]
 	, @RoleId			INT
 	, @MatchId 			INT
 	-- PRODUCT - BETTYPE - STATUS
-	, @BettypeMatrix	XML 			= NULL
-	, @TransStatus		VARCHAR(250) 	= NULL
+	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
+	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
+	
 	, @Language 		VARCHAR(2) 		= 'E'
 	, @Liveindicator 	INT 			= 0
 	, @Betteam 			NVARCHAR(20)	= NULL
@@ -25,7 +26,8 @@ AS
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
-	
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
@@ -43,6 +45,7 @@ BEGIN
 	SET NOCOUNT ON;
 	
 	DECLARE @IsBet14	BIT
+		, @tempCust		dbo.TVP_TicketSportBettype
 	
 	-- RESTET output
 	SELECT @Error			= 0
@@ -62,12 +65,13 @@ BEGIN
 		WHERE username = @username
 	END
 	
-	CREATE TABLE #tempCust 
+	CREATE TABLE #tempRawData
 	( 
 		transid			BIGINT
 		, refno			BIGINT
 		, custid 		INT 
-		, productId 	INT 
+		, productId 	TINYINT 
+		, bettype		SMALLINT 
 		, eventType		TINYINT 
 		, WhTicket		TINYINT
 	)
@@ -77,17 +81,18 @@ BEGIN
 	BEGIN
 		IF ( @roleid = 1 )
 		BEGIN
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,1 AS WhTicket
 			FROM dbo.bettrans b WITH(nolock)
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.custid 		= @custid
 				AND b.matchid	= @matchid
@@ -97,17 +102,18 @@ BEGIN
 		
 		IF ( @roleid = 2 )
 		BEGIN
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,1 AS WhTicket
 			FROM dbo.bettrans b WITH(NOLOCK)
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.recommend	= @custid
 				AND b.matchid	= @matchid
@@ -124,19 +130,20 @@ BEGIN
 				WHERE c.mrecommend 	= @custid
 					AND c.roleid 	= 2
 			)
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,1 AS WhTicket
 			FROM dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN CteRecommend c
 				ON b.recommend = c.custid
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.matchid		= @matchid
 				AND (bt.SubProduct NOT IN ('MG-SuperLive') OR bt.SubProduct	IN ('MG-SuperLive') AND b.StatusId NOT IN (0, 1))
@@ -152,19 +159,20 @@ BEGIN
 				WHERE c.srecommend 	= @custid
 					AND c.roleid 	= 2
 			)
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,1 AS WhTicket
 			FROM dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN CteRecommend c
 				ON b.recommend = c.custid
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.matchid		= @matchid
 				AND (bt.SubProduct NOT IN ('MG-SuperLive') OR bt.SubProduct	IN ('MG-SuperLive') AND b.StatusId NOT IN (0, 1))
@@ -175,17 +183,18 @@ BEGIN
 	BEGIN
 		IF ( @roleid = 1 )
 		BEGIN
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,2 AS WhTicket
 			FROM dbo.bettrans14 b WITH(nolock)
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.custid 		= @custid
 				AND b.matchid	= @matchid
@@ -193,17 +202,18 @@ BEGIN
 		
 		IF ( @roleid = 2 )
 		BEGIN
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,2 AS WhTicket
 			FROM dbo.bettrans14 b WITH(nolock)
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.recommend	= @custid
 				AND b.matchid	= @matchid
@@ -218,19 +228,20 @@ BEGIN
 				WHERE c.mrecommend 	= @custid
 					AND c.roleid 	= 2
 			)
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,2 AS WhTicket
 			FROM dbo.bettrans14 b WITH(nolock)
 				INNER JOIN CteRecommend c
 				ON b.recommend = c.custid
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.matchid		= @matchid
 		END
@@ -244,32 +255,33 @@ BEGIN
 				WHERE c.srecommend 	= @custid
 					AND c.roleid 	= 2
 			)
-			INSERT INTO #tempCust
+			INSERT INTO #tempRawData
 			SELECT b.transid
 				,b.refno
 				,b.custid
 				,bt.ProductId
+				,b.bettype
 				,bt.EventType
 				,2 AS WhTicket
 			FROM dbo.bettrans14 b WITH(nolock)
 				INNER JOIN CteRecommend c
 				ON b.recommend = c.custid
-				INNER JOIN #BettypeMatrix bt
+				INNER JOIN @BettypeMatrix bt
 				ON b.bettype	= bt.bettype
-				INNER JOIN #TransStatus stt
+				INNER JOIN @TransStatus stt
 				ON b.statusid	= stt.statusid
 			WHERE b.matchid		= @matchid
 		END
 		
 	END
 	
-	IF(EXISTS (SELECT TOP 1 1 FROM #tempCust WHERE ProductId = 3 AND eventType = 1 ) )
+	IF(EXISTS (SELECT TOP 1 1 FROM #tempRawData WHERE ProductId = 3 AND eventType = 1 ) )
 	BEGIN
 	
 		IF( @IsBet14 = 0 ) 
 		BEGIN
 			DELETE c
-			FROM #tempCust c
+			FROM #tempRawData c
 				INNER JOIN dbo.bettrans b with (nolock) 
 				ON c.transid 		= b.transid 
 				AND c.custid 		= b.custid
@@ -286,7 +298,7 @@ BEGIN
 		IF( @IsBet14 = 1 ) 
 		BEGIN
 			DELETE c
-			FROM #tempCust c
+			FROM #tempRawData c
 				INNER JOIN dbo.bettrans14 b with (nolock) 
 				ON c.transid 		= b.transid 
 				AND c.custid 		= b.custid
@@ -301,13 +313,19 @@ BEGIN
 		END
 	END
 	
+	INSERT INTO @tempCust
+	SELECT TransID
+		, Refno
+		, CustID
+		, ProductID
+		, Bettype
+		, EventType
+		, WhTicket
+	FROM #tempRawData
 	
-	CREATE CLUSTERED INDEX [CIX_tempCust] ON #tempCust (WhTicket, eventType)
 	--CALL to get ticket info
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
-	@ColumnOutput = @ColumnOutput
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] @tempCust = @tempCust, @ColumnOutput = @ColumnOutput
 	
-	DROP TABLE #tempCust;
 	RETURN;
 END
 GO
