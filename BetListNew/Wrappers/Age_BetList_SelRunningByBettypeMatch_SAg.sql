@@ -55,35 +55,16 @@ BEGIN
 			
 	-- Gather BettypeMatrix
 	INSERT INTO @BettypeMatrix
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
+	SELECT DISTINCT productid, bettype, eventtype, subproduct
+	FROM bodb02.dbo.SportBettypeMatrix b WITH(NOLOCK)
+	WHERE (
+			(@bettype		= 6 	AND b.bettype IN(6,159,161,162,126,179,181,182)) 
+			OR (@bettype  	= 14 	AND b.bettype IN(14,127)) 
+			OR (@bettype	= 2 	AND b.bettype IN(2,157)) 
+			OR (@bettype	= 15 	AND b.bettype IN(15,167)) 
+			OR bettype 		= @bettype 
+		)
 	
-	;WITH CteBettype (bettype)
-	AS (
-		SELECT bt.bettype
-		FROM @BettypeMatrix bt
-		WHERE (bt.EventType 	= 1)						-- macth event
-			OR (bt.ProductId 	= 1 AND bt.EventType = 2)	-- outright
-	)
-	DELETE bt
-	FROM @BettypeMatrix bt
-		LEFT JOIN CteBettype ct 
-		ON bt.bettype = ct.bettype
-	WHERE ct.bettype IS NULL
-		OR (@bettype NOT IN (6, 14, 2, 15) AND bt.bettype  NOT IN (@bettype))
-		OR (@bettype = 6 	AND bt.bettype NOT IN(6,159,161,162,126,179,181,182) )
-		OR (@bettype = 14 	AND bt.bettype NOT IN(14,127) )
-		OR (@bettype = 2 	AND bt.bettype NOT IN(2,157)) 
-		OR (@bettype = 15 	AND bt.bettype NOT IN(15,167))
-		/*
-		and 
-		( 
-			(@bettype=6 AND b.bettype IN(6,159,161,162,126,179,181,182)) 
-			OR (@bettype=14 and b.bettype IN(14,127)) 
-			OR (@bettype=2 and b.bettype IN(2,157)) 
-			OR (@bettype=15 and b.bettype IN(15,167)) 
-			OR bettype = @bettype 
-			)
-		*/
 	EXEC [dbo].[Age_CoreBetList_Running_SelBetTicket]
 		@CustId 			= @CustId
 		, @RoleId			= 4

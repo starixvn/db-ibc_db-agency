@@ -230,6 +230,7 @@ BEGIN
 		WHERE recommend		= @custid
 			AND bt.SubProduct NOT IN ('MG-SuperLive')
 			AND b.statusID 	IN (0,1)
+			AND (@matchid = 0 OR b.matchid 	= @matchid)
 	END
 	
 	IF(@RoleID = 3)
@@ -285,6 +286,7 @@ BEGIN
 		WHERE mrecommend	= @custid
 			AND bt.SubProduct NOT IN ('MG-SuperLive')
 			AND b.statusID 	IN (0,1)
+			AND (@matchid = 0 OR b.matchid 	= @matchid)
 	END
 	
 	IF(@RoleID = 4)
@@ -340,6 +342,7 @@ BEGIN
 		WHERE srecommend	= @custid
 			AND bt.SubProduct NOT IN ('MG-SuperLive')
 			AND b.statusID 	IN (0,1)
+			AND (@matchid = 0 OR b.matchid 	= @matchid)
 			
 	END
 
@@ -414,16 +417,23 @@ BEGIN
 			)
 	END
 	
-	IF(@MatchID				> 0 
-		OR @liveindicator	IS NOT NULL
+	IF(@liveindicator	IS NOT NULL
 		OR @Betteam			<> ''
 	)
 	BEGIN
 		DELETE b
 		FROM #tempRunning b
-		WHERE @MatchID > 0 AND b.matchid <> @MatchID
-			OR @liveindicator IS NOT NULL AND b.Liveindicator <> @liveindicator
-			OR @betteam <> '' AND b.betteam <> @betteam
+			INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
+		WHERE (
+				@liveindicator IS NOT NULL 
+				AND bt.productid = 3
+				AND b.Liveindicator <> @liveindicator
+			)
+			OR (
+				@betteam <> '' 
+				AND bt.productid = 3
+				AND b.betteam <> @betteam
+			)
 	END
 	
 	IF(@toDate >= @fromDate )
@@ -433,46 +443,51 @@ BEGIN
 		WHERE b.transdate NOT BETWEEN @fromDate AND @toDate 
 	END
 
-	CREATE CLUSTERED INDEX CIX_tempRunning ON #tempRunning(eventtype, productid)
+	--CREATE CLUSTERED INDEX CIX_tempRunning ON #tempRunning(eventtype, productid)
 	
-	IF(EXISTS(SELECT TOP 1 1 FROM #tempRunning WHERE eventtype = 1))
-	BEGIN
-		UPDATE b
-		SET sporttype 	= m.sporttype
-			,leagueID 	= m.leagueID
-			,matchcode 	= m.matchcode
-			,homeID		= m.homeID
-			,awayID		= m.awayID
-			,showtime 	= m.showtime
-		FROM #tempRunning b
-			INNER JOIN bodb02.dbo.match m ON b.matchid = m.matchid
-		WHERE eventtype = 1
-	END
+	--IF(EXISTS(SELECT TOP 1 1 FROM #tempRunning WHERE eventtype = 1))
+	--BEGIN
+	UPDATE b
+	SET sporttype 	= m.sporttype
+		,leagueID 	= m.leagueID
+		,matchcode 	= m.matchcode
+		,homeID		= m.homeID
+		,awayID		= m.awayID
+		,showtime 	= m.showtime
+	FROM #tempRunning b
+		INNER JOIN bodb02.dbo.match m ON b.matchid = m.matchid
+	WHERE b.eventtype = 1
+	--END
 	
-	IF(EXISTS(SELECT TOP 1 1 FROM #tempRunning WHERE eventtype = 2))
-	BEGIN	
-		UPDATE b
-		SET sporttype 	= l.sporttype
-			,leagueID 	= m.leagueID
-			,matchcode 	= m.matchcode
-			,homeID		= m.teamID
-			,awayID		= 0
-			,showtime 	= ''
-		FROM #tempRunning b
-			INNER JOIN bodb02.dbo.outright as m with (nolock) 
-			on  b.matchid=m.orid
-			INNER JOIN bodb02.dbo.league l with (nolock) 
-			on m.leagueid = l.leagueid 		
-		WHERE eventtype = 2
-	END
+	--IF(EXISTS(SELECT TOP 1 1 FROM #tempRunning WHERE eventtype = 2))
+	--BEGIN	
+	UPDATE b
+	SET sporttype 	= l.sporttype
+		,leagueID 	= m.leagueID
+		,matchcode 	= m.matchcode
+		,homeID		= m.teamID
+		,awayID		= 0
+		,showtime 	= ''
+	FROM #tempRunning b
+		INNER JOIN bodb02.dbo.outright as m with (nolock) 
+		on  b.matchid=m.orid
+		INNER JOIN bodb02.dbo.league l with (nolock) 
+		on m.leagueid = l.leagueid 		
+	WHERE b.eventtype = 2
+	--END
 	
-	DECLARE @queryOutput NVARCHAR(MAX)
+	/*DECLARE @queryOutput NVARCHAR(MAX)
 	SET @queryOutput = 'SELECT' 
 						+ ' ' + @ColumnOutput 
 						+ ' FROM #tempRunning t'
 						+ '	ORDER BY t.transid DESC'
 	
 	EXEC sp_sqlexec @queryOutput
+	*/
+
+	SELECT *
+	FROM #tempRunning t
+	ORDER BY t.transid DESC
 	
 	-- Get bet detial
 	SELECT 
@@ -490,7 +505,6 @@ BEGIN
 			INNER JOIN #tempRunning b 
 			ON bm.refno			= b.transid
 		WHERE bm.custid			= b.custid
-			AND b.EventType 	= 2	
 			AND b.ProductId		= 2
 			
 		UNION ALL
@@ -509,7 +523,6 @@ BEGIN
 			INNER JOIN #tempRunning b 
 			ON bm.refno			= b.refno
 		WHERE bm.custid			= b.custid
-			AND b.EventType		= 3
 			AND b.ProductID		= 5
 
 		-- SELECT bettransg
@@ -529,7 +542,6 @@ BEGIN
 			INNER JOIN #tempRunning b
 			ON bg.refno			= b.refno
 		WHERE bg.custid			= b.custid
-			AND b.EventType		= 1
 			AND b.ProductId		= 4
 
 		UNION ALL
@@ -548,7 +560,6 @@ BEGIN
 			INNER JOIN #tempRunning b
 			ON bg.refno			= b.transid
 		WHERE bg.custid			= b.custid
-			AND b.EventType		= 0
 			AND b.ProductId		= 12
 	
 	RETURN;
