@@ -48,4 +48,11 @@ GRANT SELECT ON bettransg TO bodbDownlineNet;
 GRANT SELECT ON bettransg TO bodbDownlineNetView;
 GO
 
+--@DB053
+USE bodb02
+GO
+
+GRANT SELECT ON SportBettypeMatrix TO bodbDownlineNet;
+GRANT SELECT ON SportBettypeMatrix TO bodbDownlineNetView;
+
  

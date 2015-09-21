@@ -61,37 +61,19 @@ BEGIN
 			
 	-- Gather BettypeMatrix
 	INSERT INTO @BettypeMatrix
-
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
-	
-	;WITH CteBettype (bettype)
-	AS (
-		SELECT bt.bettype
-		FROM @BettypeMatrix bt
-		WHERE (bt.ProductId = 1 AND bt.EventType = 0) 	-- mix-parlay
-			OR (bt.EventType = 1)						-- macth event
-			OR (bt.ProductId = 1 AND bt.EventType = 2)	-- outright
-	)
-	DELETE bt
-	FROM @BettypeMatrix bt
-		LEFT JOIN CteBettype ct ON bt.bettype = ct.bettype
-	WHERE ct.bettype IS NULL
-		OR (@bettype NOT IN (6, 14, 24, 26, 1, 3, 7, 8) AND bt.bettype NOT IN (@bettype))
-		OR (@bettype = 6 	AND bt.bettype NOT IN(6, 126))
-		OR (@bettype = 14 	AND bt.bettype NOT IN(14, 127))
-		OR (@bettype = 24 	AND bt.bettype NOT IN(24, 151, 186)) 
-		OR (@bettype = 26 	AND bt.bettype NOT IN(26, 145, 146, 170, 188))
+	SELECT DISTINCT productid, bettype, eventtype, subproduct
+	FROM bodb02.dbo.SportBettypeMatrix b WITH(NOLOCK)
+	WHERE ((@bettype=6 AND b.bettype IN(6,126)) 
+		OR (@bettype=14 and b.bettype IN(14,127)) 
+		OR (@bettype=24 and b.bettype IN(24,151,186)) 
+		OR (@bettype=26 and b.bettype IN(26,145,146,170,188)) 
 		OR (@bettype = 1 	AND bt.bettype NOT IN(1, 301))		-- Support Myanmar Odds
 		OR (@bettype = 3 	AND bt.bettype NOT IN(3, 302))		-- Support Myanmar Odds
 		OR (@bettype = 7 	AND bt.bettype NOT IN(7, 303))		-- Support Myanmar Odds
 		OR (@bettype = 8 	AND bt.bettype NOT IN(8, 304))		-- Support Myanmar Odds
-	/*
-		and ( (@bettype=6 AND b.bettype IN(6,126)) 
-		OR (@bettype=14 and b.bettype IN(14,127)) 
-		OR (@bettype=24 and b.bettype IN(24,151,186)) 
-		OR (@bettype=26 and b.bettype IN(26,145,146,170,188)) 
-		OR bettype = @bettype )
-	*/
+			
+			OR b.bettype = @bettype
+		)
 	
 	EXEC [dbo].[Age_CoreBetList_Running_SelBetTicket]
 		@CustId 			= @CustId
