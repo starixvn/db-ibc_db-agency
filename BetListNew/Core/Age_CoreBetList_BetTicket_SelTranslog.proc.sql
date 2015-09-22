@@ -34,12 +34,9 @@ BEGIN
 	/*
 	- Keno			: ProductId = 8
 	- GoldDelux		: ProductId = 12
-		- Colossus Bet	: ProductId = 15
+	- Colossus Bet	: ProductId = 15
 	*/
 		
-		/*	- Keno			: ProductId = 8
-			- Gold Deluxe	: ProductId = 12
-			- Colossus Bet	: ProductId = 15
 	SELECT 
 		b.translogid 	AS transid
 		, b.translogid 	AS refno
@@ -47,7 +44,7 @@ BEGIN
 		, b.UserName
 		, CASE 	WHEN c.ProductID = 8 THEN 202
 				WHEN c.ProductID = 12 THEN 255
-						WHEN c.ProductID = 15 THEN 204
+				WHEN c.ProductID = 15 THEN 204
 				ELSE 0
 		END	AS Sporttype
 		, b.GameId 		AS bettype
@@ -110,7 +107,7 @@ BEGIN
 				, CASE 	WHEN c.ProductID = 15 	THEN b.transdesc
 					ELSE ''
 				END		AS transdesc
-				, 0 AS OddsSpread
+		, 0 AS OddsSpread
 	FROM dbo.translog AS b WITH (NOLOCK)
 		INNER JOIN @tempCust c 
 		ON b.translogid		= c.transid
@@ -181,7 +178,7 @@ BEGIN
 		, '' AS betcheck
 		, 0 AS comstatus
 		,b.transdesc
-				, 0 AS OddsSpread
+		, 0 AS OddsSpread
 	FROM dbo.translog AS b WITH (NOLOCK)
 		INNER JOIN @tempCust c 
 		ON b.translogid		= c.transid

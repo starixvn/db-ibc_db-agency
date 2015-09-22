@@ -149,7 +149,7 @@ BEGIN
 						THEN b.transdesc
 					ELSE ''
 				END		AS transdesc
-				, 0 AS OddsSpread
+		, 0 AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
 		INNER JOIN @tempCust c 
 		ON b.transid		= c.transid

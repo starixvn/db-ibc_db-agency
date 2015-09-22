@@ -42,6 +42,7 @@ AS
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150831@Kos: Support Colossus Bet
 		- 20150909@Kos: Add TransType params to support Colossus Bet Grand Prize ticket
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -197,7 +198,7 @@ BEGIN
 			AND	b.custid	= @CustID
 			AND ( @TransType <> 4
 				OR EXISTS (	SELECT 1 
-							FROM bettransm14 AS bm WITH (NOLOCK) 
+							FROM bodb02.dbo.bettransm14 AS bm WITH (NOLOCK) 
 							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
 	END
 	

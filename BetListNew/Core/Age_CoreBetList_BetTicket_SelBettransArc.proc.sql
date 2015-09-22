@@ -165,6 +165,8 @@ BEGIN
 					ELSE ''
 				END		AS transdesc
 				, 0 AS OddsSpread
+	FROM dbo.bettrans_bk AS b WITH (NOLOCK, INDEX=IX_custid)
+		INNER JOIN @tempCust c 
 		ON b.transid		= c.transid
 			AND b.custid	= c.custid
 		INNER JOIN @custInfo ci

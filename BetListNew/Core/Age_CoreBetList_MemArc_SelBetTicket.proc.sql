@@ -32,11 +32,10 @@ Original:
 Revisions:
 	- 20150504@Bobby.Nguyen: Create new SP
 	- 20150504@Bobby.Nguyen: Due to performence, we should use index hint (IX_custid) on bettrans_bk
+	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 
 Param's Explanation:
-	- @BettypeMatrix	: 
-		+ VARCHAR(MAX) for remote call via linked server
-		+ XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
+	
 		
 Wrapped SP List:
 	- Age_BetList_SelByDayAll_Mem_Old
