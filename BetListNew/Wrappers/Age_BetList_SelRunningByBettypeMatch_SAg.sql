@@ -62,7 +62,7 @@ BEGIN
 	FROM bodb02.dbo.SportBettypeMatrix b WITH(NOLOCK)
 	WHERE (
 
-			@bettype		= 6 	AND b.bettype IN(6,159,161,162,126,179,181,182)) 
+			(@bettype		= 6 	AND b.bettype IN(6,159,161,162,126,179,181,182)) 
 			OR (@bettype  	= 14 	AND b.bettype IN(14,127)) 
 			OR (@bettype	= 2 	AND b.bettype IN(2,157)) 
 			OR (@bettype	= 15 	AND b.bettype IN(15,167)) 
