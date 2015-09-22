@@ -135,11 +135,12 @@ BEGIN
 		
 		EXEC sp_sqlexec @queryOutput
 	END*/
+	*/
 	
 	SELECT *
 	FROM #MemBetTicket t
 	ORDER BY t.transid DESC
-	
+		
 	-- 	OUTPUT ticket in detail
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelDetail] @tempCust 	= @tempCust
 		

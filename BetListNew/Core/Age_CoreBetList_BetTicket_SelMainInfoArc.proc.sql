@@ -98,11 +98,11 @@ BEGIN
 	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 3))
 	BEGIN
 		INSERT INTO #MemBetTicket
-		EXEC [bodb_archive].[dbo].[Age_CoreBetList_BetTicket_SelBettransArc] @tempCust = @tempCust
+		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettransArc] @tempCust = @tempCust
 	END
 	
 	-- OUTPUT main ticket
-	IF (@ColumnOutput IS NULL)
+	/*IF (@ColumnOutput IS NULL)
 	BEGIN
 		SELECT *
 		FROM #MemBetTicket t
@@ -118,7 +118,12 @@ BEGIN
 		
 		EXEC sp_sqlexec @queryOutput
 	END
+	*/
 	
+	SELECT *
+	FROM #MemBetTicket t
+	ORDER BY t.transid DESC
+		
 	-- 	OUTPUT ticket in detail
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelDetailArc]	@tempCust = @tempCust
 	

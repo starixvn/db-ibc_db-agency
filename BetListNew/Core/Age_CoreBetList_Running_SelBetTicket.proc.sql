@@ -154,9 +154,9 @@ BEGIN
 			, b.MPositiontaking
 			, b.SPositiontaking
 			, b.tpositiontaking
-			, b.Adiscount
-			, 0 Mdiscount
-			, b.Sdiscount
+			, b.discount as Adiscount --Agent
+			, b.adiscount as Mdiscount --Master
+			, b.sdiscount as Sdiscount --Super
 			, b.Liveindicator
 			, b.Livehomescore
 			, b.Liveawayscore
@@ -209,9 +209,9 @@ BEGIN
 			, b.MPositiontaking
 			, b.SPositiontaking
 			, b.tpositiontaking
-			, b.Adiscount
-			, 0 Mdiscount
-			, b.Sdiscount
+			, b.discount as Adiscount --Agent
+			, b.adiscount as Mdiscount --Master
+			, b.sdiscount as Sdiscount --Super
 			, b.Liveindicator
 			, b.Livehomescore
 			, b.Liveawayscore
@@ -265,9 +265,9 @@ BEGIN
 			, b.MPositiontaking
 			, b.SPositiontaking
 			, b.tpositiontaking
-			, b.Adiscount
-			, 0 Mdiscount
-			, b.Sdiscount
+			, b.discount as Adiscount --Agent
+			, b.adiscount as Mdiscount --Master
+			, b.sdiscount as Sdiscount --Super
 			, b.Liveindicator
 			, b.Livehomescore
 			, b.Liveawayscore
@@ -321,9 +321,9 @@ BEGIN
 			, b.MPositiontaking
 			, b.SPositiontaking
 			, b.tpositiontaking
-			, b.Adiscount
-			, 0 Mdiscount
-			, b.Sdiscount
+			, b.discount as Adiscount --Agent
+			, b.adiscount as Mdiscount --Master
+			, b.sdiscount as Sdiscount --Super
 			, b.Liveindicator
 			, b.Livehomescore
 			, b.Liveawayscore
@@ -388,9 +388,9 @@ BEGIN
 			, b.MPositiontaking
 			, b.SPositiontaking
 			, b.tpositiontaking
-			, b.Adiscount
-			, 0 Mdiscount
-			, b.Sdiscount
+			, b.discount as Adiscount --Agent
+			, b.adiscount as Mdiscount --Master
+			, b.sdiscount as Sdiscount --Super
 			, b.Liveindicator
 			, 0 Livehomescore
 			, 0 Liveawayscore
