@@ -53,7 +53,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 		
-	CREATE TABLE #tempRunning
+	DECLARE @tempRunning TABLE
 	(
 		Sporttype smallint
 		, custid INT
@@ -124,7 +124,7 @@ BEGIN
 
 	IF(@RoleID = 1)
 	BEGIN
-		INSERT INTO #tempRunning
+		INSERT INTO @tempRunning
 		SELECT 
 			0 Sporttype
 			, b.custid
@@ -173,13 +173,13 @@ BEGIN
 			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 		WHERE custid		= @custid
-			AND bt.SubProduct NOT IN ('MG-SuperLive')
 			AND b.statusID 	IN (0,1)
+			AND b.transdate BETWEEN @fromDate AND @toDate 
 	END
 	
 	IF(@RoleID = 2)
 	BEGIN
-		INSERT INTO #tempRunning
+		INSERT INTO @tempRunning
 		SELECT 
 			0 Sporttype
 			, b.custid
@@ -235,7 +235,7 @@ BEGIN
 	
 	IF(@RoleID = 3)
 	BEGIN
-		INSERT INTO #tempRunning
+		INSERT INTO @tempRunning
 		SELECT 
 			0 Sporttype
 			, b.custid
@@ -291,7 +291,7 @@ BEGIN
 	
 	IF(@RoleID = 4)
 	BEGIN
-		INSERT INTO #tempRunning
+		INSERT INTO @tempRunning
 		SELECT 
 			0 Sporttype
 			, b.custid
@@ -354,7 +354,7 @@ BEGIN
 	IF(@RoleId 	= 1 
 		AND EXISTS(SELECT TOP 1 1 FROM @BettypeMatrix WHERE ProductId IN (8, 12) OR SubProduct IN ('MG-SuperLive')))
 	BEGIN
-		INSERT INTO #tempRunning
+		INSERT INTO @tempRunning
 		SELECT 
 			CASE 	WHEN bt.ProductID = 8 THEN 202
 						WHEN bt.ProductID = 12 THEN 255
@@ -415,6 +415,7 @@ BEGIN
 				bt.ProductId	IN (8, 12) 
 				OR SubProduct	IN ('MG-SuperLive')
 			)
+			AND b.transdate BETWEEN @fromDate AND @toDate 
 	END
 	
 	IF(@liveindicator	IS NOT NULL
@@ -422,7 +423,7 @@ BEGIN
 	)
 	BEGIN
 		DELETE b
-		FROM #tempRunning b
+		FROM @tempRunning b
 			INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
 		WHERE (
 				@liveindicator IS NOT NULL 
@@ -435,17 +436,10 @@ BEGIN
 				AND b.betteam <> @betteam
 			)
 	END
-	
-	IF(@toDate >= @fromDate )
-	BEGIN
-		DELETE b
-		FROM #tempRunning b
-		WHERE b.transdate NOT BETWEEN @fromDate AND @toDate 
-	END
 
-	--CREATE CLUSTERED INDEX CIX_tempRunning ON #tempRunning(eventtype, productid)
+	--CREATE CLUSTERED INDEX CIX_tempRunning ON @tempRunning(eventtype, productid)
 	
-	--IF(EXISTS(SELECT TOP 1 1 FROM #tempRunning WHERE eventtype = 1))
+	--IF(EXISTS(SELECT TOP 1 1 FROM @tempRunning WHERE eventtype = 1))
 	--BEGIN
 	UPDATE b
 	SET sporttype 	= m.sporttype
@@ -454,12 +448,12 @@ BEGIN
 		,homeID		= m.homeID
 		,awayID		= m.awayID
 		,showtime 	= m.showtime
-	FROM #tempRunning b
+	FROM @tempRunning b
 		INNER JOIN bodb02.dbo.match m ON b.matchid = m.matchid
 	WHERE b.eventtype = 1
 	--END
 	
-	--IF(EXISTS(SELECT TOP 1 1 FROM #tempRunning WHERE eventtype = 2))
+	--IF(EXISTS(SELECT TOP 1 1 FROM @tempRunning WHERE eventtype = 2))
 	--BEGIN	
 	UPDATE b
 	SET sporttype 	= l.sporttype
@@ -468,7 +462,7 @@ BEGIN
 		,homeID		= m.teamID
 		,awayID		= 0
 		,showtime 	= ''
-	FROM #tempRunning b
+	FROM @tempRunning b
 		INNER JOIN bodb02.dbo.outright as m with (nolock) 
 		on  b.matchid=m.orid
 		INNER JOIN bodb02.dbo.league l with (nolock) 
@@ -479,14 +473,14 @@ BEGIN
 	/*DECLARE @queryOutput NVARCHAR(MAX)
 	SET @queryOutput = 'SELECT' 
 						+ ' ' + @ColumnOutput 
-						+ ' FROM #tempRunning t'
+						+ ' FROM @tempRunning t'
 						+ '	ORDER BY t.transid DESC'
 	
 	EXEC sp_sqlexec @queryOutput
 	*/
 
 	SELECT *
-	FROM #tempRunning t
+	FROM @tempRunning t
 	ORDER BY t.transid DESC
 	
 	-- Get bet detial
@@ -502,8 +496,9 @@ BEGIN
 			, bm.betteam  
 			, '' AS transdesc
 		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-			INNER JOIN #tempRunning b 
+			INNER JOIN @tempRunning b 
 			ON bm.refno			= b.transid
+			AND bm.bettype		= b.bettype
 		WHERE bm.custid			= b.custid
 			AND b.ProductId		= 2
 			
@@ -520,8 +515,9 @@ BEGIN
 			, bm.betteam  
 			, '' AS transdesc
 		FROM bodb02.dbo.bettransm bm WITH (NOLOCK)
-			INNER JOIN #tempRunning b 
+			INNER JOIN @tempRunning b 
 			ON bm.refno			= b.refno
+			AND bm.bettype		= b.bettype
 		WHERE bm.custid			= b.custid
 			AND b.ProductID		= 5
 
@@ -539,8 +535,9 @@ BEGIN
 			, bg.betteam 
 			, '' AS transdesc
 		FROM bodb02.dbo.bettransg bg WITH (NOLOCK)
-			INNER JOIN #tempRunning b
+			INNER JOIN @tempRunning b
 			ON bg.refno			= b.refno
+			AND bg.bettype		= b.bettype
 		WHERE bg.custid			= b.custid
 			AND b.ProductId		= 4
 
@@ -557,8 +554,9 @@ BEGIN
 			, bg.betteam 
 			, bg.transdesc
 		FROM bodb02.dbo.bettransg bg WITH (NOLOCK)
-			INNER JOIN #tempRunning b
+			INNER JOIN @tempRunning b
 			ON bg.refno			= b.transid
+			AND bg.bettype		= b.bettype
 		WHERE bg.custid			= b.custid
 			AND b.ProductId		= 12
 	
