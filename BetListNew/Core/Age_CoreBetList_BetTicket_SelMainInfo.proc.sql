@@ -134,7 +134,7 @@ BEGIN
 							+ '	ORDER BY t.transid DESC '
 		
 		EXEC sp_sqlexec @queryOutput
-	END*/
+	END
 	*/
 	
 	SELECT *

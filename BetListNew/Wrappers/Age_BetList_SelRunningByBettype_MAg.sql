@@ -67,10 +67,10 @@ BEGIN
 			OR (@bettype=14 and b.bettype IN(14,127)) 
 			OR (@bettype=24 and b.bettype IN(24,151,186)) 
 			OR (@bettype=26 and b.bettype IN(26,145,146,170,188)) 
-			OR (@bettype = 1 	AND bt.bettype NOT IN(1, 301))		-- Support Myanmar Odds
-			OR (@bettype = 3 	AND bt.bettype NOT IN(3, 302))		-- Support Myanmar Odds
-			OR (@bettype = 7 	AND bt.bettype NOT IN(7, 303))		-- Support Myanmar Odds
-			OR (@bettype = 8 	AND bt.bettype NOT IN(8, 304))		-- Support Myanmar Odds
+			OR (@bettype = 1 	AND b.bettype NOT IN(1, 301))		-- Support Myanmar Odds
+			OR (@bettype = 3 	AND b.bettype NOT IN(3, 302))		-- Support Myanmar Odds
+			OR (@bettype = 7 	AND b.bettype NOT IN(7, 303))		-- Support Myanmar Odds
+			OR (@bettype = 8 	AND b.bettype NOT IN(8, 304))		-- Support Myanmar Odds
 			OR b.bettype = @bettype
 		)
 
