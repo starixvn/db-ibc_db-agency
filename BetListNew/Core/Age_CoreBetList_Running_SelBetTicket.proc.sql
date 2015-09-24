@@ -173,6 +173,7 @@ BEGIN
 			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
 		WHERE custid		= @custid
+			AND bt.SubProduct NOT IN ('MG-SuperLive')
 			AND b.statusID 	IN (0,1)
 			AND b.transdate BETWEEN @fromDate AND @toDate 
 	END
