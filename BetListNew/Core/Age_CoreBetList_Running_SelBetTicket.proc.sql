@@ -36,6 +36,7 @@ AS
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150814@Bobby: #41600 - Update time range to datetime formation
 		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		- 20150925@Bobby: Add MO & CB ticket
 	
 	Param's Explanation:
 		- @BettypeMatrix	: Table TYPE variable
@@ -48,7 +49,7 @@ AS
 		
 	Scope of tickets:
 		- bettrans	: All products - all status
-		- translog	: Keno & GD - running status only
+		- translog	: Keno,GD, CB - running status only
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -94,6 +95,7 @@ BEGIN
 		, comstatus nvarchar(20)	
 		, BetCheck nvarchar(50)
 		, transdesc	NVARCHAR(300)
+		, OddsSpread SMALLMONEY
 		, productid TINYINT
 		, eventtype TINYINT
 	)
@@ -109,7 +111,7 @@ BEGIN
 		AND @UserName IS NOT NULL
 	)
 	BEGIN
-		SELECT @CustID 	= CustID
+		SELECT TOP 1 @CustID 	= CustID
 		FROM bodb02.dbo.custinfo WITH(NOLOCK) 
 		WHERE UserName	= @UserName
 	END
@@ -164,11 +166,12 @@ BEGIN
 			,CONVERT(BIT,0) IsNeutral
 			, b.oddstype
 			, '' showtime
-			,CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
+			, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 			, b.BetCheck
 			, ''transdesc
-			,bt.productid
-			,bt.eventtype
+			, CASE WHEN bt.SubProduct IN('MO') THEN b.OddsSpread ELSE 0 END as OddsSpread
+			, bt.productid
+			, bt.eventtype
 		FROM dbo.bettrans_running b WITH(NOLOCK)
 			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
@@ -223,8 +226,9 @@ BEGIN
 			,CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 			, b.BetCheck
 			, ''transdesc
-			,bt.productid
-			,bt.eventtype
+			, CASE WHEN bt.SubProduct IN('MO') THEN b.OddsSpread ELSE 0 END as OddsSpread
+			, bt.productid
+			, bt.eventtype
 		FROM dbo.bettrans_running b WITH(NOLOCK)
 			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
@@ -279,8 +283,9 @@ BEGIN
 			,CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 			, b.BetCheck
 			, ''transdesc
-			,bt.productid
-			,bt.eventtype
+			, CASE WHEN bt.SubProduct IN('MO') THEN b.OddsSpread ELSE 0 END as OddsSpread
+			, bt.productid
+			, bt.eventtype
 		FROM dbo.bettrans_running b WITH(NOLOCK)
 			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
@@ -335,8 +340,9 @@ BEGIN
 			,CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 			, b.BetCheck
 			, ''transdesc
-			,bt.productid
-			,bt.eventtype
+			, CASE WHEN bt.SubProduct IN('MO') THEN b.OddsSpread ELSE 0 END as OddsSpread
+			, bt.productid
+			, bt.eventtype
 		FROM dbo.bettrans_running b WITH(NOLOCK)
 			INNER JOIN @BettypeMatrix bt
 			ON b.bettype	= bt.bettype
@@ -359,6 +365,8 @@ BEGIN
 		SELECT 
 			CASE 	WHEN bt.ProductID = 8 THEN 202
 						WHEN bt.ProductID = 12 THEN 255
+						WHEN bt.SubProduct IN ('MG-SuperLive') THEN 1
+						WHEN bt.ProductID = 15 THEN 204
 						ELSE 0
 				END	AS Sporttype
 			, b.custid
@@ -372,6 +380,7 @@ BEGIN
 			, '' Race
 			,CASE WHEN bt.ProductID = 8 THEN fnc.GameId 
 					WHEN bt.ProductID = 12 THEN 255 
+					WHEN bt.SubProduct IN ('MG-SuperLive') THEN b.eventID
 					ELSE 0 END AS matchid
 			, 0 HomeID
 			, 0 AwayID
@@ -397,15 +406,17 @@ BEGIN
 			, 0 Liveawayscore
 			, b.IP
 			,CONVERT(BIT,0) IsNeutral
-			,CASE WHEN b.gameid BETWEEN 801 AND 899 THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType 
+			,CASE WHEN bt.SubProduct IN ('MG-SuperLive') THEN CONVERT(TINYINT, ISNULL(b.custom1, 0))  ELSE 0 END AS OddsType 
 			,'' showtime
 			,'' comstatus
 			,CASE WHEN bt.ProductID = 12 THEN b.Gameid3rd 
 					ELSE '' 
 				END AS betcheck
-			, ''transdesc
-			,bt.productid
-			,bt.eventtype
+			, CASE WHEN (bt.SubProduct IN ('MG-SuperLive') OR bt.ProductID = 15) THEN b.transdesc 
+				ELSE '' END AS transdesc
+			, 0 as OddsSpread
+			, bt.productid
+			, bt.eventtype
 		FROM bodb02.dbo.translog b WITH(NOLOCK)
 			INNER JOIN @BettypeMatrix bt
 			ON b.gameid		= bt.bettype
@@ -413,7 +424,7 @@ BEGIN
 		WHERE custid		= @custid
 			AND b.statusID 	IN (0,1)
 			AND (
-				bt.ProductId	IN (8, 12) 
+				bt.ProductId	IN (8, 12, 15) 
 				OR SubProduct	IN ('MG-SuperLive')
 			)
 			AND b.transdate BETWEEN @fromDate AND @toDate 

@@ -104,9 +104,9 @@ BEGIN
 			ELSE '' 
 		END AS betcheck
 		, 0	AS comstatus
-				, CASE 	WHEN c.ProductID = 15 	THEN b.transdesc
-					ELSE ''
-				END		AS transdesc
+		, CASE 	WHEN c.ProductID = 15 THEN b.transdesc
+			ELSE ''
+		END		AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.translog AS b WITH (NOLOCK)
 		INNER JOIN @tempCust c 
