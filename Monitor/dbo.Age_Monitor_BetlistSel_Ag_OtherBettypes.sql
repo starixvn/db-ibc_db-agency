@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]
+ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]
  @custid	INT, 
  @transid BIGINT = 0,
  @LimitRowCount int = 20 
@@ -16,6 +16,8 @@ BEGIN
 		- 20130222@Elodie: Get custid value
 		- 20130222@Elodie: Get oddsid value to use for Virtual HR		
 		- 20150302@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
+		- 20150706@Bobby: Exclude Metric Gaming running ticket
+		
 	Parameter's Explanation:
 		- @custid : agent's ID
 		- @transid: lastest transid 
@@ -58,7 +60,9 @@ BEGIN
 		AND b.statusID BETWEEN 0 AND 1	
 		AND b.bettype NOT IN (1,3,7,8)	
 		AND b.bettype < 19001
-		AND b.transid > @transid		
+		AND b.transid > @transid
+		AND b.bettype NOT BETWEEN 801 AND 806 				
+		
 	ORDER BY b.transid DESC
 END
 

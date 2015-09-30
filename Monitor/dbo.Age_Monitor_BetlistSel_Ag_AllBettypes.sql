@@ -19,6 +19,8 @@ Revision:
 	- 20130222@Elodie: Get custid value
 	- 20130222@Elodie: Get oddsid value to use for Virtual HR
 	- 20150318@Cody: Apply sporttype bettype matrix
+	- 20150706@Bobby: Exclude Metric Gaming running ticket
+	
 Parameter's Explanation:
 	- @custid : agent's ID
 	- @transid: lastest transid 
@@ -71,7 +73,9 @@ Parameter's Explanation:
 	WHERE b.recommend = @custid 
 		AND b.transid > @transid
 		--AND b.bettype < 19001
-		AND b.statusID BETWEEN 0 AND 1				
+		AND b.statusID BETWEEN 0 AND 1
+		AND b.bettype NOT BETWEEN 801 AND 806 				
+		
 	ORDER BY b.transid DESC
 END
 
