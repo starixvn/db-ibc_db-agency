@@ -16,7 +16,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerUpdAgentComm]
 	@discountcs decimal(9,8),
 	@discountHRFixedOdds decimal(9,8) = 0,	
 	@discountnumber decimal(9,8),
-	
+	@discountMyanmarOdds DECIMAL(9,8)=0, 
 	@userid int, --updater Id	
 	@subaccid int = 0, --Sub-AccountID
 	@language varchar(2) = 'E',
@@ -24,6 +24,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerUpdAgentComm]
 	@errcode int = 0 OUTPUT,
 	@errmsg nvarchar(200) = '' OUTPUT
 AS
+BEGIN
  /*
 Created: 20090713@nqminh
 Task : Update commission for Agent
@@ -39,6 +40,7 @@ Revisions:
 	- 20130311@Dan: Change linked server DB053 to DBAGE
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
 	
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -56,68 +58,89 @@ Param's Explanation:
 • @errmsg: error message if errcode > 0
 */
 
-SET NOCOUNT ON
+	SET NOCOUNT ON
 
---Check disable user
-EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
-if @ErrCode <>0 return
---end
+	--Check disable user
+	EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode output,@ErrMsg=@ErrMsg output
+	if @ErrCode <>0 return
+	--end
 
-----------------------------------------------
---Update Commission
-Declare @updatecomm_old bit
-Declare @groupa_old decimal(9,8),
-	@groupb_old decimal(9,8),
-	@groupc_old decimal(9,8),
-	@groupd_old decimal(9,8),
-	@discountcs_old decimal(9,8),
-	@discount1x2_old decimal(9,8),
-	@discountHRFixedOdds_old decimal(9,8),
-	@discountnumber_old decimal(9,8)
+	----------------------------------------------
+	--Update Commission
+	Declare @updatecomm_old bit
+	Declare @groupa_old decimal(9,8),
+		@groupb_old decimal(9,8),
+		@groupc_old decimal(9,8),
+		@groupd_old decimal(9,8),
+		@discountcs_old decimal(9,8),
+		@discount1x2_old decimal(9,8),
+		@discountHRFixedOdds_old decimal(9,8),
+		@discountnumber_old decimal(9,8),
+		@discountMyanmarOdds_old decimal(9,8)
+
+	-- Update Agent Commission --
 	
+	-- For Myanmar Odds
+	DECLARE @IsMyanmarOdds BIT = 0
+	
+	SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
+		
+	IF @IsMyanmarOdds = 1
+	BEGIN
+		-- Get old value
+		SET @discountMyanmarOdds_old = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @custid AND Sporttype = 1 AND Bettype = 301)
+		
+	END
+	
+	select @groupa_old = groupa, @groupb_old = groupb, @groupc_old = groupc, @groupd_old = groupd
+	from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype = 1
 
--- Update Agent Commission --
-select @groupa_old = groupa, @groupb_old = groupb, @groupc_old = groupc, @groupd_old = groupd
-from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype = 1
+	select @discountcs_old = discount
+	from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype = 4
 
-select @discountcs_old = discount
-from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype = 4
+	select @discount1x2_old = discount
+	from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype = 5
 
-select @discount1x2_old = discount
-from custsetting (nolock) where custid = @custid and sporttype = 1 and bettype = 5
+	select @discountHRFixedOdds_old = discount
+	from custsetting (nolock) where custid = @custid and sporttype = 154 and bettype = 20
 
-select @discountHRFixedOdds_old = discount
-from custsetting (nolock) where custid = @custid and sporttype = 154 and bettype = 20
+	select @discountnumber_old = discount
+	from custsetting3rd (nolock) where custid = @custid and sporttype = 161 and bettype = 81
 
-select @discountnumber_old = discount
-from custsetting3rd (nolock) where custid = @custid and sporttype = 161 and bettype = 81
-
-if (@groupa_old <> @groupa) or (@groupb_old <> @groupb) or (@groupc_old <> @groupc) or (@groupd_old <> @groupd)
-	or (@discountcs_old <> @discountcs) or (@discount1x2_old <> @discount1x2) or (@discountnumber_old <> @discountnumber) or (@discountHRFixedOdds_old <> @discountHRFixedOdds)
-	set @updatecomm_old = 1
-else 
-	set @updatecomm_old = 0
-if @updatecomm_old <> 0
-begin		
-	EXEC dbo.Acc_CustomerUpdAgent_Commission 
-		@custid = @custid,
-		@groupa = @groupa,
-		@groupb = @groupb,
-		@groupc = @groupc,
-		@groupd = @groupd,
-		@discountcs = @discountcs, --other comm
-		@discount1x2 = @discount1x2, --1x2
-		@discountnumber = @discountnumber, 
-		@discountHRFixedOdds = @discountHRFixedOdds, --1x2
-		@updatecomm_old = @updatecomm_old,
-		@SubAccID = @SubAccID,
-		@UserID = @UserID,
-		@Language = @Language,
-		@IP = @IP,
-		@ErrCode = @ErrCode OUTPUT,
-		@ErrMsg = @ErrMsg OUTPUT
-end
-
+	if (@groupa_old <> @groupa) or (@groupb_old <> @groupb) or (@groupc_old <> @groupc) or (@groupd_old <> @groupd)
+		or (@discountcs_old <> @discountcs) or (@discount1x2_old <> @discount1x2) or (@discountnumber_old <> @discountnumber) or (@discountHRFixedOdds_old <> @discountHRFixedOdds)
+		OR (@IsMyanmarOdds = 1 AND @discountMyanmarOdds <> @discountMyanmarOdds_old)
+		set @updatecomm_old = 1
+	else 
+		set @updatecomm_old = 0
+	
+			
+	if @updatecomm_old <> 0
+	begin		
+		EXEC dbo.Acc_CustomerUpdAgent_Commission 
+			@custid = @custid,
+			@groupa = @groupa,
+			@groupb = @groupb,
+			@groupc = @groupc,
+			@groupd = @groupd,
+			@discountcs = @discountcs, --other comm
+			@discount1x2 = @discount1x2, --1x2
+			@discountnumber = @discountnumber, 
+			@discountHRFixedOdds = @discountHRFixedOdds, --1x2
+			
+			@discountMyanmarOdds = @discountMyanmarOdds,
+			@discountMyanmarOdds_old = @discountMyanmarOdds_old,
+			@IsMyanmarOdds = @IsMyanmarOdds,
+			
+			@updatecomm_old = @updatecomm_old,
+			@SubAccID = @SubAccID,
+			@UserID = @UserID,
+			@Language = @Language,
+			@IP = @IP,
+			@ErrCode = @ErrCode OUTPUT,
+			@ErrMsg = @ErrMsg OUTPUT
+	end
+END
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerUpdAgentComm] TO [bodbDownlineNet] AS [dbo]
 GO
