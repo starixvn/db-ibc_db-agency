@@ -131,7 +131,7 @@ FROM custsetting3rd (NOLOCK) WHERE custid = @custid AND sporttype = 161 AND bett
 
 
 IF @playerdiscount_old <> @playerdiscount OR @playerdiscountcs_old <> @playerdiscountcs OR @playerdiscount1x2 <> @playerdiscount1x2_old OR @playerdiscountnumber <> @playerdiscountnumber_old OR @playerdiscountHRFixedOdds <> @playerdiscountHRFixedOdds_old
-	OR @playerdiscountMyanmarOdds <> @playerdiscountMyanmarOdds_old
+	OR (@IsMyanmarOdds = 1 AND @playerdiscountMyanmarOdds <> @playerdiscountMyanmarOdds_old)
 	SET @updatecomm_old = 1
 ELSE 
 	SET @updatecomm_old = 0
@@ -244,10 +244,6 @@ Select @LogSPData = '<Age_CustomerUpdUserComm CustID="'+ coalesce(cast(@CustID a
 'playerdiscount1x2="'+ coalesce(cast(@playerdiscount1x2 as nvarchar(50)),space(1))+ '" ' +
 'playerdiscountHRFixedOdds="'+ coalesce(cast(@playerdiscountHRFixedOdds as nvarchar(50)),space(1))+ '" ' +
 'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber as nvarchar(50)),space(1))+ '" ' 
-
-
-
-
 
 IF @IsMyanmarOdds = 1
 	SET @LogSPData = @LogSPData + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds as nvarchar(50)),space(1))+ '" ' 
