@@ -6,15 +6,14 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 /****** Object:  Stored Procedure dbo.Age_CustomerUpdUserComm    Script Date: 12/5/2013 4:35:18 PM ******/
-alter PROCEDURE [dbo].[Age_CustomerUpdUserComm_MO]	
+ALTER PROCEDURE [dbo].[Age_CustomerUpdUserComm]	
 	@custid INT, --customer to be updated
 	@playerdiscount DECIMAL(9,8),
 	@playerdiscountcs DECIMAL(9,8),
 	@playerdiscount1x2 DECIMAL(9,8),
 	@playerdiscountHRFixedOdds decimal(9,8) = 0,	
 	@playerdiscountnumber DECIMAL(9,8),
-	@playerdiscountMyanmarOdds DECIMAL(9,8)=0,
-	
+	@playerdiscountMyanmarOdds DECIMAL(9,8) = 0,
 	@userid INT, --updater Id	
 	@subaccid INT = 0, --Sub-AccountID
 	@language VARCHAR(2) = 'E',
@@ -22,6 +21,7 @@ alter PROCEDURE [dbo].[Age_CustomerUpdUserComm_MO]
 	@errcode INT = 0 OUTPUT,
 	@errmsg NVARCHAR(200) = '' OUTPUT
 AS
+BEGIN
  /*
 Created: 20090213@nqminh
 Task : Update commission of specific customer
@@ -76,18 +76,40 @@ set @startRun = getdate()
 
 --Check disable user
 EXEC dbo.Acc_CustomerSelCheckEnable @custid = @custid, @ErrCode=@ErrCode OUTPUT,@ErrMsg=@ErrMsg OUTPUT
-IF @ErrCode <>0 
-RETURN
+IF @ErrCode <>0 RETURN
 --end
 
 --Do update
+DECLARE @username VARCHAR(40), @recommend INT,
+		@discount DECIMAL(9,8), @discountcs DECIMAL(9,8), @ugroup VARCHAR(10),@discount1x2_max DECIMAL(9,8),@discountnumber_max DECIMAL(9,8), @discountHRFixedOdds_max DECIMAL(9,8)
+SELECT @UserName  = username,
+		@recommend = recommend,
+		@ugroup = c.ugroup
+FROM customer c WITH (NOLOCK) WHERE CustID = @CustID
+
 DECLARE	@playerdiscount_old DECIMAL(9,8),
 		@playerdiscountcs_old DECIMAL(9,8),		
 		@playerdiscount1x2_old DECIMAL(9,8),
 		@playerdiscountHRFixedOdds_old decimal(9,8),
 		@playerdiscountnumber_old DECIMAL(9,8),
-		@discountMyanmarOdds_old DECIMAL(9,8)
+		@playerdiscountMyanmarOdds_old decimal(9,8)
 		
+ -- For Myanmar Odds  
+ DECLARE @IsMyanmarOdds BIT = 0  
+ 
+ SELECT @recommend = recommend
+ FROM custInfo WITH (NOLOCK)
+ WHERE custid = @custid  
+ 
+ SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@recommend)  
+    
+ IF @IsMyanmarOdds = 1  
+ BEGIN  
+  -- Get old value  
+  SET @playerdiscountMyanmarOdds_old = (SELECT playerdiscount FROM CustCommRate WITH (NOLOCK) WHERE CustId = @custid AND Sporttype = 1 AND Bettype = 301)  
+    
+ END  
+ 		
 DECLARE @updatecomm_old BIT
 
 SELECT @playerdiscount_old = playerdiscount
@@ -106,27 +128,16 @@ from custsetting (nolock) where custid = @custid and sporttype = 154 and bettype
 SELECT @playerdiscountnumber_old = playerdiscount
 FROM custsetting3rd (NOLOCK) WHERE custid = @custid AND sporttype = 161 AND bettype = 81
 
-DECLARE @srecommend INT = 0, @IsMyanmarOdds BIT = 0
-SELECT @srecommend = srecommend FROM custInfo WITH (NOLOCK) WHERE custid = @custid
-
-SET @IsMyanmarOdds = (SELECT IsMyanmarOdds FROM custsuper WITH (NOLOCK) WHERE custid = @srecommend )
-IF @IsMyanmarOdds = 1
-BEGIN
-	SET @discountMyanmarOdds_old = (SELECT playerdiscount FROM CustCommRate WHERE CustID = @custid AND SportType = 1 AND BetType = 301)
-END
 
 
-IF @playerdiscount_old <> @playerdiscount OR @playerdiscountcs_old <> @playerdiscountcs OR @playerdiscount1x2 <> @playerdiscount1x2_old OR @playerdiscountnumber <> @playerdiscountnumber_old 
-	OR @playerdiscountHRFixedOdds <> @playerdiscountHRFixedOdds_old OR (@IsMyanmarOdds = 1 AND @playerdiscountMyanmarOdds <> @discountMyanmarOdds_old)
+IF @playerdiscount_old <> @playerdiscount OR @playerdiscountcs_old <> @playerdiscountcs OR @playerdiscount1x2 <> @playerdiscount1x2_old OR @playerdiscountnumber <> @playerdiscountnumber_old OR @playerdiscountHRFixedOdds <> @playerdiscountHRFixedOdds_old
+	OR @playerdiscountMyanmarOdds <> @playerdiscountMyanmarOdds_old
 	SET @updatecomm_old = 1
 ELSE 
 	SET @updatecomm_old = 0
-
-SELECT @updatecomm_old
-
+	
 IF @updatecomm_old = 0
 	RETURN
-
 
 --Check Param
 IF	@playerdiscount<0 OR @playerdiscount>0.2
@@ -134,7 +145,7 @@ IF	@playerdiscount<0 OR @playerdiscount>0.2
 	OR @playerdiscount1x2<0 OR @playerdiscount1x2>0.2
 	OR @playerdiscountHRFixedOdds<0 OR @playerdiscountHRFixedOdds>0.2
 	OR @playerdiscountnumber<0 OR @playerdiscountnumber>0.2
-	OR (@IsMyanmarOdds = 1 AND @playerdiscountMyanmarOdds < 0 AND @playerdiscountMyanmarOdds > 0.01)
+	OR @playerdiscountMyanmarOdds < 0  OR @playerdiscountMyanmarOdds > 0.01
 BEGIN	
 	SELECT @ErrMsg = CASE @Language 
 						WHEN 'E' THEN 'Invalid commission rate.'
@@ -144,12 +155,7 @@ BEGIN
 END
 
 ---------------------------------------
-DECLARE @username VARCHAR(40), @recommend INT,
-		@discount DECIMAL(9,8), @discountcs DECIMAL(9,8), @ugroup VARCHAR(10),@discount1x2_max DECIMAL(9,8),@discountnumber_max DECIMAL(9,8), @discountHRFixedOdds_max DECIMAL(9,8)
-SELECT @UserName  = username,
-		@recommend = recommend,
-		@ugroup = c.ugroup
-FROM customer c WITH (NOLOCK) WHERE CustID = @CustID
+
 
 IF @updatecomm_old = 1
 BEGIN
@@ -193,18 +199,16 @@ BEGIN
 	
 	SELECT @playerdiscountHRFixedOdds = CASE WHEN @playerdiscountHRFixedOdds > @discountHRFixedOdds_max THEN @discountHRFixedOdds_max ELSE @playerdiscountHRFixedOdds END		
 	
-	EXEC dbo.Acc_CustomerUpdMember_Commission_MO
+	EXEC dbo.Acc_CustomerUpdMember_Commission 
 		@custid = @custid,
 		@playerdiscount = @playerdiscount,
 		@playerdiscountcs = @playerdiscountcs , 
 		@playerdiscount1x2 = @playerdiscount1x2,
 		@playerdiscountHRFixedOdds = @playerdiscountHRFixedOdds,
 		@playerdiscountnumber =  @playerdiscountnumber, 
-		
 		@IsMyanmarOdds = @IsMyanmarOdds,
 		@discountMyanmarOdds = @playerdiscountMyanmarOdds,
-		@discountMyanmarOdds_old = @discountMyanmarOdds_old,
-
+		@discountMyanmarOdds_old = @playerdiscountMyanmarOdds_old,
 		@updatecomm_old = @updatecomm_old,
 		@SubAccID = @SubAccID,
 		@UserID = @UserID,
@@ -227,6 +231,7 @@ BEGIN
 	RETURN
 END
 
+
 ------------------------
 --Write log file
 
@@ -239,6 +244,10 @@ Select @LogSPData = '<Age_CustomerUpdUserComm CustID="'+ coalesce(cast(@CustID a
 'playerdiscount1x2="'+ coalesce(cast(@playerdiscount1x2 as nvarchar(50)),space(1))+ '" ' +
 'playerdiscountHRFixedOdds="'+ coalesce(cast(@playerdiscountHRFixedOdds as nvarchar(50)),space(1))+ '" ' +
 'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber as nvarchar(50)),space(1))+ '" ' 
+
+
+
+
 
 IF @IsMyanmarOdds = 1
 	SET @LogSPData = @LogSPData + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds as nvarchar(50)),space(1))+ '" ' 
@@ -259,7 +268,7 @@ Select @TrackingValue2 = '<Age_CustomerUpdUserComm CustID="'+ coalesce(cast(@Cus
 'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber_old as nvarchar(50)),space(1))+ '" ' 
 
 IF @IsMyanmarOdds = 1
-	SET @TrackingValue2 = @TrackingValue2 + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@discountMyanmarOdds_old as nvarchar(50)),space(1))+ '" ' 
+	SET @TrackingValue2 = @TrackingValue2 + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds_old as nvarchar(50)),space(1))+ '" ' 
 SET @TrackingValue2 = @TrackingValue2 +	
 'IP="' + coalesce(cast(@IP as varchar(15)),space(1))+ '" ' +
 'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1))+ '" ' +
@@ -307,7 +316,7 @@ BEGIN CATCH
 	'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber_old as nvarchar(50)),space(1))+ '" ' 
 	
 	IF @IsMyanmarOdds = 1
-		SET @TrackingValue2 = @TrackingValue2 + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@discountMyanmarOdds_old as nvarchar(50)),space(1))+ '" ' 
+		SET @TrackingValue2 = @TrackingValue2 + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds_old as nvarchar(50)),space(1))+ '" ' 
 	
 	SET @TrackingValue2 = @TrackingValue2 +		
 	'IP="' + coalesce(cast(@IP as varchar(15)),space(1))+ '" ' +
@@ -325,10 +334,12 @@ BEGIN CATCH
 		@TrackingValue2 = @TrackingValue2,
 		@duration = @duration
 END CATCH
+END
+
 
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdUserComm_MO] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdUserComm] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerUpdUserComm_MO] TO [bodbExtAccNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_CustomerUpdUserComm] TO [bodbExtAccNet] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdUserComm_MO] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerUpdUserComm] TO [vnteam] AS [dbo]
