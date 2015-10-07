@@ -27,7 +27,7 @@ Revisions:
 					3. Remove betype 23101 in CasinoOutstanding    
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]   
 	- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
-	- 20150907@Winnie: Do not check ticket running of Colosus bet at bettrans table, because of the translog [#43180]
+	- 20150907@Winnie: Do not check ticket running of Colosus bet at bettrans table, because of the translog [#43180] 
 */
 SET NOCOUNT ON
  
