@@ -1,13 +1,12 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_MAg_New]    Script Date: 06/15/2015 05:14:36 ******/
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_MAg_New_xtest]    Script Date: 9/7/2015 10:47:04 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 5/19/2015 3:17:10 AM ******/
-/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 5/11/2015 1:37:23 PM ******/
-/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 4/27/2015 10:34:40 AM ******/
+/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 6/30/2015 3:21:33 AM ******/
+/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 6/15/2015 4:53:33 PM ******/
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	@custid			 INT = NULL --mrecommend
@@ -24,6 +23,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	,@showVS         BIT = 0
 	,@showKeno       BIT = 0
 	,@showGD		 BIT = 0
+	,@showCB			BIT = 0
 	,@BalanceUpDay   SMALLDATETIME
 	,@PageSize       INT = 0
 	,@PageIndex      INT = 0
@@ -76,6 +76,7 @@ Revisions:
 	- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20150613@Francis: Change to use temporary table instead of table variable to improve performance
 	- 20150615@Sophia: Apply Gold Deluxe [Redmine: #35278]
+	- 20150831@Winnie: Include CB [Redmine: #42409]
 */
 
 
@@ -88,25 +89,25 @@ SELECT @PageIndex = @PageIndex - 1
        ,@RowStart = @PageSize * @PageIndex + 1
        ,@RowEnd = @RowStart + @PageSize - 1
 
-/*
-DECLARE #MAgWinLossDetails TABLE
-(
-    CustID			INT
-    ,TurnOver		MONEY
-    ,GrossComm		MONEY
-    ,MemberWinLost	MONEY
-	,PlayerComm		MONEY
-	,MemberTotal	MONEY
-	,AgWinLost		MONEY
-	,AgComm			MONEY
-	,AgTotal		MONEY
-	,MAgWinLost		MONEY
-	,MAgComm		MONEY
-	,MAgTotal		MONEY
-	,Company		MONEY
-	,NoOfTicket		INT
-)
-*/
+
+--DECLARE @MAgWinLossDetails TABLE
+--(
+--    CustID			INT
+--    ,TurnOver		MONEY
+--    ,GrossComm		MONEY
+--    ,MemberWinLost	MONEY
+--	,PlayerComm		MONEY
+--	,MemberTotal	MONEY
+--	,AgWinLost		MONEY
+--	,AgComm			MONEY
+--	,AgTotal		MONEY
+--	,MAgWinLost		MONEY
+--	,MAgComm		MONEY
+--	,MAgTotal		MONEY
+--	,Company		MONEY
+--	,NoOfTicket		INT
+--)
+
 
 CREATE TABLE #MAgWinLossDetails
 (
@@ -198,7 +199,12 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(255, 0) 
 END
-
+IF @showCB = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(204, 0) 
+END
 DECLARE @SportBettype TABLE(
 	ProductID INT
 	,Bettype INT
@@ -241,6 +247,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showVS = 1 THEN 5 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showGD = 1 THEN 12 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showCB = 1 THEN 15 ELSE 0 END
 				)
 				-- and (bettype < case when @showSB = 1 then 31 else 0 end
 				--OR bettype between 121 and case when @showSB = 1 then 999 else 0 end
@@ -380,19 +387,5 @@ SELECT wl.*
  WHERE 1 = 1
    AND wl.RowNum BETWEEN @RowStart AND @RowEnd
 
-DROP TABLE #MAgWinLossDetails
-
-
 
 DROP TABLE #MAgWinLossDetails
-
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam] AS [dbo]
