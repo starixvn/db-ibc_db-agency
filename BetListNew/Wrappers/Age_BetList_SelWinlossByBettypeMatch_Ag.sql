@@ -1,44 +1,46 @@
-﻿USE bodb02
+USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_BetList_SelWinlossByBettypeMatch_Ag]
 	@MatchID 			INT
-	, @custid 			INT	= NULL
-	, @username 		VARCHAR(50) = NULL
+	, @custid 			INT			= NULL
+	, @username 		VARCHAR(50)	= NULL
 	, @bettype 			INT
-	, @Language 		VARCHAR(2) = 'E'
-	, @liveindicator 	INT = 0
+	, @Language 		VARCHAR(2)	= 'E'
+	, @liveindicator	INT			= 0
 AS
 
 /*
-Created: 
-Task : Betlist
-DB: DBAGE.bodb02
-Original:BetsSelBetListMatchWinLoss_Ag
-Revisions:
-    - 200712/11@Phuc: For API
-    - 20080108: add leaguename,typenamee2,sportname
-    - 20080629@Viet: Remove Teamname, Leaguename, Sportname, TypeName
-    - 20090326@Phuc: get indexname for FI
-    - 20090406@HanhVu: remove refno
-    - 20090416@Minh: remove indexName
-	- 20090421@[HiepVo]: Include more columns: comm, acomm, scomm, awinlost, mwinlost, swinlost
-	- 20090505@HiepVo: Change formula of commission
-	- 20090618@AnhPham: Remove 'Customer' table
-	- 20090710@Phuc: unhide IP for TB currency.	
-	- 20101123@Jacob: Add column betid in select clause
-	- 20110408@Amy: Change function to get Odds value and showed odds type
-	- 20110809@Sophia: Add a new parametter @liveindicator
-	- 20110811@Sophia: Add new columns actual_stake and modds 
-	- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
-	- 20120112@Sophia:  Add refno, showtime for Table - Shoe - Hand of LiveCasino 
-						Add Sub table for Live Casino
-	- 20120926@Sophia: Get comstatus
-	- 20141016@Sophia: support Sporting solution-grouped bettype 
-	- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
-	- 20150331@Cody: Aplly sport bettype matrix [Redmine: #30169]
-	- 20150526@Bobby: Implement betlist core
-	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+	Created: 
+	Task : Betlist
+	DB: DBAGE.bodb02
+	Original:BetsSelBetListMatchWinLoss_Ag
+	Revisions:
+		- 200712/11@Phuc: For API
+		- 20080108: add leaguename,typenamee2,sportname
+		- 20080629@Viet: Remove Teamname, Leaguename, Sportname, TypeName
+		- 20090326@Phuc: get indexname for FI
+		- 20090406@HanhVu: remove refno
+		- 20090416@Minh: remove indexName
+		- 20090421@[HiepVo]: Include more columns: comm, acomm, scomm, awinlost, mwinlost, swinlost
+		- 20090505@HiepVo: Change formula of commission
+		- 20090618@AnhPham: Remove 'Customer' table
+		- 20090710@Phuc: unhide IP for TB currency.	
+		- 20101123@Jacob: Add column betid in select clause
+		- 20110408@Amy: Change function to get Odds value and showed odds type
+		- 20110809@Sophia: Add a new parametter @liveindicator
+		- 20110811@Sophia: Add new columns actual_stake and modds 
+		- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
+		- 20120112@Sophia:  Add refno, showtime for Table - Shoe - Hand of LiveCasino 
+							Add Sub table for Live Casino
+		- 20120926@Sophia: Get comstatus
+		- 20141016@Sophia: support Sporting solution-grouped bettype 
+		- 20150209@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
+		- 20150331@Cody: Aplly sport bettype matrix [Redmine: #30169]
+		- 20150526@Bobby: Implement betlist core
+		- 20150826@Kos: Add OddsSpread column to support Myanmar Odds
+		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
+		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -54,7 +56,7 @@ BEGIN
 	
 	-- Gather BettypeMatrix
 	INSERT INTO @BettypeMatrix
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=5
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
 	;WITH CteBettype (bettype)
 	AS (
@@ -127,10 +129,12 @@ BEGIN
 								refno,
 								betcheck,
 								comstatus,
-								transdesc'
+								transdesc,
+								OddsSpread'
 		
 	RETURN;
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelWinlossByBettypeMatch_Ag] TO [bodbDownlineNet]
 GO

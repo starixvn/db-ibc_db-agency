@@ -1,10 +1,18 @@
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]    Script Date: 8/27/2015 3:59:56 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]
- @custid	INT, 
- @transid BIGINT = 0,
- @LimitRowCount int = 20 
-  WITH RECOMPILE
+	@custid			INT, 
+	@transid		BIGINT	= 0,
+	@LimitRowCount	INT		= 20 
+WITH RECOMPILE
 AS
-BEGIN
+
 /*	
 	Created	: Johnson
 	Task: Monitor lastest bets list( all bettypes and others bettype not handicap and over/under)
@@ -17,19 +25,23 @@ BEGIN
 		- 20130222@Elodie: Get oddsid value to use for Virtual HR		
 		- 20150302@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 		- 20150706@Bobby: Exclude Metric Gaming running ticket
+		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds and exclude Myanmar Odds bet types
 		
 	Parameter's Explanation:
 		- @custid : agent's ID
 		- @transid: lastest transid 
 		- @LimitRowCount: max record return.
 */ 
+
+BEGIN
 	SET NOCOUNT ON
+
 	SELECT TOP(@LimitRowCount)
 		b.custid,
 		0 AS sporttype,
 		b.matchid,	
-		0 AS leagueid,			
-		b.Username,				
+		0 AS leagueid,
+		b.Username,
 		b.bettype,
 		b.transid,
 		b.refno,
@@ -37,7 +49,7 @@ BEGIN
 		'' AS matchcode,
 		0 AS homeid,
 		0 AS awayid,
-		b.oddsid as Race,				
+		b.oddsid AS Race,
 		b.betid,
 		b.livehomescore,
 		b.liveawayscore,
@@ -47,24 +59,28 @@ BEGIN
 		b.odds,
 		b.stake,
 		b.actual_stake, 
-		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
-				 ELSE b.status 
-				 END as status, 
-		b.betteam,				
+		CASE 
+			WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+			ELSE b.status 
+		 END AS status, 
+		b.betteam,
 		b.IP,
-		CONVERT(BIT,0) AS isNeutral,			
+		CONVERT(BIT, 0) AS isNeutral,
 		b.oddstype,
-		ISNULL(b.Betcheck,'') Betcheck
-	FROM dbo.bettrans b WITH(NOLOCK)				
+		ISNULL(b.Betcheck, '') Betcheck,
+		0 AS OddsSpread
+	FROM dbo.bettrans AS b WITH(NOLOCK)
 	WHERE b.recommend = @custid 
-		AND b.statusID BETWEEN 0 AND 1	
-		AND b.bettype NOT IN (1,3,7,8)	
+		AND b.statusID BETWEEN 0 AND 1
+		AND b.bettype NOT IN (1, 3, 7, 8, 301, 302, 303, 304)
 		AND b.bettype < 19001
 		AND b.transid > @transid
-		AND b.bettype NOT BETWEEN 801 AND 806 				
+		AND b.bettype NOT BETWEEN 801 AND 806
 		
 	ORDER BY b.transid DESC
 END
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes] TO [bodbDownlineNet]

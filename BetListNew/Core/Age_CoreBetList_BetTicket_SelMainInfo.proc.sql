@@ -16,6 +16,7 @@ Original:
 Revisions:
 	- 20150504@Bobby.Nguyen: Create new SP - Apply GD product
 	- 20150526@Bobby.Nguyen: Apply metric-gaming bettype
+	- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 
 Param's Explanation:
@@ -91,6 +92,7 @@ BEGIN
 		, betcheck 			NVARCHAR(50)
 		, comstatus 		NVARCHAR(20)
 		, transdesc			NVARCHAR(300)
+		, OddsSpread		SMALLMONEY
 	);
 	
 	-- CHECK for selecting from translog

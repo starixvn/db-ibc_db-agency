@@ -57,3 +57,5 @@ GRANT SELECT ON [dbo].[Age_f_SplitString] TO [bodbAdminNet]
 GO
 GRANT SELECT ON [dbo].[Age_f_SplitString] TO [bodbDownlineNet]
 GO
+GRANT SELECT ON [dbo].[Age_f_SplitString] TO [bodbDownlineNetView] AS [dbo]
+GO

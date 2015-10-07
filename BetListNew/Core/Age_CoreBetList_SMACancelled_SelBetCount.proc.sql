@@ -20,6 +20,7 @@ AS
 
 	Revisions:
 		- 20150504@Bobby.Nguyen: Create new SP
+		- 20150831@Kos.Nguyen: Support Colossus Bet
 		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 		
 	Param's Explanation:
@@ -174,7 +175,8 @@ BEGIN
 		- Casino				: ProductId = 6
 		- Bingo					: ProductId = 7
 		- Keno					: ProductId = 8
-		- Gold Delux			: ProductId = 12
+		- Gold Deluxe			: ProductId = 12
+		- Colossus Bet			: ProductId = 15
 	*/
 	IF( EXISTS(SELECT TOP 1 1 FROM #tempRawData WHERE EventType IN (0)) )
 	BEGIN
@@ -188,7 +190,7 @@ BEGIN
 			
 		FROM #tempRawData AS b
 		WHERE b.EventType 	= 0
-			AND b.ProductID IN (6, 7, 8, 9, 12)
+			AND b.ProductID IN (6, 7, 8, 9, 12, 15)
 
 		GROUP BY b.custid
 			, b.recommend
@@ -220,7 +222,7 @@ BEGIN
 			
 		FROM #tempRawData AS b
 			INNER JOIN CteMatch AS m WITH (NOLOCK) 
-			ON b.matchid		= m.matchid 		
+			ON b.matchid		= m.matchid
 			
 		WHERE b.EventType 	= 1
 			
@@ -323,6 +325,7 @@ BEGIN
 	
 	RETURN;
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_SMACancelled_SelBetCount] TO [bodbDownlineNet]
 GO
