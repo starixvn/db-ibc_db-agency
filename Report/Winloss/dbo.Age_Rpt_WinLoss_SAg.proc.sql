@@ -1,7 +1,12 @@
-﻿USE bodb02
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLoss_SAg]    Script Date: 10/7/2015 12:47:24 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
-ALTER PROCEDURE [Age_Rpt_WinLoss_SAg]  
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
  @CustID				INT --srecommend  
  ,@FromDate				SMALLDATETIME
  ,@ToDate				SMALLDATETIME  
@@ -17,6 +22,7 @@ ALTER PROCEDURE [Age_Rpt_WinLoss_SAg]
  ,@showProgressiveBonus BIT =0
  ,@showKeno				BIT = 0
  ,@showGD				BIT = 0
+ ,@showCB				BIT = 0
  ,@BalanceUpDay			SMALLDATETIME  
   
 WITH RECOMPILE  
@@ -60,7 +66,8 @@ AS
   - 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
   - 20150306@Cody: Apply sport bettype matrix [redmine: #30169]
   - 20150507@Sophia: Apply Gold Deluxe [Redmine: #35278]
-  
+  - 20150831@Winnie: Include CB [Redmine: #42409]
+
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
   
@@ -149,7 +156,12 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(255, 0) 
 END
-
+IF @showCB = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(204, 0) 
+END
 DECLARE @SportBettype TABLE(
 	ProductID INT
 	,Bettype INT
@@ -186,6 +198,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showVS = 1 THEN 5 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showGD = 1 THEN 12 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showCB = 1 THEN 15 ELSE 0 END
 				)
 		  --  (  
 		  --   bettype < case when @showSB=1 then 31 else 0 end  
@@ -276,9 +289,3 @@ FROM
 GROUP BY w.CustID, c.UserName  
 ORDER BY c.Username
 
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLoss_SAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLoss_SAg] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLoss_SAg] TO [vnteam]

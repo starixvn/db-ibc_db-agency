@@ -1,9 +1,11 @@
-﻿/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinlossAnalysis_MAg]    Script Date: 5/11/2015 10:54:57 AM ******/
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinlossAnalysis_SAg]    Script Date: 10/7/2015 12:40:37 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_SAg]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,  
 	@ToDate			SMALLDATETIME,   
@@ -12,37 +14,39 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
 	@ShowCasino		BIT = 0,
 	@ShowBI			BIT = 0,
 	@ShowNG			BIT = 0,
-	@showP2P		BIT = 0,
+	@showP2P		BIT = 0,	
 	@showLiveCasino BIT = 0,
 	@showVS			BIT = 0,
 	@showKeno		BIT = 0,
 	@showGD			BIT = 0,
+	@showCB 		BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
 /*  Created: Lukas  
 	Date: 2011-05-23 
-    Task : Master Winloss analysis Report
+    Task : Super Winloss analysis Report 
     DB: DBAGE/bodb02
    
     Revisions:  
     - 20110801@Sophia: change the range of number game's bettype from 81 to 120
-	- 20110805@Sophia: Calculate betcount for Combination MixParlay only for BetID = 0 (main ticket)
-	- 20110819@Sophia: Count Negative stake as positive turnover
+    - 20110805@Sophia: Calculate betcount for Combination MixParlay only for BetID = 0 (main ticket)
+    - 20110819@Sophia: Count Negative stake as positive turnover
 	- 20110927@Tom: 1. Add Report for P2P Games Sport : 251->253 , Bettype: 72->1000	
 					2. Remove parameter @ABSDate ('2011-09-01')
-	- 20111130@Sophia: Change the range of Sport book bettype>=121 and bettype<=999
+	- 20111130@Sophia: Change the range of Sport book bettype>=121 and bettype<=999				
 	- 20120112@Sophia: Add LiveCasino: Sporttype: 162, bettype: 1101 ->1199
 	- 20120801@Sophia: Add Virtual Sports (sporttype = 180 for representing), bettype : 1201 -> 1299
-    - 20121010@Johnson: Add new range bettype for tennis (from 1301 to 1334) 
-    - 20130121@Dan: add linked server DBSUM for bodb_Summary
+	- 20121010@Johnson: Add new range bettype for tennis (from 1301 to 1334) 
+	- 20130121@Dan: add linked server DBSUM for bodb_Summary
 	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
 	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
 	- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
+	- 20150831@Winnie: Include CB [Redmine: #42409]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
-		+ @CustID MasterID	
+		+ @CustID SuperID	
 */  
 BEGIN
 	SET NOCOUNT ON
@@ -58,13 +62,15 @@ BEGIN
 										comm		MONEY,
 										mwinlost	MONEY,
 										acomm		MONEY,
+										swinlost	MONEY,
+										scomm		MONEY,
 										company		MONEY,
 										betcount	INT
 									)
 
 	DECLARE @TmpCond TABLE(sporttype INT, bettype INT)
 	DECLARE @TmpCondSumWL TABLE(sporttype INT, bettype INT)
-
+	
 	DECLARE @SportBettype TABLE(ProductID INT,  Bettype INT, EventType INT)	
 	INSERT INTO @SportBettype
 	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
@@ -215,7 +221,8 @@ BEGIN
 		 INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		 VALUES(202,0)
 	END
-		
+	
+	
 	IF @showGD = 1
 	BEGIN
 		-- bettrans
@@ -228,11 +235,24 @@ BEGIN
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(255, 0)
 	END	
-		
+
+	IF @showCB = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	204 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 15
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(204, 0)
+	END	
+
 	IF @ToDate >= @BalanceUpDate
 	BEGIN
 		INSERT INTO @AgencyWinloss
-		SELECT winlostdate, mrecommend, t.sporttype
+		SELECT winlostdate, srecommend, t.sporttype
 			,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end)
 			,SUM(winlost-actual_stake) winlost
 			,SUM(playercomm) playercomm
@@ -240,15 +260,17 @@ BEGIN
 			,SUM(comm) comm
 			,SUM(mwinlost) mwinlost
 			,SUM(acomm) acomm
-			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(acomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-			,COUNT(transid)  betcount			
+			,SUM(swinlost) swinlost
+			,SUM(scomm) scomm
+			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
+			,COUNT(transid) betcount
 		FROM bettrans b WITH(NOLOCK) INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
-			AND mrecommend = @CustID 
+			AND srecommend = @CustID 
 			AND StatusID NOT IN (0,1,101,102,103)			
 		GROUP BY 
-			mrecommend, winlostdate, t.sporttype 
-
+			srecommend, winlostdate, t.sporttype
+		
 		-- get data from sum_winloss
 		IF @BalanceUpDate < @FromDate --if this case occurs then there is no data from sum_winloss_old
 		SELECT @BalanceUpDate = @FromDate
@@ -262,12 +284,14 @@ BEGIN
 			,comm
 			,mwinlost
 			,acomm
-			,awinlost + mwinlost + acomm + winlost
+			,swinlost
+			,scomm
+			,awinlost + mwinlost + swinlost + scomm + winlost
 			,betcount
 		FROM sum_winloss b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 		WHERE winlostdate BETWEEN @BalanceUpDate AND @ToDate
-			AND mrecommend = @CustID
-			AND roleid = 3
+			AND srecommend = @CustID
+			AND roleid = 4
 
 	END
 	IF @FromDate < @BalanceUpDate
@@ -287,12 +311,14 @@ BEGIN
 			,comm
 			,mwinlost
 			,acomm
-			,awinlost + mwinlost + acomm + winlost
+			,swinlost
+			,scomm
+			,awinlost + mwinlost + swinlost + scomm + winlost
 			,betcount
 		FROM DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
-			AND mrecommend = @CustID
-			AND roleid = 3
+			AND srecommend = @CustID
+			AND roleid = 4
 	END
 
 	SELECT	CASE WHEN @ReportType = 1 THEN CONVERT(VARCHAR(8),winlostdate,112)  
@@ -310,6 +336,9 @@ BEGIN
 			,SUM(mwinlost) AS master_winlost
 			,SUM(acomm - comm) AS master_comm
 			,SUM(mwinlost + acomm - comm) master_total
+			,SUM(swinlost) AS super_winlost
+			,SUM(scomm - acomm) super_comm			
+			,SUM(swinlost + scomm - acomm) AS super_total
 			,-SUM(company) AS company
 			,SUM(betcount) AS betcount
 	FROM @AgencyWinloss
@@ -321,9 +350,6 @@ BEGIN
 			END 
 END
 
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [vnteam] 
+
+
+

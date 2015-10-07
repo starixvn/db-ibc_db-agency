@@ -1,4 +1,11 @@
-﻿  ALTER PROCEDURE [Age_Chart_WinlossAnalysis_MAg]
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Chart_WinlossAnalysis_MAg]    Script Date: 10/7/2015 12:44:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+  ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_MAg]
 	@agentID		INT,	
 	@fromdate		DATETIME,
 	@todate			DATETIME,	
@@ -12,6 +19,7 @@
 	@showVS			BIT = 0,
 	@showKeno		BIT = 0,
 	@showGD			BIT = 0,
+	@showCB			BIT = 0,
 	@BalanceUpDate	DATETIME
 AS	
 /*
@@ -29,7 +37,7 @@ AS
 		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
 		- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
-
+		- 20150831@Winnie: Include CB [Redmine: #42409]
 	Parameters Explanation:
 */
 SET NOCOUNT ON
@@ -211,6 +219,19 @@ SET NOCOUNT ON
 		VALUES(255, 0)
 	END	
 	
+	IF @showCB = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	204 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 15
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(204, 0)
+	END	
+	
 	
 	IF @ToDate >= @BalanceUpDate
 	BEGIN
@@ -272,10 +293,3 @@ SET NOCOUNT ON
 
 			 
 	
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Chart_WinlossAnalysis_MAg] TO [vnteam]
-GO
-GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_MAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_MAg] TO [bodbDownlineNetView]
- 
