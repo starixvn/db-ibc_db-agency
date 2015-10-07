@@ -1,5 +1,13 @@
-﻿﻿ALTER PROCEDURE [Age_Rpt_Outstanding_SAg]
-@CustID int
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_Outstanding_SAg]    Script Date: 9/7/2015 2:47:48 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_Rpt_Outstanding_SAg    Script Date: 9/3/2015 9:23:28 AM ******/
+ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_SAg]
+@CustID int 
 
 AS
 /*
@@ -18,6 +26,7 @@ Revisions:
 					3. Remove betype 23101 in CasinoOutstanding 
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]   
 	- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
+	- 20150907@Winnie: Do not check ticket running of Colosus bet at bettrans table, because of the translog [#43180]
 */
 SET NOCOUNT ON
 /*
@@ -40,6 +49,7 @@ AS (
 	FROM bettrans with (nolock) 
 	WHERE	ruben=0
 			AND bettype NOT BETWEEN 801 AND 899
+			AND bettype <>18000
 			AND srecommend =  @CustID
 	GROUP BY mrecommend
 	UNION ALL 
@@ -80,11 +90,3 @@ INNER JOIN (SELECT mrecommend,
 			GROUP BY mrecommend
 			) b ON c.custid = b.mrecommend
 ORDER BY username
-
-
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_SAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_SAg] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_Outstanding_SAg] TO [vnteam]
