@@ -1,4 +1,9 @@
-﻿USE bodb02
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_LeagueSelRunning_SAg]    Script Date: 10/7/2015 11:16:04 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Age_LeagueSelRunning_SAg]
@@ -16,10 +21,11 @@ Revisions:
 	- 20090325@Phuc: add para bettypes, remove unused code
 	- 20110516@Johnson: expand length of @Bettypes parameter
 	- 20150408@Cody: Apply bet radar bettype (167) [Remine: #32734]
+	- 20150826@Winnie: Myanmar Odds
 */
 SET NOCOUNT ON
 
-Select @Bettypes = case @Bettypes when '0' then '1,3,7,8,5,15,167' when '1' then '1,3,7,8' when '5' then '5,15, 167' else '1,3,7,8,5,15, 167' end 
+Select @Bettypes = case @Bettypes when '0' then '1,3,7,8,301,302,303,304,5,15,167' when '1' then '1,3,7,8,301,302,303,304' when '5' then '5,15, 167' else '1,3,7,8,301,302,303,304,5,15, 167' end 
 
 select 
 	m.leagueid
@@ -35,9 +41,3 @@ where  m.eventstatus in ('running')
 group by  m.leagueid, league.leagueid, m.sporttype
 order by league.leagueid
 
-GO
-
-GRANT EXECUTE ON [dbo].[Age_LeagueSelRunning_SAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_LeagueSelRunning_SAg] TO [bodbDownlineNetView]
-GO

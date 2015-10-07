@@ -1,4 +1,9 @@
-﻿USE bodb02
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_ScoreMap_SelBettype]    Script Date: 10/7/2015 11:20:23 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
  ALTER PROCEDURE [dbo].[Age_ScoreMap_SelBettype]  
@@ -12,7 +17,8 @@ AS
 	- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
     - 20140417@Dom: Add new bettype 126
 	- 20140807@Dom: Include 11 new bettypes of Soccer [feature: #19632]
-	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
+	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738
+	- 20150828@Winnie: Myanmar odds
  Parameter
 	EvenType : 0 DeadBall 1 LiveBall
 */  
@@ -29,8 +35,8 @@ BEGIN
 	
 	SELECT 1 typeid
 	,0 EvenType
-	,'1,7' [1stId]
-	,'1,7' [InfoId]
+	,'1,7,301,303' [1stId]
+	,'1,7,301,303' [InfoId]
 	,1 OrderID
 	UNION ALL
 	SELECT 1 typeid
@@ -54,8 +60,8 @@ BEGIN
 	UNION ALL
 	SELECT 3 typeid
 		,0 EvenType
-		,'3,8' [1stId]
-		,'3,8' [InfoId]
+		,'3,8,302,304' [1stId]
+		,'3,8,302,304' [InfoId]
 		,30 OrderID
 	UNION ALL
 	SELECT 3 typeid
@@ -220,11 +226,3 @@ BEGIN
 	ORDER BY OrderID,EvenType
 END  
 	
-GO
-
-
-GRANT EXECUTE ON [dbo].[Age_ScoreMap_SelBettype] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_ScoreMap_SelBettype] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_ScoreMap_SelBettype] TO [vnteam]

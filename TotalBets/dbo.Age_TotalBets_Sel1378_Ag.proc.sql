@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_TotalBets_Sel1378_Ag]
+﻿USE [bodb_Age]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_TotalBets_Sel1378_Ag]    Script Date: 10/7/2015 11:21:40 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel1378_Ag]
 	@custid INT,
 	@Language varchar(2) = 'E'
 AS
@@ -6,12 +13,13 @@ AS
 /*
 Created: 20090122@Thien
 Task : Retrieve Total Bet values for bettype 1,3,7,8
-DB: DB05.bodb02
+DB: DBAGE/bodb_AGE
 Original: eagenttotalbet13
 
 Revisions:
     -- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
-
+	- 20130925@Jamie: Change to bodb_Age / bettrans_running 
+	- 20150825@Winnie: Myanmar odds
 Param's Explanation:
 • @custid: agent ID
 */
@@ -27,18 +35,18 @@ SELECT
 	m.awayID,
 	b.livehomescore,
 	b.liveawayscore,
-	sum(Case when bettype=1 and betteam = 'h' then Stake else 0 End) AS home_odds_HDP,
-	sum(Case when bettype=1 and betteam = 'a' then Stake else 0 End) AS away_odds_HDP,
-	sum(Case when bettype=7 and betteam = 'h' then Stake else 0 End) AS home_odds_HTHDP,
-	sum(Case when bettype=7 and betteam = 'a' then Stake else 0 End) AS away_odds_HTHDP,
-	sum(Case when bettype=3 and betteam = 'h' then Stake else 0 End) AS home_odds_OU,
-	sum(Case when bettype=3 and betteam = 'a' then Stake else 0 End) AS away_odds_OU,
-	sum(Case when bettype=8 and betteam = 'h' then Stake else 0 End) AS home_odds_HTOU,
-	sum(Case when bettype=8 and betteam = 'a' then Stake else 0 End) AS away_odds_HTOU,
-	sum(case when bettype=1 then BetCount else 0 end) as BetCount_HDP,
-	sum(case when bettype=7 then BetCount else 0 end) as BetCount_HTHDP,
-	sum(case when bettype=3 then BetCount else 0 end) as BetCount_OU,
-	sum(case when bettype=8 then BetCount else 0 end) as BetCount_HTOU,
+	sum(Case when bettype IN(1,301) and betteam = 'h' then Stake else 0 End) AS home_odds_HDP,
+	sum(Case when bettype IN(1,301) and betteam = 'a' then Stake else 0 End) AS away_odds_HDP,
+	sum(Case when bettype IN(7,303) and betteam = 'h' then Stake else 0 End) AS home_odds_HTHDP,
+	sum(Case when bettype IN(7,303) and betteam = 'a' then Stake else 0 End) AS away_odds_HTHDP,
+	sum(Case when bettype IN(3,302)  and betteam = 'h' then Stake else 0 End) AS home_odds_OU,
+	sum(Case when bettype IN(3,302)  and betteam = 'a' then Stake else 0 End) AS away_odds_OU,
+	sum(Case when bettype IN(8,304) and betteam = 'h' then Stake else 0 End) AS home_odds_HTOU,
+	sum(Case when bettype IN(8,304) and betteam = 'a' then Stake else 0 End) AS away_odds_HTOU,
+	sum(case when bettype IN(1,301) then BetCount else 0 end) as BetCount_HDP,
+	sum(case when bettype IN(7,303) then BetCount else 0 end) as BetCount_HTHDP,
+	sum(case when bettype IN(3,302) then BetCount else 0 end) as BetCount_OU,
+	sum(case when bettype IN(8,304) then BetCount else 0 end) as BetCount_HTOU,
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 FROM
 	(SELECT
@@ -46,15 +54,14 @@ FROM
 		liveindicator, livehomescore, liveawayscore,
 		SUM(apositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake,
 		COUNT(*) BetCount
-	FROM bettrans WITH (NOLOCK)
+	FROM	dbo.bettrans_running WITH (NOLOCK)
 	WHERE
-			bettype IN (1,3,7,8)
+			bettype  IN (1,3,7,8,301,302,303,304)
 			AND recommend = @custid
-			--AND status in ('running', 'waiting')
-			AND statusID in (0,1)
-			AND ruben = 0
+			--AND statusID in (0,1) --AND status in ('running', 'waiting')
+			--AND ruben = 0
 	GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
-	INNER JOIN match 	m  WITH (NOLOCK) ON m.matchid       = b.matchid 	
+	INNER JOIN bodb02.dbo.match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
 WHERE	
 	m.eventstatus = 'running'	
 	
@@ -72,10 +79,5 @@ GROUP BY
 ORDER BY	
 	b.liveindicator desc, m.matchcode
 
-GO
-GRANT EXECUTE ON [dbo].[Age_TotalBets_Sel1378_Ag] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_TotalBets_Sel1378_Ag] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_TotalBets_Sel1378_Ag] TO [vnteam]
+
 

@@ -1,4 +1,9 @@
-﻿ USE bodb02
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_LeagueSelRunning_MAg]    Script Date: 10/7/2015 11:15:37 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Age_LeagueSelRunning_MAg]
@@ -18,10 +23,11 @@ Revisions:
 	- 20090325@Phuc: add para bettypes, remove unused code
 	- 20110516@Johnson: expand length of @Bettypes parameter
 	- 20150408@Cody: Apply bet radar bettype (167) [Remine: #32734]
+	- 20150826@Winnie: Myanmar Odds
 */
 SET NOCOUNT ON
 
-Select @Bettypes = case @Bettypes when '0' then '1,3,7,8,5,15,167' when '1' then '1,3,7,8' when '5' then '5,15,167' else '1,3,7,8,5,15,167' end 
+Select @Bettypes = case @Bettypes when '0' then '1,3,7,8,301,302,303,304,5,15,167' when '1' then '1,3,7,8,301,302,303,304' when '5' then '5,15,167' else '1,3,7,8,301,302,303,304,5,15,167' end 
 
 select 
 	match.leagueid
@@ -36,8 +42,3 @@ where  match.eventstatus in ('running')
 	and match.matchid IN(select distinct matchid from bettrans with (nolock) where status in ('running','waiting') and mrecommend = @MAgID and bettype in (select val from dbo.strSplit_Key(@Bettypes,','))) 
 group by  match.leagueid, league.leaguename, match.sporttype
 order by league.leaguename
-GO
-
-GRANT EXECUTE ON [dbo].[Age_LeagueSelRunning_MAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_LeagueSelRunning_MAg] TO [bodbDownlineNetView]
