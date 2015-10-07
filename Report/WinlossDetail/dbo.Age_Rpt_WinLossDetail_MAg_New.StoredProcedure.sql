@@ -8,7 +8,7 @@ GO
 /****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 6/30/2015 3:21:33 AM ******/
 /****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 6/15/2015 4:53:33 PM ******/
 
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME

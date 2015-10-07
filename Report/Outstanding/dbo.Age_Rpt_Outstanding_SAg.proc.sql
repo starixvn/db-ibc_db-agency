@@ -7,7 +7,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 /****** Object:  Stored Procedure dbo.Age_Rpt_Outstanding_SAg    Script Date: 9/3/2015 9:23:28 AM ******/
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_SAg]
-@CustID int
+@CustID int 
 
 AS
 /*
