@@ -11,7 +11,7 @@ ALTER FUNCTION  [dbo].[All_f_TransStatus]
 ( 
 	@TransType TINYINT = 0
 )
-RETURNS @res TABLE ( StatusId	INT, Name VARCHAR(100)  )
+RETURNS @res TABLE ( StatusId	TINYINT, Name VARCHAR(100)  )
 AS
  /*
 	Created	: Bobby.Nguyen
@@ -60,8 +60,9 @@ BEGIN
 END
 GO
 
-GRANT SELECT ON [dbo].[All_f_TransStatus] TO [bodbAdminNet]
+GRANT SELECT ON [dbo].[All_f_TransStatus] TO [bodbAdminNet]  AS [dbo]
 GO
-GRANT SELECT ON [dbo].[All_f_TransStatus] TO [bodbDownlineNet]
+GRANT SELECT ON [dbo].[All_f_TransStatus] TO [bodbDownlineNet]  AS [dbo]
 GO
+GRANT SELECT ON [dbo].[All_f_TransStatus] TO [bodbDownlineNetView] AS [dbo]
 

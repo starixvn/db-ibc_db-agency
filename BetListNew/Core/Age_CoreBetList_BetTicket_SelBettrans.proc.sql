@@ -18,6 +18,8 @@ Original:
 
 Revisions:
 	- 20150504@Bobby.Nguyen: Create new SP - Re-factor bet list
+	- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
+	- 20150831@Kos.Nguyen: Support Colossus Bet
 	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 	
 Param's Explanation:
@@ -36,6 +38,7 @@ BEGIN
 	- Bingo					: ProductId = 7
 	- Keno					: ProductId = 8
 	- Gold Delux			: ProductId = 12
+	- Colossus Bet			: ProductId = 15
 	*/
 	SELECT
 		CASE WHEN (b.bettype = 29 AND ISNULL(b.betid, 0) > 0) THEN b.betid
@@ -49,6 +52,7 @@ BEGIN
 				WHEN c.ProductID = 7 THEN 252
 				WHEN c.ProductID = 8 THEN 202
 				WHEN c.ProductID = 12 THEN 255
+				WHEN c.ProductID = 15 THEN 204
 				ELSE 0
 		END							AS Sporttype
 		
@@ -145,6 +149,7 @@ BEGIN
 				ELSE '0' 
 		END		AS comstatus
 		, '' AS transdesc
+		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust c 
 		ON b.transid		= c.transid
@@ -233,6 +238,7 @@ BEGIN
 			ELSE '0' 
 		END		AS comstatus
 		, CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc
+		, ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.match AS m WITH (NOLOCK) 
 		ON b.matchid		= m.matchid 		
@@ -307,7 +313,7 @@ BEGIN
 		, '' AS betcheck
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus				
 		, '' AS transdesc
-		
+		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.Outright AS m WITH (NOLOCK) 
 		ON b.matchid		= m.orid
@@ -382,7 +388,7 @@ BEGIN
 		, '' AS betcheck
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 		, '' AS transdesc
-		
+		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.VSOutright o WITH (NOLOCK) 
 		ON b.oddsid			= o.Orid

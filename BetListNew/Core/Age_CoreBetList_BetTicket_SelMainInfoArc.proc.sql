@@ -92,6 +92,7 @@ BEGIN
 		, betcheck 			NVARCHAR(50)
 		, comstatus 		NVARCHAR(20)
 		, transdesc			NVARCHAR(300)
+		, OddsSpread		SMALLMONEY
 	);
 	
 	-- CHECK for selecting from bettrans_bk

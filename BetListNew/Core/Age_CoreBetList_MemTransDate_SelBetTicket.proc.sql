@@ -30,6 +30,7 @@ AS
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150814@Bobby: #41600 - Update time range to datetime formation
+		- 20150831@Kos: Support Colossus Bet
 		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 	
 	Param's Explanation:
@@ -71,7 +72,7 @@ BEGIN
 	)
 	BEGIN
 		SELECT @Recommend 	= Recommend 
-		,@UserName			= UserName
+			,@UserName		= UserName
 		FROM dbo.custinfo WITH(NOLOCK) 
 		WHERE CustID		= @CustID
 	END
@@ -108,7 +109,8 @@ BEGIN
 	
 	/* running tickets
 		- Keno 			: ProductId = 8
-		- GoldDelux		: ProductId = 12
+		- Gold Deluxe	: ProductId = 12
+		- Colossus Bet	: ProductId = 15
 		- Metric Gaming	: Bettype(801-899)
 	*/
 	IF (EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1)))
@@ -130,7 +132,7 @@ BEGIN
 		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
 			AND	b.custid		= @CustID
 			AND	(
-				bt.ProductId	IN (8, 12) 
+				bt.ProductId	IN (8, 12, 15) 
 				OR bt.bettype BETWEEN 801 AND 899
 			)
 			AND b.statusID IN (0, 1)
