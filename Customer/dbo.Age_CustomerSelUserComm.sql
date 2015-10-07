@@ -123,7 +123,7 @@ Param's Explanation:
 			cs.custid=@CustID
 	END
 	ELSE
-	IF @RoleId IN (3,4) 
+	IF @RoleId = 3
 	BEGIN
 		
 		SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
@@ -173,7 +173,59 @@ Param's Explanation:
 			custsetting AS cs WITH (NOLOCK)
 			INNER JOIN CustSetting3rd as cs3 WITH (NOLOCK) ON cs.custid = cs3.custid
 		WHERE cs.custid=@CustID
-	end
+	END
+	ELSE IF @RoleId = 4
+	BEGIN
+	
+		SET @IsMyanmarOdds = dbo.fn_IsMyanmarOdds (@custid)
+		
+		IF @IsMyanmarOdds = 1
+		BEGIN
+			SET @sdiscountMyanmarOdds = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @SRecommend AND Sporttype = 1 AND Bettype = 301)
+			
+			SET @discountMyanmarOdds = (SELECT CommRate FROM AgentCommRate WITH (NOLOCK) WHERE CustId = @custid AND Sporttype = 1 AND Bettype = 301)
+			
+		END
+		
+		SELECT 
+			@ga = MAX(CASE WHEN acs.bettype = 1 AND acs.sporttype=1 THEN acs.groupa ELSE 0 END),
+			@gb = MAX(CASE WHEN acs.bettype = 1 AND acs.sporttype=1 THEN acs.groupb ELSE 0 END),
+			@gc = MAX(CASE WHEN acs.bettype = 1 AND acs.sporttype=1 THEN acs.groupc ELSE 0 END),
+			@gd = MAX(CASE WHEN acs.bettype = 1 AND acs.sporttype=1 THEN acs.groupd ELSE 0 END),
+			@dis1x2 = MAX(CASE WHEN acs.bettype = 5 AND acs.sporttype=1 THEN acs.sdiscount ELSE 0 END), --1x2 comm
+			@dis = MAX(CASE WHEN acs.bettype = 4 AND acs.sporttype=1 THEN acs.sdiscount ELSE 0 END), --other comm		
+			@disnumber = MAX(CASE WHEN acs3.bettype = 81 AND acs3.sporttype=161 THEN acs3.sdiscount ELSE 0 END),
+			@disHRFixedOdds = max(case when acs.bettype = 20 and acs.sporttype = 154 then acs.sdiscount else 0 end)-- HR Fixed Odds
+		FROM custsetting as acs WITH (NOLOCK)
+		INNER JOIN CustSetting3rd as acs3 WITH (NOLOCK) ON acs.custid = acs3.custid
+		WHERE acs.custid = @custid
+		
+		SELECT
+			MAX(CASE WHEN cs.bettype = 1 AND cs.sporttype=1 THEN cs.groupa ELSE 0 END) AS groupa,
+			MAX(CASE WHEN cs.bettype = 1 AND cs.sporttype=1 THEN cs.groupb ELSE 0 END) AS groupb,
+			MAX(CASE WHEN cs.bettype = 1 AND cs.sporttype=1 THEN cs.groupc ELSE 0 END) AS groupc,
+			MAX(CASE WHEN cs.bettype = 1 AND cs.sporttype=1 THEN cs.groupd ELSE 0 END) AS groupd,
+			MAX(CASE WHEN cs.bettype = 5 AND cs.sporttype=1 THEN cs.sdiscount ELSE 0 END) AS discount1x2, --1x2 comm
+			MAX(CASE WHEN cs.bettype = 4 AND cs.sporttype=1 THEN cs.sdiscount ELSE 0 END) AS discountcs, --other comm	
+			MAX(CASE WHEN cs3.bettype = 81 AND cs3.sporttype=161 THEN cs3.sdiscount ELSE 0 END) AS discountnumber,	
+			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.sdiscount else 0 end) as discountHRFixedOdds,
+			@ga AS groupa_max,
+			@gb AS groupb_max,
+			@gc AS groupc_max,
+			@gd AS groupd_max,
+			@dis1x2 AS discount1x2_max,
+			@dis AS discountcs_max,
+			@disnumber AS discountnumber_max,
+			@disHRFixedOdds as discountHRFixedOdds_max,
+			ISNULL(@IsMyanmarOdds,0) AS IsMyanmarOdds,
+			ISNULL(@discountMyanmarOdds,0.00) AS discountMyanmarOdds,
+			ISNULL(@sdiscountMyanmarOdds,0.00) AS discountMyanmarOdds_Max 
+		FROM 
+			custsetting AS cs WITH (NOLOCK)
+			INNER JOIN CustSetting3rd as cs3 WITH (NOLOCK) ON cs.custid = cs3.custid
+		WHERE cs.custid=@CustID
+	
+	END
 end
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelUserComm] TO [bodbDownlineNet]
