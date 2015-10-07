@@ -1,4 +1,9 @@
-﻿ USE bodb02
+﻿USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_CommByBettype_SAg]    Script Date: 10/7/2015 11:31:18 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_SAg]
@@ -41,7 +46,9 @@ Revisions:
 	- 20150331@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20150401@Elodie: Fix bug because of getting wrong data of Keno 
 	- 20150402@Cody: Apply 60 New Bettypes - BetRadar Phase II [Redmine: #32734]
-	- 20150511@Sophia: Apply Gold Deluxe and Metric Gaming  [Redmine: #35278]
+	- 20150511@Sophia: Apply Gold Deluxe and Metric Gaming  [Redmine: #35278
+	- 20150903@Winnie: Add column MO_comm for Myanmar odd [Redmine: #42813]
+	- 20150904@Winnie: Exclude CB
 */
 
 SET NOCOUNT ON
@@ -75,7 +82,7 @@ BEGIN
 		winlostdate between @FDate and @ToDate 
 		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype NOT BETWEEN 1501 AND 1599 
-		AND s.ProductID NOT IN(2, 8)
+		AND s.ProductID NOT IN(2, 8,15)
 	GROUP BY mrecommend, b.bettype	
 
 	INSERT INTO #tmp
@@ -104,7 +111,7 @@ BEGIN
 		winlostdate between @FromDate and @TDate 
 		--and b.bettype < 19001  and b.bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype BETWEEN 1501 AND 1599 
-		AND s.ProductID NOT IN(2, 8)
+		AND s.ProductID NOT IN(2, 8,15)
 	GROUP BY mrecommend, b.bettype
 
 	INSERT INTO #tmp
@@ -159,7 +166,8 @@ SELECT pvt.mrecommend, c.username,
 	---Keno_comm
 	ISNULL([1501],0) +
 	---Gold Deluxe_Comm
-	ISNULL([1701],0) + ISNULL([1702],0) + ISNULL([1703],0) AS Casino_comm
+	ISNULL([1701],0) + ISNULL([1702],0) + ISNULL([1703],0) AS Casino_comm,
+	ISNULL([301],0) + ISNULL([302],0) + ISNULL([303],0) + ISNULL([304],0) AS MO_comm
 
 FROM #tmp AS p
 PIVOT
@@ -182,7 +190,8 @@ PIVOT
 					[157], [159], [160], [161], [162], [163], [164], [165], [166], [167], [168], [169], [170], [171], [172],
 					[173], [174], [175], [176], [177], [178], [179], [180], [181], [182], [183], [184], [185], [186], [187],
 					[188], [189], [190], [191], [192], [193], [194], [195], [196], [197], [198], [199], [200], [201], [202],
-					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217]
+					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217],
+					[301],[302],[303],[304]
 					)
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.mrecommend 
@@ -191,9 +200,3 @@ ORDER BY c.username
 DROP TABLE #tmp
 
 
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_SAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_SAg] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_SAg] TO [vnteam]
