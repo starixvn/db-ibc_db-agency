@@ -128,8 +128,6 @@ from custsetting (nolock) where custid = @custid and sporttype = 154 and bettype
 SELECT @playerdiscountnumber_old = playerdiscount
 FROM custsetting3rd (NOLOCK) WHERE custid = @custid AND sporttype = 161 AND bettype = 81
 
-
-
 IF @playerdiscount_old <> @playerdiscount OR @playerdiscountcs_old <> @playerdiscountcs OR @playerdiscount1x2 <> @playerdiscount1x2_old OR @playerdiscountnumber <> @playerdiscountnumber_old OR @playerdiscountHRFixedOdds <> @playerdiscountHRFixedOdds_old
 	OR (@IsMyanmarOdds = 1 AND @playerdiscountMyanmarOdds <> @playerdiscountMyanmarOdds_old)
 	SET @updatecomm_old = 1
@@ -155,8 +153,6 @@ BEGIN
 END
 
 ---------------------------------------
-
-
 IF @updatecomm_old = 1
 BEGIN
 	--Get g2
@@ -199,7 +195,7 @@ BEGIN
 	
 	SELECT @playerdiscountHRFixedOdds = CASE WHEN @playerdiscountHRFixedOdds > @discountHRFixedOdds_max THEN @discountHRFixedOdds_max ELSE @playerdiscountHRFixedOdds END		
 	
-	EXEC dbo.Acc_CustomerUpdMember_Commission 
+	EXEC dbo.Acc_CustomerUpdMember_Commission
 		@custid = @custid,
 		@playerdiscount = @playerdiscount,
 		@playerdiscountcs = @playerdiscountcs , 
@@ -218,7 +214,6 @@ BEGIN
 		@ErrMsg = @ErrMsg OUTPUT
 	
 END
-
 	
 --Error return
 IF (@ErrCode > 0)
@@ -231,105 +226,6 @@ BEGIN
 	RETURN
 END
 
-
-------------------------
---Write log file
-
-declare @LogSPData varchar(8000)
-declare @TrackingValue2 varchar(8000)
-
-Select @LogSPData = '<Age_CustomerUpdUserComm CustID="'+ coalesce(cast(@CustID as varchar(50)),space(1))+ '" ' +
-'PlayerDiscount="'+ coalesce(cast(@playerdiscount as nvarchar(50)),space(1))+ '" ' +
-'PlayerDiscountcs="'+ coalesce(cast(@playerdiscountcs as nvarchar(50)),space(1))+ '" ' +
-'playerdiscount1x2="'+ coalesce(cast(@playerdiscount1x2 as nvarchar(50)),space(1))+ '" ' +
-'playerdiscountHRFixedOdds="'+ coalesce(cast(@playerdiscountHRFixedOdds as nvarchar(50)),space(1))+ '" ' +
-'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber as nvarchar(50)),space(1))+ '" ' 
-
-IF @IsMyanmarOdds = 1
-	SET @LogSPData = @LogSPData + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds as nvarchar(50)),space(1))+ '" ' 
-
-SET @LogSPData = @LogSPData +
-'IP="' + coalesce(cast(@IP as varchar(15)),space(1))+ '" ' +
-'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1))+ '" ' +
-'UserID="'+ coalesce(cast(@UserID as varchar(50)),space(1))+ '" ' +
-'Language="'+ coalesce(cast(@Language as varchar(2)),space(1))+ '" ' +
-'ErrCode="'+ coalesce(cast(@ErrCode as varchar(50)),space(1))+ '" ' +
-'ErrMsg="'+ coalesce(cast(@ErrMsg as varchar(4000)),space(1)) + '" />'
-
-Select @TrackingValue2 = '<Age_CustomerUpdUserComm CustID="'+ coalesce(cast(@CustID as varchar(50)),space(1))+ '" ' +
-'PlayerDiscount="'+ coalesce(cast(@playerdiscount_old as nvarchar(50)),space(1))+ '" ' +
-'PlayerDiscountcs="'+ coalesce(cast(@playerdiscountcs_old as nvarchar(50)),space(1))+ '" ' +
-'playerdiscount1x2="'+ coalesce(cast(@playerdiscount1x2_old as nvarchar(50)),space(1))+ '" ' +
-'playerdiscountHRFixedOdds="'+ coalesce(cast(@playerdiscountHRFixedOdds_old as nvarchar(50)),space(1))+ '" ' +
-'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber_old as nvarchar(50)),space(1))+ '" ' 
-
-IF @IsMyanmarOdds = 1
-	SET @TrackingValue2 = @TrackingValue2 + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds_old as nvarchar(50)),space(1))+ '" ' 
-SET @TrackingValue2 = @TrackingValue2 +	
-'IP="' + coalesce(cast(@IP as varchar(15)),space(1))+ '" ' +
-'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1))+ '" ' +
-'UserID="'+ coalesce(cast(@UserID as varchar(50)),space(1))+ '" ' +
-'Language="'+ coalesce(cast(@Language as varchar(2)),space(1))+ '" ' +
-'ErrCode="'+ coalesce(cast(@ErrCode as varchar(50)),space(1))+ '" ' +
-'ErrMsg="'+ coalesce(cast(@ErrMsg as varchar(4000)),space(1)) + '" />'
-
-set @endRun = getdate()
-set @duration  = datediff (millisecond,@startRun,@endRun)
-
-BEGIN TRY
-	EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-		@UserID = @UserID,
-		@CustID = @CustID,
-		@ActionID = 213,
-		@TrackingValue = @LogSPData	,
-		@TrackingValue2 = @TrackingValue2,
-		@duration = @duration
-END TRY
-BEGIN CATCH
-	Select @LogSPData = '<Age_CustomerUpdUserComm CustID="'+ coalesce(cast(@CustID as varchar(50)),space(1))+ '" ' +
-	'PlayerDiscount="'+ coalesce(cast(@playerdiscount as nvarchar(50)),space(1))+ '" ' +
-	'PlayerDiscountcs="'+ coalesce(cast(@playerdiscountcs as nvarchar(50)),space(1))+ '" ' +
-	'playerdiscount1x2="'+ coalesce(cast(@playerdiscount1x2 as nvarchar(50)),space(1))+ '" ' +
-	'playerdiscountHRFixedOdds="'+ coalesce(cast(@playerdiscountHRFixedOdds as nvarchar(50)),space(1))+ '" ' +
-	'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber as nvarchar(50)),space(1))+ '" ' 
-	
-	IF @IsMyanmarOdds = 1
-		SET @LogSPData = @LogSPData + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds as nvarchar(50)),space(1))+ '" ' 
-	
-	SET @LogSPData = @LogSPData + 	
-	'IP="' + coalesce(cast(@IP as varchar(15)),space(1))+ '" ' +
-	'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1))+ '" ' +
-	'UserID="'+ coalesce(cast(@UserID as varchar(50)),space(1))+ '" ' +
-	'Language="'+ coalesce(cast(@Language as varchar(2)),space(1))+ '" ' +
-	'ErrCode="'+ coalesce(cast(ERROR_NUMBER() as varchar(50)),space(1))+ '" ' +
-	'ErrMsg="'+ coalesce(cast(ERROR_MESSAGE() as varchar(4000)),space(1)) + '" />'
-
-	Select @TrackingValue2 = '<Age_CustomerUpdUserComm CustID="'+ coalesce(cast(@CustID as varchar(50)),space(1))+ '" ' +
-	'PlayerDiscount="'+ coalesce(cast(@playerdiscount_old as nvarchar(50)),space(1))+ '" ' +
-	'PlayerDiscountcs="'+ coalesce(cast(@playerdiscountcs_old as nvarchar(50)),space(1))+ '" ' +
-	'playerdiscount1x2="'+ coalesce(cast(@playerdiscount1x2_old as nvarchar(50)),space(1))+ '" ' +
-	'playerdiscountHRFixedOdds="'+ coalesce(cast(@playerdiscountHRFixedOdds_old as nvarchar(50)),space(1))+ '" ' +
-	'playerdiscountnumber="'+ coalesce(cast(@playerdiscountnumber_old as nvarchar(50)),space(1))+ '" ' 
-	
-	IF @IsMyanmarOdds = 1
-		SET @TrackingValue2 = @TrackingValue2 + 'playerdiscountMyanmarOdds="'+ coalesce(cast(@playerdiscountMyanmarOdds_old as nvarchar(50)),space(1))+ '" ' 
-	
-	SET @TrackingValue2 = @TrackingValue2 +		
-	'IP="' + coalesce(cast(@IP as varchar(15)),space(1))+ '" ' +
-	'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1))+ '" ' +
-	'UserID="'+ coalesce(cast(@UserID as varchar(50)),space(1))+ '" ' +
-	'Language="'+ coalesce(cast(@Language as varchar(2)),space(1))+ '" ' +
-	'ErrCode="'+ coalesce(cast(ERROR_NUMBER() as varchar(50)),space(1))+ '" ' +
-	'ErrMsg="'+ coalesce(cast(ERROR_MESSAGE() as varchar(4000)),space(1)) + '" />'
-
-	EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-		@UserID = @UserID,
-		@CustID = @CustID,
-		@ActionID = 213,
-		@TrackingValue = @LogSPData	,
-		@TrackingValue2 = @TrackingValue2,
-		@duration = @duration
-END CATCH
 END
 
 
