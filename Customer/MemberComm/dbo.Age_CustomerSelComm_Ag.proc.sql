@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelComm_Ag]
+﻿alter PROCEDURE [dbo].[Age_CustomerSelComm_Ag]
 	@Recommend INT
 AS
 /*
@@ -13,6 +13,8 @@ Revisions:
 	- 20110323@Lukas: Remove horse racing
 	- 20120928@Sophia: Get DoubleCommLosing
 	- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
+	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	
 */
 
 SET NOCOUNT ON
@@ -31,6 +33,11 @@ SELECT
 	max(case when cs.bettype = 5 and cs.sporttype=1 then cs.adiscount else 0 end)*100 as adiscount1x2,
 	max(case when cs.bettype = 5 and cs.sporttype=1 then cs.discount else 0 end)*100 as discount1x2,
 	max(case when cs.bettype = 5 and cs.sporttype=1 then cs.playerdiscount else 0 end)*100 as playerdiscount1x2,
+	
+	-- Myanmar Odds
+	ISNULL(ccr.adiscount,0) * 100 AS adiscountMyanmarOdds,
+	ISNULL(ccr.discount,0) * 100 AS discountMyanmarOdds,
+	ISNULL(ccr.playerdiscount,0) * 100 AS playerdiscountMyanmarOdds, 
 	
 	--Get Horse Racing for Tote and Fixed odd
 --	max(case when cs3rd.bettype = 31 and cs3rd.sporttype=151 then cs3rd.adiscount else 0 end)*100 as adiscount_hr_to,
@@ -63,12 +70,13 @@ FROM
 	INNER JOIN CustInfo as ci with (NOLOCK) on m.CustID = ci.CustID
 	INNER JOIN CustSetting as cs with (NOLOCK) on m.CustID = cs.CustID
 	INNER JOIN CustSetting3rd as cs3rd with (NOLOCK) on m.custID = cs3rd.CustID 
+	LEFT JOIN CustCommRate ccr WITH (NOLOCK) ON CCR.CustId = CI.custid AND CCR.Sporttype = 1 AND CCR.Bettype = 301
 WHERE 
 	m.Recommend = @recommend 
 	and m.roleid=1 
 group by
 ci.enabled, ci.closed, ci.reject, m.username, m.custid, m.ugroup, 
-m.firstname, m.lastname,ci.credit,ci.DoubleCommLosing
+m.firstname, m.lastname,ci.credit,ci.DoubleCommLosing,ccr.adiscount,ccr.discount,ccr.playerdiscount
 ORDER BY 
 case when isnull(ci.enabled,0) = 0 then 3 when isnull(ci.closed,0) = 1 then 2 when isnull(ci.reject,0) = 1 then 1 else 0 end, 
 m.username

@@ -24,6 +24,7 @@ AS
 		- 20140822@Logan: Get Esports status [Redmine: #21007]
 		- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+		- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 
 */
 BEGIN
@@ -32,16 +33,24 @@ BEGIN
     DECLARE @RoleID TINYINT
           , @TransferOption VARCHAR(8)
           , @DisableAutoMPT BIT
+          , @HasDownline BIT = 0
+          , @uplineDisableColossusBet	BIT
+		  , @recommend INT 
+		  , @mrecommend INT
+		  , @srecommend INT
 
-    SELECT @RoleID = RoleID
-      FROM custinfo WITH(NOLOCK)
-     WHERE custid = @CustId
+    SELECT @RoleID = RoleID, @srecommend = @srecommend, @mrecommend = mrecommend, @recommend = recommend
+    FROM custinfo WITH(NOLOCK)
+    WHERE custid = @CustId
 
     IF (@RoleID = 4)
     BEGIN 
 	    SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption, 0))
 	      FROM CustSuper WITH(NOLOCK) 
 	     WHERE custid = @CustId
+	    
+	    SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE srecommend = @custid AND roleid = 3 
+	    
     END
     ELSE IF (@RoleID = 3)
     BEGIN 
@@ -49,14 +58,36 @@ BEGIN
 		       @DisableAutoMPT = DisableAutoMPT
 	      FROM CustMaster WITH(NOLOCK) 
 	     WHERE custid = @CustId
+	     
+	     SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
+	     
+	    SELECT @uplineDisableColossusBet = ISNULL(DisableColossusBet, 0)
+		FROM custinfo WITH(NOLOCK)
+	    WHERE custID = @srecommend	
+	     
+	     
     END
     ELSE IF (@RoleID = 2)
     BEGIN 
 	    SELECT @TransferOption = dbo.F_Decimal_Binary(ISNULL(TransferOption, 0))
 	      FROM CustAgent WITH(NOLOCK) 
 	     WHERE custid = @CustId
+	     
+	     SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE recommend = @custid AND roleid = 1
+	     
+	    SELECT @uplineDisableColossusBet = ISNULL(DisableColossusBet, 0)
+		FROM custinfo WITH(NOLOCK)
+	    WHERE custID = @mrecommend	
+	    
     END
-
+    ELSE IF (@RoleID = 1 )
+    BEGIN
+		
+		SELECT @uplineDisableColossusBet = ISNULL(DisableColossusBet, 0)
+		FROM custinfo WITH(NOLOCK)
+	    WHERE custID = @recommend	
+	     
+    END
     SELECT c.username
          , firstname
          , lastname
@@ -88,8 +119,14 @@ BEGIN
          , ci.DisableEsports
 		 , ISNULL(ci.DisableGoldDeluxe,1) AS DisableGoldDeluxe
 		 , ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe
+		 
+		 , ISNULL(ci.DisableColossusBet,1) AS DisableColossusBet
+		 , ISNULL(ci.HideColossusBet,1) AS HideColossusBet
+		 , ISNULL(@uplineDisableColossusBet, 0) AS uplineDisableColossusBet
+    	 , ISNULL(@HasDownline,0) AS HasDownline
+    	
       FROM Customer c WITH(NOLOCK)
-INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
+		INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
      WHERE c.CustID = @CustID
 END
 
