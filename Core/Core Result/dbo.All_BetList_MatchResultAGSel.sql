@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[All_BetList_MatchResultAGSel]
+ALTER PROCEDURE [dbo].[All_BetList_MatchResultAGSel]
 	@TransId BIGINT 
 AS
 /*
@@ -38,7 +38,7 @@ BEGIN
 			WHERE	TransId = @TransId
 		END 
 
-		SELECT @TransDesc 
+		SELECT @TransDesc as TransDesc 
 
 END 
 
