@@ -25,6 +25,7 @@ Revisions:
 	- 20110617@Amy: modify to convert NULL for lastlogged
 	- 20110823@Sophia: Count Negative stake as positive turnover
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 Param's Explanation:
 • @CustID: MAgentID
 */
@@ -67,6 +68,11 @@ as (
 		IsNull(sum(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover 
 	FROM bettrans with (NOLOCK)
 	WHERE mrecommend=@CustID
+		AND (
+			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			AND ruben =0)
+			OR ruben <> 0
+			)
 	GROUP BY recommend
 	UNION ALL
 	SELECT recommend as custid,
@@ -99,6 +105,7 @@ SELECT
 FROM bettrans with (NOLOCK)
 WHERE mrecommend=@CustID AND ruben = 1 AND bettype < 19001
 	AND bettrans.winlostdate >= convert(varchar(10), current_timestamp, 120)  	
+	 
 GROUP BY recommend
 
 SET @Username = isnull(@Username, '')

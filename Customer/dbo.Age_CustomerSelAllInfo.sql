@@ -36,6 +36,7 @@ Revisions:
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 	- 20150612@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 	- 20150803@Elodie: Get DisableDownlinesGoldDeluxe field [Redmine:#38741]
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 
 
@@ -50,6 +51,12 @@ BEGIN
     DECLARE @custid INT, @roleid TINYINT, @srecommend INT, @mrecommend INT, @recommend INT, @UsedCredit MONEY, @Mem_MaxCredit MONEY
     DECLARE @todaySuperCash MONEY,@todayMasterCash MONEY, @todayAgentCash MONEY, @todayCustCash MONEY--, @PokerHeldFunds MONEY
     DECLARE @currentDate DATETIME 
+	
+	DECLARE @bettypemetric AS TABLE ( bettype INT)
+	INSERT INTO @bettypemetric (bettype)
+	SELECT typeid AS bettype
+	FROM dbo.bettype WITH (NOLOCK)
+	WHERE typeID IN (801,802,803,804,805,806)
 
     /*DECLARE @ABSDate DATETIME
     SET @ABSDate = '2011-09-01'	*/
@@ -417,7 +424,11 @@ BEGIN
 			    MAX(transdate) lastTxn 
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE custid = @custid
-
+				AND (
+					(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric)
+					AND ruben =0)
+					OR ruben <> 0
+					)
 		    UNION ALL
 		    SELECT 0,
 			    SUM(ABS(actual_stake)) outstanding, 
@@ -482,6 +493,11 @@ BEGIN
 			    MAX(transdate) lastTxn
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE recommend = @custid
+					AND (
+					(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric)
+					AND ruben =0)
+					OR ruben <> 0
+					)
 		    UNION ALL
 		    SELECT 0,
 			    SUM(actual_stake*apositiontaking) agentPositionTaking, 
@@ -550,7 +566,11 @@ BEGIN
 				    MAX(transdate) lastTxn
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE mrecommend = @custid	
-
+				AND (
+					(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric)
+					AND ruben =0)
+					OR ruben <> 0
+					)
 		    UNION ALL
 		    SELECT	0,
 				    SUM(actual_stake * mpositiontaking) masterPositionTaking, 
