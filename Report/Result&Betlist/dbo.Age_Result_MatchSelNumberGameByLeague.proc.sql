@@ -16,6 +16,7 @@ Revisions:
  20101217@Viet: change the condition back (remove never-open-game) for agentsite to use.
  20101229@Simon: Show All League or only show Live belong to @isShowAll.  
  20110901@Jamie: Get Refund Result
+ 20151014@Sophia: Show internal match [#45531]
 */  
   
 SET NOCOUNT ON  
@@ -61,7 +62,7 @@ FROM
 				) AS B ON B.matchid = m.matchid
 	LEFT OUTER JOIN match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid  
 	INNER JOIN league with (nolock) on m.leagueid = league.leagueid
-WHERE (m.eventstatus NOT IN ('internal','running') OR (m.eventstatus = 'running' AND mr.ishtcal=1))
+WHERE (m.eventstatus NOT IN ('running') OR (m.eventstatus = 'running' AND mr.ishtcal=1))
 		and league.isTest = isnull(@isShowAll, league.isTest)
 GO
 

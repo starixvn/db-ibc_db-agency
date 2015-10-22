@@ -18,6 +18,8 @@ Revision:
  - 20150414@Sophia: Support BetRadar
  - 20150416@Sophia: Condition of showing Running match different between Sporting solution and BetRadar
  - 20150810@Sophia: Hardcode to exclude ResultDetail of bettype 216, 217 for a temporary time [#40991]
+ - 20151014@Sophia: Show internal match [#45531]
+ 
 */  
   
 SET NOCOUNT ON  
@@ -50,7 +52,7 @@ FROM sports WITH (nolock)
 WHERE   
 		match.eventdate >= @EventDate  
 		AND match.eventdate <= @toDate  
-		AND ( match.eventstatus NOT IN ('internal','closed','running')  
+		AND ( match.eventstatus NOT IN ('closed','running')  
 			OR ( mr.IsPending=1 AND match.eventstatus IN ('running','closed') )  
 			OR ( mr.IsHTCal = 1 AND match.eventstatus ='running')  
 			OR ( ISNULL(SS.MatchID,0) <> 0 AND match.eventstatus = 'running')  --- condition for Sportting Solution show running Match but settled least one type
