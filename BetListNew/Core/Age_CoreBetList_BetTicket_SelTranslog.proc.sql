@@ -21,7 +21,8 @@ AS
 		- 20150504@Bobby.Nguyen: Create new SP
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 		- 20150831@Kos.Nguyen: Support Colossus Bet
-		- 20150907@Bobby: Enhance performence for SP core
+		- 20150907@Bobby: Enhance performance for SP core
+		- 20151022@Kos: Return [translog].[tranid3rd] to support view ticket detail
 		- 20151023@Bobby: Hotfix#46203 - Agent PT always show 0 in case of ticket running
 
 	Param's Explanation:
@@ -31,10 +32,10 @@ AS
 */
 
 BEGIN
-	SET NOCOUNT ON;		
+	SET NOCOUNT ON;
 	/*
 	- Keno			: ProductId = 8
-	- GoldDelux		: ProductId = 12
+	- Gold Deluxe	: ProductId = 12
 	- Colossus Bet	: ProductId = 15
 	*/
 		
@@ -75,33 +76,35 @@ BEGIN
 		, b.MPositiontaking
 		, b.SPositiontaking
 		, b.TPositiontaking
-				, b.discount 	AS adiscount
-				, b.adiscount 	AS mdiscount
-				, b.sdiscount 	AS sdiscount
+		, b.discount 	AS adiscount
+		, b.adiscount 	AS mdiscount
+		, b.sdiscount 	AS sdiscount
 		, 0		AS Liveindicator
 		, 0		AS Livehomescore
 		, 0		AS Liveawayscore
-				, 0 	AS finalhomescore
-				, 0 	AS finalawayscore
-				, 0 	AS hthomescore
-				, 0 	AS htawayscore
-		, b.IP	AS IP
+		, 0 	AS finalhomescore
+		, 0 	AS finalawayscore
+		, 0 	AS hthomescore
+		, 0 	AS htawayscore
+		, b.IP
 		, 0		AS LeagueID
-				, CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
-				WHEN c.ProductID = 12 	THEN 255
+		, CASE
+			WHEN c.ProductID = 8 	THEN fnc.GameId
+			WHEN c.ProductID = 12 	THEN 255
 			ELSE 0
 		END		AS MatchID
 		, ''	AS MatchCode
 		, ''	AS Race
 		, b.winlostdate AS eventdate
 		, 0		AS HomeID
-		, 0		AS AwayID		
+		, 0		AS AwayID
 		, ''	AS Betstatus
 		, CONVERT(BIT,0) AS IsNeutral
-		,'' AS Placing
+		, '' AS Placing
 		, '' 	AS showtime
-		, CASE WHEN ( c.ProductID IN (12) AND b.gameid IN ( 1701,1702 )  )
-			THEN b.Gameid3rd 
+		, CASE 
+			WHEN ( c.ProductID IN (12) AND b.gameid IN ( 1701,1702 ) ) THEN b.Gameid3rd 
+			WHEN c.ProductID = 15 THEN b.Tranid3rd 
 			ELSE '' 
 		END AS betcheck
 		, 0	AS comstatus
@@ -118,9 +121,9 @@ BEGIN
 				AND c.EventType	= 0
 				AND b.StatusID	IN (0,1)
 	
-	/*	
-		- SportsBook		: ProductId = 1 -> Metric Gaming bettype(801-899)
-	*/	
+	/*
+		- SportsBook	: ProductId = 1 -> Metric Gaming bettype(801-899)
+	*/
 	UNION ALL
 	SELECT
 		b.translogid AS transid
@@ -141,7 +144,7 @@ BEGIN
 		, b.actual_stake
 		, b.status 
 		, b.transdate
-		, b.winlostdate			
+		, b.winlostdate
 		, 0 AS winlost
 		, 0 AS awinlost
 		, 0 AS mwinlost
@@ -160,10 +163,10 @@ BEGIN
 		, 0 AS Liveindicator
 		, 0 AS Livehomescore
 		, 0 AS Liveawayscore
-		, m.finalhomescore 	
-		, m.finalawayscore 	 
-		, m.hthomescore 		
-		, m.htawayscore 		
+		, m.finalhomescore
+		, m.finalawayscore
+		, m.hthomescore
+		, m.htawayscore
 		, b.IP
 		, m.LeagueID
 		, m.MatchID	
