@@ -22,6 +22,7 @@ AS
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 		- 20150831@Kos.Nguyen: Support Colossus Bet
 		- 20150907@Bobby: Enhance performence for SP core
+		- 20151023@Bobby: Hotfix#46203 - Agent PT always show 0 in case of ticket running
 
 	Param's Explanation:
 	
@@ -70,7 +71,7 @@ BEGIN
 		, 0 AS comm
 		, 0 AS acomm 
 		, 0 AS scomm
-		, 0 AS APositiontaking
+		, b.APositiontaking
 		, b.MPositiontaking
 		, b.SPositiontaking
 		, b.TPositiontaking
@@ -149,7 +150,7 @@ BEGIN
 		, 0 AS comm
 		, 0 AS acomm
 		, 0 AS scomm
-		, 0 AS apsitiontaking
+		, b.apositiontaking
 		, b.mpositiontaking
 		, b.spositiontaking
 		, b.TPositiontaking
