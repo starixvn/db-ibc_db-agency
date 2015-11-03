@@ -36,8 +36,9 @@ Revisions:
 	- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 	- 20150612@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
 	- 20150803@Elodie: Get DisableDownlinesGoldDeluxe field [Redmine:#38741]
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
-
+	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
 
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -50,6 +51,12 @@ BEGIN
     DECLARE @custid INT, @roleid TINYINT, @srecommend INT, @mrecommend INT, @recommend INT, @UsedCredit MONEY, @Mem_MaxCredit MONEY
     DECLARE @todaySuperCash MONEY,@todayMasterCash MONEY, @todayAgentCash MONEY, @todayCustCash MONEY--, @PokerHeldFunds MONEY
     DECLARE @currentDate DATETIME 
+	
+	DECLARE @bettypemetric AS TABLE ( bettype INT)
+	INSERT INTO @bettypemetric (bettype)
+	SELECT typeid AS bettype
+	FROM dbo.bettype WITH (NOLOCK)
+	WHERE typeID IN (801,802,803,804,805,806)
 
     /*DECLARE @ABSDate DATETIME
     SET @ABSDate = '2011-09-01'	*/
@@ -276,6 +283,8 @@ BEGIN
     FROM custinfo WITH (NOLOCK) 	
     WHERE custid = @uplineId
 
+	
+	
     --General info
     SELECT c.custid, ci.roleid, 
         c.username, c.username2, c.firstname, c.lastname, 	
@@ -310,6 +319,7 @@ BEGIN
     	@HasDownline AS HasDownline,
 		@DisableDownlinesGoldDeluxe AS DisableDownlinesGoldDeluxe,
 		@DisableDownlinesColossusBet AS DisableDownlinesColossusBet,
+				
 	    @Credit_MAg_Min AS [MasterCredit_Min],
 	    @Credit_MAg_Max AS [MasterCredit_Max],
 	    @Credit_Ag_Min AS [AgentCredit_Min],
@@ -342,6 +352,7 @@ BEGIN
 		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
 		ISNULL(ci.DisableColossusBet,1) AS DisableColossusBet,
 		ISNULL(ci.HideColossusBet,1) AS HideColossusBet
+		
     FROM customer c WITH (NOLOCK)
 	    INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
     WHERE c.custid = @custid
@@ -417,7 +428,11 @@ BEGIN
 			    MAX(transdate) lastTxn 
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE custid = @custid
-
+				AND (
+					(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric)
+					AND ruben =0)
+					OR ruben <> 0
+					)
 		    UNION ALL
 		    SELECT 0,
 			    SUM(ABS(actual_stake)) outstanding, 
@@ -482,6 +497,11 @@ BEGIN
 			    MAX(transdate) lastTxn
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE recommend = @custid
+					AND (
+					(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric)
+					AND ruben =0)
+					OR ruben <> 0
+					)
 		    UNION ALL
 		    SELECT 0,
 			    SUM(actual_stake*apositiontaking) agentPositionTaking, 
@@ -550,7 +570,11 @@ BEGIN
 				    MAX(transdate) lastTxn
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE mrecommend = @custid	
-
+				AND (
+					(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric)
+					AND ruben =0)
+					OR ruben <> 0
+					)
 		    UNION ALL
 		    SELECT	0,
 				    SUM(actual_stake * mpositiontaking) masterPositionTaking, 
@@ -587,6 +611,8 @@ BEGIN
 	    FROM Balance 
     	
     END
+    -- For Sportbook2
+	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
 
 
