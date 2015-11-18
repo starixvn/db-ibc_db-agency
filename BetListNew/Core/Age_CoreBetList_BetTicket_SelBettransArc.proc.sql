@@ -24,6 +24,7 @@ AS
 		- 20150831@Bobby.Nguyen: Bug#42652 - Update for joining with outright_bk and VSOutright_bk
 		- 20150831@Kos.Nguyen: Support Colossus Bet
 		- 20151022@Kos: Return [bettransm].[betcheck] to support view CB ticket detail
+		- 20151118@Kos: Remove index hint to enhance performance (#47704)
 
 	Param's Explanation:
 	
@@ -36,8 +37,8 @@ BEGIN
 	
 	DECLARE @custInfo TABLE
 	(
-		CustId 			INT
-		, Username 		NVARCHAR(30)
+		CustId 		INT
+		, Username	NVARCHAR(30)
 	);
 
 	INSERT INTO @custInfo
@@ -161,7 +162,7 @@ BEGIN
 		END		AS comstatus
 		, '' AS transdesc
 		, 0 AS OddsSpread
-	FROM dbo.bettrans_bk AS b WITH (NOLOCK, INDEX=IX_custid)
+	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN @tempCust AS c
 		ON b.transid		= c.transid
 			AND b.custid	= c.custid
@@ -236,7 +237,7 @@ BEGIN
 		END		AS comstatus
 		, '' AS transdesc
 		, 0 AS OddsSpread
-	FROM dbo.bettrans_bk AS b WITH (NOLOCK, INDEX=IX_custid)
+	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN @tempCust AS c
 		ON b.transid		= c.transid
 			AND b.custid	= c.custid
@@ -325,7 +326,7 @@ BEGIN
 			ELSE '' 
 		END AS transdesc
 		, ISNULL(b.oddsspread, 0) AS OddsSpread
-	FROM dbo.bettrans_bk AS b WITH (NOLOCK, INDEX=IX_custid)
+	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN dbo.match_bk AS m WITH (NOLOCK) 
 		ON b.matchid		= m.matchid
 		INNER JOIN @tempCust c 
@@ -399,7 +400,7 @@ BEGIN
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 		, '' AS transdesc
 		, 0 AS OddsSpread
-	FROM dbo.bettrans_bk AS b WITH (NOLOCK, INDEX=IX_custid)
+	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN dbo.Outright_bk AS m WITH (NOLOCK) 
 		ON b.matchid		= m.orid
 		INNER JOIN bodb02.dbo.League AS l WITH (NOLOCK) 
@@ -474,7 +475,7 @@ BEGIN
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 		, '' AS transdesc
 		, 0 AS OddsSpread
-	FROM dbo.bettrans_bk AS b WITH (NOLOCK, INDEX=IX_custid)
+	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN dbo.VSOutright_bk o WITH (NOLOCK) 
 		ON b.oddsid			= o.Orid
 		INNER JOIN bodb02.dbo.VSRaceInfo r WITH (NOLOCK) 
