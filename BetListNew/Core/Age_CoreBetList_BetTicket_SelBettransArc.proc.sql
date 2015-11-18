@@ -165,9 +165,10 @@ BEGIN
 	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN @tempCust AS c
 		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		--	AND b.custid	= c.custid
 		INNER JOIN @custInfo AS ci
-		ON b.custid 		= ci.custid
+		--ON b.custid 		= ci.custid
+		ON c.custid   = ci.custid
 		OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.bettype) fnc
 	WHERE	c.WhTicket 	= 3
 		AND c.EventType = 0
@@ -240,9 +241,10 @@ BEGIN
 	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN @tempCust AS c
 		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		--	AND b.custid	= c.custid
 		INNER JOIN @custInfo AS ci
-		ON b.custid 		= ci.custid
+		--ON b.custid 		= ci.custid
+		ON c.custid   = ci.custid
 		LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON bm.refno = b.transid AND bm.bettype = 18001
 	WHERE	c.WhTicket	= 3
 		AND c.EventType	= 0
@@ -331,9 +333,10 @@ BEGIN
 		ON b.matchid		= m.matchid
 		INNER JOIN @tempCust c 
 		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		--	AND b.custid	= c.custid
 		INNER JOIN @custInfo ci
-		ON b.custid 		= ci.custid
+		--ON b.custid 		= ci.custid
+		ON c.custid   = ci.custid
 	WHERE c.WhTicket 		= 3
 		AND c.EventType 	= 1
 
@@ -407,9 +410,10 @@ BEGIN
 		ON m.leagueID		= l.leagueID
 		INNER JOIN @tempCust c 
 		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		--	AND b.custid	= c.custid
 		INNER JOIN @custInfo ci
-		ON b.custid 		= ci.custid
+		--ON b.custid 		= ci.custid
+		ON c.custid   = ci.custid
 	WHERE c.WhTicket 		= 3
 		AND c.EventType		= 2
 
@@ -482,14 +486,16 @@ BEGIN
 		ON r.EventID		= o.EventID
 		INNER JOIN @tempCust c 
 		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		--	AND b.custid	= c.custid
 		INNER JOIN @custInfo ci
-		ON b.custid 		= ci.custid
+		--ON b.custid 		= ci.custid
+		ON c.custid   = ci.custid
 	WHERE c.WhTicket 		= 3
 		AND c.EventType		= 3
 	
 	RETURN
 END
+
 
 
 
