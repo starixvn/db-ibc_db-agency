@@ -25,6 +25,7 @@ AS
 		- 20150422@Elodie: Add Gold Deluxe product [Redmine:#34486]
 		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
 		- 20150825@Helen: Colossus Bet - [Redmine: #41264]
+		- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
 
 */
 BEGIN
@@ -88,6 +89,7 @@ BEGIN
 	    WHERE custID = @recommend	
 	     
     END
+    
     SELECT c.username
          , firstname
          , lastname
@@ -128,6 +130,10 @@ BEGIN
       FROM Customer c WITH(NOLOCK)
 		INNER JOIN Custinfo ci WITH(NOLOCK) ON c.CustID = ci.CustID
      WHERE c.CustID = @CustID
+     
+    -- For Sportbook2
+	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
+	
 END
 
 GO

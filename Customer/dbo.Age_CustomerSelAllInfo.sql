@@ -38,7 +38,7 @@ Revisions:
 	- 20150803@Elodie: Get DisableDownlinesGoldDeluxe field [Redmine:#38741]
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
-
+	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
 
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -283,6 +283,8 @@ BEGIN
     FROM custinfo WITH (NOLOCK) 	
     WHERE custid = @uplineId
 
+	
+	
     --General info
     SELECT c.custid, ci.roleid, 
         c.username, c.username2, c.firstname, c.lastname, 	
@@ -317,6 +319,7 @@ BEGIN
     	@HasDownline AS HasDownline,
 		@DisableDownlinesGoldDeluxe AS DisableDownlinesGoldDeluxe,
 		@DisableDownlinesColossusBet AS DisableDownlinesColossusBet,
+				
 	    @Credit_MAg_Min AS [MasterCredit_Min],
 	    @Credit_MAg_Max AS [MasterCredit_Max],
 	    @Credit_Ag_Min AS [AgentCredit_Min],
@@ -349,6 +352,7 @@ BEGIN
 		ISNULL(ci.HideGoldDeluxe,1) AS HideGoldDeluxe,
 		ISNULL(ci.DisableColossusBet,1) AS DisableColossusBet,
 		ISNULL(ci.HideColossusBet,1) AS HideColossusBet
+		
     FROM customer c WITH (NOLOCK)
 	    INNER JOIN custinfo ci WITH (NOLOCK) ON c.custid = ci.custid	
     WHERE c.custid = @custid
@@ -607,6 +611,8 @@ BEGIN
 	    FROM Balance 
     	
     END
+    -- For Sportbook2
+	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
 
 
