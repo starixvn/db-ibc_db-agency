@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_Rpt_ConsolidatedGroup]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@CustID			INT, 
 	@Currency		INT,
 	@FromDate		SMALLDATETIME,  
@@ -27,6 +27,7 @@ AS
 	Revisions:   
 		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
+		- 20151110@Percy: Include CustID in select result [RedmineID: #47201]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -552,10 +553,10 @@ SELECT	CASE WHEN @ReportType = 1 THEN custID
 			 WHEN @ReportType = 3 THEN sporttype
 			 ELSE '0' 
 		END AS breakdown
+		,custID 
 		,username
 		,currency
 		,roleid
-		
 		,SUM(turnover) AS turnover
 		,SUM(member_winlost) AS member_winlost
 		,SUM(member_comm) AS member_comm
@@ -591,11 +592,21 @@ GROUP BY
 			 WHEN @ReportType = 3 THEN sporttype
 			 ELSE '0' 
 		END 
-		,username, currency, roleid	
+		,custID, username, currency, roleid
+
 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNet]
+
+SET QUOTED_IDENTIFIER OFF 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNetView]
+SET ANSI_NULLS ON 
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [vnteam]
+
+
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNetView]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNet]
+GO 
