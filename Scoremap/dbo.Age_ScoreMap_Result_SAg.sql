@@ -381,3 +381,13 @@ BEGIN
 
 		DROP TABLE #ScoreMap_Super
 END
+GO
+
+GRANT EXECUTE ON [dbo].[Age_ScoreMap_Result_SAg] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_ScoreMap_Result_SAg] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_ScoreMap_Result_SAg] TO [vnteam] AS [dbo]
+GO

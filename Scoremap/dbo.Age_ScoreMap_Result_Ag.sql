@@ -384,3 +384,13 @@ BEGIN
 			
 		DROP TABLE #ScoreMap_Agent
 END
+GO
+
+GRANT EXECUTE ON [dbo].[Age_ScoreMap_Result_Ag] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_ScoreMap_Result_Ag] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_ScoreMap_Result_Ag] TO [vnteam] AS [dbo]
+GO
