@@ -49,6 +49,8 @@ Revisions:
 	- 20150511@Sophia: Apply Gold Deluxe and Metric Gaming  [Redmine: #35278
 	- 20150903@Winnie: Add column MO_comm for Myanmar odd [Redmine: #42813]
 	- 20150904@Winnie: Exclude CB
+	 20151126@Percy: Apply 11 New Bettypes - PH All in One Phase I [RedmineID: #48050]
+	 
 */
 
 SET NOCOUNT ON
@@ -82,7 +84,7 @@ BEGIN
 		winlostdate between @FDate and @ToDate 
 		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype NOT BETWEEN 1501 AND 1599 
-		AND s.ProductID NOT IN(2, 8,15)
+		AND s.ProductID NOT IN(2,8,15)
 	GROUP BY mrecommend, b.bettype	
 
 	INSERT INTO #tmp
@@ -111,7 +113,7 @@ BEGIN
 		winlostdate between @FromDate and @TDate 
 		--and b.bettype < 19001  and b.bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype BETWEEN 1501 AND 1599 
-		AND s.ProductID NOT IN(2, 8,15)
+		AND s.ProductID NOT IN(2,8,15)
 	GROUP BY mrecommend, b.bettype
 
 	INSERT INTO #tmp
@@ -133,7 +135,8 @@ SELECT pvt.mrecommend, c.username,
 	isnull([1301],0) + isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0) + isnull([1311],0) + isnull([1312],0) + isnull([1316],0) + isnull([1318],0) + isnull([1324],0) +
 	ISNULL([157], 0) + ISNULL([178], 0) + ISNULL([183], 0) + ISNULL([184], 0) + ISNULL([185], 0) + ISNULL([189], 0) + ISNULL([190], 0) + ISNULL([191], 0) + ISNULL([194], 0) + ISNULL([197], 0) +
 	ISNULL([198], 0) + ISNULL([203], 0) + ISNULL([204], 0) + ISNULL([205], 0) +
-	ISNULL([801], 0) + ISNULL([802], 0) + ISNULL([803], 0) + ISNULL([804], 0) + ISNULL([805], 0) + ISNULL([806], 0) + ISNULL([807], 0) + ISNULL([808], 0) as totalcomm_1,
+	ISNULL([801], 0) + ISNULL([802], 0) + ISNULL([803], 0) + ISNULL([804], 0) + ISNULL([805], 0) + ISNULL([806], 0) + ISNULL([807], 0) + ISNULL([808], 0) +
+	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0) as totalcomm_1,
 	
 	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) as [totalcomm_2],
 		
@@ -146,7 +149,8 @@ SELECT pvt.mrecommend, c.username,
 	ISNULL([169],0) + ISNULL([170],0) + ISNULL([171],0) + ISNULL([172],0) + ISNULL([173],0) + ISNULL([174],0) + ISNULL([175],0) + ISNULL([179],0) + ISNULL([180],0) + 
 	ISNULL([181],0) + ISNULL([182],0) +	ISNULL([186],0) + ISNULL([187],0) + ISNULL([188],0) + ISNULL([192],0) + ISNULL([193],0) + ISNULL([195],0) + ISNULL([196],0) + 
 	ISNULL([199],0) + ISNULL([200],0) + ISNULL([201],0) + ISNULL([202],0) +	ISNULL([206],0) + ISNULL([207],0) + ISNULL([208],0) + ISNULL([209],0) + ISNULL([210],0) + 
-	ISNULL([211],0) + ISNULL([212],0) +	ISNULL([213],0) + ISNULL([214],0) + ISNULL([215],0) + ISNULL([216],0) + ISNULL([217],0) as totalcomm_3,
+	ISNULL([211],0) + ISNULL([212],0) +	ISNULL([213],0) + ISNULL([214],0) + ISNULL([215],0) + ISNULL([216],0) + ISNULL([217],0) +
+	ISNULL([405],0) + ISNULL([406],0) + ISNULL([407],0) + ISNULL([408],0) + ISNULL([409],0) + ISNULL([410],0) as totalcomm_3,
 		
 	---Casino_comm
 	isnull([71],0) + 
@@ -191,12 +195,21 @@ PIVOT
 					[173], [174], [175], [176], [177], [178], [179], [180], [181], [182], [183], [184], [185], [186], [187],
 					[188], [189], [190], [191], [192], [193], [194], [195], [196], [197], [198], [199], [200], [201], [202],
 					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217],
-					[301],[302],[303],[304]
+					[301],[302],[303],[304],
+					[401], [402], [403], [404], [405], [406], [407], [408], [409], [410], [411]
 					)
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.mrecommend 
 ORDER BY c.username
  
 DROP TABLE #tmp
+GO
 
+GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_SAg] TO [bodbDownlineNet] AS [dbo]
+GO
 
+GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_SAg] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_SAg] TO [vnteam] AS [dbo]
+GO

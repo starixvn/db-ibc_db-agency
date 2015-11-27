@@ -19,6 +19,8 @@ AS
 	- 20140807@Dom: Include 11 new bettypes of Soccer [feature: #19632]
 	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738
 	- 20150828@Winnie: Myanmar odds
+	- 20151126@Percy: Add Correct Score into the Live Ball Section [RedmineID: #48050]
+					
  Parameter
 	EvenType : 0 DeadBall 1 LiveBall
 */  
@@ -166,6 +168,13 @@ BEGIN
 		,4000 OrderID
 	UNION ALL
 	
+	SELECT 4 typeid
+		,1 EvenType
+		,'4,30' [1stId]
+		,'4,30' [InfoId]
+		,4000 OrderID
+	UNION ALL
+	
 	SELECT 6 typeid
 		,0 EvenType
 		,'6,126,131,132,159,161,162' [1stId]
@@ -226,3 +235,13 @@ BEGIN
 	ORDER BY OrderID,EvenType
 END  
 	
+GO
+
+GRANT EXECUTE ON [dbo].[Age_ScoreMap_SelBettype] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_ScoreMap_SelBettype] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_ScoreMap_SelBettype] TO [vnteam] AS [dbo]
+GO
