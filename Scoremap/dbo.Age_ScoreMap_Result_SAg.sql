@@ -30,6 +30,8 @@ AS
 		- 20140814@Dom:  [Redmine: #19661] Offering 11 new bettypes
 		- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
 		- 20150903@Winnie: Myanmar Odds
+		- 20151127@Percy: Add AOS choice for Correct Score [RedmineID: #48050]
+		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
 		@bettypes_dead : dead ball bet types
@@ -113,6 +115,7 @@ BEGIN
 						WHEN betteam <> 'h' AND bt IN (3,8,302,304) THEN hc - (home+away)
 						WHEN home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30,165,166) THEN 1  
 						WHEN ((home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd)) AND bt IN (4,30,165,166) THEN 1 
+						WHEN betteam  = 'AOS' AND (home >= 5 OR away >= 5) AND bt IN (4,30,165,166) THEN 1 -- Percy: AOS choice
 						WHEN home>away AND betteam = '1' AND bt IN (5,15,167) THEN 1 	--Radar
 						WHEN away>home AND betteam = '2' AND bt IN (5,15,167) THEN 1	--Radar
 						WHEN home=away AND betteam = 'x' AND bt IN (5,15,167) THEN 1 	--Radar
