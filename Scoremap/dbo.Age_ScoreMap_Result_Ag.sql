@@ -113,8 +113,8 @@ BEGIN
 						WHEN betteam <> 'h' AND bt IN (2, 12,136,137,138,139,157) THEN 1-( (home+away)&1) --Dom & Radar
 						WHEN betteam  = 'h' AND bt IN (3, 8,302,304) THEN (home+away) - hc 
 						WHEN betteam <> 'h' AND bt IN (3, 8,302,304) THEN hc - (home+away)
-						WHEN home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30,165,166) THEN 1  
-						WHEN ((home >= 5 AND hc = 5 AND home - away >= hc) OR (away >= 5 AND hd = 5 AND away - home >= hd)) AND bt IN (4,30,165,166) THEN 1
+						WHEN betteam  <> 'AOS' AND home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30,165,166) THEN 1  
+						WHEN betteam  <> 'AOS' AND ((home >= 5 AND hc = 5 AND home - away >= hc) OR (away >= 5 AND hd = 5 AND away - home >= hd)) AND bt IN (4,30,165,166) THEN 1
 						WHEN betteam  = 'AOS' AND (home >= 5 OR away >= 5) AND bt IN (4,30,165,166) THEN 1 -- Percy: AOS choice
 						WHEN home>away AND betteam = '1' AND bt IN (5, 15,167) THEN 1	--Radar
 						WHEN away>home AND betteam = '2' AND bt IN (5, 15,167) THEN 1	--Radar
