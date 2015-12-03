@@ -2,34 +2,36 @@ USE bodb_archive
 GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfoArc]
 (
-	@tempCust			TVP_TicketSportBettype READONLY
-	,@ColumnOutput		VARCHAR(MAX) 	= NULL
+	@tempCust		TVP_TicketSportBettype READONLY
+	,@ColumnOutput	VARCHAR(MAX) 	= NULL
 )
 AS
+
 /*
-Created: Bobby.Nguyen
-Task : Re-factor core bet list
-DB: DBARC.bodb_archive
-Original: 
+	Created: Bobby.Nguyen
+	Task : Re-factor core bet list
+	DB: DBARC.bodb_archive
+	Original: 
 
-Revisions:
-	- 20150504@Bobby.Nguyen: Create new SP - Apply GD product
-	- 20150526@Bobby.Nguyen: Apply metric-gaming bettype
+	Revisions:
+		- 20150504@Bobby.Nguyen: Create new SP - Apply GD product
+		- 20150526@Bobby.Nguyen: Apply metric-gaming bettype
+		- 20151203@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 
-Param's Explanation:
+	Param's Explanation:
 	
-	
-Dependences:
-	- CREATE TABLE @tempCust 
-	( 
-		transid			BIGINT
-		, refno			BIGINT
-		, custid 		INT 
-		, productId 	INT 
-		, eventType		TINYINT
-		, WhTicket		TINYINT
-	)
+	Dependences:
+		- CREATE TABLE @tempCust 
+		( 
+			transid			BIGINT
+			, refno			BIGINT
+			, custid 		INT 
+			, productId 	INT 
+			, eventType		TINYINT
+			, WhTicket		TINYINT
+		)
 */
+
 BEGIN
 	SET NOCOUNT ON;
 	
@@ -48,8 +50,8 @@ BEGIN
 		, hdp2 				SMALLMONEY 
 		, OddsType 			TINYINT
 		, oddsid			INT
-		, Odds 				SMALLMONEY 
-		, modds 			SMALLMONEY
+		, Odds 				MONEY 
+		, modds 			MONEY
 		, Stake 			MONEY
 		, actual_stake 		MONEY
 		, Status 			NVARCHAR(10)
@@ -84,7 +86,7 @@ BEGIN
 		, Race 				NVARCHAR(20)
 		, eventdate 		DATETIME
 		, HomeId 			INT
-		, AwayId 			INT 	
+		, AwayId 			INT
 		, Betstatus 		NVARCHAR(50)
 		, isNeutral 		BIT
 		, Placing 			NVARCHAR(20)
@@ -94,14 +96,14 @@ BEGIN
 		, transdesc			NVARCHAR(300)
 		, OddsSpread		SMALLMONEY
 	);
-	
+
 	-- CHECK for selecting from bettrans_bk
 	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 3))
 	BEGIN
 		INSERT INTO #MemBetTicket
 		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettransArc] @tempCust = @tempCust
 	END
-	
+
 	-- OUTPUT main ticket
 	/*IF (@ColumnOutput IS NULL)
 	BEGIN
@@ -131,6 +133,7 @@ BEGIN
 	RETURN;
 	
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] TO [bodbDownlineNet]
 GO

@@ -47,27 +47,27 @@ AS
 		- 20150526@Bobby: Implement bet list core
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
-		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
+		- 20151125@Kos: Support new bet type (410) for Total Bet of Double Chance
 */
 
 BEGIN
 	SET NOCOUNT ON;
-	
-	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
+
+	DECLARE	 @TransStatus	[dbo].[TVP_BetTicketStatus]
 		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
-	
+
 	-- Gather Ticket status
 	INSERT INTO @TransStatus
 
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt
-	WHERE stt.statusId IN (0, 1)	
-	
+	WHERE stt.statusId IN (0, 1)
+
 	-- Gather BettypeMatrix
 	INSERT INTO @BettypeMatrix
-
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
-	
+
 	;WITH CteBettype (bettype)
 	AS (
 		SELECT bt.bettype
@@ -76,6 +76,7 @@ BEGIN
 			OR (bt.EventType = 1)						-- macth event
 			OR (bt.ProductId = 1 AND bt.EventType = 2)	-- outright
 	)
+
 	DELETE bt
 	FROM @BettypeMatrix bt
 		LEFT JOIN CteBettype ct ON bt.bettype = ct.bettype
@@ -83,7 +84,7 @@ BEGIN
 		OR (@bettype NOT IN (6, 14, 24, 26, 1, 3, 7, 8) AND bt.bettype NOT IN (@bettype))
 		OR (@bettype = 6 	AND bt.bettype NOT IN(6, 126) )
 		OR (@bettype = 14 	AND bt.bettype NOT IN(14, 127) )
-		OR (@bettype = 24 	AND bt.bettype NOT IN(24, 151, 186)) 
+		OR (@bettype = 24 	AND bt.bettype NOT IN(24, 151, 186, 410)) 
 		OR (@bettype = 26 	AND bt.bettype NOT IN(26, 145, 146, 170, 188))
 		OR (@bettype = 1 	AND bt.bettype NOT IN(1, 301))		-- Support Myanmar Odds
 		OR (@bettype = 3 	AND bt.bettype NOT IN(3, 302))		-- Support Myanmar Odds
@@ -113,12 +114,12 @@ BEGIN
 								status,
 								stake,
 								actual_stake,
-								transdate,		
+								transdate,
 								betteam,
 								betID,
-								livehomescore, 
+								livehomescore,
 								liveawayscore,
-								liveindicator ,
+								liveindicator,
 								tpositiontaking,
 								spositiontaking,
 								mpositiontaking,
@@ -136,6 +137,7 @@ BEGIN
 		
 	RETURN;
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelRunningByBettype_SAg] TO [bodbDownlineNet]

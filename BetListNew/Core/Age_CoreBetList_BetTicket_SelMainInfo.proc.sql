@@ -3,33 +3,36 @@ GO
 
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
 (
-	@tempCust			TVP_TicketSportBettype READONLY
-	,@ColumnOutput		VARCHAR(MAX) 	= NULL
+	@tempCust		TVP_TicketSportBettype READONLY
+	,@ColumnOutput	VARCHAR(MAX)	= NULL
 )
 AS
+
 /*
-Created: Bobby.Nguyen
-Task : Re-factor core bet list
-DB: DBAGE.bodb02
-Original: 
+	Created: Bobby.Nguyen
+	Task : Re-factor core bet list
+	DB: DBAGE.bodb02
+	Original: 
 
-Revisions:
-	- 20150504@Bobby.Nguyen: Create new SP - Apply GD product
-	- 20150526@Bobby.Nguyen: Apply metric-gaming bettype
-	- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
-	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+	Revisions:
+		- 20150504@Bobby.Nguyen: Create new SP - Apply GD product
+		- 20150526@Bobby.Nguyen: Apply metric-gaming bettype
+		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
+		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
+		- 20151203@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 
-Param's Explanation:
-	- @tempCust  AS TABLE
-	( 
-		transid			BIGINT
-		, refno			BIGINT
-		, custid 		INT 
-		, productId 	INT 
-		, eventType		TINYINT
-		, WhTicket		TINYINT
-	)
+	Param's Explanation:
+		- @tempCust  AS TABLE
+		( 
+			transid			BIGINT
+			, refno			BIGINT
+			, custid		INT
+			, productId		INT
+			, eventType		TINYINT
+			, WhTicket		TINYINT
+		)
 */
+
 BEGIN
 	SET NOCOUNT ON;
 	
@@ -37,7 +40,7 @@ BEGIN
 	CREATE TABLE #MemBetTicket
 	(
 		TransId 			BIGINT
-		, RefNo 			BIGINT	
+		, RefNo 			BIGINT
 		, custid 			INT
 		, Username 			NVARCHAR(30)
 		, Sporttype 		SMALLINT
@@ -48,17 +51,17 @@ BEGIN
 		, hdp2 				SMALLMONEY 
 		, OddsType 			TINYINT
 		, oddsid			INT
-		, Odds 				SMALLMONEY 
-		, modds 			SMALLMONEY
+		, Odds 				MONEY 
+		, modds 			MONEY
 		, Stake 			MONEY
-		, actual_stake 		MONEY
+		, actual_stake		MONEY
 		, Status 			NVARCHAR(10)
 		, transdate 		DATETIME
 		, winlostdate 		DATETIME
-		, winlost 			MONEY
-		, awinlost 			MONEY
-		, mwinlost 			MONEY
-		, swinlost 			MONEY
+		, winlost			MONEY
+		, awinlost			MONEY
+		, mwinlost			MONEY
+		, swinlost			MONEY
 		, playerComm		MONEY
 		, comm				MONEY
 		, acomm				MONEY
@@ -67,9 +70,9 @@ BEGIN
 		, mpositiontaking	SMALLMONEY
 		, spositiontaking	SMALLMONEY
 		, tpositiontaking	SMALLMONEY
-		, adiscount 		SMALLMONEY
-		, mdiscount 		SMALLMONEY
-		, sdiscount 		SMALLMONEY
+		, adiscount			SMALLMONEY
+		, mdiscount			SMALLMONEY
+		, sdiscount			SMALLMONEY
 		, liveindicator 	BIT
 		, livehomescore 	SMALLINT
 		, liveawayscore 	SMALLINT
@@ -94,14 +97,14 @@ BEGIN
 		, transdesc			NVARCHAR(300)
 		, OddsSpread		SMALLMONEY
 	);
-	
+
 	-- CHECK for selecting from translog
 	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 0))
 	BEGIN
 		INSERT INTO #MemBetTicket
 		EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog] @tempCust = @tempCust
 	END
-	
+
 	-- CHECK for selecting from bettrans
 	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 1))
 	BEGIN
@@ -109,7 +112,7 @@ BEGIN
 		INSERT INTO #MemBetTicket
 		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans] @tempCust = @tempCust
 	END
-	
+
 	-- CHECK for selecting from bettrans14
 	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 2))
 	BEGIN
@@ -117,7 +120,7 @@ BEGIN
 		INSERT INTO #MemBetTicket
 		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans14] @tempCust = @tempCust
 	END
-	
+
 	-- OUTPUT main ticket
 	/*IF (@ColumnOutput IS NULL)
 	BEGIN
@@ -147,6 +150,8 @@ BEGIN
 	RETURN;
 	
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] TO [bodbDownlineNet]
 GO

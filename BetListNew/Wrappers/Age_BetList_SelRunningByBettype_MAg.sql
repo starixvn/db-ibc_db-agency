@@ -50,32 +50,30 @@ AS
 		- 20150526@Bobby: Implement bet list core
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
-		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
+		- 20151125@Kos: Support new bet type (410) for Total Bet of Double Chance
 */
 
 BEGIN
 	SET NOCOUNT ON;
-	
+
 	DECLARE	 @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
 
-			
 	-- Gather BettypeMatrix
 	INSERT INTO @BettypeMatrix
 	SELECT DISTINCT productid, bettype, eventtype, subproduct
 	FROM bodb02.dbo.SportBettypeMatrix b WITH(NOLOCK)
-	WHERE ((@bettype		= 6 	AND b.bettype IN(6,126)) 
-			OR (@bettype	= 14 	and b.bettype IN(14,127)) 
-			OR (@bettype	= 24 	and b.bettype IN(24,151,186)) 
-			OR (@bettype	= 26 	and b.bettype IN(26,145,146,170,188)) 
-			OR (@bettype 	= 1 	AND b.bettype IN(1, 301))		-- Support Myanmar Odds
-			OR (@bettype 	= 3 	AND b.bettype IN(3, 302))		-- Support Myanmar Odds
-			OR (@bettype 	= 7 	AND b.bettype IN(7, 303))		-- Support Myanmar Odds
-			OR (@bettype 	= 8 	AND b.bettype IN(8, 304))		-- Support Myanmar Odds
-			OR b.bettype 	= @bettype
+	WHERE ((@bettype		= 6		AND b.bettype IN (6, 126)) 
+			OR (@bettype	= 14	AND b.bettype IN (14, 127)) 
+			OR (@bettype	= 24	AND b.bettype IN (24, 151, 186, 410)) 
+			OR (@bettype	= 26	AND b.bettype IN (26, 145, 146, 170, 188)) 
+			OR (@bettype	= 1		AND b.bettype IN (1, 301))		-- Support Myanmar Odds
+			OR (@bettype	= 3		AND b.bettype IN (3, 302))		-- Support Myanmar Odds
+			OR (@bettype	= 7		AND b.bettype IN (7, 303))		-- Support Myanmar Odds
+			OR (@bettype	= 8		AND b.bettype IN (8, 304))		-- Support Myanmar Odds
+			OR b.bettype	= @bettype
 		)
 
-		
-	
 	EXEC [dbo].[Age_CoreBetList_Running_SelBetTicket]
 		@CustId 			= @CustId
 		, @RoleId			= 3
@@ -118,7 +116,7 @@ BEGIN
 								comstatus,
 								transdesc,
 								OddsSpread'
-		
+
 	RETURN;
 END
 
