@@ -26,6 +26,7 @@ Revisions:
 	- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
 	- 20120927@Sophia: Get comstatus
 	- 20150420@Tom: Add @leagueID parameter
+	- 20151203@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 */
 SET NOCOUNT ON
 DECLARE @SAgWinlossOutright TABLE(
@@ -180,6 +181,7 @@ BEGIN
 END
 
 SELECT * FROM @SAgWinlossOutright ORDER BY Status, Transid
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_BetList_SelWinlossOutright_SAg] TO [bodbDownlineNet]
