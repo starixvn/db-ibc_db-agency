@@ -39,7 +39,7 @@ DECLARE @SAgWinlossOutright TABLE(
 	awayID int,
 	hdp1 smallmoney,
 	hdp2 smallmoney,
-	odds smallmoney,
+	odds money,
 	status nvarchar(10),
 	stake money,
 	winlost money,
@@ -181,6 +181,7 @@ BEGIN
 END
 
 SELECT * FROM @SAgWinlossOutright ORDER BY Status, Transid
+
 
 
 GO
