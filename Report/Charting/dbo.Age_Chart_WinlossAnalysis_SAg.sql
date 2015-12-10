@@ -20,6 +20,7 @@ GO
 	@showKeno		BIT = 0,
 	@showGD			BIT = 0,
 	@showCB			BIT = 0,
+	@showCF			BIT = 0,
 	@BalanceUpDate	DATETIME
 AS	
 /*
@@ -38,6 +39,7 @@ AS
 		- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 		- 20150831@Winnie: Include CB [Redmine: #42409]
+		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 
 	Parameters Explanation:
 */
@@ -229,6 +231,19 @@ SET NOCOUNT ON
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(204, 0)
 	END	
+	
+	IF @showCF = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	206 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 19
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(206, 1003)
+	END	
 		
 	IF @ToDate >= @BalanceUpDate
 	BEGIN
@@ -285,7 +300,13 @@ SET NOCOUNT ON
 	FROM @AgencyWinloss
 	GROUP BY CONVERT(VARCHAR(6),winlostdate,112)
 	ORDER BY CONVERT(VARCHAR(6),winlostdate,112) ASC
-			 
-	
-		 
-	
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_SAg] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_SAg] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Chart_WinlossAnalysis_SAg] TO [vnteam] AS [dbo]
+GO

@@ -170,7 +170,10 @@ SELECT pvt.recommend, c.username,
 	ISNULL([1501],0) +
 	---Gold Deluxe_Comm
 	ISNULL([1701],0) + ISNULL([1702],0) + ISNULL([1703],0) AS Casino_comm,
-	ISNULL([301],0) + ISNULL([302],0) + ISNULL([303],0) + ISNULL([304],0) AS MO_comm
+	ISNULL([301],0) + ISNULL([302],0) + ISNULL([303],0) + ISNULL([304],0) AS MO_comm,
+	
+	---Cock Fighting_Comm
+	ISNULL([1003],0) AS Other_comm
 	
 FROM #tmp AS p
 PIVOT
@@ -196,6 +199,7 @@ PIVOT
 					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217],
 					[301],[302],[303],[304],
 					[401], [402], [403], [404], [405], [406], [407], [408], [409], [410], [411]
+					[1003]
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.recommend 
@@ -204,10 +208,13 @@ ORDER BY c.username
 DROP TABLE #tmp
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [bodbDownlineNet] AS [dbo]
+GO
 GO
 
 GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [vnteam] AS [dbo]
 GO
 
 GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [vnteam] AS [dbo]

@@ -13,6 +13,7 @@
 	@showVS			BIT = 0,
 	@showKeno		BIT = 0,
 	@showGD			BIT = 0,
+	@showCF			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 WITH RECOMPILE
@@ -28,6 +29,7 @@ AS
 		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 		- 20151110@Percy: Include CustID in select result [RedmineID: #47201]
+		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -239,7 +241,6 @@ BEGIN
 		VALUES(202,0)
 END
 	
-	
 IF @showGD = 1
 BEGIN
 	-- bettrans
@@ -251,6 +252,19 @@ BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, bettype)
 	VALUES(255, 0)
+END	
+
+IF @showCF = 1
+BEGIN
+	-- bettrans
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	206 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 19
+
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, bettype)
+	VALUES(206, 1003)
 END	
 		
 IF @tdate >= @BalanceUpDate

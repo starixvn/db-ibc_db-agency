@@ -23,6 +23,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]
  ,@showKeno				BIT = 0
  ,@showGD				BIT = 0
  ,@showCB				BIT = 0
+ ,@showCF				BIT = 0
  ,@BalanceUpDay			SMALLDATETIME  
   
 WITH RECOMPILE  
@@ -67,6 +68,7 @@ AS
   - 20150306@Cody: Apply sport bettype matrix [redmine: #30169]
   - 20150507@Sophia: Apply Gold Deluxe [Redmine: #35278]
   - 20150831@Winnie: Include CB [Redmine: #42409]
+  - 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -162,6 +164,13 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(204, 0) 
 END
+IF @showCF = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(206, 1003) 
+END
+
 DECLARE @SportBettype TABLE(
 	ProductID INT
 	,Bettype INT
@@ -199,6 +208,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showGD = 1 THEN 12 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showCB = 1 THEN 15 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showCF = 1 THEN 19 ELSE 0 END
 				)
 		  --  (  
 		  --   bettype < case when @showSB=1 then 31 else 0 end  
@@ -289,3 +299,13 @@ FROM
 GROUP BY w.CustID, c.UserName  
 ORDER BY c.Username
 
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLoss_SAg] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLoss_SAg] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLoss_SAg] TO [vnteam] AS [dbo]
+GO
