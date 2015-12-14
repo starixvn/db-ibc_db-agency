@@ -27,7 +27,8 @@ Revisions:
 					3. Remove betype 23101 in CasinoOutstanding    
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]   
 	- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
-	- 20150907@Winnie: Do not check ticket running of Colosus bet at bettrans table, because of the translog [#43180] 
+	- 20150907@Winnie: Do not check ticket running of Colosus bet at bettrans table, because of the translog [#43180]
+	- 20151214@Percy: Do not check ticket running of Cock Fighting at bettrans table, because of the translog [#48601]
 */
 SET NOCOUNT ON
  
@@ -45,8 +46,8 @@ AS (
 		SUM(case when bettype = 23202 then actual_stake end) BingoOutstanding
 	FROM	bettrans with (nolock) 
 	WHERE	ruben=0
-			AND bettype NOT BETWEEN 801 AND 899
-			AND bettype <>18000
+			AND bettype NOT BETWEEN 801 AND 899 -- Metric gaming
+			AND bettype NOT IN (18000, 1003) -- Colosus bet, Cock Fighting
 			AND mrecommend =  @CustID
 	GROUP BY recommend
 
@@ -89,3 +90,13 @@ INNER JOIN (
 				group BY recommend
 			) b ON c.custid = b.recommend
 ORDER BY username
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_MAg] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_MAg] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_Outstanding_MAg] TO [vnteam] AS [dbo]
+GO

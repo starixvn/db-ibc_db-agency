@@ -1,4 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
+﻿USE [bodb02]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Age_CustomerSelAllInfo]    Script Date: 12/14/2015 11:29:57 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
 	@isInternalAgent BIT = 0
@@ -39,6 +49,7 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
+	- 20151214@Percy: Do not check ticket running of Cock Fighting at bettrans table, because of the translog [#48601]
 
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -56,7 +67,7 @@ BEGIN
 	INSERT INTO @bettypemetric (bettype)
 	SELECT typeid AS bettype
 	FROM dbo.bettype WITH (NOLOCK)
-	WHERE typeID IN (801,802,803,804,805,806)
+	WHERE typeID IN (801,802,803,804,805,806,1003) -- Exlude Metric gaming, Cock Fighting from bettrans
 
     /*DECLARE @ABSDate DATETIME
     SET @ABSDate = '2011-09-01'	*/
@@ -622,3 +633,4 @@ GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelAllInfo] TO [bodbDownlineNetView] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelAllInfo] TO [vnteam] AS [dbo]
+GO

@@ -1,17 +1,28 @@
-﻿ALTER PROCEDURE [Age_CustomerSelStatisticsInfo_Ag]
+﻿USE [bodb02]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Age_CustomerSelStatisticsInfo_Ag]    Script Date: 12/14/2015 11:31:21 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [Age_CustomerSelStatisticsInfo_Ag]
 	 @custid INT
 AS
 /*
 	Created: Johnson
 	Date: 2011-05-31
-	DB: DB052.BODB02
+	DB: DBAGE/bodb02
 	Task: Get Agent Statictis Info 
 	Revisions:
 	- 20110819@Sophia: Count Negative stake as positive turnover
 	- 20111017@Tom: 1. Add P2P Transfer (23101)/Outstanding (23102)
 					2. Remove variable @ABSDate ('2011-09-01')	
 	- 20140305@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
-	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789
+	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
 */
 SET NOCOUNT ON
 
@@ -54,7 +65,7 @@ SELECT --@OutStanding = ISNULL(SUM(apositiontaking* CASE WHEN winlostdate >= @AB
 		@total_P2POutstanding = ISNULL(SUM(CASE WHEN bettype = 23102 THEN actual_stake ELSE 0 END),0)
 FROM bettrans WITH(NOLOCK)
 WHERE recommend = @custid AND ruben =0 
-		AND bettrans.bettype NOT IN (801,802,803,804,805,806)
+		AND bettrans.bettype NOT IN (801,802,803,804,805,806,1003) -- Exlude Metric gaming, Cock Fighting from bettrans
 			 
 
 SELECT @Total_memberActive = ISNULL(SUM(CASE WHEN Closed = 0 AND ISNULL(reject,0) = 0 THEN 1 ELSE 0 END), 0),
@@ -86,3 +97,4 @@ GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelStatisticsInfo_Ag] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelStatisticsInfo_Ag] TO [vnteam]
+GO
