@@ -6,7 +6,6 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
-(
 	-- MEM INFO
 	@CustId 			INT
 	, @Username			NVARCHAR(30)
@@ -18,8 +17,8 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	, @Error			INT 			= 0 OUTPUT
 	, @ErrorMsg			VARCHAR(250) 	= '' OUTPUT
-)
 AS
+
 /*
 	Created: Bobby.Nguyen
 	Task : Aphla site - refactor betlist core 
@@ -31,36 +30,38 @@ AS
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150814@Bobby: #41600 - Update time range to datetime formation
 		- 20150831@Kos: Support Colossus Bet
-		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
-	
+		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
+		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
+
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
-		
+
 	Wrapped SP List:
 		- Age_BetList_SelRunningByDate_Mem
 		- Age_BetList_SelAllByDate_Mem
 		
 	Scope of tickets:
 		- bettrans	: All products - all status
-		- translog	: Keno & GD - running status only
+		- translog	: Keno, Gold Deluxe, Metric Gaming, Colossus Bet, Cockfighting - running status only
 */
+
 BEGIN
 	SET NOCOUNT ON;
-	
+
 	DECLARE @Recommend		INT
 		, @tempCust			dbo.TVP_TicketSportBettype
-	
+
 	SELECT @Error			= 0
 		, @ErrorMsg			= ''
-	
+
 	-- CHECK member info
 	IF( @CustID IS NULL
 		AND @UserName IS NOT NULL
 	)
 	BEGIN
 		SELECT @CustID 	= CustID
-		, @Recommend 	= Recommend 
+			, @Recommend 	= Recommend 
 		FROM dbo.custinfo WITH(NOLOCK) 
 		WHERE UserName	= @UserName
 	END
@@ -73,11 +74,11 @@ BEGIN
 	BEGIN
 		SELECT @Recommend 	= Recommend 
 			,@UserName		= UserName
-		FROM dbo.custinfo WITH(NOLOCK) 
+		FROM dbo.custinfo WITH (NOLOCK) 
 		WHERE CustID		= @CustID
 	END
 	
-	IF(@Recommend IS NULL)
+	IF @Recommend IS NULL
 	BEGIN
 		SELECT @Error 	= 100
 			, @ErrorMsg	= 'The customer was not found.'
@@ -94,7 +95,7 @@ BEGIN
 		, b.bettype
 		, bt.EventType
 		, 1 AS WhTicket
-	FROM dbo.bettrans b WITH(nolock)
+	FROM dbo.bettrans b WITH (NOLOCK)
 		INNER JOIN @BettypeMatrix bt
 		ON b.bettype	= bt.bettype
 		INNER JOIN @TransStatus stt
@@ -106,14 +107,15 @@ BEGIN
 		AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
 			OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
 		)
-	
+
 	/* running tickets
 		- Keno 			: ProductId = 8
 		- Gold Deluxe	: ProductId = 12
 		- Colossus Bet	: ProductId = 15
+		- Cockfighting	: ProductId = 19
 		- Metric Gaming	: Bettype(801-899)
 	*/
-	IF (EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1)))
+	IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
 	BEGIN
 		INSERT INTO @tempCust
 		SELECT 
@@ -132,7 +134,7 @@ BEGIN
 		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
 			AND	b.custid		= @CustID
 			AND	(
-				bt.ProductId	IN (8, 12, 15) 
+				bt.ProductId	IN (8, 12, 15, 19) 
 				OR bt.bettype BETWEEN 801 AND 899
 			)
 			AND b.statusID IN (0, 1)
@@ -145,6 +147,8 @@ BEGIN
 	
 	RETURN;
 END
+
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket] TO [bodbDownlineNet]
 GO

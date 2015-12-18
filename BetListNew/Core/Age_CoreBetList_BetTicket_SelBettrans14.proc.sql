@@ -23,6 +23,7 @@ AS
 		- 20150831@Kos: Support Colossus Bet
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151022@Kos: Return [bettransm14].[betcheck] to support view CB ticket detail
+		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 	
 	Param's Explanation:
 	
@@ -34,11 +35,12 @@ BEGIN
 	SET NOCOUNT ON;
 	
 	/*
-	- Mix & System Parlay	: ProductID = 1
-	- P2P					: ProductID = 9
-	- Casino				: ProductID = 6
-	- Bingo					: ProductID = 7
-	- Gold Deluxe			: ProductID = 12
+		- Mix & System Parlay	: ProductID = 1
+		- P2P					: ProductID = 9
+		- Casino				: ProductID = 6
+		- Bingo					: ProductID = 7
+		- Gold Deluxe			: ProductID = 12
+		- Cockfighting			: ProductID = 19
 	*/
 	SELECT
 		CASE WHEN (b.bettype = 29 AND ISNULL(b.betid, 0) > 0) THEN b.betid
@@ -52,31 +54,33 @@ BEGIN
 				WHEN c.ProductID = 7 THEN 252
 				WHEN c.ProductID = 8 THEN 202
 				WHEN c.ProductID = 12 THEN 255
+				WHEN c.ProductID = 19 THEN 206
 				ELSE 0
 		END							AS Sporttype
 		, b.bettype
-				, ISNULL(b.BetID, 0)
-				, CASE WHEN c.ProductID = 1 THEN b.Betteam 
-						WHEN c.ProductID = 8 THEN fnc.ChoiceId 
-				ELSE '' 
-			END						AS Betteam 
-		, CASE WHEN c.ProductID = 1
-					THEN b.hdp1 
-				ELSE 0
-			END						AS hdp1
-		, CASE WHEN c.ProductID = 1
-					THEN b.hdp2 
-				ELSE 0 
-			END						AS hdp2
-		, CASE WHEN c.ProductID = 8
-				THEN b.OddsType
+		, ISNULL(b.BetID, 0)
+		, CASE 
+			WHEN c.ProductID = 1 THEN b.Betteam 
+			WHEN c.ProductID = 8 THEN fnc.ChoiceId 
+			ELSE '' 
+		END						AS Betteam 
+		, CASE 
+			WHEN c.ProductID = 1 THEN b.hdp1 
+			ELSE 0
+		END						AS hdp1
+		, CASE 
+			WHEN c.ProductID = 1 THEN b.hdp2 
+			ELSE 0 
+		END						AS hdp2
+		, CASE 
+			WHEN c.ProductID IN (8, 19) THEN b.OddsType
 			ELSE 0
 		END		AS OddsType
-		, b.oddsid				
-		, CASE WHEN c.ProductID IN ( 1, 8, 12 )
-					THEN b.Odds 
-				ELSE 0 
-			END						AS Odds
+		, b.oddsid
+		, CASE 
+			WHEN c.ProductID IN ( 1, 8, 12, 19 ) THEN b.Odds 
+			ELSE 0 
+		END						AS Odds
 		, CASE WHEN c.ProductID IN ( 1 )
 					THEN b.modds 
 				ELSE 0 
@@ -121,8 +125,10 @@ BEGIN
 		, 0 	AS htawayscore
 		, b.IP
 		, 0		AS LeagueID
-		,CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
-				WHEN c.ProductID = 12 	THEN 255
+		,CASE
+			WHEN c.ProductID = 8	THEN fnc.GameId
+			WHEN c.ProductID = 12	THEN 255
+			WHEN c.ProductID = 19	THEN b.betdaqid
 			ELSE 0
 		END		AS MatchID
 		, ''	AS MatchCode
@@ -134,20 +140,23 @@ BEGIN
 		, CONVERT(BIT,0) AS IsNeutral
 		, '' AS Placing
 		, '' 	AS showtime
-		, CASE WHEN c.ProductID IN ( 9, 12 ) AND b.bettype IN ( 1000, 1701, 1702 )
-				THEN b.betcheck 
-				ELSE ''
-			END	AS betcheck
+		, CASE 
+			WHEN c.ProductID IN ( 9, 12 ) AND b.bettype IN ( 1000, 1701, 1702 ) THEN b.betcheck 
+			WHEN c.ProductID = 19 THEN b.betcheck 
+			ELSE ''
+		END	AS betcheck
 		, CASE WHEN b.comstatus = '1' 
 					THEN '1' 
 				ELSE '0' 
 		END		AS comstatus
-		, '' AS transdesc
+		, CASE
+			WHEN c.ProductId = 19 THEN b.transdesc
+			ELSE ''
+		END AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		INNER JOIN @tempCust c ON b.transid = c.transid
+--			AND b.custid	= c.custid
 		OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.bettype) fnc
 	WHERE	c.EventType = 0
 		AND c.WhTicket = 2
@@ -218,9 +227,8 @@ BEGIN
 		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
-		INNER JOIN @tempCust c 
-			ON b.transid = c.transid
-			AND b.custid = c.custid
+		INNER JOIN @tempCust c ON b.transid = c.transid
+--			AND b.custid = c.custid
 		LEFT JOIN dbo.bettransm14 AS bm WITH (NOLOCK) ON bm.refno = b.transid AND bm.bettype = 18001
 	WHERE	c.EventType = 0
 		AND c.WhTicket	= 2
@@ -307,13 +315,11 @@ BEGIN
 		END AS transdesc
 		, ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
-		INNER JOIN dbo.match14 AS m WITH (NOLOCK) 
-		ON b.matchid		= m.matchid
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
-	WHERE c.EventType 		= 1
-		AND c.WhTicket 		= 2
+		INNER JOIN dbo.match14 AS m WITH (NOLOCK) ON b.matchid = m.matchid
+		INNER JOIN @tempCust c ON b.transid		= c.transid
+--			AND b.custid	= c.custid
+	WHERE c.EventType	= 1
+		AND c.WhTicket	= 2
 
 	/* 
 	- SB outright	: ProductID = 1
@@ -379,13 +385,10 @@ BEGIN
 		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
-		INNER JOIN dbo.Outright14 AS m WITH (NOLOCK) 
-		ON b.matchid		= m.orid
-		INNER JOIN dbo.League AS l WITH (NOLOCK) 
-		ON m.leagueID		= l.leagueID
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		INNER JOIN dbo.Outright14 AS m WITH (NOLOCK) ON b.matchid = m.orid
+		INNER JOIN dbo.League AS l WITH (NOLOCK) ON m.leagueID = l.leagueID
+		INNER JOIN @tempCust c ON b.transid = c.transid
+--			AND b.custid	= c.custid
 	WHERE c.EventType		= 2
 		AND c.WhTicket 		= 2
 
@@ -450,15 +453,12 @@ BEGIN
 		, '' AS betcheck
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
 		, '' AS transdesc
-				, 0 AS OddsSpread
+		, 0 AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
-		INNER JOIN dbo.VSOutright14 o WITH (NOLOCK) 
-		ON b.oddsid			= o.Orid
-		INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) 
-		ON r.EventID		= o.EventID
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		INNER JOIN dbo.VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
+		INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		INNER JOIN @tempCust c ON b.transid = c.transid
+--			AND b.custid	= c.custid
 	WHERE c.EventType		= 3
 		AND c.WhTicket 		= 2
 		

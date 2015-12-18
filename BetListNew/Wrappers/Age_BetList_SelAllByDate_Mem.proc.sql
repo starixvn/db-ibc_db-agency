@@ -7,24 +7,25 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
-	@custid 			INT				= NULL
-	, @AgID 			INT				= 0
-	, @FromDate 		DATETIME
-	, @ToDate 			DATETIME
-	, @Language 		VARCHAR(2)		= 'E'
-	, @username 		VARCHAR(50)		= NULL -- for API
-	, @ShowSB 			BIT = 1
-	, @ShowCasino 		BIT = 0
-	, @ShowP2P 			BIT = 0
-	, @ShowRB 			BIT = 0
-	, @ShowFI 			BIT = 0
-	, @ShowNG 			BIT = 0
-	, @ShowBI 			BIT = 0
+	@custid				INT				= NULL
+	, @AgID				INT				= 0
+	, @FromDate			DATETIME
+	, @ToDate			DATETIME
+	, @Language			VARCHAR(2)		= 'E'
+	, @username			VARCHAR(50)		= NULL -- for API
+	, @ShowSB			BIT = 1
+	, @ShowCasino		BIT = 0
+	, @ShowP2P			BIT = 0
+	, @ShowRB			BIT = 0
+	, @ShowFI			BIT = 0
+	, @ShowNG			BIT = 0
+	, @ShowBI			BIT = 0
 	, @ShowLiveCasino	BIT = 0
-	, @ShowVS 			BIT = 0
-	, @ShowKeno 		BIT = 0
-	, @ShowGD 			BIT = 0
-	, @ShowCB 			BIT = 0
+	, @ShowVS			BIT = 0
+	, @ShowKeno			BIT = 0
+	, @ShowGD			BIT = 0
+	, @ShowCB			BIT = 0
+	, @ShowCF			BIT = 0
 	, @Error			INT 			= 0
 	, @ErrorMsg			NVARCHAR(250)	= NULL
 AS
@@ -88,7 +89,8 @@ AS
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150828@Kos: Support Colossus Bet
 		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
-		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
+		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 */
 
 BEGIN
@@ -96,16 +98,14 @@ BEGIN
 	
 	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
 		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
-		
-	-- Gather Ticket status	
-	INSERT INTO @TransStatus
 
+	-- Gather Ticket status
+	INSERT INTO @TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt
 	
 	-- Gather BettypeMatrix
 	INSERT INTO @BettypeMatrix
-
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
 	
 	-- ADD exception bettype for pending funds tickets
@@ -131,38 +131,37 @@ BEGIN
 	FROM CteExtBettype
 	
 	-- DO filtering bettype by product
-	DECLARE @ProductFilter TABLE 
-	( 
-		ProductID 		TINYINT 
-	)
-	IF(@ShowSB = 1)
+	DECLARE @ProductFilter TABLE ( ProductID TINYINT )
+
+	IF @ShowSB = 1
 		INSERT INTO @ProductFilter VALUES (1)
-	IF(@ShowRB = 1)
+	IF @ShowRB = 1
 		INSERT INTO @ProductFilter VALUES (2)
-	IF(@ShowNG = 1)
+	IF @ShowNG = 1
 		INSERT INTO @ProductFilter VALUES (3)
-	IF(@ShowLiveCasino = 1)
+	IF @ShowLiveCasino = 1
 		INSERT INTO @ProductFilter VALUES (4)
-	IF(@ShowVS = 1)
+	IF @ShowVS = 1
 		INSERT INTO @ProductFilter VALUES (5)
-	IF(@ShowCasino = 1)
+	IF @ShowCasino = 1
 		INSERT INTO @ProductFilter VALUES (6)
-	IF(@ShowBI = 1)
+	IF @ShowBI = 1
 		INSERT INTO @ProductFilter VALUES (7)
-	IF(@ShowKeno = 1)
+	IF @ShowKeno = 1
 		INSERT INTO @ProductFilter VALUES (8)
-	IF(@ShowP2P = 1)
+	IF @ShowP2P = 1
 		INSERT INTO @ProductFilter VALUES (9)
-	IF(@ShowGD = 1)
+	IF @ShowGD = 1
 		INSERT INTO @ProductFilter VALUES (12)
-	IF(@ShowCB = 1)
+	IF @ShowCB = 1
 		INSERT INTO @ProductFilter VALUES (15)
-		
+	IF @ShowCF = 1
+		INSERT INTO @ProductFilter VALUES (19)
+
 	-- DELETE bettypes 
 	DELETE bt
 	FROM @BettypeMatrix bt
-		LEFT JOIN @ProductFilter p 
-		ON bt.ProductID = p.ProductID
+		LEFT JOIN @ProductFilter p ON bt.ProductID = p.ProductID
 	WHERE p.ProductID IS NULL
 	
 	/*DELETE bt

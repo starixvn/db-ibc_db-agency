@@ -23,6 +23,7 @@ AS
 		- 20150831@Kos: Support Colossus Bet
 		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 		- 20151022@Kos: Return [bettransm].[betcheck] to support view CB ticket detail
+		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 
 	Param's Explanation:
 
@@ -34,12 +35,13 @@ BEGIN
 	SET NOCOUNT ON;
 
 	/*
-	- Mix & System Parlay	: ProductId = 1
-	- P2P					: ProductId = 9
-	- Casino				: ProductId = 6
-	- Bingo					: ProductId = 7
-	- Keno					: ProductId = 8
-	- Gold Deluxe			: ProductId = 12
+		- Mix & System Parlay	: ProductId = 1
+		- P2P					: ProductId = 9
+		- Casino				: ProductId = 6
+		- Bingo					: ProductId = 7
+		- Keno					: ProductId = 8
+		- Gold Deluxe			: ProductId = 12
+		- Cockfighting			: ProductId = 19
 	*/
 	SELECT
 		CASE WHEN (b.bettype = 29 AND ISNULL(b.betid, 0) > 0) THEN b.betid
@@ -48,15 +50,17 @@ BEGIN
 		, b.refno
 		, b.custid
 		, b.Username
-		, CASE	WHEN c.ProductID = 9 THEN 253 
-				WHEN c.ProductID = 6 THEN 251
-				WHEN c.ProductID = 7 THEN 252
-				WHEN c.ProductID = 8 THEN 202
-				WHEN c.ProductID = 12 THEN 255
-				ELSE 0
+		, CASE
+			WHEN c.ProductID = 9 THEN 253 
+			WHEN c.ProductID = 6 THEN 251
+			WHEN c.ProductID = 7 THEN 252
+			WHEN c.ProductID = 8 THEN 202
+			WHEN c.ProductID = 12 THEN 255
+			WHEN c.ProductId = 19 THEN 206
+			ELSE 0
 		END							AS Sporttype
 		, b.bettype
-		, ISNULL(b.BetID,0)
+		, ISNULL(b.BetID, 0)
 		, CASE WHEN c.ProductID = 1 THEN b.Betteam 
 				WHEN c.ProductID = 8 THEN fnc.ChoiceId 
 				ELSE '' 
@@ -67,16 +71,14 @@ BEGIN
 		, CASE WHEN c.ProductID = 1 THEN b.hdp2 
 				ELSE 0 
 			END						AS hdp2
-		, CASE WHEN c.ProductID = 8 THEN b.OddsType
+		, CASE WHEN c.ProductID IN (8, 19) THEN b.OddsType
 			ELSE 0
 		END		AS OddsType
 		, b.oddsid
-		, CASE WHEN c.ProductID IN ( 1, 8, 12 )
-					THEN b.Odds 
+		, CASE WHEN c.ProductID IN ( 1, 8, 12, 19 ) THEN b.Odds 
 				ELSE 0 
 			END						AS Odds
-		, CASE WHEN c.ProductID IN (1)
-					THEN b.modds 
+		, CASE WHEN c.ProductID IN (1) THEN b.modds 
 				ELSE 0 
 			END						AS modds
 		, b.Stake
@@ -119,8 +121,10 @@ BEGIN
 		, 0 	AS htawayscore
 		, b.IP
 		, 0		AS LeagueID
-		,CASE 	WHEN c.ProductID = 8 	THEN fnc.GameId
-				WHEN c.ProductID = 12 	THEN 255
+		,CASE
+			WHEN c.ProductID = 8 	THEN fnc.GameId
+			WHEN c.ProductID = 12 	THEN 255
+			WHEN c.ProductID = 19 	THEN b.betdaqid
 			ELSE 0
 		END		AS MatchID
 		, ''	AS MatchCode
@@ -132,20 +136,19 @@ BEGIN
 		, CONVERT(BIT,0) AS IsNeutral
 		,'' AS Placing
 		, '' 	AS showtime
-		, CASE WHEN c.ProductID IN ( 9, 12 ) 
-				AND b.bettype IN ( 1000, 1701, 1702 )	THEN b.betcheck 
+		, CASE 
+			WHEN c.ProductID IN ( 9, 12 ) AND b.bettype IN ( 1000, 1701, 1702 )	THEN b.betcheck 
+			WHEN c.ProductID = 19 THEN b.betcheck 
 			ELSE ''
 		END	AS betcheck
-		, CASE WHEN b.comstatus = '1' 
-					THEN '1' 
+		, CASE WHEN b.comstatus = '1' THEN '1' 
 				ELSE '0' 
 		END		AS comstatus
 		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		INNER JOIN @tempCust c ON b.transid = c.transid
+--			AND b.custid	= c.custid
 		OUTER APPLY [dbo].[f_ParseTransDesc](b.transdesc, b.bettype) fnc
 	WHERE	c.WhTicket 	= 1
 		AND c.EventType	= 0
@@ -216,9 +219,8 @@ BEGIN
 		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN @tempCust c 
-			ON b.transid		= c.transid
-				AND b.custid	= c.custid
+		INNER JOIN @tempCust c ON b.transid = c.transid
+--				AND b.custid	= c.custid
 		LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON bm.refno = b.transid AND bm.bettype = 18001
 	WHERE	c.WhTicket 	= 1
 		AND c.EventType	= 0
@@ -246,9 +248,8 @@ BEGIN
 		, CASE WHEN c.ProductID IN (3, 4) THEN 0
 				ELSE b.hdp2
 		END		AS hdp2
-
 		, b.OddsType
-		, b.oddsid				
+		, b.oddsid
 		, b.odds 
 		, b.modds
 		, b.stake 
@@ -257,7 +258,7 @@ BEGIN
 			ELSE b.status 
 		END AS status
 		, b.transdate
-		, b.winlostdate			
+		, b.winlostdate
 		, (b.winlost-actual_stake) AS winlost
 		, b.awinlost
 		, b.mwinlost
@@ -303,13 +304,11 @@ BEGIN
 		, CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc
 		, ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN dbo.match AS m WITH (NOLOCK)
-		ON b.matchid		= m.matchid
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
-	WHERE c.WhTicket 		= 1
-		AND c.EventType 	= 1
+		INNER JOIN dbo.match AS m WITH (NOLOCK) ON b.matchid = m.matchid
+		INNER JOIN @tempCust c ON b.transid = c.transid
+--			AND b.custid	= c.custid
+	WHERE c.WhTicket 	= 1
+		AND c.EventType	= 1
 
 	/* 
 	- SB outright	: ProductID = 1
@@ -375,13 +374,10 @@ BEGIN
 		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN dbo.Outright AS m WITH (NOLOCK) 
-		ON b.matchid		= m.orid
-		INNER JOIN dbo.League AS l WITH (NOLOCK) 
-		ON m.leagueID		= l.leagueID
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		INNER JOIN dbo.Outright AS m WITH (NOLOCK) ON b.matchid = m.orid
+		INNER JOIN dbo.League AS l WITH (NOLOCK) ON m.leagueID = l.leagueID
+		INNER JOIN @tempCust c ON b.transid		= c.transid
+--			AND b.custid	= c.custid
 	WHERE c.EventType	= 2
 		AND c.WhTicket	= 1
 
@@ -433,7 +429,7 @@ BEGIN
 		, 0 AS htawayscore
 		, b.IP
 		, r.LeagueID
-		, b.MatchID	
+		, b.MatchID
 		, CONVERT(NVARCHAR(50), o.RacerNum) AS MatchCode
 		, CONVERT(NVARCHAR(50), b.oddsid) 	AS Race
 		, o.eventdate
@@ -448,13 +444,10 @@ BEGIN
 		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN dbo.VSOutright o WITH (NOLOCK) 
-		ON b.oddsid			= o.Orid
-		INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) 
-		ON r.EventID		= o.EventID
-		INNER JOIN @tempCust c 
-		ON b.transid		= c.transid
-			AND b.custid	= c.custid
+		INNER JOIN dbo.VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
+		INNER JOIN dbo.VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+		INNER JOIN @tempCust c ON b.transid		= c.transid
+--			AND b.custid	= c.custid
 	WHERE c.EventType	= 3
 		AND c.WhTicket	= 1
 
