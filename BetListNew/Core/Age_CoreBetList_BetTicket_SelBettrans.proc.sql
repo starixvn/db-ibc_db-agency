@@ -144,7 +144,10 @@ BEGIN
 		, CASE WHEN b.comstatus = '1' THEN '1' 
 				ELSE '0' 
 		END		AS comstatus
-		, '' AS transdesc
+		, CASE
+			WHEN c.ProductId = 19 THEN b.transdesc
+			ELSE ''
+		END AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust c ON b.transid = c.transid
