@@ -43,6 +43,7 @@ AS
 		- 20150831@Kos: Support Colossus Bet
 		- 20150909@Kos: Add TransType params to support Colossus Bet Grand Prize ticket
 		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		- 20151223@Kos: Support Cockfighting (#Redmine: 48850)
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -65,14 +66,14 @@ BEGIN
 		, @tempCust			dbo.TVP_TicketSportBettype
 		
 	-- CHECK for MoveBetsDay
-	IF( @MoveBetsDay IS NULL )
+	IF @MoveBetsDay IS NULL
 	BEGIN
 		SELECT @MoveBetsDay = MAX(Winlostdate) 
 		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 	END
 	
 	-- CHECK for BalanceupDay
-	IF( @BalanceupDay IS NULL )
+	IF @BalanceupDay IS NULL
 	BEGIN
 		SELECT @BalanceupDay = MIN(Winlostdate) 
 		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
@@ -84,13 +85,11 @@ BEGIN
 		,@ErrorMsg		= ''
 	
 	-- CHECK member info
-	IF( @CustID IS NULL
-		AND @UserName IS NOT NULL
-	)
+	IF( @CustID IS NULL AND @UserName IS NOT NULL )
 	BEGIN
 		SELECT @CustID 	= CustID
 			, @Recommend = Recommend 
-		FROM bodb02.dbo.custinfo WITH(NOLOCK) 
+		FROM bodb02.dbo.custinfo WITH (NOLOCK) 
 		WHERE UserName	= @UserName
 	END
 	
@@ -100,10 +99,10 @@ BEGIN
 		)
 	)
 	BEGIN
-		SELECT @Recommend 	= Recommend 
-			,@UserName		= UserName
-		FROM bodb02.dbo.custinfo WITH(NOLOCK) 
-		WHERE CustID		= @CustID
+		SELECT @Recommend = Recommend 
+			,@UserName = UserName
+		FROM bodb02.dbo.custinfo WITH (NOLOCK) 
+		WHERE CustID = @CustID
 	END
 	
 	IF(@Recommend IS NULL)
@@ -127,10 +126,8 @@ BEGIN
 			, bt.EventType
 			, 1 AS WhTicket
 		FROM bodb02.dbo.bettrans b WITH (NOLOCK)
-			INNER JOIN @BettypeMatrix bt
-				ON b.bettype	= bt.bettype
-			INNER JOIN @TransStatus stt
-				ON b.statusid	= stt.statusid
+			INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
+			INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
 			AND	b.custid	= @CustID
@@ -147,11 +144,10 @@ BEGIN
 			- Keno 			: ProductId = 8
 			- Gold Deluxe	: ProductId = 12
 			- Colossus Bet	: ProductId = 15
+			- Cockfighting	: ProductId = 19
 			- Sportsbook	: Metric Gaming bettype(801-899)
 		*/
-		IF (
-			EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1))
-		)
+		IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1))
 		BEGIN
 			INSERT INTO @tempCust
 			SELECT 
@@ -163,13 +159,11 @@ BEGIN
 				, bt.EventType
 				, 0 AS WhTicket
 			FROM bodb02.dbo.translog AS b WITH (NOLOCK)
-				INNER JOIN @BettypeMatrix bt 
-				ON b.gameid			= bt.Bettype
-				INNER JOIN @TransStatus st
-				ON b.statusID		= st.StatusID
+				INNER JOIN @BettypeMatrix bt ON b.gameid = bt.Bettype
+				INNER JOIN @TransStatus st ON b.statusID = st.StatusID
 			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 				AND b.custid		= @CustID
-				AND	(bt.ProductId	IN (8, 12, 15)
+				AND	(bt.ProductId	IN (8, 12, 15, 19)
 					OR bt.Bettype BETWEEN 801 AND 899
 				)
 				AND b.statusID IN (0, 1)
@@ -177,7 +171,7 @@ BEGIN
 		END
 	END
 	-- CHECK for bettrans14
-	IF ( @FromDate <= @MoveBetsDay )
+	IF @FromDate <= @MoveBetsDay
 	BEGIN
 		INSERT INTO @tempCust
 		SELECT 
@@ -189,10 +183,8 @@ BEGIN
 			, bt.EventType
 			, 2 AS WhTicket
 		FROM bodb02.dbo.bettrans14 b WITH (NOLOCK)
-			INNER JOIN @BettypeMatrix bt
-			ON b.bettype	= bt.bettype
-			INNER JOIN @TransStatus stt
-			ON b.statusid	= stt.statusid
+			INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
+			INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
 		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
 			AND	b.recommend	= @Recommend 
 			AND	b.custid	= @CustID
