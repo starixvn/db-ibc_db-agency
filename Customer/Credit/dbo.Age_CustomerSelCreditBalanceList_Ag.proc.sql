@@ -11,7 +11,7 @@ AS
 
 Task : Credit/Balance of Agent
 
-DB: DB05.bodb02
+DB: DBAGE/bodb02
 
 Original: CustAccountSelCreditList_Ag_1
 
@@ -20,26 +20,18 @@ Original: CustAccountSelCreditList_Ag_1
 Revisions:
 
     - 20060222: remove refno  
-
 	- 20060320: split table Customer
-
 	- 20080102@Vinh: add yesterday balance column
-
 	- 20090212@Phuc: paging
-
 	- 20090214@AnhPham: added getting data by username and status
-
 	- 20090710@Phuc: unhide IP for TB currency.
-
 	- 20090812@Phuc: add new filter enabled.
-
 	- 20110516@Johnson: apply new arrange bettype
-
 	- 20110617@Amy: modify to convert NULL for lastlogged
-
 	- 20110823@Sophia: Count Negative stake as positive turnover
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	- 20151222@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48601]
 
 Param's Explanation:
 
@@ -107,7 +99,7 @@ AS (
 	FROM bettrans WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			(bettrans.bettype NOT IN (801,802,803,804,805,806,1003)
 			AND ruben =0)
 			OR ruben <> 0
 			)
@@ -249,3 +241,4 @@ GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [vnteam]
+GO

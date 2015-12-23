@@ -26,6 +26,8 @@ Revisions:
 	- 20110823@Sophia: Count Negative stake as positive turnover
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	- 20151222@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48601]
+	
 Param's Explanation:
 • @CustID: MAgentID
 */
@@ -69,7 +71,7 @@ as (
 	FROM bettrans with (NOLOCK)
 	WHERE mrecommend=@CustID
 		AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
+			(bettrans.bettype NOT IN (801,802,803,804,805,806,1003)
 			AND ruben =0)
 			OR ruben <> 0
 			)
@@ -175,4 +177,5 @@ GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_MAg] TO [bodbDownlineNe
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_MAg] TO [bodbDownlineNetView]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_MAg] TO vnteam
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_MAg] TO [vnteam]
+GO
