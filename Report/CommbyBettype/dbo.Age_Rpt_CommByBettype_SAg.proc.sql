@@ -49,7 +49,8 @@ Revisions:
 	- 20150511@Sophia: Apply Gold Deluxe and Metric Gaming  [Redmine: #35278
 	- 20150903@Winnie: Add column MO_comm for Myanmar odd [Redmine: #42813]
 	- 20150904@Winnie: Exclude CB
-	 20151126@Percy: Apply 11 New Bettypes - PH All in One Phase I [RedmineID: #48050]
+	- 20151126@Percy: Apply 11 New Bettypes - PH All in One Phase I [RedmineID: #48050]
+	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	 
 */
 
@@ -150,7 +151,7 @@ SELECT pvt.mrecommend, c.username,
 	ISNULL([181],0) + ISNULL([182],0) +	ISNULL([186],0) + ISNULL([187],0) + ISNULL([188],0) + ISNULL([192],0) + ISNULL([193],0) + ISNULL([195],0) + ISNULL([196],0) + 
 	ISNULL([199],0) + ISNULL([200],0) + ISNULL([201],0) + ISNULL([202],0) +	ISNULL([206],0) + ISNULL([207],0) + ISNULL([208],0) + ISNULL([209],0) + ISNULL([210],0) + 
 	ISNULL([211],0) + ISNULL([212],0) +	ISNULL([213],0) + ISNULL([214],0) + ISNULL([215],0) + ISNULL([216],0) + ISNULL([217],0) +
-	ISNULL([405],0) + ISNULL([406],0) + ISNULL([407],0) + ISNULL([408],0) + ISNULL([409],0) + ISNULL([410],0) as totalcomm_3,
+	ISNULL([405],0) + ISNULL([406],0) + ISNULL([407],0) + ISNULL([408],0) + ISNULL([409],0) + ISNULL([410],0) + ISNULL([412],0) as totalcomm_3,
 		
 	---Casino_comm
 	isnull([71],0) + 
@@ -198,7 +199,7 @@ PIVOT
 					[188], [189], [190], [191], [192], [193], [194], [195], [196], [197], [198], [199], [200], [201], [202],
 					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217],
 					[301],[302],[303],[304],
-					[401], [402], [403], [404], [405], [406], [407], [408], [409], [410], [411]
+					[401], [402], [403], [404], [405], [406], [407], [408], [409], [410], [411], [412],
 					[1003]
 					)
 ) AS pvt
