@@ -30,6 +30,7 @@ AS
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 		- 20151110@Percy: Include CustID in select result [RedmineID: #47201]
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+		- 20160104@Percy: Include new bettype range into current RNG Casino [Redmine: #48283]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -117,13 +118,23 @@ BEGIN
 	--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
 
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
-	SELECT	251 AS sporttype, Bettype 
+	SELECT	208 AS sporttype, Bettype 
 	FROM	@SportBettype  
-	WHERE	ProductId = 6
+	WHERE	ProductId = 6 AND Bettype BETWEEN 2101 AND 2199
+	UNION ALL
+	SELECT	209 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 6 AND Bettype BETWEEN 2201 AND 2299
+	UNION ALL
+	SELECT	210 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 6 AND Bettype BETWEEN 2301 AND 2399
+	UNION ALL
+	SELECT  251 AS sporttype, 71 AS Bettype 
 		
 	--Sum_winloss  
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-	VALUES(251,71)  
+	VALUES  (208,0), (209,0), (210,0), (251,71)
 END
 IF @ShowRB = 1  
 BEGIN  	

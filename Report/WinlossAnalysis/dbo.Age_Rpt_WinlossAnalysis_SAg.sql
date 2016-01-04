@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_Rpt_WinlossAnalysis_SAg]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_SAg]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,  
 	@ToDate			SMALLDATETIME,   
@@ -13,6 +13,7 @@
 	@showKeno		BIT = 0,
 	@showGD			BIT = 0,
 	@showCF			BIT = 0,
+	@showCB 		BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -35,7 +36,9 @@ AS
 	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)
 	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
 	- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
+	- 20150831@Winnie: Include CB [Redmine: #42409]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -228,6 +231,20 @@ BEGIN
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(255, 0)
 	END	
+	
+	IF @showCB = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	204 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 15
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(204, 0)
+	END	
+	
 	
 	IF @showCF = 1
 	BEGIN

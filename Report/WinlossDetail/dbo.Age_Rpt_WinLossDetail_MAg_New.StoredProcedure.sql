@@ -80,6 +80,7 @@ Revisions:
 	- 20150615@Sophia: Apply Gold Deluxe [Redmine: #35278]
 	- 20150831@Winnie: Include CB [Redmine: #42409]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 	
 */
 
@@ -146,6 +147,12 @@ BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
 	VALUES(251, 71)
+	
+	-- New bettype for RNG Casino
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
+	SELECT Sporttype, Bettype
+	FROM bodb02.SportBettypeMatrix
+	WHERE Sporttype IN (208,209,210)
 END
 
 IF @ShowP2P = 1

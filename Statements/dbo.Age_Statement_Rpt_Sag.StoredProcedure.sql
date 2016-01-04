@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Statement_Rpt_Sag]    Script Date: 10/02/2014 09:20:08 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Age_Statement_Rpt_Sag    Script Date: 5/23/2011 6:27:06 PM ******/
-ALTER PROCEDURE [dbo].[Age_Statement_Rpt_Sag]
+﻿ALTER PROCEDURE [dbo].[Age_Statement_Rpt_SAg]
 	@custid int,
 	@fromdate 	DATETIME,
 	@todate 	DATETIME,
@@ -209,8 +201,8 @@ WHERE A.RowNum between @RowStart and @RowEnd
 
 
 GO
-GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_Sag] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_SAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_Sag] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Statement_Rpt_SAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Statement_Rpt_Sag] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Age_Statement_Rpt_SAg] TO [vnteam] AS [dbo]

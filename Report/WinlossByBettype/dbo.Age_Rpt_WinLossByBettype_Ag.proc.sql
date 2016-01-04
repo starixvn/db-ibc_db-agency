@@ -34,6 +34,7 @@ Revisions:
 	- 20140509@Logan:	Add counting for number of tickets
 	- 20140926@Sophia:  Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]
 	- 20150331@Cody: Apply sport bettype matrix [Redmine: #30169]
+	- 20160104@Percy: Include new bettype range into RNG Casino [Redmine: #48283]
 */
 SET NOCOUNT ON
 DECLARE @AgWinLoss TABLE
@@ -96,6 +97,27 @@ BEGIN
 		   AND  s.ProductID = 3
 		GROUP BY b.bettype, liveindicator
 		
+		UNION ALL -- RNG Casino not group by bettype
+		SELECT 71 AS bettype,
+			   0 AS liveindicator,
+			   SUM(comm/(1 - apositiontaking)) as GrossComm,
+			   SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) as TurnOver,
+			   SUM(winlost - actual_stake),
+			   SUM(awinlost),
+			   SUM(playercomm),
+			   SUM(comm - playercomm),
+			   isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
+		       -SUM(winlost - actual_stake + awinlost + comm),
+			   COUNT(transid) as NoOfTicket
+         FROM Bettrans b WITH(NOLOCK)
+			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
+		 WHERE winlostdate between @FromDate and @ToDate
+		   and ruben = 1
+		   and statusID not in (101, 102, 103)
+		   and recommend = @custid
+		   AND  s.ProductID = 6
+		
 	    UNION ALL --- Not number Game not group by liveindicator
 		SELECT 
 			   CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
@@ -125,7 +147,7 @@ BEGIN
 		   and recommend = @custid
 		   --and b.bettype < 19001
 		   --AND b.bettype NOT BETWEEN 81 AND 120
-		   AND s.ProductID <> 3
+		   AND s.ProductID NOT IN (3, 6)
 		 GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 
@@ -159,6 +181,26 @@ BEGIN
 		   AND s.ProductID = 3
 		 GROUP BY b.bettype, liveindicator
          UNION ALL
+		 SELECT 71 AS bettype,
+		       0 AS liveindicator,
+		       SUM(comm/(1 - apositiontaking)) as GrossComm,
+		       SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) as TurnOver,
+			   SUM(winlost - actual_stake),
+			   SUM(awinlost),
+			   SUM(playercomm),
+			   SUM(comm - playercomm),
+			   isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
+			   -SUM(winlost - actual_stake + awinlost + comm),
+			   COUNT(transid) as NoOfTicket
+		 FROM Bettrans14 b WITH(NOLOCK, index = bettrans143)
+			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
+		 WHERE winlostdate between @FromDate and @ToDate
+		   and ruben = 1
+		   and statusID not in (101, 102, 103)
+		   and recommend = @custid
+		   AND s.ProductID = 6
+         UNION ALL
 		 SELECT 
 			  CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
 		       0 as liveindicator,
@@ -187,7 +229,7 @@ BEGIN
 		   and recommend = @custid
 		   --and b.bettype < 19001
 		   --AND b.bettype NOT BETWEEN 81 AND 120
-		   AND s.ProductID <> 3
+		   AND s.ProductID NOT IN (3, 6)
 		 GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 END

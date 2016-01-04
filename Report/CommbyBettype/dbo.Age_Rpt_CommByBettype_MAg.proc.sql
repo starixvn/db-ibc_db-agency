@@ -83,7 +83,7 @@ BEGIN
 		winlostdate between @FDate and @ToDate 
 		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype NOT BETWEEN 1501 AND 1599 
-		AND s.ProductID NOT IN(2,8,15)
+		AND s.ProductID NOT IN(2,6,8,15)
 	GROUP BY recommend, b.bettype
 
 	INSERT INTO #tmp
@@ -94,6 +94,15 @@ BEGIN
 		winlostdate between @FDate and @ToDate 
 		--AND b.bettype BETWEEN 1501 AND 1599
 		AND s.ProductID = 8
+	GROUP BY recommend
+	
+	INSERT INTO #tmp
+	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, 71, recommend
+	FROM dbo.bettrans b with(nolock) 
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+	WHERE b.mrecommend = @CustID and ruben = 1 and
+		winlostdate between @FDate and @ToDate
+		AND s.ProductID = 6
 	GROUP BY recommend
 END
 
@@ -112,7 +121,7 @@ BEGIN
 		winlostdate between @FromDate and @TDate 
 		--and bettype < 19001  and bettype not in (31,32,33,41,42,43,51,52,53,54,55,56,61,62,63,64,65,66)
 		--AND b.bettype not BETWEEN 1501 AND 1599
-		AND s.ProductID NOT IN(2,8,15)
+		AND s.ProductID NOT IN(2,6,8,15)
 	GROUP BY recommend, b.bettype
 
 	INSERT INTO #tmp
@@ -123,6 +132,15 @@ BEGIN
 		winlostdate between @FromDate and @TDate 
 		--AND b.bettype BETWEEN 1501 AND 1599
 		AND s.ProductID = 8
+	GROUP BY recommend
+	
+	INSERT INTO #tmp
+	SELECT sum(isnull(acomm,0) - isnull(comm,0)) as ma_comm, 71, recommend
+	FROM dbo.bettrans14 b with(nolock) 
+		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+	WHERE b.mrecommend = @CustID and ruben = 1 and
+		winlostdate between @FDate and @ToDate
+		AND s.ProductID = 6
 	GROUP BY recommend
 END
 		

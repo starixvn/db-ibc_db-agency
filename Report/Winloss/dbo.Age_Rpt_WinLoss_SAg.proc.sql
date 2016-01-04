@@ -67,8 +67,9 @@ AS
   - 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
   - 20150306@Cody: Apply sport bettype matrix [redmine: #30169]
   - 20150507@Sophia: Apply Gold Deluxe [Redmine: #35278]
-  - 20150831@Winnie: Include CB [Redmine: #42409]
+  - 20150831@Winnie: Include CB [Redmine: #42409
   - 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+  - 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -102,7 +103,13 @@ IF @ShowCasino = 1
 BEGIN  
 	--Sum_winloss  
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-	VALUES(251, 71)  
+	VALUES(251, 71)
+	
+	-- New bettype for RNG Casino
+	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
+	SELECT Sporttype, Bettype
+	FROM bodb02.SportBettypeMatrix
+	WHERE Sporttype IN (208,209,210)
 END  
 IF @ShowP2P = 1  
 BEGIN  

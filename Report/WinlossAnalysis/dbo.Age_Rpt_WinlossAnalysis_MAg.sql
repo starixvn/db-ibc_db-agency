@@ -45,6 +45,7 @@ AS
 	- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 	- 20150831@Winnie: Include CB [Redmine: #42409]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -354,9 +355,12 @@ BEGIN
 END
 
 GO
+
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [bodbDownlineNet] AS [dbo]
 GO
+
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [bodbDownlineNetView] AS [dbo]
 GO
+
 GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [vnteam] AS [dbo]
 GO
