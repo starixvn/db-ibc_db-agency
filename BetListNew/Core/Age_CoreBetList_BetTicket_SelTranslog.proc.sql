@@ -99,7 +99,7 @@ BEGIN
 		, CASE
 			WHEN c.ProductID = 8	THEN fnc.GameId
 			WHEN c.ProductID = 12	THEN 255
-			WHEN c.ProductID = 19	THEN b.eventID
+			WHEN c.ProductID = 19	THEN b.Gameid3rd
 			ELSE 0
 		END		AS MatchID
 		, ''	AS MatchCode
