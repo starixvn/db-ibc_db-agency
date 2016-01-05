@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLoss_SAg]    Script Date: 10/7/2015 12:47:24 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
  @CustID				INT --srecommend  
  ,@FromDate				SMALLDATETIME
  ,@ToDate				SMALLDATETIME  
@@ -103,13 +95,7 @@ IF @ShowCasino = 1
 BEGIN  
 	--Sum_winloss  
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-	VALUES(251, 71)
-	
-	-- New bettype for RNG Casino
-	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
-	SELECT Sporttype, Bettype
-	FROM bodb02.SportBettypeMatrix
-	WHERE Sporttype IN (208,209,210)
+	VALUES(251, 71), (208, 0), (209, 0), (210, 0)
 END  
 IF @ShowP2P = 1  
 BEGIN  

@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_CommByBettype_MAg]    Script Date: 10/7/2015 11:30:53 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_MAg]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_MAg]
 	@CustID INT, 
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,
@@ -50,6 +43,7 @@ Revisions:
 	- 20150904@Winnie: Exclude CB
 	- 20151126@Percy: Apply 11 New Bettypes - PH All in One Phase I [RedmineID: #48050]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+	- 20160104@Percy: Include new bettype range into current RNG Casino [Redmine: #48283]
 */
 
 SET NOCOUNT ON

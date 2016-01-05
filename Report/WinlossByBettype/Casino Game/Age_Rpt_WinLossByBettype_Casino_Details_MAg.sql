@@ -15,16 +15,13 @@ BEGIN
 SET NOCOUNT ON
 DECLARE @MAgWinLoss TABLE
 (
-	bettype int, 
-	liveindicator int,
-	GrossComm money,
+	bettype int,
 	TurnOver money, 
 	AgTotal money, 
 	MAgWinlost money, 
 	Comm money, 
 	MAgTotal money, 
-	Company money,
-	NoOfTicket int
+	Company money
 )
 
 DECLARE @ABSDate DATETIME
@@ -75,7 +72,7 @@ BEGIN
 	GROUP BY b.bettype
 END
 
-SELECT bettype
+SELECT bettype,
 	   SUM(TurnOver) as TurnOver,	
 	   SUM(AgTotal) as AgTotal,
 	   SUM(MAgWinlost) as MAgWinlost,

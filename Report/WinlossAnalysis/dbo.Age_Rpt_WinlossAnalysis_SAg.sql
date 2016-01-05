@@ -100,7 +100,7 @@ BEGIN
 		
 		--Sum_winloss  
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-		VALUES(251,71)  
+		VALUES(251, 71), (208, 0), (209, 0), (210, 0) 
 	END
 	IF @ShowRB = 1  
 	BEGIN  	

@@ -16,7 +16,7 @@ BEGIN
 SET NOCOUNT ON
 DECLARE @AgWinLoss TABLE
 (
-	bettype int
+	bettype int,
 	TurnOver money, 
 	MemberWinLost money, 
 	AgWinLost money, 
@@ -58,6 +58,7 @@ BEGIN
 	   and statusID not in (101, 102, 103)
 	   and recommend = @custid
 	   AND  s.ProductID = 6
+	GROUP BY b.bettype
 	UNION ALL
 	SELECT b.bettype,
 		   SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) as TurnOver,
@@ -75,6 +76,7 @@ BEGIN
 	   and statusID not in (101, 102, 103)
 	   and recommend = @custid
 	   AND  s.ProductID = 6
+	GROUP BY b.bettype
 END
 
 SELECT bettype,

@@ -146,13 +146,7 @@ IF @ShowCasino = 1
 BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
-	VALUES(251, 71)
-	
-	-- New bettype for RNG Casino
-	INSERT INTO @TmpCondSumWL(sporttype, Bettype)
-	SELECT Sporttype, Bettype
-	FROM bodb02.SportBettypeMatrix
-	WHERE Sporttype IN (208,209,210)
+	VALUES(251, 71), (208, 0), (209, 0), (210, 0)
 END
 
 IF @ShowP2P = 1
