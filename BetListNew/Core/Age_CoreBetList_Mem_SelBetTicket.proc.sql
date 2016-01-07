@@ -42,8 +42,9 @@ AS
 		- 20150706@Bobby: Exclude Metric Gaming running ticket from bettrans table
 		- 20150831@Kos: Support Colossus Bet
 		- 20150909@Kos: Add TransType params to support Colossus Bet Grand Prize ticket
-		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151223@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20160107@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -116,7 +117,14 @@ BEGIN
 	-- do selecting from bettrans
 	IF ( @ToDate > @MoveBetsDay )
 	BEGIN
-		INSERT INTO @tempCust
+		INSERT INTO @tempCust (
+			TransID
+			, Refno
+			, CustID
+			, ProductID
+			, Bettype
+			, EventType
+			, WhTicket)
 		SELECT 
 			b.transid
 			, b.refno
@@ -139,7 +147,10 @@ BEGIN
 				OR EXISTS (	SELECT 1 
 							FROM bettransm AS bm WITH (NOLOCK) 
 							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
-		
+			AND (bt.ProductId <> 6 OR bt.SubProduct = ''
+				OR @todate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+				OR @fromdate > DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))
+
 		/* 	select running tickets
 			- Keno 			: ProductId = 8
 			- Gold Deluxe	: ProductId = 12
@@ -149,7 +160,14 @@ BEGIN
 		*/
 		IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1))
 		BEGIN
-			INSERT INTO @tempCust
+			INSERT INTO @tempCust (
+				TransID
+				, Refno
+				, CustID
+				, ProductID
+				, Bettype
+				, EventType
+				, WhTicket)
 			SELECT 
 				b.translogid	AS transid
 				, b.translogid 	AS refno
@@ -169,11 +187,47 @@ BEGIN
 				AND b.statusID IN (0, 1)
 				AND @TransType <> 4
 		END
+
+		IF @todate >= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+			AND @fromdate <= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- Today
+			AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1, 111, 112, 113))
+		BEGIN
+			INSERT INTO @tempCust (
+				TransID
+				, Refno
+				, CustID
+				, ProductID
+				, Bettype
+				, EventType
+				, WhTicket)
+			SELECT 
+				b.transid
+				, b.refno
+				, b.custid
+				, bt.ProductId
+				, b.bettype
+				, bt.EventType
+				, 1 AS WhTicket
+			FROM bodb02.dbo.bettrans b WITH (NOLOCK)
+				INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
+			WHERE b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) AND @todate 
+				AND b.recommend = @Recommend 
+				AND b.custid = @CustID
+				AND (bt.ProductId = 6 AND b.bettype <> 71)
+				AND @TransType <> 4
+		END
 	END
 	-- CHECK for bettrans14
 	IF @FromDate <= @MoveBetsDay
 	BEGIN
-		INSERT INTO @tempCust
+		INSERT INTO @tempCust (
+			TransID
+			, Refno
+			, CustID
+			, ProductID
+			, Bettype
+			, EventType
+			, WhTicket)
 		SELECT 
 			b.transid
 			, b.refno
