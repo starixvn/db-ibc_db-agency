@@ -165,7 +165,7 @@ BEGIN
 			   isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0) AS SuperRolling,
 			   isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm) AS SuperTotal,
 			   - (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))AS Company
-		FROM dbo.bettrans14 b WITH(NOLOCK, INDEX = IX_srecommend)
+		FROM dbo.bettrans14 b WITH(NOLOCK)
 			INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND statusID NOT IN (0, 1, 101, 102, 103)
@@ -189,6 +189,9 @@ SELECT  A.bettype AS GameTypeID,
 		A.MemberWinLoss,
 		A.MemberRolling,
 		A.MemberTotal,
+		A.AgentWinLoss,
+		A.AgentRolling,
+		A.AgentTotal,
 		A.MasterWinLoss,
 		A.MasterRolling,
 		A.MasterTotal,
@@ -204,6 +207,10 @@ FROM bettype t
 				SUM(MemberWinLoss) as MemberWinLoss,
 				SUM(MemberRolling) as MemberRolling,
 				SUM(MemberTotal) as MemberTotal,
+
+				SUM(AgentWinLoss) as AgentWinLoss,
+				SUM(AgentRolling) as AgentRolling,
+				SUM(AgentTotal) as AgentTotal,
 				   
 				SUM(MasterWinLoss) as MasterWinLoss,
 				SUM(MasterRolling) as MasterRolling,
@@ -222,9 +229,12 @@ FROM bettype t
 END
 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Casino_Details] TO [bodbDownlineNet]
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Casino_Details] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Casino_Details] TO [bodbDownlineNetView]
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Casino_Details] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Casino_Details] TO [vnteam]
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Casino_Details] TO [vnteam] AS [dbo]
 GO

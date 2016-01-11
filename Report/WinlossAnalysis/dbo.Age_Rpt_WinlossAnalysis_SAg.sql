@@ -94,9 +94,21 @@ BEGIN
 		--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
 
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	208 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2101 AND 2199
+		UNION
+		SELECT	209 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2201 AND 2299
+		UNION
+		SELECT	210 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2301 AND 2399
+		UNION
 		SELECT	251 AS sporttype, Bettype 
 		FROM	@SportBettype  
-		WHERE	ProductId = 6
+		WHERE	ProductId = 6 AND Bettype BETWEEN 71 AND 72
 		
 		--Sum_winloss  
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
@@ -331,6 +343,9 @@ BEGIN
 			AND roleid = 4
 	END
 
+	UPDATE @AgencyWinloss
+	SET sporttype = 251 WHERE sporttype IN (208, 209, 210)
+
 	SELECT	CASE WHEN @ReportType = 1 THEN CONVERT(VARCHAR(8),winlostdate,112)  
 				 WHEN @ReportType = 2 THEN CONVERT(VARCHAR(6),winlostdate,112)  
 				 WHEN @ReportType = 3 THEN sporttype
@@ -359,7 +374,6 @@ BEGIN
 				 ELSE '0' 
 			END 
 END
-
 GO
 
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_SAg] TO [bodbDownlineNet] AS [dbo]
