@@ -150,8 +150,7 @@ BEGIN
 							FROM bettransm AS bm WITH (NOLOCK) 
 							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
 			AND (bt.ProductId <> 6 OR bt.SubProduct = ''
-				OR @todate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
-				OR @fromdate > DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))
+				OR b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))
 
 		/* 	select running tickets
 			- Keno 			: ProductId = 8
