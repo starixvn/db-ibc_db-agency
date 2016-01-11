@@ -31,6 +31,7 @@ ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 	, @ErrorMsg			VARCHAR(250) 	= '' OUTPUT
 )
 AS
+
 /*
 	Created: Bobby.Nguyen
 	Task : Re-factor core betlist and apply GD product
@@ -44,7 +45,7 @@ AS
 		- 20150909@Kos: Add TransType params to support Colossus Bet Grand Prize ticket
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151223@Kos: Support Cockfighting (#Redmine: 48850)
-		- 20160107@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
 	
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -60,31 +61,32 @@ AS
 		- translog	: Keno & GD - running status only
 		- bettrans14: [MoveBetDay] All product - all status
 */
+
 BEGIN
 	SET NOCOUNT ON;
 	
 	DECLARE @Recommend 		INT
 		, @tempCust			dbo.TVP_TicketSportBettype
-		
+
 	-- CHECK for MoveBetsDay
 	IF @MoveBetsDay IS NULL
 	BEGIN
 		SELECT @MoveBetsDay = MAX(Winlostdate) 
 		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 	END
-	
+
 	-- CHECK for BalanceupDay
 	IF @BalanceupDay IS NULL
 	BEGIN
 		SELECT @BalanceupDay = MIN(Winlostdate) 
 		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 	END
-	
+
 	-- RESTET output
 	SELECT @TotalRows	= 0
 		,@Error			= 0
 		,@ErrorMsg		= ''
-	
+
 	-- CHECK member info
 	IF( @CustID IS NULL AND @UserName IS NOT NULL )
 	BEGIN
@@ -93,7 +95,7 @@ BEGIN
 		FROM bodb02.dbo.custinfo WITH (NOLOCK) 
 		WHERE UserName	= @UserName
 	END
-	
+
 	IF( @CustID > 0
 		AND (@Recommend IS NULL 
 			OR @UserName IS NULL
@@ -105,17 +107,17 @@ BEGIN
 		FROM bodb02.dbo.custinfo WITH (NOLOCK) 
 		WHERE CustID = @CustID
 	END
-	
-	IF(@Recommend IS NULL)
+
+	IF @Recommend IS NULL
 	BEGIN
 		SELECT @Error 	= 100
 			, @ErrorMsg	= 'The customer was not found.'
 			
 		RETURN;
 	END
-		
+
 	-- do selecting from bettrans
-	IF ( @ToDate > @MoveBetsDay )
+	IF @ToDate > @MoveBetsDay
 	BEGIN
 		INSERT INTO @tempCust (
 			TransID
@@ -217,6 +219,7 @@ BEGIN
 				AND @TransType <> 4
 		END
 	END
+
 	-- CHECK for bettrans14
 	IF @FromDate <= @MoveBetsDay
 	BEGIN
@@ -249,7 +252,10 @@ BEGIN
 	END
 	
 	--CALL to get ticket info
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] @tempCust = @tempCust, @ColumnOutput = @ColumnOutput
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] 
+		@tempCust = @tempCust, 
+		@TransStatus = @TransStatus, 
+		@ColumnOutput = @ColumnOutput
 	
 	RETURN;
 END

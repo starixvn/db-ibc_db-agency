@@ -7,7 +7,8 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelBettrans14]
 (
-	@tempCust	TVP_TicketSportBettype READONLY
+	@tempCust		[dbo].[TVP_TicketSportBettype]	READONLY
+	, @TransStatus 	[dbo].[TVP_BetTicketStatus]		READONLY
 )
 AS
 
@@ -24,7 +25,7 @@ AS
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151022@Kos: Return [bettransm14].[betcheck] to support view CB ticket detail
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
-		- 20160107@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160107@Kos: Add @TransStatus param, support RNG Casino Single Wallet [Redmine: #48958]
 	
 	Param's Explanation:
 	
@@ -467,6 +468,7 @@ BEGIN
 		
 	RETURN;
 END
+
 
 
 

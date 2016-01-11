@@ -7,7 +7,8 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelBettrans]
 (
-	@tempCust	TVP_TicketSportBettype READONLY
+	@tempCust		[dbo].[TVP_TicketSportBettype]	READONLY
+	, @TransStatus 	[dbo].[TVP_BetTicketStatus]		READONLY
 )
 AS
 
@@ -24,6 +25,7 @@ AS
 		- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
 		- 20151022@Kos: Return [bettransm].[betcheck] to support view CB ticket detail
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20160111@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 
 	Param's Explanation:
 
@@ -156,6 +158,189 @@ BEGIN
 	WHERE	c.WhTicket 	= 1
 		AND c.EventType	= 0
 		AND c.ProductID <> 15	-- not Colossus Bet
+		AND (c.ProductID <> 6	-- not RNG Casino Single Wallet today ticket
+			OR b.bettype = 71 
+			OR b.winlostdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))	
+
+	/*
+		RNG Casino today running tickets
+		- RNG Casino Single Wallet	: ProductId = 6 AND bettype <> 71
+	*/
+	UNION ALL
+	SELECT
+		b.transid
+		, b.refno
+		, b.custid
+		, b.Username
+		, b.matchid AS Sporttype
+		, b.bettype
+		, ISNULL(b.BetID, 0)
+		, '' AS Betteam 
+		, 0	AS hdp1
+		, 0	AS hdp2
+		, 0	AS OddsType
+		, 0	AS oddsid
+		, 0	AS Odds
+		, 0	AS modds
+		, SUM(brng.stake) AS Stake
+		, SUM(brng.actual_stake) AS actual_stake 
+		, 'Running' AS Status
+		, b.Transdate
+		, b.winlostdate
+		, 0 AS winlost
+		, 0 AS awinlost
+		, 0 AS mwinlost
+		, 0 AS swinlost
+		, 0 AS PlayerComm
+		, 0 AS comm
+		, 0 AS acomm 
+		, 0 AS scomm
+		, AVG(brng.APositiontaking)
+		, AVG(brng.MPositiontaking)
+		, AVG(brng.SPositiontaking)
+		, AVG(brng.TPositiontaking)
+		, AVG(brng.discount)
+		, AVG(brng.adiscount)
+		, AVG(brng.sdiscount)
+		, 0	AS Liveindicator
+		, 0	AS Livehomescore
+		, 0	AS Liveawayscore
+		, 0	AS finalhomescore
+		, 0	AS finalawayscore
+		, 0	AS hthomescore
+		, 0	AS htawayscore
+		, b.IP
+		, 0	AS LeagueID
+		, 0	AS MatchID
+		, '' AS MatchCode
+		, '' AS Race
+		, b.winlostdate AS eventdate
+		, 0	AS HomeID
+		, 0	AS AwayID
+		, '' AS Betstatus
+		, CONVERT(BIT,0) AS IsNeutral
+		, '' AS Placing
+		, '' AS showtime
+		, '' AS betcheck
+		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END	AS comstatus
+		, CASE
+			WHEN c.ProductId = 6 THEN b.transdesc
+			ELSE ''
+		END AS transdesc
+		, 0 AS OddsSpread
+	FROM dbo.bettrans AS b WITH (NOLOCK)
+		INNER JOIN @tempCust c ON b.transid = c.transid
+		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
+	WHERE	c.WhTicket 	= 1
+		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		AND (c.ProductID = 6 AND b.bettype <> 71)		 
+		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
+	GROUP BY
+		b.transid,
+		ISNULL(b.BetID, 0),
+		b.Bettype,
+		b.refno,
+		b.transdate,
+		b.winlostdate,
+		b.custid,
+		b.Username,
+		b.IP,
+		b.transdesc,
+		b.comstatus,
+		b.matchid,
+		c.ProductID
+
+	/*
+		RNG Casino today settled tickets
+		- RNG Casino Single Wallet	: ProductId = 6 AND bettype <> 71
+	*/
+	UNION ALL
+	SELECT
+		b.transid
+		, b.refno
+		, b.custid
+		, b.Username
+		, b.matchid AS Sporttype
+		, b.bettype
+		, ISNULL(b.BetID, 0)
+		, '' AS Betteam 
+		, 0	AS hdp1
+		, 0	AS hdp2
+		, 0	AS OddsType
+		, 0	AS oddsid
+		, 0	AS Odds
+		, 0	AS modds
+		, SUM(brng.stake) AS Stake
+		, SUM(brng.actual_stake) AS actual_stake 
+		, CASE 
+			WHEN SUM(brng.winlost - brng.actual_stake) = 0 THEN 'Draw'
+			WHEN SUM(brng.winlost - brng.actual_stake) > 0 THEN 'Won'
+			WHEN SUM(brng.winlost - brng.actual_stake) < 0 THEN 'Lose'
+		END AS Status
+		, b.Transdate
+		, b.winlostdate
+		, SUM(brng.winlost - brng.actual_stake) AS winlost
+		, SUM(brng.awinlost) AS awinlost
+		, SUM(brng.mwinlost) AS mwinlost
+		, SUM(brng.swinlost) AS swinlost
+		, SUM(brng.playercomm) AS PlayerComm
+		, SUM(brng.comm - brng.playercomm) AS comm
+		, SUM(brng.acomm - brng.comm) AS acomm 
+		, SUM(brng.scomm - brng.acomm) AS scomm
+		, AVG(brng.APositiontaking)
+		, AVG(brng.MPositiontaking)
+		, AVG(brng.SPositiontaking)
+		, AVG(brng.TPositiontaking)
+		, AVG(brng.discount)
+		, AVG(brng.adiscount)
+		, AVG(brng.sdiscount)
+		, 0	AS Liveindicator
+		, 0	AS Livehomescore
+		, 0	AS Liveawayscore
+		, 0	AS finalhomescore
+		, 0	AS finalawayscore
+		, 0	AS hthomescore
+		, 0	AS htawayscore
+		, b.IP
+		, 0	AS LeagueID
+		, 0	AS MatchID
+		, '' AS MatchCode
+		, '' AS Race
+		, b.winlostdate AS eventdate
+		, 0	AS HomeID
+		, 0	AS AwayID
+		, '' AS Betstatus
+		, CONVERT(BIT,0) AS IsNeutral
+		, '' AS Placing
+		, '' AS showtime
+		, '' AS betcheck
+		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END	AS comstatus
+		, CASE
+			WHEN c.ProductId = 6 THEN b.transdesc
+			ELSE ''
+		END AS transdesc
+		, 0 AS OddsSpread
+	FROM dbo.bettrans AS b WITH (NOLOCK)
+		INNER JOIN @tempCust c ON b.transid = c.transid
+		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
+	WHERE	c.WhTicket 	= 1
+		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+		AND (c.ProductID = 6 AND b.bettype <> 71)
+		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (111, 112, 113))
+	GROUP BY
+		b.transid,
+		ISNULL(b.BetID, 0),
+		b.Bettype,
+		b.refno,
+		b.transdate,
+		b.winlostdate,
+		b.custid,
+		b.Username,
+		b.IP,
+		b.transdesc,
+		b.comstatus,
+		b.matchid,
+		c.ProductID
 
 	/*
 	- Colossus Bet	: ProductId = 15

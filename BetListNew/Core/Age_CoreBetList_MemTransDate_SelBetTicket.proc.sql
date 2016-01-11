@@ -7,10 +7,10 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
 	-- MEM INFO
-	@CustId 			INT
+	@CustId				INT
 	, @Username			NVARCHAR(30)
 	, @FromDate			DATETIME
-	, @ToDate 			DATETIME
+	, @ToDate			DATETIME
 	-- PRODUCT - BETTYPE - STATUS
 	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
 	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
@@ -32,6 +32,8 @@ AS
 		- 20150831@Kos: Support Colossus Bet
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20160111@Kos: Add column list in INSERT statement
+		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -56,14 +58,12 @@ BEGIN
 		, @ErrorMsg			= ''
 
 	-- CHECK member info
-	IF( @CustID IS NULL
-		AND @UserName IS NOT NULL
-	)
+	IF @CustID IS NULL AND @UserName IS NOT NULL
 	BEGIN
-		SELECT @CustID 	= CustID
-			, @Recommend 	= Recommend 
-		FROM dbo.custinfo WITH(NOLOCK) 
-		WHERE UserName	= @UserName
+		SELECT @CustID = CustID
+			, @Recommend = Recommend 
+		FROM dbo.custinfo WITH (NOLOCK) 
+		WHERE UserName = @UserName
 	END
 	
 	IF( @CustID > 0
@@ -86,7 +86,14 @@ BEGIN
 		RETURN;
 	END
 	
-	INSERT INTO @tempCust
+	INSERT INTO @tempCust (
+		TransID,
+		Refno,
+		CustID,
+		ProductID,
+		Bettype,
+		EventType,
+		WhTicket )
 	SELECT 
 		b.transid
 		, b.refno
@@ -95,11 +102,9 @@ BEGIN
 		, b.bettype
 		, bt.EventType
 		, 1 AS WhTicket
-	FROM dbo.bettrans b WITH (NOLOCK)
-		INNER JOIN @BettypeMatrix bt
-		ON b.bettype	= bt.bettype
-		INNER JOIN @TransStatus stt
-		ON b.statusid	= stt.statusid
+	FROM dbo.bettrans AS b WITH (NOLOCK)
+		INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
+		INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
 	WHERE b.transdate	BETWEEN @fromdate AND @todate 
 		AND	b.recommend	= @Recommend 
 		AND	b.custid	= @CustID
@@ -117,7 +122,14 @@ BEGIN
 	*/
 	IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
 	BEGIN
-		INSERT INTO @tempCust
+		INSERT INTO @tempCust (
+			TransID,
+			Refno,
+			CustID,
+			ProductID,
+			Bettype,
+			EventType,
+			WhTicket )
 		SELECT 
 			b.translogid	AS transid
 			, b.translogid 	AS refno
@@ -127,13 +139,11 @@ BEGIN
 			, bt.EventType
 			, 0 AS WhTicket
 		FROM dbo.translog AS b WITH (NOLOCK)
-			INNER JOIN @BettypeMatrix bt 
-			ON b.gameid		= bt.Bettype
-			INNER JOIN @TransStatus st
-			ON b.statusID	= st.StatusID
-		WHERE	b.transdate		BETWEEN @fromdate AND @todate 
-			AND	b.custid		= @CustID
-			AND	(
+			INNER JOIN @BettypeMatrix bt ON b.gameid = bt.Bettype
+			INNER JOIN @TransStatus st ON b.statusID = st.StatusID
+		WHERE b.transdate BETWEEN @fromdate AND @todate 
+			AND b.custid = @CustID
+			AND (
 				bt.ProductId	IN (8, 12, 15, 19) 
 				OR bt.bettype BETWEEN 801 AND 899
 			)
@@ -142,8 +152,9 @@ BEGIN
 	
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
-		@tempCust 		= @tempCust
-		,@ColumnOutput 	= @ColumnOutput
+		@tempCust = @tempCust
+		, @TransStatus = @TransStatus
+		, @ColumnOutput = @ColumnOutput
 	
 	RETURN;
 END
