@@ -53,10 +53,11 @@ BEGIN
 		, b.custid
 		, b.Username
 		, CASE
-			WHEN c.ProductID = 9 THEN 253 
-			WHEN c.ProductID = 6 THEN 251
+			WHEN c.ProductID = 6 AND b.bettype = 71 THEN 251
+			WHEN c.ProductID = 6 AND b.bettype <> 71 THEN b.matchid
 			WHEN c.ProductID = 7 THEN 252
 			WHEN c.ProductID = 8 THEN 202
+			WHEN c.ProductID = 9 THEN 253 
 			WHEN c.ProductID = 12 THEN 255
 			WHEN c.ProductId = 19 THEN 206
 			ELSE 0
@@ -147,6 +148,7 @@ BEGIN
 				ELSE '0' 
 		END		AS comstatus
 		, CASE
+			WHEN c.ProductID = 6 AND b.bettype <> 71 THEN b.transdesc
 			WHEN c.ProductId = 19 THEN b.transdesc
 			ELSE ''
 		END AS transdesc
