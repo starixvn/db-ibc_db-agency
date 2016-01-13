@@ -39,8 +39,12 @@ AS
 		- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 		- 20150831@Winnie: Include CB [Redmine: #42409]
+<<<<<<< Updated upstream
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 		
+=======
+		- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
+>>>>>>> Stashed changes
 	Parameters Explanation:
 */
 SET NOCOUNT ON
@@ -83,14 +87,26 @@ SET NOCOUNT ON
 		--bettrans
 		--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
 
-		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		INSERT INTO @TmpCond(Sporttype, Bettype)
 		SELECT	251 AS sporttype, Bettype 
 		FROM	@SportBettype  
-		WHERE	ProductId = 6
+		WHERE	ProductId = 6 AND Bettype BETWEEN 71 AND 72
+		UNION
+		SELECT	208 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2101 AND 2199
+		UNION
+		SELECT	209 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2201 AND 2299
+		UNION
+		SELECT	210 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2301 AND 2399
 		
 		--Sum_winloss  
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-		VALUES(251,71)  
+		VALUES (251,71), (208, 0), (209, 0), (210, 0) 
 	END
 	IF @ShowRB = 1  
 	BEGIN  	
@@ -310,6 +326,10 @@ GO
 
 GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_MAg] TO [bodbDownlineNetView] AS [dbo]
 GO
+<<<<<<< Updated upstream
 
 GRANT VIEW DEFINITION ON [dbo].[Age_Chart_WinlossAnalysis_MAg] TO [vnteam] AS [dbo]
+=======
+GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_MAg] TO [bodbDownlineNetView]
+>>>>>>> Stashed changes
 GO

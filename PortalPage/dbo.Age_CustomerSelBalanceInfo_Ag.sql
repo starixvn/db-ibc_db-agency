@@ -1,8 +1,4 @@
-﻿USE bodb02
-GO
-
-  
-ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_Ag]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_Ag]
 	 @custid		INT,
 	 @MoveBetsDay	DATETIME
 AS
@@ -14,6 +10,7 @@ AS
 	
 	Revisions:
 		- 20110803@Johnson: Include commission into today winloss and yesterday winloss
+		- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
 */
 
 SET NOCOUNT ON 
@@ -28,11 +25,17 @@ DECLARE @username nvarchar(50),
 		@totalBalance MONEY,
 		@today_Winloss MONEY,
 		@yesterday_Winloss MONEY,
+		@cashBalanceRNG MONEY,
+		@today_cashBalanceRNG MONEY,
+		@today_totalBalanceRNG MONEY,
+		@totalBalanceRNG MONEY,
+		@today_WinlossRNG MONEY,
+		@yesterday_WinlossRNG MONEY,
 		@today DATETIME,
 		@yesterday DATETIME				
 
-SELECT @today = CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)
-SELECT @yesterday = DATEADD(dd,-1,@today)
+SELECT @today = CONVERT(DATE, GETDATE())
+SELECT @yesterday = DATEADD(dd, -1, @today)
 
 SELECT @username = username ,
 		@givenCredit = ISNULL(Credit,0) 
@@ -49,41 +52,76 @@ SELECT  @today_cashBalance = ISNULL(SUM(awinlost + comm - playercomm),0),
 FROM bettrans WITH(NOLOCK)
 WHERE recommend = @custid 
 	AND ruben = 1
-	AND bettype < 19001 	
-	AND winlostdate >= CONVERT(VARCHAR(10),CURRENT_TIMESTAMP,120)
+	AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2399
+	AND CONVERT(DATE, winlostdate) = @today
+
+SELECT  @today_cashBalanceRNG = ISNULL(SUM(awinlost + comm - playercomm),0),
+		@today_totalBalanceRNG = ISNULL(SUM(awinlost + comm + winlost - actual_stake),0),
+		@today_WinlossRNG = ISNULL(SUM(awinlost + comm - playercomm),0)
+FROM bettransRNG WITH(NOLOCK)
+WHERE recommend = @custid 
+	AND statusID NOT IN (0, 1, 101, 102)
+	AND gameID BETWEEN 2101 AND 2399
+	AND CONVERT(DATE, winlostdate) = @today
 
 SELECT
-	@cashBalance = ISNULL(SUM(CASE WHEN custid = recommend THEN winlost - actual_stake ELSE awinlost + comm - playercomm END),0),
-	@totalBalance = ISNULL(SUM(CASE WHEN custid = recommend THEN winlost - actual_stake ELSE awinlost+ comm - playercomm END)										
-					+ SUM(CASE WHEN custid <> srecommend AND custid <> mrecommend AND custid <> recommend AND ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END),0)
+	@cashBalance = ISNULL(SUM(CASE WHEN custid = recommend AND bettype NOT BETWEEN 2101 AND 2399 THEN winlost - actual_stake ELSE awinlost + comm - playercomm END),0),
+	@totalBalance = ISNULL(SUM(CASE WHEN custid = recommend AND bettype NOT BETWEEN 2101 AND 2399 THEN winlost - actual_stake ELSE awinlost+ comm - playercomm END)										
+					+ SUM(CASE WHEN custid <> srecommend AND custid <> mrecommend AND custid <> recommend AND ruben = 1 AND bettype NOT BETWEEN 2101 AND 2399 THEN winlost - actual_stake + playercomm ELSE 0 END),0),
+	@cashBalanceRNG = ISNULL(SUM(CASE WHEN custid = recommend AND bettype BETWEEN 2101 AND 2399 AND CONVERT(DATE, winlostdate) < @yesterday THEN winlost - actual_stake ELSE awinlost + comm - playercomm END),0),
+	@totalBalanceRNG = ISNULL(SUM(CASE WHEN custid = recommend AND bettype BETWEEN 2101 AND 2399 AND CONVERT(DATE, winlostdate) < @yesterday THEN winlost - actual_stake ELSE awinlost+ comm - playercomm END)										
+					+ SUM(CASE WHEN custid <> srecommend AND custid <> mrecommend AND custid <> recommend AND ruben = 1 AND bettype NOT BETWEEN 2101 AND 2399 AND CONVERT(DATE, winlostdate) < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END),0)
 FROM bettrans WITH(NOLOCK) 
 WHERE recommend = @custid
+
+SELECT
+	@cashBalanceRNG = @cashBalanceRNG + ISNULL(SUM(CASE WHEN custid = recommend THEN winlost - actual_stake ELSE awinlost + comm - playercomm END),0),
+	@totalBalanceRNG = @totalBalanceRNG + ISNULL(SUM(CASE WHEN custid = recommend THEN winlost - actual_stake ELSE awinlost+ comm - playercomm END)										
+					+ SUM(CASE WHEN custid <> srecommend AND custid <> mrecommend AND custid <> recommend AND statusID NOT IN (0, 1, 101, 102) THEN winlost - actual_stake + playercomm ELSE 0 END),0)
+FROM bettransRNG WITH(NOLOCK) 
+WHERE recommend = @custid
+	AND gameID BETWEEN 2101 AND 2399
+	AND CONVERT(DATE, winlostdate) >= @yesterday
 
 IF @yesterday <= @MoveBetsDay
 BEGIN
 	SELECT @yesterday_Winloss = ISNULL(SUM(awinlost + comm - playercomm),0)
-	FROM bettrans14 b WITH (NOLOCK)
+	FROM bettrans14 WITH (NOLOCK)
 	WHERE recommend = @custid 
 		AND ruben = 1
 		AND bettype < 19001
-		AND winlostdate = @yesterday
+		AND CONVERT(DATE, winlostdate) = @yesterday
+
+	SELECT @yesterday_WinlossRNG = ISNULL(SUM(awinlost + comm - playercomm),0)
+	FROM bettransRNG14 WITH (NOLOCK)
+	WHERE recommend = @custid 
+		AND statusID NOT IN (0, 1, 101, 102)
+		AND gameID BETWEEN 2101 AND 2399
+		AND CONVERT(DATE, winlostdate) = @yesterday
 END
 ELSE BEGIN
 	SELECT @yesterday_Winloss = ISNULL(SUM(awinlost + comm - playercomm),0)
-	FROM bettrans b WITH (NOLOCK)
+	FROM bettrans WITH (NOLOCK)
 	WHERE recommend = @custid 
 		AND ruben = 1
 		AND bettype < 19001
-		AND winlostdate = @yesterday
+		AND CONVERT(DATE, winlostdate) = @yesterday
+
+	SELECT @yesterday_WinlossRNG = ISNULL(SUM(awinlost + comm - playercomm),0)
+	FROM bettransRNG WITH (NOLOCK)
+	WHERE recommend = @custid 
+		AND statusID NOT IN (0, 1, 101, 102)
+		AND gameID BETWEEN 2101 AND 2399
+		AND CONVERT(DATE, winlostdate) = @yesterday
 END
 
 SELECT	@username AS username,
-		@cashBalance AS cashBalance,
-		@cashBalance - @today_cashBalance AS yesterday_CashBalance,
-		@totalBalance AS totalBalance,
-		@totalBalance - @today_totalBalance  AS yesterday_totalBalance,
-		@today_Winloss AS todayWinloss,
-		@yesterday_Winloss AS yesterdayWinloss,
+		@cashBalance + @cashBalanceRNG AS cashBalance,
+		@cashBalance + @cashBalanceRNG - @today_cashBalance - @today_cashBalanceRNG AS yesterday_CashBalance,
+		@totalBalance + @totalBalanceRNG AS totalBalance,
+		@totalBalance + @totalBalanceRNG - @today_totalBalance - @today_totalBalanceRNG  AS yesterday_totalBalance,
+		@today_Winloss + @today_WinlossRNG AS todayWinloss,
+		@yesterday_Winloss + @yesterday_WinlossRNG AS yesterdayWinloss,
 		@givenCredit AS givenCredit,
 		@memberCredit AS memberCredit
 
@@ -95,3 +133,4 @@ GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelBalanceInfo_Ag] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelBalanceInfo_Ag] TO [vnteam]
+GO
