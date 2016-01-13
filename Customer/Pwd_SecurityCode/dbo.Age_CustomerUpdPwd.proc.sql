@@ -15,11 +15,11 @@ ALTER PROCEDURE [dbo].[Age_CustomerUpdPwd]
     @SubAccID INT = 0 , --Sub-AccountID
     @LoginIP VARCHAR(20) = '' ,
     @ErrCode INT = 0 OUTPUT , --default no error
-    @ErrMsg NVARCHAR(100) = '' OUTPUT
+    @ErrMsg NVARCHAR(500) = '' OUTPUT
 AS /*
 Created: 
 Task : Reset password for his downlines
-DB: DBTXN/bodb02
+DB: DBCust/Custdb
 Original: CustomerPwdUpd2
 
 Revisions:
@@ -35,6 +35,7 @@ Revisions:
 	- 20130311@Dan: Change linked server DB053 to DBAGE; Write more log on DBTXN server in case of DBLOG server failure
 	- 20150508@Johnson: Check sub-account not allow to update main account password [Redmine: #35551]
 	- 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
+	- 20160104@Helen: Disallow SMA changes password or updates account status of members - [Redmine:#49967]
 	
 Param's Explanation:
 • @ErrCode:
@@ -43,7 +44,7 @@ Param's Explanation:
   
 • @ErrMsg: Error description.
 */
-
+BEGIN
     SET NOCOUNT ON
     
 	declare @startRun datetime
@@ -84,6 +85,16 @@ Param's Explanation:
             RETURN
         END	
 
+	IF @UserID <> @CustID AND EXISTS (SELECT 1 FROM custInfo WITH (NOLOCK) WHERE custid = @CustID AND LockUpd = 1 AND roleid = 1)
+	BEGIN
+		 SELECT  @ErrMsg = CASE @Language
+                                WHEN 'E' THEN 'You are currently not authorized to perform this action. Please contact the Customer Service Department for further assistance.'
+                                ELSE [dbo].[f_Get_MsgNamebyMsgID](40033,@Language)
+                              END ,
+                 @ErrCode = 102
+         RETURN
+	END
+	
 	SELECT	@OldPwd	= userpwd
 	FROM	Customer WITH (NOLOCK) 
 	WHERE	custid = @CustID
@@ -146,7 +157,7 @@ Param's Explanation:
 			@TrackingValue = @LogData	,
 			@duration = @duration	
 	END CATCH
-
+END
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerUpdPwd] TO [bodbDownlineNet] AS [dbo]
 GO
