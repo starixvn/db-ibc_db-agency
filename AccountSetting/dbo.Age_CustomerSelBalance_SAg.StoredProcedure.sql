@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_CustomerSelBalance_SAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelBalance_SAg]
 	@CustID int,
 	@UserName varchar(20) = '' OUTPUT ,
 	@CashBalance money = 0 OUTPUT,
@@ -86,7 +86,7 @@ From Custinfo with (NOLOCK)
 Where SRecommend = @CustID
 
 SELECT @translog_superOutstanding = ISNULL(SUM(ABS(actual_stake)*spositiontaking),0),
-		@translog_totalOutstanding = ISNULL(SUM(ABS(actual_stake)),0)
+	   @translog_totalOutstanding = ISNULL(SUM(ABS(actual_stake)),0)
 FROM translog with(NOLOCK)
 WHERE srecommend = @custid 
 and statusid = 0
@@ -128,8 +128,8 @@ FROM bettransRNG WITH (NOLOCK)
 WHERE srecommend= @CustID 
 	AND gameID BETWEEN 2101 AND 2399
 	AND(
-			(CONVERT(DATE, winlostdate) >= @yesterday AND statusID IN (0, 1)
-			OR statusID NOT IN (0, 1, 101, 102))
+			(CONVERT(DATE, winlostdate) >= @yesterday AND statusID NOT IN (0, 1, 101, 102))
+			OR statusID IN (0, 1)
 		)
 
 SELECT 
@@ -141,39 +141,33 @@ FROM
 			ISNULL(sum(swinlost+scomm + mwinlost + awinlost + winlost-actual_stake),0) totalBalance 
 		FROM bettrans WITH (NOLOCK)  
 		WHERE srecommend= @CustID
-			AND ruben = 1 AND bettype <= 19000 and CONVERT(DATE, winlostdate) = @today 
-			AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806,1003)
-			AND ruben =0)
-			OR ruben <> 0
-			)
-			AND bettype NOT BETWEEN 2101 AND 2399
+			AND ruben = 1
+			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2399
+			AND CONVERT(DATE, winlostdate) = @today
 	 )today_balance
 
 SELECT 
- @Yesterday_CashBalance  = @Yesterday_CashBalance  - isnull(today_balanceRNG.cashBalance,0)  + isnull(today_balanceRNG.yes_cashBalance,0),
- @Yesterday_TotalBalance = @Yesterday_TotalBalance - isnull(today_balanceRNG.totalBalance,0) + isnull(today_balanceRNG.yes_totalBalance,0)
+ @Yesterday_CashBalance  = @Yesterday_CashBalance  - isnull(today_balanceRNG.cashBalance,0),
+ @Yesterday_TotalBalance = @Yesterday_TotalBalance - isnull(today_balanceRNG.totalBalance,0)
 FROM 
-	(	SELECT 
-			ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN swinlost+scomm-acomm ELSE 0 END),0) yes_cashBalance,  
-			ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN swinlost+scomm + mwinlost + awinlost + winlost-actual_stake ELSE 0 END),0) yes_totalBalance,
-			ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN swinlost+scomm-acomm ELSE 0 END),0) cashBalance,  
-			ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) = @yesterday THEN swinlost+scomm + mwinlost + awinlost + winlost-actual_stake ELSE 0 END),0) totalBalance
-		FROM bettrans WITH (NOLOCK)  
+	(	SELECT
+			ISNULL(sum(swinlost+scomm-acomm),0) cashBalance,  
+			ISNULL(sum(swinlost+scomm + mwinlost + awinlost + winlost-actual_stake),0) totalBalance
+		FROM bettransRNG WITH (NOLOCK)  
 		WHERE srecommend= @CustID
-			AND ruben = 1 AND bettype <= 19000 and CONVERT(DATE, winlostdate) = @today 
-			AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806,1003)
-			AND ruben =0)
-			OR ruben <> 0
-			)
-			AND bettype NOT BETWEEN 2101 AND 2399
+			AND gameID BETWEEN 2101 AND 2399
+			AND CONVERT(DATE, winlostdate) = @today
+			AND statusID NOT IN (0, 1, 101, 102)
 	 )today_balanceRNG
 
+
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_SAg] TO [bodbDownlineNet]
+
+GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_SAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_SAg] TO [bodbDownlineNetView]
+
+GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_SAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelBalance_SAg] TO [vnteam]
-Go
+
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelBalance_SAg] TO [vnteam] AS [dbo]
+GO
