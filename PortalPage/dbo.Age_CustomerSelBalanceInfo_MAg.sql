@@ -86,7 +86,7 @@ BEGIN
 	FROM bettrans14 WITH(NOLOCK)
 	WHERE mrecommend = @custid
 		 AND ruben = 1
-		 AND bettype < 19001 AND bettype BETWEEN 2101 AND 2399
+		 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2399
 		 AND CONVERT(DATE, winlostdate) = @yesterday 
 
 	SELECT @yesterday_Winloss = @yesterday_Winloss + ISNULL(SUM(mwinlost + acomm - comm),0)
@@ -102,7 +102,7 @@ BEGIN
 	FROM bettrans WITH(NOLOCK)
 	WHERE mrecommend = @custid
 		 AND ruben = 1
-		 AND bettype < 19001 AND bettype BETWEEN 2101 AND 2399
+		 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2399
 		 AND CONVERT(DATE, winlostdate) = @yesterday 
 
 	SELECT @yesterday_Winloss = @yesterday_Winloss + ISNULL(SUM(mwinlost + acomm - comm),0)
