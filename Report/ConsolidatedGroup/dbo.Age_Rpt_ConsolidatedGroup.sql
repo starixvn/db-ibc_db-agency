@@ -1,4 +1,14 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
+﻿USE [bodb02]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_ConsolidatedGroup]    Script Date: 1/14/2016 5:19:06 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER OFF
+GO
+
+CREATE PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@CustID			INT, 
 	@Currency		INT,
 	@FromDate		SMALLDATETIME,  
@@ -13,6 +23,7 @@
 	@showVS			BIT = 0,
 	@showKeno		BIT = 0,
 	@showGD			BIT = 0,
+	@showCB			BIT = 0,
 	@showCF			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
@@ -28,9 +39,10 @@ AS
 	Revisions:   
 		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
+		- 20150831@Winnie: Include CB [Redmine: #42409]
 		- 20151110@Percy: Include CustID in select result [RedmineID: #47201]
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
-		- 20160104@Percy: Include new bettype range into current RNG Casino [Redmine: #48283]
+		- 20160108@Percy: Include new bettype range into the current RNG Casino [Redmine: #48283]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -121,20 +133,20 @@ BEGIN
 	SELECT	208 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 6 AND Bettype BETWEEN 2101 AND 2199
-	UNION ALL
+	UNION
 	SELECT	209 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 6 AND Bettype BETWEEN 2201 AND 2299
-	UNION ALL
+	UNION
 	SELECT	210 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 6 AND Bettype BETWEEN 2301 AND 2399
-	UNION ALL
-	SELECT  251 AS sporttype, 71 AS Bettype 
+	UNION
+	SELECT	251 AS sporttype, 71 AS Bettype
 		
 	--Sum_winloss  
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-	VALUES  (208,0), (209,0), (210,0), (251,71)
+	VALUES (251,71), (208, 0), (209, 0), (210, 0)
 END
 IF @ShowRB = 1  
 BEGIN  	
@@ -265,6 +277,19 @@ BEGIN
 	VALUES(255, 0)
 END	
 
+IF @showCB = 1
+BEGIN
+	-- bettrans
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	204 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 15
+
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, bettype)
+	VALUES(204, 0)
+END	
+
 IF @showCF = 1
 BEGIN
 	-- bettrans
@@ -284,7 +309,9 @@ BEGIN
 	BEGIN 
 		---Super agent 
 		INSERT INTO @AgencyWinloss
-		SELECT b.winlostdate, b.srecommend, t.sporttype, 4 RoleID
+		SELECT b.winlostdate, b.srecommend
+			,CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END AS sporttype
+			,4 RoleID
 			,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
 			,SUM(winlost-actual_stake) winlost
 			,SUM(playercomm) playercomm
@@ -300,7 +327,7 @@ BEGIN
 				AND StatusID NOT IN (0,1,101,102,103) 
 				AND srecommend IN (SELECT CustID FROM @TmpCust WHERE roleID = 4)	
 		GROUP BY 
-				b.srecommend, b.winlostdate, t.sporttype
+				b.srecommend, b.winlostdate, CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END
 
 	END
 
@@ -308,7 +335,9 @@ BEGIN
 	BEGIN
 		--- Master agent 
 		INSERT INTO @AgencyWinloss
-		SELECT b.winlostdate, b.mrecommend, t.sporttype, 3 RoleID 
+		SELECT b.winlostdate, b.mrecommend
+			,CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END AS sporttype
+		    ,3 RoleID 
 			,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
 			,SUM(winlost-actual_stake) winlost
 			,SUM(playercomm) playercomm
@@ -324,14 +353,16 @@ BEGIN
 				AND StatusID NOT IN (0,1,101,102,103) 
 				AND mrecommend IN (SELECT CustID FROM @TmpCust WHERE roleID = 3)		
 		GROUP BY 
-			b.mrecommend, b.winlostdate, t.sporttype 
+			b.mrecommend, b.winlostdate, CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END
 	END
 
 	IF @isAg = 1
 	BEGIN
 		--- Agent 
 		INSERT INTO @AgencyWinloss
-		SELECT b.winlostdate,  b.recommend, t.sporttype, 2 RoleID
+		SELECT b.winlostdate,  b.recommend
+			,CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END AS sporttype
+			,2 RoleID
 			,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
 			,SUM(winlost-actual_stake) winlost
 			,SUM(playercomm) playercomm
@@ -347,14 +378,16 @@ BEGIN
 				AND b.StatusID NOT IN (0,1,101,102,103) 
 				AND recommend IN (SELECT CustID FROM @TmpCust WHERE roleID = 2)
 		GROUP BY 
-			b.recommend, b.winlostdate, t.sporttype
+			b.recommend, b.winlostdate, CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END
 	END
 
 	IF @isMem = 1
 	BEGIN
 		--- member
 		INSERT INTO @AgencyWinloss
-		SELECT b.winlostdate, b.CustID, t.sporttype, 1 RoleID 
+		SELECT b.winlostdate, b.CustID
+			,CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END AS sporttype
+			,1 RoleID 
 			,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
 			,0 as winlost
 			,0 as playercomm
@@ -370,7 +403,7 @@ BEGIN
 				AND StatusID NOT IN (0,1,101,102,103) 
 				AND b.custid IN (SELECT CustID FROM @TmpCust WHERE roleID = 1)
 		GROUP BY 
-			b.CustID, b.winlostdate, t.sporttype 
+			b.CustID, b.winlostdate, CASE WHEN t.sporttype IN (208, 209, 210, 251) THEN 251 ELSE t.sporttype END
 	END
 
 
@@ -573,6 +606,10 @@ BEGIN
 
 END
 
+UPDATE @AgencyWinloss
+SET sporttype = 251
+WHERE sporttype IN (208, 209, 210)
+
 SELECT	CASE WHEN @ReportType = 1 THEN custID  
 			 WHEN @ReportType = 2 THEN CONVERT(VARCHAR(8),winlostdate,112)  
 			 WHEN @ReportType = 3 THEN sporttype
@@ -594,7 +631,7 @@ SELECT	CASE WHEN @ReportType = 1 THEN custID
 		,SUM(betcount) AS betcount 
 
 FROM	(SELECT   
-		C.custID, C.username, C.currency, winlostdate , sporttype, c.RoleID
+		C.custID, C.username, C.currency, winlostdate, CASE WHEN sporttype IN (208, 209, 210, 251) THEN 251 ELSE sporttype END AS sporttype, c.RoleID
 		
 		,turnover AS turnover
 		,winlost AS member_winlost
@@ -620,18 +657,15 @@ GROUP BY
 		,custID, username, currency, roleid
 
 
-GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
 
 
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNetView]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNet]
-GO 
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [vnteam] AS [dbo]
+GO
