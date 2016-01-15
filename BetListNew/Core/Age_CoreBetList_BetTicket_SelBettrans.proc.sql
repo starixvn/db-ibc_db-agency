@@ -237,6 +237,7 @@ BEGIN
 		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		AND (c.ProductID = 6 AND b.bettype <> 71)		 
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
+		AND brng.statusID IN (SELECT statusID FROM @TransStatus)
 	GROUP BY
 		b.transid,
 		ISNULL(b.BetID, 0),
@@ -329,6 +330,7 @@ BEGIN
 		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		AND (c.ProductID = 6 AND b.bettype <> 71)
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (111, 112, 113))
+		AND brng.statusID IN (SELECT statusID FROM @TransStatus)
 	GROUP BY
 		b.transid,
 		ISNULL(b.BetID, 0),
@@ -643,6 +645,7 @@ BEGIN
 
 	RETURN;
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_BetTicket_SelBettrans] TO [bodbDownlineNet]
