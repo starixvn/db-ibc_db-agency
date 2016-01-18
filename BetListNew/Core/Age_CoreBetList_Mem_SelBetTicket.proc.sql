@@ -45,8 +45,9 @@ AS
 		- 20150909@Kos: Add TransType params to support Colossus Bet Grand Prize ticket
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151223@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20160108@Kos: Support Colossus Bet ticket flow change [Redmine: #49967]
 		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
-	
+
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
@@ -65,8 +66,8 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	
-	DECLARE @Recommend 		INT
-		, @tempCust			dbo.TVP_TicketSportBettype
+	DECLARE @Recommend	INT
+		, @tempCust		dbo.TVP_TicketSportBettype
 
 	-- CHECK for MoveBetsDay
 	IF @MoveBetsDay IS NULL
@@ -145,10 +146,7 @@ BEGIN
 			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
 				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
 			)
-			AND ( @TransType <> 4
-				OR EXISTS (	SELECT 1 
-							FROM bettransm AS bm WITH (NOLOCK) 
-							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
+			AND @TransType <> 4
 			AND (bt.ProductId <> 6 OR bt.SubProduct = ''
 				OR b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))
 
@@ -217,37 +215,104 @@ BEGIN
 				AND (bt.ProductId = 6 AND b.bettype <> 71)
 				AND @TransType <> 4
 		END
+		
+		-- Grand Prize ticket
+		IF @TransType = 4
+		BEGIN
+			-- Colossus Bet 
+			IF EXISTS(SELECT TOP 1 1 FROM @BettypeMatrix WHERE ProductID = 15)
+			BEGIN
+				INSERT INTO @tempCust (
+					TransID
+					, Refno
+					, CustID
+					, ProductID
+					, Bettype
+					, EventType
+					, WhTicket)
+				SELECT 
+					b.transid
+					, b.refno
+					, b.custid
+					, bt.ProductId
+					, b.bettype
+					, bt.EventType
+					, 1 AS WhTicket
+				FROM bodb02.dbo.bettrans b WITH (NOLOCK)
+					INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
+					INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
+				WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
+					AND	b.recommend	= @Recommend 
+					AND	b.custid	= @CustID
+					AND EXISTS (	SELECT 1 
+									FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
+									WHERE pt.refno = b.transid AND pt.PayoutStatus = 'Completed')
+			END
+		END
 	END
 
 	-- CHECK for bettrans14
 	IF @FromDate <= @MoveBetsDay
 	BEGIN
-		INSERT INTO @tempCust (
-			TransID
-			, Refno
-			, CustID
-			, ProductID
-			, Bettype
-			, EventType
-			, WhTicket)
-		SELECT 
-			b.transid
-			, b.refno
-			, b.custid
-			, bt.ProductId
-			, b.bettype
-			, bt.EventType
-			, 2 AS WhTicket
-		FROM bodb02.dbo.bettrans14 b WITH (NOLOCK)
-			INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
-			INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
-		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-			AND	b.recommend	= @Recommend 
-			AND	b.custid	= @CustID
-			AND ( @TransType <> 4
-				OR EXISTS (	SELECT 1 
-							FROM bodb02.dbo.bettransm14 AS bm WITH (NOLOCK) 
-							WHERE bm.refno = b.refno AND bm.statuswinlost <> 0))
+		IF @TransType <> 4
+		BEGIN
+			INSERT INTO @tempCust (
+				TransID
+				, Refno
+				, CustID
+				, ProductID
+				, Bettype
+				, EventType
+				, WhTicket)
+			SELECT 
+				b.transid
+				, b.refno
+				, b.custid
+				, bt.ProductId
+				, b.bettype
+				, bt.EventType
+				, 2 AS WhTicket
+			FROM bodb02.dbo.bettrans14 AS b WITH (NOLOCK)
+				INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
+				INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
+			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
+				AND	b.recommend	= @Recommend 
+				AND	b.custid	= @CustID
+		END
+
+		-- Grand Prize ticket
+		IF @TransType = 4
+		BEGIN
+			-- Colossus Bet 
+			IF EXISTS(SELECT TOP 1 1 FROM @BettypeMatrix WHERE ProductID = 15)
+			BEGIN
+				INSERT INTO @tempCust (
+					TransID
+					, Refno
+					, CustID
+					, ProductID
+					, Bettype
+					, EventType
+					, WhTicket)
+				SELECT 
+					b.transid
+					, b.refno
+					, b.custid
+					, bt.ProductId
+					, b.bettype
+					, bt.EventType
+					, 1 AS WhTicket
+				FROM bodb02.dbo.bettrans14 AS b WITH (NOLOCK)
+					INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
+					INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
+				WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
+					AND	b.recommend	= @Recommend 
+					AND	b.custid	= @CustID
+					AND EXISTS (	SELECT 1 
+									FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
+									WHERE pt.refno = b.transid AND pt.PayoutStatus = 'Completed')
+			END
+		END
 	END
 	
 	--CALL to get ticket info

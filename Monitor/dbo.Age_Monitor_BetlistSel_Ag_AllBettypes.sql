@@ -9,7 +9,7 @@ WITH RECOMPILE
 AS
 
 /*
-	Created	: Johnson
+	Created: Johnson
 	Task: Monitor lastest bets list( all bettypes and all sports)
 	Date: 28/06/2011
 	DB: DBAGE.BODB02
@@ -22,6 +22,7 @@ AS
 		- 20150706@Bobby: Exclude Metric Gaming running ticket
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150904@Kos: Correct data type of temp table
+		- 20160104@Kos: Support Sportsbook only
 
 	Parameter's Explanation:
 		- @custid : agent's ID
@@ -31,15 +32,15 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
-	
-	DECLARE @SportBettype TABLE(
-			ProductID	TINYINT
-			, Bettype	SMALLINT
-			, EventType	TINYINT
-		)
-		
+
+	DECLARE @SportBettype TABLE (ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
+
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
+		-- Only support Sportsbook
+	DELETE FROM @SportBettype
+	WHERE ProductID <> 1
 
 	SELECT TOP(@LimitRowCount)
 		b.custid,
@@ -54,7 +55,7 @@ BEGIN
 		'' AS matchcode,
 		0 AS homeid,
 		0 AS awayid,
-		b.oddsid as Race,
+		b.oddsid AS Race,
 		b.betid,
 		b.livehomescore,
 		b.liveawayscore,
@@ -63,22 +64,21 @@ BEGIN
 		b.hdp2,
 		b.odds,
 		b.stake,
-		b.actual_stake, 
+		b.actual_stake,
 		CASE 
-			WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 and ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+			WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 			ELSE b.status
-		 END AS status,
+		END AS status,
 		b.betteam,
-		b.IP,	
+		b.IP,
 		CONVERT(BIT, 0) AS isNeutral,
 		b.oddstype,
-		ISNULL(b.Betcheck, '') Betcheck,
+		ISNULL(b.Betcheck, '') AS Betcheck,
 		ISNULL(b.oddsspread, 0) AS OddsSpread
-	FROM dbo.bettrans AS b WITH(NOLOCK)
+	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
 	WHERE b.recommend = @custid 
 		AND b.transid > @transid
-		--AND b.bettype < 19001
 		AND b.statusID BETWEEN 0 AND 1
 		AND b.bettype NOT BETWEEN 801 AND 806
 	ORDER BY b.transid DESC
