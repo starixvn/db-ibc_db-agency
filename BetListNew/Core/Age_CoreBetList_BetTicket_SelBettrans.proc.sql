@@ -30,7 +30,7 @@ AS
 	Param's Explanation:
 
 	Dependences:
-		- Age_CoreBetList_BetTicket_SelMainInfo
+		- Age_CoreBetList_BetTicket_SelMainInfo_xpre
 */
 
 BEGIN
@@ -237,7 +237,7 @@ BEGIN
 		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		AND (c.ProductID = 6 AND b.bettype <> 71)		 
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
-		AND brng.statusID IN (SELECT statusID FROM @TransStatus)
+		AND brng.statusID IN (0, 1)
 	GROUP BY
 		b.transid,
 		ISNULL(b.BetID, 0),
@@ -330,7 +330,7 @@ BEGIN
 		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		AND (c.ProductID = 6 AND b.bettype <> 71)
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (111, 112, 113))
-		AND brng.statusID IN (SELECT statusID FROM @TransStatus)
+		AND brng.statusID NOT IN (0, 1)
 	GROUP BY
 		b.transid,
 		ISNULL(b.BetID, 0),
