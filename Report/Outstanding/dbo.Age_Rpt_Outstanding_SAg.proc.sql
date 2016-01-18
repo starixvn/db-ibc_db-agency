@@ -43,7 +43,7 @@ AS (
 	FROM bettrans with (nolock) 
 	WHERE	ruben=0
 			AND bettype NOT BETWEEN 801 AND 899 -- Metric gaming
-			AND bettype NOT IN (18000, 1003) -- Colosus bet, Cock Fighting
+			AND bettype NOT IN (1003) -- Colosus bet, Cock Fighting
 			AND bettype NOT BETWEEN 2101 AND 2399 -- new RNG Casino
 			AND srecommend =  @CustID
 	GROUP BY mrecommend
@@ -76,6 +76,7 @@ AS (
 	FROM bettransRNG with (nolock) 
 	WHERE	statusid=0
 			AND srecommend =  @CustID
+			AND gameID BETWEEN 2101 AND 2399
 	GROUP BY mrecommend
 )
 SELECT	username, b.mrecommend as custid, 
