@@ -30,7 +30,7 @@ AS
 	Param's Explanation:
 
 	Dependences:
-		- Age_CoreBetList_BetTicket_SelMainInfo_xpre
+		- Age_CoreBetList_BetTicket_SelMainInfo
 */
 
 BEGIN
@@ -231,11 +231,11 @@ BEGIN
 		END AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN @tempCust c ON b.transid = c.transid
-		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
-	WHERE	c.WhTicket 	= 1
+		INNER JOIN @tempCust AS c ON b.transid = c.transid
+		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = c.transid
+	WHERE c.WhTicket = 1
 		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
-		AND (c.ProductID = 6 AND b.bettype <> 71)		 
+		AND (c.ProductID = 6 AND b.bettype <> 71)
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
 		AND brng.statusID IN (0, 1)
 	GROUP BY
@@ -324,9 +324,9 @@ BEGIN
 		END AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN @tempCust c ON b.transid = c.transid
-		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
-	WHERE	c.WhTicket 	= 1
+		INNER JOIN @tempCust AS c ON b.transid = c.transid
+		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = c.transid
+	WHERE c.WhTicket = 1
 		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 		AND (c.ProductID = 6 AND b.bettype <> 71)
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (111, 112, 113))
