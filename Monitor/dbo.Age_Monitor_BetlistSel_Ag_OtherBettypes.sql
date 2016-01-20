@@ -80,6 +80,7 @@ BEGIN
 		ISNULL(b.Betcheck, '') AS Betcheck,
 		0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
+		INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
 	WHERE b.recommend = @custid 
 		AND b.statusID BETWEEN 0 AND 1
 		AND b.bettype NOT IN (1, 3, 7, 8, 301, 302, 303, 304)		-- Exclude HDP & OU bettypes
