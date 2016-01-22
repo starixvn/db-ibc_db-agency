@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [Age_CustomerSelBalance_MAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelBalance_MAg]
 	@CustID int,
 	@UserName varchar(20) = '' OUTPUT ,
 	@CashBalance money = 0 OUTPUT,
@@ -41,29 +41,36 @@ Revisions:
 					   Remove bettype = 23101 in total Casino Outstanding
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
-
+	- 20151209@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48604]
+	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
 */
 SET NOCOUNT ON
 
 DECLARE @translog_masterOutstanding money,
-		@translog_totalOutstanding money 
+		@translog_totalOutstanding money
+
+DECLARE @today DATE,
+		@yesterday DATE
+SELECT @today = CONVERT(DATE, GETDATE())
+SELECT @yesterday = DATEADD(DD, -1, @today)
+
 Select 
 	@UserName = UserName,
-	@MasterCredit = isnull(Credit, 0)
+	@MasterCredit = ISNULL(Credit, 0)
 From custinfo with (NOLOCK)
 Where CustID = @CustID
 
 Select 
-	@TotalAgentCredit = isnull(sum(case when RoleID = 2 then Credit else 0 end), 0), 
-	@TotalMemberCredit = isnull(sum(case when RoleID = 1 then Credit else 0 end), 0),
+	@TotalAgentCredit = ISNULL(sum(CASE WHEN RoleID = 2 THEN Credit else 0 END), 0), 
+	@TotalMemberCredit = ISNULL(sum(CASE WHEN RoleID = 1 THEN Credit else 0 END), 0),
 	
-	@TotalAgentActive = isnull(sum(case when RoleID = 2 and Closed = 0 and isnull(reject,0) = 0 then 1 else 0 end), 0),
-	@TotalAgentClosed = isnull(sum(case when RoleID = 2 and Closed = 1 then 1 else 0 end), 0),
-	@TotalAgentSuspended = isnull(sum(case when RoleID = 2 and isnull(reject,0) = 1 and closed = 0 then 1 else 0 end), 0),
+	@TotalAgentActive = ISNULL(sum(CASE WHEN RoleID = 2 and Closed = 0 and ISNULL(reject,0) = 0 THEN 1 else 0 END), 0),
+	@TotalAgentClosed = ISNULL(sum(CASE WHEN RoleID = 2 and Closed = 1 THEN 1 else 0 END), 0),
+	@TotalAgentSuspended = ISNULL(sum(CASE WHEN RoleID = 2 and ISNULL(reject,0) = 1 and closed = 0 THEN 1 else 0 END), 0),
 	
-	@TotalMemberActive = isnull(sum(case when RoleID = 1 and Closed = 0 and isnull(reject,0) = 0 then 1 else 0 end), 0),
-	@TotalMemberClosed = isnull(sum(case when RoleID = 1 and Closed = 1 then 1 else 0 end), 0),
-	@TotalMemberSuspended = isnull(sum(case when RoleID = 1 and isnull(reject,0) = 1 and closed = 0 then 1 else 0 end), 0)
+	@TotalMemberActive = ISNULL(sum(CASE WHEN RoleID = 1 and Closed = 0 and ISNULL(reject,0) = 0 THEN 1 else 0 END), 0),
+	@TotalMemberClosed = ISNULL(sum(CASE WHEN RoleID = 1 and Closed = 1 THEN 1 else 0 END), 0),
+	@TotalMemberSuspended = ISNULL(sum(CASE WHEN RoleID = 1 and ISNULL(reject,0) = 1 and closed = 0 THEN 1 else 0 END), 0)
 	
 From Custinfo with (NOLOCK)
 Where MRecommend = @CustID
@@ -75,65 +82,80 @@ WHERE mrecommend = @custid
 and statusid = 0
 
 SELECT 
-	@CashBalance=IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0),  	
-	@MasterOutstanding=IsNull(sum(case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) + @translog_masterOutstanding, 
-	@TotalOutstanding=IsNull(sum(case when  ruben=0 then ABS(actual_stake) else 0 end),0) + @translog_totalOutstanding,
-	@TotalCSTransfer=IsNull(sum(case when bettype=23001 and ruben=0 then actual_stake else 0 end),0),
-	@TotalCSOutstanding=IsNull(sum(case when bettype=23002 and ruben=0 then actual_stake else 0 end),0),
-	@TotalBITransfer=IsNull(sum(case when bettype=23201 and ruben=0 then actual_stake else 0 end),0),
-	@TotalBIOutstanding=IsNull(sum(case when bettype = 23202 and ruben=0 then actual_stake else 0 end),0),
-	@TotalP2PTransfer=IsNull(sum(case when bettype=23101 and ruben=0 then actual_stake else 0 end),0),
-	@TotalP2POutstanding=IsNull(sum(case when bettype=23102 and ruben=0 then actual_stake else 0 end),0),
-	@TotalBalance = IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0)
-					+ IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0)
-					+ IsNull(sum(case when custid <> recommend and custid <> mrecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end),0)
-			 
-		/*	IsNull(sum(case when bettype > 90  then winlost-actual_stake 
-									when bettype < 91 and ruben =1 then mwinlost+acomm + awinlost + winlost-actual_stake
-									else 0 
-									end),0)*/
+	@CashBalance         = ISNULL(sum(CASE WHEN custid=mrecommend THEN winlost-actual_stake else mwinlost+acomm-comm END),0),  	
+	@MasterOutstanding   = ISNULL(sum(CASE WHEN ruben=0 THEN ABS(actual_stake) * mpositiontaking else 0 END),0) + @translog_masterOutstanding, 
+	@TotalOutstanding    = ISNULL(sum(CASE WHEN  ruben=0 THEN ABS(actual_stake) else 0 END),0) + @translog_totalOutstanding,
+	@TotalCSTransfer     = ISNULL(sum(CASE WHEN bettype=23001 and ruben=0 THEN actual_stake else 0 END),0),
+	@TotalCSOutstanding  = ISNULL(sum(CASE WHEN bettype=23002 and ruben=0 THEN actual_stake else 0 END),0),
+	@TotalBITransfer     = ISNULL(sum(CASE WHEN bettype=23201 and ruben=0 THEN actual_stake else 0 END),0),
+	@TotalBIOutstanding  = ISNULL(sum(CASE WHEN bettype = 23202 and ruben=0 THEN actual_stake else 0 END),0),
+	@TotalP2PTransfer    = ISNULL(sum(CASE WHEN bettype=23101 and ruben=0 THEN actual_stake else 0 END),0),
+	@TotalP2POutstanding = ISNULL(sum(CASE WHEN bettype=23102 and ruben=0 THEN actual_stake else 0 END),0),
+	@TotalBalance        = ISNULL(sum(CASE WHEN custid=mrecommend THEN winlost-actual_stake else mwinlost+acomm-comm END),0)
+							+ ISNULL(sum(CASE WHEN custid=recommend THEN winlost-actual_stake else awinlost+comm-playercomm END),0)
+							+ ISNULL(sum(CASE WHEN custid <> recommend and custid <> mrecommend and ruben=1 THEN winlost-actual_stake+playercomm else 0 END),0)
 			
 FROM bettrans WITH (NOLOCK, index=bettrans16)  
 WHERE mrecommend=@CustID 
-	AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
-			AND ruben =0)
+	AND(
+			(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2399 AND ruben = 0)
 			OR ruben <> 0
-			)
-/*
-SELECT 
-	@Yesterday_CashBalance=IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0),  
-	@Yesterday_TotalBalance = 
-				IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0)
-				+ IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0)
-				+ IsNull(sum(case when custid <> recommend and custid <> mrecommend and ruben=1 then winlost-actual_stake+playercomm else 0 end),0)
-
-FROM bettrans WITH (NOLOCK, index=bettrans16)  
-WHERE mrecommend=@CustID and bettrans.winlostdate < convert(varchar(10), CURRENT_TIMESTAMP, 120)
-*/
+		)
+	AND(
+			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+			OR CONVERT(DATE, winlostdate) < @yesterday
+	   )
 
 SELECT 
-	@Yesterday_CashBalance  = @CashBalance - isnull(today_balance.cashBalance,0),
+	@CashBalance         = @CashBalance       + ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),  	
+	@MasterOutstanding   = @MasterOutstanding + ISNULL(sum(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE 0 END),0), 
+	@TotalOutstanding    = @TotalOutstanding  + ISNULL(sum(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END),0),
+	@TotalBalance        = @TotalBalance      + ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0)
+												+ ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0)
+												+ ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday AND custid <> recommend and custid <> mrecommend and statusID NOT IN (0, 1, 101, 102) THEN winlost-actual_stake+playercomm ELSE 0 END),0)
+			
+FROM bettransRNG WITH (NOLOCK)  
+WHERE mrecommend=@CustID 
+	AND gameID BETWEEN 2101 AND 2399
+
+SELECT 
+	@Yesterday_CashBalance  = @CashBalance  - isnull(today_balance.cashBalance,0),
 	@Yesterday_TotalBalance = @TotalBalance - isnull(today_balance.totalBalance,0)
 FROM 
-	(	SELECT	IsNull(sum(mwinlost+ acomm - comm),0) cashBalance,  
-				IsNull(sum(mwinlost + acomm + awinlost + winlost-actual_stake),0) totalBalance
+	(	SELECT
+			ISNULL(sum(mwinlost+ acomm - comm),0) cashBalance,  
+			ISNULL(sum(mwinlost + acomm + awinlost + winlost-actual_stake),0) totalBalance
 		FROM bettrans WITH (NOLOCK)  
-		WHERE mrecommend=@CustID and ruben = 1 and bettype <= 19000
-			and bettrans.winlostdate >= convert(varchar(10), CURRENT_TIMESTAMP, 120)
-			AND (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
-			AND ruben =0)
-			OR ruben <> 0
-			)
-	
+		WHERE mrecommend=@CustID
+			AND ruben = 1
+			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2399
+			AND CONVERT(DATE, winlostdate) = @today
 	 )today_balance 
 
+SELECT 
+	@Yesterday_CashBalance  = @Yesterday_CashBalance  - isnull(today_balanceRNG.cashBalance,0),
+    @Yesterday_TotalBalance = @Yesterday_TotalBalance - isnull(today_balanceRNG.totalBalance,0)
+FROM 
+	(	SELECT	
+			ISNULL(sum(mwinlost+ acomm - comm),0) cashBalance,  
+			ISNULL(sum(mwinlost + acomm + awinlost + winlost-actual_stake),0) totalBalance
+		FROM bettransRNG WITH (NOLOCK)  
+		WHERE mrecommend=@CustID
+			AND gameID BETWEEN 2101 AND 2399
+			AND CONVERT(DATE, winlostdate) = @today
+			AND statusID NOT IN (0, 1, 101, 102)
+	 )today_balanceRNG
+
+
 
 
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_MAg] TO [bodbDownlineNet]
+
+GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_MAg] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_MAg] TO [bodbDownlineNetView]
+
+GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_MAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelBalance_MAg] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelBalance_MAg] TO [vnteam] AS [dbo]
+GO

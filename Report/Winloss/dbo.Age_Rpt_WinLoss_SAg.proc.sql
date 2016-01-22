@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLoss_SAg]    Script Date: 10/7/2015 12:47:24 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
  @CustID				INT --srecommend  
  ,@FromDate				SMALLDATETIME
  ,@ToDate				SMALLDATETIME  
@@ -67,8 +59,9 @@ AS
   - 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
   - 20150306@Cody: Apply sport bettype matrix [redmine: #30169]
   - 20150507@Sophia: Apply Gold Deluxe [Redmine: #35278]
-  - 20150831@Winnie: Include CB [Redmine: #42409]
+  - 20150831@Winnie: Include CB [Redmine: #42409
   - 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+  - 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -102,7 +95,7 @@ IF @ShowCasino = 1
 BEGIN  
 	--Sum_winloss  
 	INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-	VALUES(251, 71)  
+	VALUES(251, 71), (208, 0), (209, 0), (210, 0)
 END  
 IF @ShowP2P = 1  
 BEGIN  

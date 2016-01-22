@@ -1,12 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_Outstanding_SAg]    Script Date: 9/7/2015 2:47:48 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-/****** Object:  Stored Procedure dbo.Age_Rpt_Outstanding_SAg    Script Date: 9/3/2015 9:23:28 AM ******/
-ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_SAg]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_SAg]
 @CustID int 
 
 AS
@@ -28,6 +20,7 @@ Revisions:
 	- 20150706@Sophia: Do not check ticket running of Metric gaming at bettrans table, because of the translog [#38789]
 	- 20150907@Winnie: Do not check ticket running of Colosus bet at bettrans table, because of the translog [#43180]
 	- 20151214@Percy: Do not check ticket running of Cock Fighting at bettrans table, because of the translog [#48601]
+	- 20160108@Percy: Get data new bettype RNG Casino from bettransRNG [Redmine: #48283]
 */
 SET NOCOUNT ON
 /*
@@ -50,9 +43,11 @@ AS (
 	FROM bettrans with (nolock) 
 	WHERE	ruben=0
 			AND bettype NOT BETWEEN 801 AND 899 -- Metric gaming
-			AND bettype NOT IN (18000, 1003) -- Colosus bet, Cock Fighting
+			AND bettype NOT IN (1003) -- Colosus bet, Cock Fighting
+			AND bettype NOT BETWEEN 2101 AND 2399 -- new RNG Casino
 			AND srecommend =  @CustID
 	GROUP BY mrecommend
+	
 	UNION ALL 
 	SELECT	mrecommend,  
 			SUM(ABS(actual_stake)) Outstanding,  
@@ -66,6 +61,22 @@ AS (
 	FROM translog with (nolock) 
 	WHERE	statusid=0
 			AND srecommend =  @CustID
+	GROUP BY mrecommend
+
+	UNION ALL -- bettransRNG
+	SELECT	mrecommend,  
+			SUM(ABS(actual_stake)) Outstanding,  
+			SUM(actual_stake * spositiontaking) positiontaking,
+			0,
+			0,
+			0,
+			0,					
+			0,
+			0	
+	FROM bettransRNG with (nolock) 
+	WHERE	statusid=0
+			AND srecommend =  @CustID
+			AND gameID BETWEEN 2101 AND 2399
 	GROUP BY mrecommend
 )
 SELECT	username, b.mrecommend as custid, 

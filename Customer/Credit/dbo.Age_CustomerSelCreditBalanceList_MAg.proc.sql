@@ -27,6 +27,7 @@ Revisions:
 	- 20140304@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20151222@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48601]
+	- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
 	
 Param's Explanation:
 • @CustID: MAgentID
@@ -34,8 +35,13 @@ Param's Explanation:
 
 SET NOCOUNT ON
 
-DECLARE @ABSDate DATETIME
-SET @ABSDate = '2011-09-01'	
+DECLARE @ABSDate DATETIME,
+		@today DATE,
+		@yesterday DATE
+
+SET @ABSDate = '2011-09-01'
+SELECT @today = CONVERT(DATE, GETDATE())
+SELECT @yesterday = DATEADD(DD, -1, @today)	
 
 DECLARE @RowCount int, @RowStart int, @RowEnd int
 SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1 
@@ -65,9 +71,12 @@ CREATE TABLE #balance
 as (
 	SELECT
 		recommend as custid,
-		IsNull(sum (case when ruben=0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking else 0 end),0) AS outstanding, 
-		IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance,
-		IsNull(sum(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover 
+		ISNULL(SUM(case when ruben=0 AND bettype NOT BETWEEN 2101 AND 2399 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking else 0 end),0) AS outstanding, 
+		ISNULL(SUM(case when custid=recommend AND bettype NOT BETWEEN 2101 AND 2399 then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance,
+		ISNULL(SUM(case when matchid > 0 AND matchid NOT IN (208, 209, 210) then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover,
+		0 outstandingRNG, 
+		ISNULL(SUM(case when custid=recommend AND bettype BETWEEN 2101 AND 2399 AND CONVERT(DATE, winlostdate) < @yesterday  then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balanceRNG,
+		ISNULL(SUM(case when matchid > 0 AND matchid IN (208, 209, 210) AND CONVERT(DATE, winlostdate) < @yesterday then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnoverRNG
 	FROM bettrans with (NOLOCK)
 	WHERE mrecommend=@CustID
 		AND (
@@ -78,19 +87,35 @@ as (
 	GROUP BY recommend
 	UNION ALL
 	SELECT recommend as custid,
-		IsNull(sum (CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking),0) AS outstanding, 
-		0 AS balance,
-		0 as turnover 
+		ISNULL(SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking),0) AS outstanding, 
+		0 balance,
+		0 turnover,
+		0 outstandingRNG,
+		0 balanceRNG,
+		0 turnoverRNG
 	from translog with(NOLOCK)
 	WHERE statusid = 0
 	and mrecommend=@CustID
 	GROUP BY recommend
+	UNION ALL
+	SELECT
+		recommend as custid,
+		0 outstanding, 
+		0 balance,
+		0 turnover,
+		ISNULL(SUM(case when statusID IN (0, 1) then actual_stake * apositiontaking else 0 end),0) outstandingRNG, 
+		ISNULL(SUM(case when custid=recommend AND CONVERT(DATE, winlostdate) >= @yesterday then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balanceRNG,
+		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN actual_stake ELSE 0 END), 0) as turnoverRNG
+	FROM bettransRNG with (NOLOCK)
+	WHERE mrecommend=@CustID
+		AND gameID BETWEEN 2101 AND 2399
+	GROUP BY recommend
 )
 INSERT INTO #balance
 SELECT custid,
-	sum(outstanding),
-	sum(balance),
-	sum(turnover)
+	sum(outstanding) + sum(outstandingRNG),
+	sum(balance) + sum(balanceRNG),
+	sum(turnover) + sum(turnoverRNG)
 FROM rt
 GROUP BY custid
 
@@ -105,9 +130,16 @@ SELECT
 	recommend as custid,
 	sum(awinlost+comm-playercomm) AS balance
 FROM bettrans with (NOLOCK)
-WHERE mrecommend=@CustID AND ruben = 1 AND bettype < 19001
-	AND bettrans.winlostdate >= convert(varchar(10), current_timestamp, 120)  	
-	 
+WHERE mrecommend=@CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2399
+	AND CONVERT(DATE, winlostdate) = @today
+GROUP BY recommend
+UNION ALL
+SELECT
+	recommend as custid,
+	sum(awinlost+comm-playercomm) AS balance
+FROM bettransRNG with (NOLOCK)
+WHERE mrecommend=@CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2101 AND 2399
+	AND CONVERT(DATE, winlostdate) = @today
 GROUP BY recommend
 
 SET @Username = isnull(@Username, '')

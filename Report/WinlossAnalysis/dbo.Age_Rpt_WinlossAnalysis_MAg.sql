@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinlossAnalysis_MAg]    Script Date: 12/9/2015 1:05:25 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,  
 	@ToDate			SMALLDATETIME,   
@@ -45,6 +38,7 @@ AS
 	- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 	- 20150831@Winnie: Include CB [Redmine: #42409]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -98,13 +92,25 @@ BEGIN
 		--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
 
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	208 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2101 AND 2199
+		UNION
+		SELECT	209 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2201 AND 2299
+		UNION
+		SELECT	210 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 6 AND Bettype BETWEEN 2301 AND 2399
+		UNION
 		SELECT	251 AS sporttype, Bettype 
 		FROM	@SportBettype  
-		WHERE	ProductId = 6
+		WHERE	ProductId = 6 AND Bettype BETWEEN 71 AND 72
 		
 		--Sum_winloss  
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
-		VALUES(251,71)  
+		VALUES(251, 71), (208, 0), (209, 0), (210, 0)  
 	END
 	IF @ShowRB = 1  
 	BEGIN  	
@@ -327,6 +333,9 @@ BEGIN
 			AND roleid = 3
 	END
 
+	UPDATE @AgencyWinloss
+	SET sporttype = 251 WHERE sporttype IN (208, 209, 210)
+
 	SELECT	CASE WHEN @ReportType = 1 THEN CONVERT(VARCHAR(8),winlostdate,112)  
 				 WHEN @ReportType = 2 THEN CONVERT(VARCHAR(6),winlostdate,112)  
 				 WHEN @ReportType = 3 THEN sporttype
@@ -352,11 +361,13 @@ BEGIN
 				 ELSE '0' 
 			END 
 END
-
 GO
+
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [bodbDownlineNet] AS [dbo]
 GO
+
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [bodbDownlineNetView] AS [dbo]
 GO
+
 GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinlossAnalysis_MAg] TO [vnteam] AS [dbo]
 GO
