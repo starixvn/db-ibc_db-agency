@@ -53,7 +53,7 @@ BEGIN
 			AND roleid = 1
 			AND c.mrecommend = @mrecommend
 			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
-			AND b.statusID NOT IN (0,1)
+			AND b.statusID NOT IN (0,1,101,102)
 		GROUP BY c.custid
 
 		--get data from bettransRnG table within 2 days: today & yesterday
@@ -65,7 +65,7 @@ BEGIN
 			AND roleid = 1
 			AND c.mrecommend = @mrecommend
 			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
-			AND b.statusID NOT IN (0,1)
+			AND b.statusID NOT IN (0,1,101,102)
 			AND winlostdate >= @yesterday
 		GROUP BY c.custid
 
@@ -81,7 +81,7 @@ BEGIN
 			AND roleid = 1
 			AND c.srecommend = @srecommend 
 			AND c.recommend = @recommend
-			AND b.statusID NOT IN (0,1)
+			AND b.statusID NOT IN (0,1,101,102)
 		GROUP BY c.custid
 
 		--get data from bettransRnG table within 2 days: today & yesterday
@@ -93,7 +93,8 @@ BEGIN
 			AND roleid = 1
 			AND c.srecommend = @srecommend 
 			AND c.recommend = @recommend
-			AND b.statusID NOT IN (0,1)
+			AND b.statusID NOT IN (0,1,101,102)
+			AND winlostdate >= @yesterday
 		GROUP BY c.custid
 
 	END
@@ -107,7 +108,7 @@ BEGIN
 		WHERE c.recommend = @CustId
 			AND roleid = 1
 			AND c.srecommend = @srecommend
-			AND b.statusID NOT IN (0,1)
+			AND b.statusID NOT IN (0,1,101,102)
 		GROUP BY c.custid
 
 		--get data from bettransRnG table within 2 days: today & yesterday
@@ -118,7 +119,8 @@ BEGIN
 		WHERE c.recommend = @CustId
 			AND roleid = 1
 			AND c.srecommend = @srecommend
-			AND b.statusID NOT IN (0,1)
+			AND b.statusID NOT IN (0,1,101,102)
+			AND winlostdate >= @yesterday
 		GROUP BY c.custid
 
 	END
@@ -133,9 +135,10 @@ BEGIN
 	FROM (
 		SELECT ROW_NUMBER() OVER (ORDER BY c.enabled DESC, c.closed, ISNULL(c.reject, 0), c.username) AS RowNumber
 			, b.CustId
-			, b.Balance
+			, SUM(b.Balance) AS Balance
 		FROM #MemberBalance b
 			INNER JOIN dbo.custInfo c WITH(NOLOCK) ON b.CustId = c.CustId
+		GROUP BY b.CustId, c.enabled, c.closed, ISNULL(c.reject, 0), c.username
 	)tmp
 	WHERE tmp.RowNumber BETWEEN @RowStart AND @RowEnd
 
