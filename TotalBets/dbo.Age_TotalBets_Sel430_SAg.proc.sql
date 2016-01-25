@@ -1,9 +1,17 @@
 ﻿USE bodb02
 GO
 
+USE [bodb02]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_TotalBets_Sel430_SAg]    Script Date: 1/25/2016 4:27:53 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel430_SAg]
-	@custid int,
-	@Language varchar(2) = 'E'
+	@custid		INT,
+	@Language	VARCHAR(2) = 'E'
 AS
 
 /*
@@ -20,54 +28,58 @@ AS
 		- 20140611@Dom: Add new bettype ht correct score 152
 		- 20150407@Cody: Integrate new 60 bet types from BetRadar [Redmine: #32734]
 		- 20151203@Kos: Include bet type 405 2H Correct Score [Redmine: #47959]
+		- 20160123@Kos: Include bet type 413 Correct Score (aos) and [414] 1H Correct Score (aos) [Redmine: #50897]
 */
 
-SET NOCOUNT ON
-	select 
+BEGIN
+	SET NOCOUNT ON
+
+	SELECT 
 		m.sporttype,
 		b.username,
-		m.leagueID, 
-		b.bettype,		
+		m.leagueID,
+		b.bettype,
 		b.transid,
 		b.refno,
 		m.matchid,
 		m.matchcode,
 		m.homeID,
 		m.awayID,
-		convert(float, b.hdp1) as hdp1, 
-		convert(float, b.hdp2) as hdp2, 
+		CONVERT(FLOAT, b.hdp1) AS hdp1,
+		CONVERT(FLOAT, b.hdp2) AS hdp2,
 		b.odds,
 		b.modds,
-		CASE WHEN b.status = 'running' AND IsNull(b.SecAcceptFlag, 0) = 1 and IsNull(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
-				 ELSE b.status 
-				 END as status,
-		CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END as comstatus,
+		CASE 
+			WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
+			ELSE b.status
+		END AS status,
+		CASE WHEN b.comstatus = '1' THEN 1 ELSE 0 END AS comstatus,
 		b.stake,
 		b.actual_stake,
-		b.transdate,		
+		b.transdate,
 		b.betteam,
 		b.betID,
 		b.spositiontaking,
 		b.mpositiontaking,
 		b.apositiontaking,
-		b.discount as Adiscount,
-		b.adiscount as Mdiscount,
-		b.sdiscount as Sdiscount,
+		b.discount AS Adiscount,
+		b.adiscount AS Mdiscount,
+		b.sdiscount AS Sdiscount,
 		b.livehomescore,
 		b.liveawayscore,
-		b.liveindicator, 
-		IP as IP,
-		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
-		b.OddsType
- 	from 
-		bettrans b with (nolock)
-		inner join match m with (nolock) on  b.matchid=m.matchid 
-	where 
-		b.SRecommend=@custid
-		AND b.bettype IN (4,30,152,165,166, 405)
-		and b.statusID in (0,1)
-		
-	order by b.status, b.transid
+		b.liveindicator,
+		b.IP,
+		ISNULL(m.isNeutral, CONVERT(BIT,0)) AS IsNeutral,
+		b.OddsType,
+		ISNULL(b.transdesc, '') AS transdesc
+ 	FROM dbo.bettrans AS b WITH (NOLOCK)
+		INNER JOIN dbo.match AS m WITH (NOLOCK) ON b.matchid = m.matchid
+	WHERE b.SRecommend = @custid
+		AND b.bettype IN (4, 30, 152, 165, 166, 405, 413, 414)
+		AND b.statusID IN (0, 1)
+	ORDER BY b.status, b.transid
+END
+
 	
 
 GO

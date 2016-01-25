@@ -27,6 +27,7 @@ AS
 		- 20151118@Kos: Remove index hint to enhance performance (#47704)
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20160107@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
 
 	Param's Explanation:
 	
@@ -333,10 +334,7 @@ BEGIN
 				THEN '1' 
 			ELSE '0' 
 		END		AS comstatus
-		, CASE 
-			WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc -- metric gaming
-			ELSE '' 
-		END AS transdesc
+		, ISNULL(b.transdesc, '') AS transdesc
 		, ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans_bk AS b WITH (NOLOCK) --, INDEX=IX_custid)
 		INNER JOIN dbo.match_bk AS m WITH (NOLOCK) 

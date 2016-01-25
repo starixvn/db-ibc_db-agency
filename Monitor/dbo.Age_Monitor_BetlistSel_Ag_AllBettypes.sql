@@ -23,6 +23,7 @@ AS
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds
 		- 20150904@Kos: Correct data type of temp table
 		- 20160104@Kos: Support Sportsbook only
+		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
 
 	Parameter's Explanation:
 		- @custid : agent's ID
@@ -38,7 +39,7 @@ BEGIN
 	INSERT INTO @SportBettype
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
-		-- Only support Sportsbook
+	-- Only support Sportsbook
 	DELETE FROM @SportBettype
 	WHERE ProductID <> 1
 
@@ -74,6 +75,7 @@ BEGIN
 		CONVERT(BIT, 0) AS isNeutral,
 		b.oddstype,
 		ISNULL(b.Betcheck, '') AS Betcheck,
+		ISNULL(b.transdesc, '') AS transdesc,
 		ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @SportBettype AS s ON b.bettype = s.BetType

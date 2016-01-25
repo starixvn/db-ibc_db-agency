@@ -26,6 +26,7 @@ AS
 		- 20151022@Kos: Return [bettransm14].[betcheck] to support view CB ticket detail
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20160107@Kos: Add @TransStatus param, support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
 	
 	Param's Explanation:
 	
@@ -313,10 +314,7 @@ BEGIN
 				THEN '1' 
 			ELSE '0' 
 		END		AS comstatus
-		, CASE 
-			WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc -- metric gaming
-			ELSE '' 
-		END AS transdesc
+		, ISNULL(b.transdesc, '') AS transdesc
 		, ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
 		INNER JOIN dbo.match14 AS m WITH (NOLOCK) ON b.matchid = m.matchid
@@ -468,6 +466,7 @@ BEGIN
 		
 	RETURN;
 END
+
 
 
 
