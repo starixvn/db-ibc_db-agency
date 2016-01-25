@@ -321,7 +321,7 @@ BEGIN
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust AS c ON b.transid = c.transid
-		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = c.transid
+		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
 	WHERE c.WhTicket = 4
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (111, 112, 113))
 		AND brng.statusID NOT IN (0, 1)
@@ -639,6 +639,7 @@ BEGIN
 
 	RETURN;
 END
+
 
 
 GO
