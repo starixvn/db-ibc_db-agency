@@ -28,6 +28,7 @@ AS
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20160107@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
+		- 20160125@Kos: Fix Colossus Bet result issue
 
 	Param's Explanation:
 	
@@ -256,7 +257,7 @@ BEGIN
 		INNER JOIN @custInfo AS ci
 		--ON b.custid 		= ci.custid
 		ON c.custid   = ci.custid
-		LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON bm.refno = b.transid AND bm.bettype = 18001
+		LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON bm.refno = b.refno AND bm.bettype = 18001
 	WHERE	c.WhTicket	= 3
 		AND c.EventType	= 0
 		AND c.ProductID	= 15
