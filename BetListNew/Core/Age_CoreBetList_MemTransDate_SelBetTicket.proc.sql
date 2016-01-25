@@ -34,6 +34,7 @@ AS
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20160111@Kos: Add column list in INSERT statement
 		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
+		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -101,7 +102,10 @@ BEGIN
 		, bt.ProductId
 		, b.bettype
 		, bt.EventType
-		, 1 AS WhTicket
+		, CASE
+			WHEN bt.ProductId = 6 AND bt.SubProduct <> '' AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) THEN 4	-- Today RNG Casino Single Wallet summary
+			ELSE 1 
+		END AS WhTicket
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
 		INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid

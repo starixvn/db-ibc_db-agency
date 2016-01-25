@@ -26,6 +26,7 @@ AS
 		- 20151022@Kos: Return [bettransm].[betcheck] to support view CB ticket detail
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20160111@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
+		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
 
 	Param's Explanation:
 
@@ -160,9 +161,6 @@ BEGIN
 	WHERE	c.WhTicket 	= 1
 		AND c.EventType	= 0
 		AND c.ProductID <> 15	-- not Colossus Bet
-		AND (c.ProductID <> 6	-- not RNG Casino Single Wallet today ticket
-			OR b.bettype = 71 
-			OR b.winlostdate <> DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))	
 
 	/*
 		RNG Casino today running tickets
@@ -232,10 +230,8 @@ BEGIN
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust AS c ON b.transid = c.transid
-		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = c.transid
-	WHERE c.WhTicket = 1
-		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
-		AND (c.ProductID = 6 AND b.bettype <> 71)
+		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = b.transid
+	WHERE c.WhTicket = 4
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
 		AND brng.statusID IN (0, 1)
 	GROUP BY
@@ -326,9 +322,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust AS c ON b.transid = c.transid
 		INNER JOIN dbo.bettransRnG AS brng WITH (NOLOCK) ON brng.RefNo = c.transid
-	WHERE c.WhTicket = 1
-		AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
-		AND (c.ProductID = 6 AND b.bettype <> 71)
+	WHERE c.WhTicket = 4
 		AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (111, 112, 113))
 		AND brng.statusID NOT IN (0, 1)
 	GROUP BY
