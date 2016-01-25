@@ -3,8 +3,9 @@ GO
 
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
 (
-	@tempCust		TVP_TicketSportBettype READONLY
-	,@ColumnOutput	VARCHAR(MAX)	= NULL
+	@tempCust		[dbo].[TVP_TicketSportBettype]	READONLY
+	, @TransStatus	[dbo].[TVP_BetTicketStatus]		READONLY
+	, @ColumnOutput	VARCHAR(MAX)	= NULL
 )
 AS
 
@@ -20,6 +21,7 @@ AS
 		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151203@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
+		- 20160111@Kos: Add @TransStatus to support RNG Casino Single Wallet [Redmine: #48958]
 
 	Param's Explanation:
 		- @tempCust  AS TABLE
@@ -99,26 +101,24 @@ BEGIN
 	);
 
 	-- CHECK for selecting from translog
-	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 0))
+	IF EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 0)
 	BEGIN
 		INSERT INTO #MemBetTicket
-		EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog] @tempCust = @tempCust
+		EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog] @tempCust = @tempCust, @TransStatus = @TransStatus
 	END
 
 	-- CHECK for selecting from bettrans
-	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 1))
+	IF EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 1)
 	BEGIN
-		
 		INSERT INTO #MemBetTicket
-		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans] @tempCust = @tempCust
+		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans] @tempCust = @tempCust, @TransStatus = @TransStatus
 	END
 
 	-- CHECK for selecting from bettrans14
-	IF (EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 2))
+	IF EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 2)
 	BEGIN
-		
 		INSERT INTO #MemBetTicket
-		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans14] @tempCust = @tempCust
+		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans14] @tempCust = @tempCust, @TransStatus = @TransStatus
 	END
 
 	-- OUTPUT main ticket
@@ -139,16 +139,15 @@ BEGIN
 		EXEC sp_sqlexec @queryOutput
 	END
 	*/
-	
+
 	SELECT *
 	FROM #MemBetTicket t
 	ORDER BY t.transid DESC
-		
+
 	-- 	OUTPUT ticket in detail
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelDetail] @tempCust 	= @tempCust
-		
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelDetail] @tempCust = @tempCust
+
 	RETURN;
-	
 END
 
 

@@ -8,67 +8,76 @@ GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_MemArc_SelBetTicket]
 (
 	-- MEM INFO
-	@CustId 				INT
-	, @FromDate				DATE
-	, @ToDate 				DATE
+	@CustId 			INT
+	, @FromDate			DATE
+	, @ToDate 			DATE
 	-- PRODUCT - BETTYPE - STATUS
 	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
 	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
 	-- PAGING
-	, @PageIndex			INT	= 1
-	, @PageSize				INT	= 1000
-	, @ColumnOutput			VARCHAR(MAX) 	= NULL
+	, @PageIndex		INT	= 1
+	, @PageSize			INT	= 1000
+	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	-- OUTPUT INFO
-	, @Error				INT = 0 OUTPUT
-	, @ErrorMsg				VARCHAR(250) = '' OUTPUT
+	, @Error			INT = 0 OUTPUT
+	, @ErrorMsg			VARCHAR(250) = '' OUTPUT
 )
 AS
+
 /*
-Created: Bobby.Nguyen
-Task : Aphla site - refactor betlist core 
-DB: DB0ARC.bodb_archive
-Original: 
+	Created: Bobby.Nguyen
+	Task : Aphla site - refactor betlist core 
+	DB: DB0ARC.bodb_archive
+	Original: 
 
-Revisions:
-	- 20150504@Bobby.Nguyen: Create new SP
-	- 20150504@Bobby.Nguyen: Due to performence, we should use index hint (IX_custid) on bettrans_bk
-	- 20150910@Bobby: Enhance performence for SP core. Apply TVP for input parameters
+	Revisions:
+		- 20150504@Bobby: Create new SP
+		- 20150504@Bobby: Due to performance, we should use index hint (IX_custid) on bettrans_bk
+		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
+		- 20160111@Kos: Add column list in INSERT statement
 
-Param's Explanation:
+	Param's Explanation:
 	
 		
-Wrapped SP List:
-	- Age_BetList_SelByDayAll_Mem_Old
-	- Age_BetList_SelWinLossByDate_Mem_Old
+	Wrapped SP List:
+		- Age_BetList_SelByDayAll_Mem_Old
+		- Age_BetList_SelWinLossByDate_Mem_Old
 	
-Dependences:
+	Dependences:
 		
 */
+
 BEGIN
 	SET NOCOUNT ON;
-	
-	DECLARE @Recommend 	INT
+
+	DECLARE @Recommend	INT
 		, @Username		NVARCHAR(30)
 		, @tempCust		dbo.TVP_TicketSportBettype
-	
+
 	SELECT @Error		= 0
 		,@ErrorMsg		= ''
-	
-	SELECT @Recommend 	= Recommend 
+
+	SELECT @Recommend	= Recommend
 		,@UserName		= UserName
-	FROM bodb02.dbo.custinfo WITH(NOLOCK) 
-	WHERE CustID		= @CustID
-	
-	IF(@Recommend IS NULL)
+	FROM bodb02.dbo.custinfo WITH (NOLOCK)
+	WHERE CustID = @CustID
+
+	IF @Recommend IS NULL
 	BEGIN
 		SELECT @Error 	= 100
 			, @ErrorMsg	= 'The customer was not found.'
 			
 		RETURN;
-		
 	END
-	
-	INSERT INTO @tempCust
+
+	INSERT INTO @tempCust (
+		TransID,
+		Refno,
+		CustID,
+		ProductID,
+		Bettype,
+		EventType,
+		WhTicket )
 	SELECT 
 		b.transid
 		, b.refno
@@ -77,17 +86,15 @@ BEGIN
 		, b.bettype
 		, bt.EventType
 		, 3 AS WhTicket
-	FROM dbo.bettrans_bk b WITH(NOLOCK, INDEX=IX_custid)		
-		INNER JOIN @BettypeMatrix bt
-		ON b.bettype	= bt.bettype
-		INNER JOIN @TransStatus stt
-		ON b.statusid	= stt.statusid
-	WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-		AND	b.custid	= @CustID
-	
+	FROM dbo.bettrans_bk AS b WITH(NOLOCK, INDEX = IX_custid)
+		INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
+		INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
+	WHERE b.winlostdate BETWEEN @fromdate AND @todate
+		AND b.custid = @CustID
+
 	--CALL to get ticket info
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfoArc] @tempCust = @tempCust, @ColumnOutput = @ColumnOutput
-	
+
 	RETURN;
 END
 

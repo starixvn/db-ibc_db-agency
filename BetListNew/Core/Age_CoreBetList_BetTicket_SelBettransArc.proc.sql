@@ -26,6 +26,7 @@ AS
 		- 20151022@Kos: Return [bettransm].[betcheck] to support view CB ticket detail
 		- 20151118@Kos: Remove index hint to enhance performance (#47704)
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20160107@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 
 	Param's Explanation:
 	
@@ -65,7 +66,8 @@ BEGIN
 		, b.custid
 		, ci.username
 		, CASE	WHEN c.ProductID = 9 THEN 253 
-				WHEN c.ProductID = 6 THEN 251
+				WHEN c.ProductID = 6 AND b.bettype = 71 THEN 251
+				WHEN c.ProductID = 6 AND b.bettype <> 71 THEN b.matchid
 				WHEN c.ProductID = 7 THEN 252
 				WHEN c.ProductID = 8 THEN 202
 				WHEN c.ProductID = 12 THEN 255
@@ -164,7 +166,8 @@ BEGIN
 					THEN '1' 
 				ELSE '0' 
 		END		AS comstatus
-		, CASE
+		,CASE
+			WHEN c.ProductID = 6 AND b.bettype <> 71 THEN b.transdesc
 			WHEN c.ProductId = 19 THEN b.transdesc
 			ELSE ''
 		END AS transdesc

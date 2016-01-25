@@ -7,28 +7,29 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_OtherBettypes]
-	@custid			INT, 
+	@custid			INT,
 	@transid		BIGINT	= 0,
-	@LimitRowCount	INT		= 20 
+	@LimitRowCount	INT		= 20
 WITH RECOMPILE
 AS
 
-/*	
-	Created	: Johnson
+/*
+	Created: Johnson
 	Task: Monitor lastest bets list( all bettypes and others bettype not handicap and over/under)
 	Date: 28/06/2011
-	DB: DB053.BODB02
+	DB: DBAGE.BODB02
 	Revision:
 		- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
-		- 20120827@Jamie: Add actual_stake for System Parlay Bet list 
+		- 20120827@Jamie: Add actual_stake for System Parlay Bet list
 		- 20130222@Elodie: Get custid value
-		- 20130222@Elodie: Get oddsid value to use for Virtual HR		
+		- 20130222@Elodie: Get oddsid value to use for Virtual HR
 		- 20150302@Tom: Support 60 BetRadar (27218) Show betcheck coloum on Bettype 216,217 
 		- 20150706@Bobby: Exclude Metric Gaming running ticket
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds and exclude Myanmar Odds bet types
-		
+		- 20160104@Kos: Support Sportsbook only and use SportBetTypeMatrix
+
 	Parameter's Explanation:
-		- @custid : agent's ID
+		- @custid : agent ID
 		- @transid: lastest transid 
 		- @LimitRowCount: max record return.
 */ 
@@ -36,10 +37,19 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
+	DECLARE @SportBettype TABLE (ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
+
+	INSERT INTO @SportBettype
+	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
+	-- Only support Sportsbook
+	DELETE FROM @SportBettype
+	WHERE ProductID <> 1
+
 	SELECT TOP(@LimitRowCount)
 		b.custid,
 		0 AS sporttype,
-		b.matchid,	
+		b.matchid,
 		0 AS leagueid,
 		b.Username,
 		b.bettype,
@@ -58,25 +68,25 @@ BEGIN
 		b.hdp2,
 		b.odds,
 		b.stake,
-		b.actual_stake, 
+		b.actual_stake,
 		CASE 
 			WHEN b.status = 'running' AND ISNULL(b.SecAcceptFlag, 0) = 1 AND ISNULL(b.checktime, CURRENT_TIMESTAMP) > CURRENT_TIMESTAMP THEN 'waiting'
 			ELSE b.status 
-		 END AS status, 
+		END AS status, 
 		b.betteam,
 		b.IP,
 		CONVERT(BIT, 0) AS isNeutral,
 		b.oddstype,
-		ISNULL(b.Betcheck, '') Betcheck,
+		ISNULL(b.Betcheck, '') AS Betcheck,
 		0 AS OddsSpread
-	FROM dbo.bettrans AS b WITH(NOLOCK)
+	FROM dbo.bettrans AS b WITH (NOLOCK)
+		INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
 	WHERE b.recommend = @custid 
 		AND b.statusID BETWEEN 0 AND 1
-		AND b.bettype NOT IN (1, 3, 7, 8, 301, 302, 303, 304)
+		AND b.bettype NOT IN (1, 3, 7, 8, 301, 302, 303, 304)		-- Exclude HDP & OU bettypes
 		AND b.bettype < 19001
 		AND b.transid > @transid
-		AND b.bettype NOT BETWEEN 801 AND 806
-		
+		AND b.bettype NOT BETWEEN 801 AND 806		-- Exclude Metric Gaming
 	ORDER BY b.transid DESC
 END
 

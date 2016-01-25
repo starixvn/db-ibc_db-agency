@@ -7,7 +7,8 @@ SET QUOTED_IDENTIFIER ON
 GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelTranslog]
 (
-	@tempCust	TVP_TicketSportBettype READONLY
+	@tempCust		[dbo].[TVP_TicketSportBettype]	READONLY
+	, @TransStatus 	[dbo].[TVP_BetTicketStatus]		READONLY
 )
 AS
 
@@ -18,13 +19,14 @@ AS
 	Original: 
 
 	Revisions:
-		- 20150504@Bobby.Nguyen: Create new SP
-		- 20150827@Kos.Nguyen: Add column OddsSpread to support Myanmar Odds
-		- 20150831@Kos.Nguyen: Support Colossus Bet
+		- 20150504@Bobby: Create new SP
+		- 20150827@Kos: Add column OddsSpread to support Myanmar Odds
+		- 20150831@Kos: Support Colossus Bet
 		- 20150907@Bobby: Enhance performance for SP core
 		- 20151022@Kos: Return [translog].[tranid3rd] to support view ticket detail
 		- 20151023@Bobby: Hotfix#46203 - Agent PT always show 0 in case of ticket running
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20160111@Kos: Add @TransStatus param
 
 	Param's Explanation:
 	
