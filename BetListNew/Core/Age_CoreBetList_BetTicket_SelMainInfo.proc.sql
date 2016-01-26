@@ -108,7 +108,7 @@ BEGIN
 	END
 
 	-- CHECK for selecting from bettrans
-	IF EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket = 1)
+	IF EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket IN (1, 4))
 	BEGIN
 		INSERT INTO #MemBetTicket
 		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans] @tempCust = @tempCust, @TransStatus = @TransStatus

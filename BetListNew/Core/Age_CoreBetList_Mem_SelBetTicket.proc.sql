@@ -47,6 +47,7 @@ AS
 		- 20151223@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20160108@Kos: Support Colossus Bet ticket flow change [Redmine: #49967]
 		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
+		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -120,76 +121,7 @@ BEGIN
 	-- do selecting from bettrans
 	IF @ToDate > @MoveBetsDay
 	BEGIN
-		INSERT INTO @tempCust (
-			TransID
-			, Refno
-			, CustID
-			, ProductID
-			, Bettype
-			, EventType
-			, WhTicket)
-		SELECT 
-			b.transid
-			, b.refno
-			, b.custid
-			, bt.ProductId
-			, b.bettype
-			, bt.EventType
-			, 1 AS WhTicket
-		FROM bodb02.dbo.bettrans b WITH (NOLOCK)
-			INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
-			INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
-		WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-			AND	b.recommend	= @Recommend 
-			AND	b.custid	= @CustID
-			--exclude running tickets of MetricGaming
-			AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
-				OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
-			)
-			AND @TransType <> 4
-			AND (bt.ProductId <> 6 OR bt.SubProduct = ''
-				OR b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))
-
-		/* 	select running tickets
-			- Keno 			: ProductId = 8
-			- Gold Deluxe	: ProductId = 12
-			- Colossus Bet	: ProductId = 15
-			- Cockfighting	: ProductId = 19
-			- Sportsbook	: Metric Gaming bettype(801-899)
-		*/
-		IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1))
-		BEGIN
-			INSERT INTO @tempCust (
-				TransID
-				, Refno
-				, CustID
-				, ProductID
-				, Bettype
-				, EventType
-				, WhTicket)
-			SELECT 
-				b.translogid	AS transid
-				, b.translogid 	AS refno
-				, b.custid
-				, bt.ProductId
-				, b.gameid
-				, bt.EventType
-				, 0 AS WhTicket
-			FROM bodb02.dbo.translog AS b WITH (NOLOCK)
-				INNER JOIN @BettypeMatrix bt ON b.gameid = bt.Bettype
-				INNER JOIN @TransStatus st ON b.statusID = st.StatusID
-			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-				AND b.custid		= @CustID
-				AND	(bt.ProductId	IN (8, 12, 15, 19)
-					OR bt.Bettype BETWEEN 801 AND 899
-				)
-				AND b.statusID IN (0, 1)
-				AND @TransType <> 4
-		END
-
-		IF @todate >= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
-			AND @fromdate <= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- Today
-			AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1, 111, 112, 113))
+		IF @TransType <> 4
 		BEGIN
 			INSERT INTO @tempCust (
 				TransID
@@ -209,11 +141,80 @@ BEGIN
 				, 1 AS WhTicket
 			FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
-			WHERE b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) AND @todate 
-				AND b.recommend = @Recommend 
-				AND b.custid = @CustID
-				AND (bt.ProductId = 6 AND b.bettype <> 71)
-				AND @TransType <> 4
+				INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
+			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
+				AND	b.recommend	= @Recommend 
+				AND	b.custid	= @CustID
+				--exclude running tickets of MetricGaming
+				AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
+					OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
+				)
+				AND (bt.ProductId <> 6 OR bt.SubProduct = ''
+					OR b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))
+
+			/* 	select running tickets
+				- Keno 			: ProductId = 8
+				- Gold Deluxe	: ProductId = 12
+				- Colossus Bet	: ProductId = 15
+				- Cockfighting	: ProductId = 19
+				- Sportsbook	: Metric Gaming bettype(801-899)
+			*/
+			IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1))
+			BEGIN
+				INSERT INTO @tempCust (
+					TransID
+					, Refno
+					, CustID
+					, ProductID
+					, Bettype
+					, EventType
+					, WhTicket)
+				SELECT 
+					b.translogid	AS transid
+					, b.translogid 	AS refno
+					, b.custid
+					, bt.ProductId
+					, b.gameid
+					, bt.EventType
+					, 0 AS WhTicket
+				FROM bodb02.dbo.translog AS b WITH (NOLOCK)
+					INNER JOIN @BettypeMatrix bt ON b.gameid = bt.Bettype
+					INNER JOIN @TransStatus st ON b.statusID = st.StatusID
+				WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
+					AND b.custid		= @CustID
+					AND	(bt.ProductId	IN (8, 12, 15, 19)
+						OR bt.Bettype BETWEEN 801 AND 899
+					)
+					AND b.statusID IN (0, 1)
+			END
+
+			IF @todate >= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+				AND @fromdate <= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- Today
+				AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1, 111, 112, 113))
+			BEGIN
+				INSERT INTO @tempCust (
+					TransID
+					, Refno
+					, CustID
+					, ProductID
+					, Bettype
+					, EventType
+					, WhTicket)
+				SELECT 
+					b.transid
+					, b.refno
+					, b.custid
+					, bt.ProductId
+					, b.bettype
+					, bt.EventType
+					, 4 AS WhTicket
+				FROM bodb02.dbo.bettrans b WITH (NOLOCK)
+					INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
+				WHERE b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) AND @todate 
+					AND b.recommend = @Recommend 
+					AND b.custid = @CustID
+					AND (bt.ProductId = 6 AND bt.SubProduct <> '')
+			END
 		END
 		
 		-- Grand Prize ticket
