@@ -1,11 +1,4 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_Chart_WinlossAnalysis_Ag]    Script Date: 10/7/2015 12:43:56 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
- ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_Ag]
+﻿ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_Ag]
 	@agentID		INT,	
 	@fromdate		DATETIME,
 	@todate			DATETIME,	
@@ -40,12 +33,8 @@ AS
 		- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
 		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
 		- 20150831@Winnie: Include CB [Redmine: #42409]
-<<<<<<< Updated upstream
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
-		
-=======
 		- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
->>>>>>> Stashed changes
 	Parameters Explanation:
 */
 SET NOCOUNT ON
@@ -328,10 +317,6 @@ GO
 
 GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_Ag] TO [bodbDownlineNetView] AS [dbo]
 GO
-<<<<<<< Updated upstream
 
 GRANT VIEW DEFINITION ON [dbo].[Age_Chart_WinlossAnalysis_Ag] TO [vnteam] AS [dbo]
-=======
-GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_Ag] TO [bodbDownlineNetView]
->>>>>>> Stashed changes
 GO

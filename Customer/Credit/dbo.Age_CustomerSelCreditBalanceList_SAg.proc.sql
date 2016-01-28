@@ -28,6 +28,7 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20151222@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48601]
 	- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
+	- 20160128@Percy: Support new sport Cricket [Redmine: #50027]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -167,6 +168,23 @@ ELSE
 		AND isnull(closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(closed, 0)) end  
 		AND isnull(reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(reject, 0))end
 
+----------------------------
+CREATE TABLE #net_position (
+	custid INT PRIMARY KEY,
+	netPosition MONEY
+	)
+
+INSERT INTO #net_position
+SELECT
+	TC.custid,
+	ISNULL(SUM(NP.Credit - NP.Debit), 0) AS netPosition
+FROM #tmp_customer TC
+INNER JOIN Customer C WITH (NOLOCK)
+	ON TC.custid = C.mrecommend
+INNER JOIN DBPRO.bodb02.dbo.BalNetPosition NP WITH (NOLOCK)
+	ON NP.custid = C.custid
+GROUP BY TC.custid
+
 --Calc total pages
 IF @TotalPages = 0
 BEGIN
@@ -189,13 +207,14 @@ SELECT * FROM
 		isnull(balance.outstanding,0) AS outstanding, 
 		isnull(balance.balance,0) AS balance,
 		isnull(balance.balance,0) - isnull(today_balance.balance,0) yesterday_balance,
-		isnull(balance.balance,0) + isnull(c.credit,0) - isnull(balance.outstanding,0) betCredit,
+		isnull(balance.balance,0) + isnull(c.credit,0) - isnull(balance.outstanding,0) + isnull(net_position.netPosition, 0) betCredit,
 		isnull(balance.turnover,0) AS turnover,
 		isnull(c.credit,0) credit,		
 		CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged
 	FROM #tmp_customer c 
 		LEFT JOIN #balance AS balance ON c.custid = balance.custid 
-		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid 
+		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
+		LEFT JOIN #net_position AS net_position ON c.custid = net_position.custid
 )a
 WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 
