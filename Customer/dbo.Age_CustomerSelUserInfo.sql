@@ -24,6 +24,7 @@ Revisions:
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
 	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
 	- 20160114@Helen: Cricket - [Redmine: #50027]
+	- 20160127@Billy: Member information for AllBet - [Redmine: #51698]
 
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -66,19 +67,31 @@ Param's Explanation:
 
 	-- For DCS
 	 
-    DECLARE @bitmapOrder_MuayThai INT , @bitmapOrder_CockFighting INT, @bitmapOrder_Cricket INT
+    DECLARE	@bitmapOrder_MuayThai		INT
+		,	@bitmapOrder_CockFighting	INT
+		,	@bitmapOrder_Cricket		INT
+		,	@bitmapOrder_AllBet			INT
     
     SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
     SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
     SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
+
+	SELECT	@bitmapOrder_AllBet =	(
+										SELECT	psp.bitmapOrder
+										FROM	dbo.ProductStatusProfile AS psp WITH(NOLOCK)
+										WHERE	psp.Sporttype = 211
+											AND	psp.Bettype = 2401
+									)
     
-    DECLARE @IsHidden_MuayThai INT = 1
-    DECLARE @IsHidden_CockFighting INT = 1
-    DECLARE @IsHidden_Cricket INT = 1
+    DECLARE	@IsHidden_MuayThai		INT = 1
+		,	@IsHidden_CockFighting	INT = 1
+		,	@IsHidden_Cricket		INT = 1
+		,	@IsHidden_AllBet		INT = 1	
     
-    DECLARE @SportBook2 INT = 16
-    DECLARE @CockFighting INT = 19
-    DECLARE @Cricket INT = 20
+    DECLARE	@SportBook2				INT = 16
+		,	@CockFighting			INT = 19
+		,	@Cricket				INT = 20
+		,	@AllBet					INT = 21
     
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
 	BEGIN
@@ -87,6 +100,10 @@ Param's Explanation:
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@CockFighting,4))
 	BEGIN
 		SET @IsHidden_CockFighting = 0
+	END
+	IF EXISTS (SELECT TOP(1) 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@AllBet, 4))
+	BEGIN
+	    SET	@IsHidden_AllBet = 0
 	END
 	
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@Cricket,4))
@@ -108,6 +125,7 @@ Param's Explanation:
 		IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @custid AND [Site] = 'IMBC')
 			SET @IsIMBC = 1
 	END
+
 	SELECT Customer.custid,
 		   Customer.userpwd,
 		   ci.username,
@@ -143,6 +161,9 @@ Param's Explanation:
 			-- For CockFighting
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_CockFighting),1) AS DisableCockFighting,
 			CAST(CASE WHEN @IsHidden_CockFighting = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_CockFighting),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCockFighting,
+			-- For AllBet
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_AllBet), 1) AS DisableAllBet,
+			CAST(CASE WHEN @IsHidden_AllBet = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_AllBet), 1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideAllBet,
 			-- Cricket
 			@IsIMBC AS IsIMBC,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_Cricket),1) AS DisableCricket,
