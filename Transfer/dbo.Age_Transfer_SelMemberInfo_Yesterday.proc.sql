@@ -1,10 +1,9 @@
-﻿ALTER PROC [dbo].[Age_Transfer_SelMemberInfo_Yesterday]
+﻿ALTER PROCEDURE [dbo].[Age_Transfer_SelMemberInfo_Yesterday]
 	@custid int,--member 
 	@IsAllowTotalBalance bit = null,
 	@username varchar(20) OUTPUT,--member 
 	@syncCasino BIT = 0 OUTPUT ,
 	@DisableCasino BIT = 0 OUTPUT,
-	@DisableP2P BIT = 0 OUTPUT,
 	@CashBalance money OUTPUT,
 	@Oustanding money OUTPUT,
 	@GivenCredit money OUTPUT,
@@ -13,13 +12,12 @@
 	@Balance money OUTPUT,
 	@MaxTransDate datetime OUTPUT,
 	@FutureBetCredit money OUTPUT,
-	@AmtTransferred money = 0 OUTPUT,
-	@PokerHeldFunds money = 0 OUTPUT
+	@AmtTransferred money = 0 OUTPUT
 AS
 /*
 Created: ???
 Task : 
-DB: DB05.bodb02
+DB: DB053.bodb02
 Original: Age_Transfer_SelMemberInfo_Yesterday_1
 	Revisions:
 		- 20090505@Phuc: get amount transferred.
@@ -29,12 +27,15 @@ Original: Age_Transfer_SelMemberInfo_Yesterday_1
 		- 20110123@Thien: fix the FutureBetCredit formula
 		- 20111108@Lukas: Get more column syncCasino
 		- 20120403@Lukas: Get more column DisableCasino
-		- 20130522@Johnson: add poker held funds and Poker option	
+		- 20160127@Percy: Balance changes with RNG Casino [Redmine: #50674]
 */
 SET NOCOUNT ON
-DECLARE @currentDate datetime 
-SELECT @currentDate = convert(varchar(10), CURRENT_TIMESTAMP, 120)
-SELECT @IsAllowTotalBalance = isnull(@IsAllowTotalBalance, 0)
+DECLARE @today DATE,
+		@yesterday DATE
+SELECT  @today = CONVERT(DATE, GETDATE())
+SELECT  @yesterday = DATEADD(DD, -1, @today)
+
+SELECT  @IsAllowTotalBalance = isnull(@IsAllowTotalBalance, 0)
 
 DECLARE @RoleID INT --nqminh - 19Feb09
 
@@ -45,19 +46,34 @@ IF (@IsAllowTotalBalance = 0)
 	     @Username = customer.username,  
 		 @syncCasino = ci.syncCasino,
 		 @DisableCasino = ci.DisableCasino,
-		 @DisableP2P = ci.DisableP2P,
 	     @GivenCredit = ci.credit,
 	     @CashBalance = isnull(b.CashBalance,0)
     from   
 	    customer with (NOLOCK)  
 	    INNER JOIN CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
 	    LEFT JOIN 
-		    (	SELECT custid, isnull(sum( case when b.bettype < 19001 and b.winlostdate < @currentDate then b.winlost-b.actual_stake+playercomm
-											    when b.bettype > 19000 then b.winlost-b.actual_stake +playercomm
-											    else 0 end ), 0) as CashBalance 
-			    FROM bettrans as b with (NOLOCK) 
-			    WHERE custid = @CustID and ruben  =1 
-			    GROUP BY custid 
+		    (	
+				SELECT custid, SUM(CashBalance) AS CashBalance
+				FROM (
+						SELECT custid, isnull(sum( case when b.bettype < 19001 and b.winlostdate < @today then b.winlost-b.actual_stake+playercomm
+														when b.bettype > 19000 then b.winlost-b.actual_stake +playercomm
+														else 0 end ), 0) as CashBalance 
+						FROM bettrans as b with (NOLOCK) 
+						WHERE custid = @CustID and ruben  =1
+							AND (
+									(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+									OR CONVERT(DATE, winlostdate) < @yesterday
+								)
+						GROUP BY custid
+						UNION ALL
+						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance 
+						FROM bettransRNG as b with (NOLOCK) 
+						WHERE custid = @CustID and statusID NOT IN (0, 1)
+							AND gameID BETWEEN 2101 AND 2399
+							AND CONVERT(DATE, winlostdate)= @yesterday
+						GROUP BY custid
+					  ) AS A
+				GROUP BY custid
 		    ) as b ON customer.custid=b.custid  
     where  
 	    customer.custid= @CustID  
@@ -68,70 +84,75 @@ ELSE
 	     @Username = customer.username, 
 		 @syncCasino = ci.syncCasino, 
 		 @DisableCasino = ci.DisableCasino,
-		 @DisableP2P = ci.DisableP2P,
 	     @GivenCredit = ci.credit,
 	     @CashBalance = isnull(b.CashBalance,0)
     from   
 	    customer with (NOLOCK)  
 	    INNER JOIN CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
 	    LEFT JOIN 
-		    (	SELECT custid, isnull(sum( case when b.bettype < 19001 then b.winlost-b.actual_stake+playercomm
-											    when b.bettype > 19000 then b.winlost-b.actual_stake +playercomm
-											    else 0 end ), 0) as CashBalance 
-			    FROM bettrans as b with (NOLOCK) 
-			    WHERE custid = @CustID and ruben  =1 
-			    GROUP BY custid 
+		    (   SELECT custid, SUM(CashBalance) AS CashBalance
+				FROM (
+						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance 
+						FROM bettrans as b with (NOLOCK) 
+						WHERE custid = @CustID and ruben  =1
+							AND (
+									(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+									OR CONVERT(DATE, winlostdate) < @yesterday
+								)
+						GROUP BY custid
+						UNION ALL
+						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance 
+						FROM bettransRNG as b with (NOLOCK) 
+						WHERE custid = @CustID and statusID NOT IN (0, 1)
+							AND gameID BETWEEN 2101 AND 2399
+							AND CONVERT(DATE, winlostdate) >= @yesterday
+						GROUP BY custid
+					) AS A
+				GROUP BY custid
 		    ) as b ON customer.custid=b.custid  
     where  
 	    customer.custid= @CustID  
 
 select @BetCredit = @GivenCredit + @CashBalance
 
-SELECT @Oustanding = SUM(bettrans.actual_stake) FROM bettrans WITH (NOLOCK)
-WHERE bettrans.bettype < 19001 AND
-	  bettrans.ruben=0 AND
-	  bettrans.custid=@custid
-GROUP BY bettrans.custid
+SELECT @Oustanding = ISNULL(SUM(actual_stake), 0) FROM bettrans WITH (NOLOCK)
+WHERE bettype < 19001
+	AND (bettype NOT IN (801, 802, 803, 804, 805, 806, 1003) OR (Bettype NOT BETWEEN 2101 AND 2399))
+	AND ruben = 0
+	AND custid = @custid
+
+SELECT @Oustanding = @Oustanding + ISNULL(SUM(actual_stake), 0) FROM bettransRNG WITH (NOLOCK)
+WHERE GameID BETWEEN 2101 AND 2399
+	AND StatusID IN (0,1)
+	AND custid = @custid
+
+SELECT @Oustanding = @Oustanding + ISNULL(SUM(actual_stake), 0) FROM translog WITH (NOLOCK)
+WHERE custid = @custid
+	AND statusID = 0
 
 --Start - nqminh - 19Feb09	
 IF (@RoleId = 1)
 BEGIN
 	DECLARE @TotalCash money
-	SELECT @TotalCash = SUM(case when ruben=1 then winlost-actual_stake+playercomm else 0 end),
-		@AmtTransferred = SUM(case when ruben=1 and winlostdate = @currentDate and bettype = 21004 then winlost - actual_stake else 0 end)
-	FROM bettrans 
+	SELECT  @TotalCash      = ISNULL(SUM(winlost-actual_stake+playercomm), 0),
+		    @AmtTransferred = ISNULL(SUM(case when CONVERT(DATE, winlostdate) = @today AND bettype = 21004 then winlost - actual_stake else 0 end), 0)
+	FROM bettrans
 	WHERE custid = @CustID
+		AND ruben = 1
+		AND (
+				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+				OR CONVERT(DATE, winlostdate) < @yesterday
+			)
+
+	SELECT  @TotalCash      = @TotalCash + ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+	FROM bettransRNG
+	WHERE custid = @CustID
+		AND statusID NOT IN (0, 1)
+		AND gameID BETWEEN 2101 AND 2399
+		AND CONVERT(DATE, winlostdate) >= @yesterday
+
 
 	SELECT @BetCredit = @GivenCredit + @TotalCash - @Oustanding
-	
-	IF @DisableP2P = 0
-	BEGIN
-		DECLARE @PokerHeldFundsTime DATETIME
-		
-		SELECT @PokerHeldFundsTime = GETDATE() - 3
-
-		SELECT @PokerHeldFunds = ISNULL(SUM(winlost),0)
-		FROM		
-			(
-			SELECT custid,winlost - actual_stake + playercomm as winlost
-			FROM bettrans WITH(NOLOCK) 
-			WHERE custid = @custid 
-				AND matchid = 1000 
-				AND bettype = 1000 
-				AND statusid IN (112,113)
-				AND transdate >= @PokerHeldFundsTime
-			UNION 
-			SELECT custid,winlost - actual_stake + playercomm as winlost
-			FROM bettrans14 WITH(NOLOCK) 
-			WHERE custid = @custid 
-				AND matchid = 1000 
-				AND bettype = 1000 
-				AND statusid IN (112,113)
-				AND transdate >= @PokerHeldFundsTime  
-			)b 
-		
-		SELECT @PokerHeldFunds = CASE WHEN @PokerHeldFunds < 0 THEN 0 ELSE @PokerHeldFunds END
-	END
 END
 --End - nqminh - 19Feb09	
 
@@ -144,9 +165,16 @@ if @CashBalance > 0
 else
 	set @FutureBetCredit = 0
 
+
+
+
 GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [bodbDownlineNet]
+
+GRANT EXECUTE ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [bodbDownlineNetView]
+
+GRANT EXECUTE ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [vnteam]
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [vnteam] AS [dbo]
+GO
