@@ -27,6 +27,8 @@ AS
 		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
 		- 20160111@Kos: Support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
+		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
+		- 20160125@Kos: Fix Colossus Bet result issue
 
 	Param's Explanation:
 
@@ -407,7 +409,7 @@ BEGIN
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust c ON b.transid = c.transid
 --				AND b.custid	= c.custid
-		LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON bm.refno = b.transid AND bm.bettype = 18001
+		LEFT JOIN dbo.bettransm AS bm WITH (NOLOCK) ON bm.refno = b.refno AND bm.bettype = 18001
 	WHERE	c.WhTicket 	= 1
 		AND c.EventType	= 0
 		AND c.ProductID	= 15
@@ -487,7 +489,7 @@ BEGIN
 				THEN '1' 
 			ELSE '0' 
 		END		AS comstatus
-		, CASE WHEN b.bettype BETWEEN 801 AND 899 THEN b.transdesc ELSE '' END AS transdesc
+		, ISNULL(b.transdesc, '') AS transdesc
 		, ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN dbo.match AS m WITH (NOLOCK) ON b.matchid = m.matchid

@@ -27,6 +27,7 @@ AS
 		- 20150706@Bobby: Exclude Metric Gaming running ticket
 		- 20150826@Kos: Add column OddsSpread to support Myanmar Odds and exclude Myanmar Odds bet types
 		- 20160104@Kos: Support Sportsbook only and use SportBetTypeMatrix
+		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
 
 	Parameter's Explanation:
 		- @custid : agent ID
@@ -78,6 +79,7 @@ BEGIN
 		CONVERT(BIT, 0) AS isNeutral,
 		b.oddstype,
 		ISNULL(b.Betcheck, '') AS Betcheck,
+		ISNULL(b.transdesc, '') AS transdesc,
 		0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
