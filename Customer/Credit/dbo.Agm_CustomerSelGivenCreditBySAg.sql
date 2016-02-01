@@ -20,6 +20,7 @@ Revisions:
 	- 20140403@Dom: Add Betcredit field
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20160201@Percy: expand new RNG Casino [Redmine: #51952]
+	- 20160202@Percy: support new sport Cricket [Redmine: #50027]
 */
 
 SET NOCOUNT ON
@@ -49,7 +50,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0))+ISNULL(netBalance.netPosition, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -101,6 +102,17 @@ BEGIN
 		and statusID = 0
 		GROUP BY mrecommend
 	) translog ON translog.custid = c.custid
+	LEFT JOIN
+	(
+		SELECT
+			C.mrecommend as custid,
+			ISNULL(SUM(NP.Credit - NP.Debit), 0) AS netPosition
+		FROM DBPRO.bodb02.dbo.BalNetPosition NP WITH (NOLOCK)
+		INNER JOIN Customer C WITH (NOLOCK)
+			ON NP.custid = C.custid
+		WHERE C.srecommend = @SRecommend
+		GROUP BY C.mrecommend
+	) netBalance ON netBalance.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
 
@@ -157,6 +169,15 @@ BEGIN
 						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
+			GROUP BY mrecommend
+			UNION ALL
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND gameID BETWEEN 2101 AND 2399
 			GROUP BY mrecommend
 			UNION ALL
 			SELECT
@@ -246,6 +267,15 @@ BEGIN
 			WHERE srecommend = @SRecommend
 				AND gameID BETWEEN 2101 AND 2399
 			GROUP BY mrecommend
+			UNION ALL
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND gameID BETWEEN 2101 AND 2399
+			GROUP BY mrecommend
 			) AS A
 		GROUP BY custid
 	) as t ON t.custid = c.custid
@@ -265,6 +295,4 @@ GO
 
 GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [bodbDownlineNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [vnteam] AS [dbo]
 GO

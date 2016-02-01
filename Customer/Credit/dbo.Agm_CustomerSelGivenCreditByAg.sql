@@ -19,6 +19,7 @@ Original:
 	- 20140403@Dom: Add Betcredit field
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20160201@Percy: expand new RNG Casino [Redmine: #51912]
+	- 20160202@Percy: support new sport Cricket [Redmine: #50027]
 */
 
 SET NOCOUNT ON
@@ -49,7 +50,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0))+ISNULL(netBalance.netPosition, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -101,6 +102,17 @@ BEGIN
 		and statusID = 0
 		GROUP BY custid
 	) translog ON translog.custid = c.custid
+	LEFT JOIN
+	(
+		SELECT
+			C.custid as custid,
+			ISNULL(SUM(NP.Credit - NP.Debit), 0) AS netPosition
+		FROM DBPRO.bodb02.dbo.BalNetPosition NP WITH (NOLOCK)
+		INNER JOIN Customer C WITH (NOLOCK)
+			ON NP.custid = C.custid
+		WHERE C.recommend = @Recommend
+		GROUP BY C.custid
+	) netBalance ON netBalance.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
 
