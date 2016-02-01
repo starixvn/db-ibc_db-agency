@@ -1,15 +1,4 @@
-﻿USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_MAg_New]    Script Date: 12/17/2015 5:20:26 PM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -81,6 +70,7 @@ Revisions:
 	- 20150831@Winnie: Include CB [Redmine: #42409]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
+	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 	
 */
 
@@ -243,7 +233,7 @@ BEGIN
 		       SUM(acomm) - SUM(comm), --MAgComm
 		       ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) - SUM(comm), --MAgTotal
 		       -(ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost - actual_stake), 0)),--Company
-		       COUNT(b.transid) --No Of Ticket
+		       COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) --No Of Ticket
 	    FROM dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		WHERE 

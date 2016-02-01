@@ -1,14 +1,4 @@
-﻿USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_ConsolidatedGroup]    Script Date: 1/14/2016 5:19:06 PM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER OFF
-GO
-
-CREATE PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@CustID			INT, 
 	@Currency		INT,
 	@FromDate		SMALLDATETIME,  
@@ -43,6 +33,7 @@ AS
 		- 20151110@Percy: Include CustID in select result [RedmineID: #47201]
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 		- 20160108@Percy: Include new bettype range into the current RNG Casino [Redmine: #48283]
+		- 20160129@Percy: Support new sport Cricket [Redmine: #50027]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -61,19 +52,19 @@ DECLARE @fdate SMALLDATETIME, @tdate SMALLDATETIME
 SELECT @fdate = @FromDate, @tdate = @ToDate
 
 DECLARE @AgencyWinloss AS TABLE (
-									winlostdate DATETIME,
-									custid		INT,										
-									sporttype	INT,
-									RoleID		INT,
-									turnover	MONEY,
-									winlost		MONEY,
-									playercomm	MONEY,
-									ownerturnover MONEY,
-									ownerwinlost	MONEY,
-									ownercomm		MONEY,
-									precomm		MONEY,
-									company		MONEY,
-									betcount	INT
+									winlostdate      DATETIME,
+									custid		     INT,										
+									sporttype	     INT,
+									RoleID		     INT,
+									turnover	     MONEY,
+									winlost		     MONEY,
+									playercomm	     MONEY,
+									ownerturnover    MONEY,
+									ownerwinlost     MONEY,
+									ownercomm	     MONEY,
+									precomm		     MONEY,
+									company		     MONEY,
+									betcount	     INT
 								)
 
 DECLARE @TmpCond TABLE(sporttype INT, bettype INT)
@@ -320,7 +311,7 @@ BEGIN
 			,SUM(scomm) ownercomm
 			,SUM(acomm) precomm
 			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-			,COUNT(transid) betcount
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
 		FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
@@ -346,7 +337,7 @@ BEGIN
 			,SUM(acomm) ownercomm 
 			,SUM(comm) precomm
 			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(acomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-			,COUNT(transid) betcount
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
 		FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
@@ -371,7 +362,7 @@ BEGIN
 			,SUM(comm) ownercomm
 			,SUM(playercomm) precomm
 			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(comm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-			,COUNT(transid) betcount
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
 		FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	b.winlostdate BETWEEN @fdate AND @tdate
@@ -396,7 +387,7 @@ BEGIN
 			,SUM(playercomm) as ownercomm
 			,0 as precomm
 			,SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) +SUM(playercomm) company
-			,COUNT(transid) betcount
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
 		FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE	winlostdate BETWEEN @fdate AND @tdate

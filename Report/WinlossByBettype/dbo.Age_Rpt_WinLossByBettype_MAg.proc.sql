@@ -1,7 +1,4 @@
-﻿USE bodb02
-GO
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,	
@@ -34,6 +31,7 @@ Revisions:
 	- 20140926@Sophia:  Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]
 	- 20150331@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20160104@Percy: Include new bettype range into RNG Casino [Redmine: #48283]
+	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 */
 SET NOCOUNT ON
 DECLARE @MAgWinLoss TABLE
@@ -85,7 +83,7 @@ BEGIN
 			,isnull(SUM(acomm), 0) - isnull(SUM(comm), 0)
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		WHERE 1 = 1
@@ -109,7 +107,7 @@ BEGIN
 			,isnull(SUM(acomm), 0) - isnull(SUM(comm), 0)
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
@@ -143,7 +141,7 @@ BEGIN
 			,isnull(SUM(acomm), 0) - isnull(SUM(comm), 0)
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
 		FROM dbo.bettrans b WITH (NOLOCK)
 			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
@@ -179,7 +177,7 @@ BEGIN
 			,isnull(SUM(acomm), 0) - isnull(SUM(comm), 0)
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
 		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
 			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		WHERE 1 = 1
@@ -204,7 +202,7 @@ BEGIN
 			,isnull(SUM(acomm), 0) - isnull(SUM(comm), 0)
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
 		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
 			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
@@ -238,7 +236,7 @@ BEGIN
 			,isnull(SUM(acomm), 0) - isnull(SUM(comm), 0)
 			,isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) - SUM(comm)
 			,- (isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(acomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
 		FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
 			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 			INNER JOIN @SportBettype s ON b.bettype = s.Bettype
