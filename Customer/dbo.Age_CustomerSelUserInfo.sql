@@ -23,6 +23,7 @@ Revisions:
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20151028@Helen: Member Information to support Muay Thai  [Redmine: #45496]
 	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
+	- 20160114@Helen: Cricket - [Redmine: #50027]
 
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -32,6 +33,8 @@ Param's Explanation:
 
 	declare @roleid tinyint
 	declare @remark nvarchar(300) = ''
+	DECLARE @Site VARCHAR(10)
+	
 	select @roleid = roleid
 	  from Customer with(nolock)
 	 where custid = @custid
@@ -63,16 +66,19 @@ Param's Explanation:
 
 	-- For DCS
 	 
-    DECLARE @bitmapOrder_MuayThai INT , @bitmapOrder_CockFighting INT
+    DECLARE @bitmapOrder_MuayThai INT , @bitmapOrder_CockFighting INT, @bitmapOrder_Cricket INT
     
     SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
     SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
+    SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
     
     DECLARE @IsHidden_MuayThai INT = 1
     DECLARE @IsHidden_CockFighting INT = 1
+    DECLARE @IsHidden_Cricket INT = 1
     
     DECLARE @SportBook2 INT = 16
     DECLARE @CockFighting INT = 19
+    DECLARE @Cricket INT = 20
     
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
 	BEGIN
@@ -82,7 +88,26 @@ Param's Explanation:
 	BEGIN
 		SET @IsHidden_CockFighting = 0
 	END
-
+	
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@Cricket,4))
+	BEGIN
+		SET @IsHidden_Cricket = 0
+	END
+	
+	DECLARE @recommend INT, @IsIMBC BIT = 0
+	
+	IF @roleid = 1
+	BEGIN
+		SET @recommend = (SELECT recommend FROM custInfo WITH (NOLOCK) WHERE custid = @custid)
+		IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @recommend AND [Site] = 'IMBC')
+			SET @IsIMBC = 1
+			
+	END
+	ELSE
+	BEGIN
+		IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @custid AND [Site] = 'IMBC')
+			SET @IsIMBC = 1
+	END
 	SELECT Customer.custid,
 		   Customer.userpwd,
 		   ci.username,
@@ -118,6 +143,10 @@ Param's Explanation:
 			-- For CockFighting
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_CockFighting),1) AS DisableCockFighting,
 			CAST(CASE WHEN @IsHidden_CockFighting = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_CockFighting),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCockFighting,
+			-- Cricket
+			@IsIMBC AS IsIMBC,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_Cricket),1) AS DisableCricket,
+			CAST(CASE WHEN @IsIMBC = 1 AND @IsHidden_Cricket = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_Cricket),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCricket,
 						
 		   ci.credit,
 		   e.currency as currencyname,
