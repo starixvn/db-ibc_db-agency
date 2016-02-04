@@ -14,6 +14,7 @@
 	@showGD			BIT = 0,
 	@showCB			BIT = 0,
 	@showCF			BIT = 0,
+	@showAB			BIT = 0,
 	@BalanceUpDate	DATETIME
 AS	
 /*
@@ -35,6 +36,8 @@ AS
 		- 20150831@Winnie: Include CB [Redmine: #42409]
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 		- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
+		- 20160204@Percy: Support new product AllBet [Redmine: #50605]
+
 	Parameters Explanation:
 */
 SET NOCOUNT ON
@@ -73,6 +76,7 @@ SET NOCOUNT ON
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
 		VALUES(0,0)   
 	END  
+
 	IF @ShowCasino = 1  
 	BEGIN  
 		--bettrans
@@ -99,6 +103,7 @@ SET NOCOUNT ON
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
 		VALUES (251,71), (208, 0), (209, 0), (210, 0)
 	END
+
 	IF @ShowRB = 1  
 	BEGIN  	
 		--bettrans
@@ -118,6 +123,7 @@ SET NOCOUNT ON
 		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		SELECT 151,0
 	END
+
 	IF @ShowNG = 1  
 	BEGIN  	
 		-- bettrans
@@ -133,6 +139,7 @@ SET NOCOUNT ON
 		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		VALUES(161,0)  
 	END  
+
 	IF @ShowBI = 1  
 	BEGIN  	
 		-- bettrans
@@ -148,6 +155,7 @@ SET NOCOUNT ON
 		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		VALUES(252,73) 
 	END  
+
 	IF @ShowP2P = 1
 	BEGIN
 		-- bettrans
@@ -215,7 +223,6 @@ SET NOCOUNT ON
 		 VALUES(202,0)
 	END
 	
-	
 	IF @showGD = 1
 	BEGIN
 		-- bettrans
@@ -253,6 +260,19 @@ SET NOCOUNT ON
 		--Sum_winloss
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(206, 1003)
+	END	
+
+	IF @showAB = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	211 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 21
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(211, 0)
 	END	
 	
 	IF @ToDate >= @BalanceUpDate
@@ -319,4 +339,5 @@ GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_Ag] TO [bodbDownlineNetView] A
 GO
 
 GRANT VIEW DEFINITION ON [dbo].[Age_Chart_WinlossAnalysis_Ag] TO [vnteam] AS [dbo]
+
 GO
