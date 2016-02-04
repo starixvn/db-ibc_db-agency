@@ -4,7 +4,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 SET ANSI_NULLS ON 
 GO
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New_UAT4] 
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -21,6 +21,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New_UAT4]
 	,@showGD		 BIT = 0
 	,@showCB		 BIT = 0
 	,@showCF		 BIT = 0
+	,@showAB			BIT = 0
 	,@BalanceUpDay   SMALLDATETIME
 	,@PageSize       INT = 0
 	,@PageIndex      INT = 0
@@ -77,6 +78,7 @@ Revisions:
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
+	- 20160204@Percy: Support new product AllBet [Redmine: #50605]
 	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
 	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
 	- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
@@ -215,6 +217,13 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(206, 1003) 
 END
+IF @showAB = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(211, 0) 
+END
+
 
 DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
 
@@ -265,31 +274,20 @@ BEGIN
 		WHERE 
 				1 = 1
 				AND b.bettype = s.Bettype
-				AND (s.ProductID = CASE WHEN @showSB = 1 THEN 1 ELSE 0 END
-					OR s.ProductID = CASE WHEN @ShowRB = 1 THEN 2 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showCasino = 1 THEN 6 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showP2P = 1 THEN 9 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showNG = 1 THEN 3 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showBI = 1 THEN 7 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showLiveCasino = 1 THEN 4 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showVS = 1 THEN 5 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showKeno = 1 THEN 8 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showGD = 1 THEN 12 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showCB = 1 THEN 15 ELSE 0 END
-					OR s.ProductID = CASE WHEN @showCF = 1 THEN 19 ELSE 0 END
+				AND (  s.ProductID = CASE WHEN @showSB			= 1 THEN 1 ELSE 0 END
+					OR s.ProductID = CASE WHEN @ShowRB			= 1 THEN 2 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showCasino		= 1 THEN 6 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showP2P			= 1 THEN 9 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showNG			= 1 THEN 3 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showBI			= 1 THEN 7 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showLiveCasino	= 1 THEN 4 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showVS			= 1 THEN 5 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showKeno		= 1 THEN 8 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showGD			= 1 THEN 12 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showCB			= 1 THEN 15 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showCF			= 1 THEN 19 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showAB			= 1 THEN 21 ELSE 0 END
 				)
-				-- and (bettype < case when @showSB = 1 then 31 else 0 end
-				--OR bettype between 121 and case when @showSB = 1 then 999 else 0 end
-				--OR bettype between 1301 and case when @showSB = 1 then 1399 else 0 end
-				--OR bettype between 31 and case when @ShowRB = 1 then 49 else 0 end
-				--OR bettype = case when @showCasino = 1 then 71 else 0 end
-				--OR bettype = case when @showP2P = 1 then 1000 else 0 end
-				--OR bettype BETWEEN 81 AND (CASE WHEN @showNG = 1 THEN 120 ELSE 0 END)
-				--OR bettype = (CASE WHEN @showBI = 1 THEN 73 ELSE 0 END)
-				--OR bettype BETWEEN 1101 AND (CASE WHEN @showLiveCasino = 1 THEN 1199 ELSE 0 END) 
-				--OR bettype BETWEEN 1201 AND (CASE WHEN @showVS = 1 THEN 1299 ELSE 0 END)
-				--OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END
-			 --  )
 			AND winlostdate BETWEEN @FDate AND @TDate
 			--status not in ('running','waiting','VOID', 'REJECT', 'Refund') and
 			AND statusID NOT IN (101, 102, 103)
