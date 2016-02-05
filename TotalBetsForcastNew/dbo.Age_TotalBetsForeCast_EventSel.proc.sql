@@ -2,13 +2,12 @@ Use bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_TotalBetsForeCast_EventSel] (
-	@CustId			INT	= 0
-	,@LeagueList	VARCHAR(1000) = NULL
-	,@IsLive		BIT = 1
+	@LeagueList		VARCHAR(1000) = NULL
+	,@IsLive		BIT = 0
 ) AS
 /*	
 Created: 20151216@Bobby
-Task: Alpha site - New total bets and forecast events filtering
+Task: Alpha site - New total bets AND forecast events filtering
 DB: DBAGE/BODB02
 Revision:
 	- 20151216@Bobby: Initial
@@ -46,8 +45,8 @@ BEGIN
 	SELECT bettype
 	FROM ( 
 		VALUES 
-		(1)		--Handicap
-		, (7)	-- 1H Handicap
+		(1)		--HANDicap
+		, (7)	-- 1H HANDicap
 		, (3)	-- Over/Under
 		, (8)	-- 1H Over/Under
 		, (5)	-- FT.1X2
@@ -56,40 +55,6 @@ BEGIN
 	
 	SET @sporttype	= 1 
 
-	/*SELECT TOP 1
-		@roleId			= roleId
-		, @sporttype	= 1 
-	FROM dbo.Customer c WITH (NOLOCK)
-	WHERE c.custid = @custid
-	
-	IF(ISNULL(@roleId, 0) = 0) RETURN
-	
-	--select @roleId RoleId
-	
-	--agent
-	INSERT INTO #custRecommend
-	SELECT @CustId
-	WHERE @roleId	= 2
-
-	--master
-	UNION ALL
-	SELECT cr.custId
-	FROM dbo.Customer cr WITH (NOLOCK)
-	WHERE cr.mrecommend		= @custid
-		AND cr.roleid		= 2
-		AND @roleId			= 3
-
-	--super
-	UNION ALL
-	SELECT cr.custId
-	FROM dbo.Customer cr WITH (NOLOCK)
-	WHERE cr.srecommend		= @custid
-		AND cr.roleid		= 2
-		AND @roleId			= 4
-	*/
-	
-	--select count(1) TotalRec
-	--from #custRecommend
 
 	IF(@leagueList = 'ALL')
 	BEGIN
@@ -109,6 +74,8 @@ BEGIN
 		WHERE l.sporttype	= @sporttype
 			AND l.IsActive	= 1
 			AND l.IsTest	= 0
+			AND l.outright 	= 0
+			AND l.leagueid	<> 28412 -- Arsenal & Over 2.5
 			AND m.eventstatus = 'running'
 			AND EXISTS ( 
 				SELECT TOP 1 1 
@@ -126,24 +93,6 @@ BEGIN
 						WHEN @IsLive = 1 AND m.kickofftime <= @timeNow	THEN 1
 						ELSE 0
 					END
-			--AND l.leaguename LIKE '*%' --main league
-			/*AND EXISTS (
-				SELECT TOP 1 1 
-				FROM dbo.bettrans b WITH(NOLOCK) 
-					--INNER JOIN #custRecommend c
-					--ON b.recommend = c.custId
-				WHERE EXISTS(
-						SELECT 1 
-						FROM #custRecommend c 
-						WHERE c.custId = b.recommend
-					)
-					AND b.matchid = m.matchid 
-					AND EXISTS(
-						SELECT 1 
-						FROM #bettypes bt 
-						WHERE bt.bettype = b.bettype
-					)
-			)*/
 	END
 	ELSE
 	BEGIN	
@@ -159,10 +108,12 @@ BEGIN
 			INNER JOIN dbo.League l WITH(NOLOCK)
 			ON m.leagueid	= l.leagueid
 			INNER JOIN [dbo].[Age_f_SplitString] (@leagueList, ',') AS t
-			ON l.leagueid = t.Val
+			ON l.leagueid 	= t.Val
 		WHERE l.sporttype	= @sporttype
 			AND l.IsActive	= 1
 			AND l.IsTest	= 0
+			AND l.outright 	= 0
+			AND l.leagueid	<> 28412 -- Arsenal & Over 2.5
 			AND m.eventstatus = 'running'
 			AND EXISTS ( 
 				SELECT TOP 1 1 
@@ -180,27 +131,48 @@ BEGIN
 						WHEN @IsLive = 1 AND m.kickofftime <= @timeNow	THEN 1
 						ELSE 0
 					END
-			--AND l.leaguename LIKE '*%' --main league
-			/*AND EXISTS (
-				SELECT TOP 1 1 
-				FROM dbo.bettrans b WITH(NOLOCK) 
-					--INNER JOIN #custRecommend c
-					--ON b.recommend = c.custId
-				WHERE 
-					EXISTS(
-						SELECT 1 
-						FROM #custRecommend c 
-						WHERE c.custId = b.recommend
-					)
-					AND b.matchid = m.matchid 
-					AND EXISTS(
-						SELECT 1 
-						FROM #bettypes bt 
-						WHERE bt.bettype = b.bettype
-					)
-			)*/
 	END
-
+	
+	-- filter by main league
+	DELETE d
+	FROM #matchEvent d
+	WHERE leaguename LIKE '%special%'
+		OR leaguename LIKE '%specific%'
+		OR leaguename LIKE '%corner%'
+		OR leaguename LIKE '%booking%'
+		OR leaguename LIKE '%winner%'
+		OR leaguename LIKE '%goal%'
+		OR leaguename LIKE '%team%'
+		OR leaguename LIKE '%injury%'
+		OR leaguename LIKE 'z*%'
+		OR leaguename LIKE 'z-%'
+		OR leaguename LIKE '%half%'
+		OR leaguename LIKE '%advance%'
+		OR leaguename LIKE '%reach%'
+		OR leaguename LIKE '%?%'
+		OR leaguename LIKE '%final%'
+		OR leaguename LIKE '%promot%'
+		OR leaguename LIKE '%method%'
+		OR leaguename LIKE '%relegat%'
+		OR leaguename LIKE '%double chance%'
+		OR leaguename LIKE '%hockey%'
+		OR leaguename LIKE '%yellow card%'
+		OR leaguename LIKE '%red card%'
+		OR leaguename LIKE '%winning%'
+		OR leaguename LIKE '%scor%'
+		OR leaguename LIKE '%penalty%'
+		OR leaguename LIKE '%fantasy%'
+		OR leaguename LIKE '%half%'
+		OR leaguename LIKE '%Substitution%'
+		OR leaguename LIKE '%offside%'
+		OR leaguename LIKE '%free kick%'
+		OR leaguename LIKE '%throw in%'
+		OR leaguename LIKE '%extra%'
+		OR leaguename LIKE '%rock bottom%'
+		OR leaguename LIKE '%post split%'
+		OR leaguename LIKE '%test%'
+		OR leaguename LIKE '%no use%'
+	
 	--return league	
 	SELECT 
 		DISTINCT
@@ -222,8 +194,6 @@ BEGIN
 	DROP TABLE #matchEvent
 
 	RETURN
-
-	RETURN
 END
 GO
 GRANT EXECUTE ON [dbo].[Age_TotalBetsForeCast_EventSel] TO [bodbDownlineNet]
@@ -232,3 +202,4 @@ GRANT EXECUTE ON [dbo].[Age_TotalBetsForeCast_EventSel] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_TotalBetsForeCast_EventSel] TO [vnteam]
 GO
+exec [dbo].[Age_TotalBetsForeCast_EventSel]
