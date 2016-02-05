@@ -1,7 +1,7 @@
 Use bodb02
 GO
 
-ALTER PROCEDURE [dbo].[Age_TotalBetsForeCast_EventSel] (
+ALTER PROCEDURE [dbo].[Age_NewTotalBetsForeCast_EventSel] (
 	@LeagueList		VARCHAR(1000) = NULL
 	,@IsLive		BIT = 0
 ) AS
@@ -196,10 +196,9 @@ BEGIN
 	RETURN
 END
 GO
-GRANT EXECUTE ON [dbo].[Age_TotalBetsForeCast_EventSel] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_NewTotalBetsForeCast_EventSel] TO [bodbDownlineNet]
 GO
-GRANT EXECUTE ON [dbo].[Age_TotalBetsForeCast_EventSel] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_NewTotalBetsForeCast_EventSel] TO [bodbDownlineNetView]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_TotalBetsForeCast_EventSel] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Age_NewTotalBetsForeCast_EventSel] TO [vnteam]
 GO
-exec [dbo].[Age_TotalBetsForeCast_EventSel]
