@@ -28,7 +28,7 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20151222@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48601]
 	- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
-	- 20160128@Percy: Support new sport Cricket [Redmine: #50027]
+	- 20160205@Percy: Support new sport Cricket [Redmine: #50027]
 	
 Param's Explanation:
 • @CustID: MAgentID
@@ -71,19 +71,27 @@ CREATE TABLE #balance
 ;WITH rt
 as (
 	SELECT
-		recommend as custid,
-		ISNULL(SUM(case when ruben=0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking else 0 end),0) AS outstanding, 
-		ISNULL(SUM(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance,
-		ISNULL(SUM(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover
-	FROM bettrans with (NOLOCK)
+		recommend
+			AS custid,
+		ISNULL(SUM(case when ruben=0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * apositiontaking else 0 end),0)
+			AS outstanding, 
+		ISNULL(SUM(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0)
+			AS balance,
+		ISNULL(SUM(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0)
+			AS turnover
+	FROM bettrans WITH (NOLOCK)
 	WHERE mrecommend=@CustID
 		AND (
-				(bettrans.bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2399 AND ruben =0)
+				(ruben = 0 AND bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2399)
 				OR ruben <> 0
 			)
 		AND (
 				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
 				OR CONVERT(DATE, winlostdate) < @yesterday
+			)
+		AND (
+				(matchid > 0 AND matchid NOT IN (208, 209, 210, 211))
+				OR matchid <= 0
 			)
 	GROUP BY recommend
 	UNION ALL
@@ -97,10 +105,14 @@ as (
 	GROUP BY recommend
 	UNION ALL
 	SELECT
-		recommend as custid,
-		ISNULL(SUM(case when statusID IN (0, 1) then actual_stake * apositiontaking else 0 end),0) outstanding, 
-		ISNULL(SUM(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end ELSE 0 END),0) AS balance,
-		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN actual_stake ELSE 0 END), 0) as turnover
+		recommend
+			AS custid,
+		ISNULL(SUM(case when statusID IN (0, 1) then actual_stake * apositiontaking else 0 end),0)
+			AS outstanding, 
+		ISNULL(SUM(case when  CONVERT(DATE, winlostdate) >= @yesterday then case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end else 0 end),0)
+			AS balance,
+		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN actual_stake ELSE 0 END), 0)
+			AS turnover
 	FROM bettransRNG with (NOLOCK)
 	WHERE mrecommend=@CustID
 		AND gameID BETWEEN 2101 AND 2399
@@ -123,6 +135,10 @@ CREATE TABLE #today_balance
 INSERT INTO #today_balance
 SELECT custid, SUM(balance) AS balance FROM (
 	SELECT
+	custid,
+	SUM(balance) AS balance
+FROM (
+	SELECT
 		recommend as custid,
 		sum(awinlost+comm-playercomm) AS balance
 	FROM bettrans with (NOLOCK)
@@ -134,10 +150,10 @@ SELECT custid, SUM(balance) AS balance FROM (
 		recommend as custid,
 		sum(awinlost+comm-playercomm) AS balance
 	FROM bettransRNG with (NOLOCK)
-	WHERE mrecommend=@CustID AND statusID NOT IN (0, 1, 101, 102) AND gameID BETWEEN 2101 AND 2399
+	WHERE mrecommend=@CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2101 AND 2399
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY recommend
-) AS A
+	) AS A
 GROUP BY custid
 
 SET @Username = isnull(@Username, '')
@@ -180,8 +196,8 @@ INNER JOIN Customer C WITH (NOLOCK)
 	ON TC.custid = C.recommend
 INNER JOIN DBPRO.bodb02.dbo.BalNetPosition NP WITH (NOLOCK)
 	ON NP.custid = C.custid
-GROUP BY TC.custid
-
+GROUP BY TC.custid		
+		
 IF @TotalPages = 0
 BEGIN
 	SELECT 
