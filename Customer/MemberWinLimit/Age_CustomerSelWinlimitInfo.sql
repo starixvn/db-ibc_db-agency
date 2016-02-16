@@ -1,5 +1,3 @@
-USE custdb
-GO 
 ALTER PROCEDURE dbo.Age_CustomerSelWinlimitInfo @CustId INT
 	, @BetType SMALLINT
 	, @mrecommend INT = 0
