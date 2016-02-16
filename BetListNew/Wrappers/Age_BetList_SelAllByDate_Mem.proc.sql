@@ -26,14 +26,15 @@ ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
 	, @ShowGD			BIT = 0
 	, @ShowCB			BIT = 0
 	, @ShowCF			BIT = 0
-	, @Error			INT 			= 0
+	, @ShowAB			BIT = 0
+	, @Error			INT				= 0
 	, @ErrorMsg			NVARCHAR(250)	= NULL
 AS
 
 /*
 	Created: 
 	Task : Bet List
-	DB: DB053.bodb02
+	DB: DBAGE.bodb02
 	Original BetsSelBetListEnglishAgent2
 	Revisions:
 		- 20080707@Viet: Remove Teamname, Leaguename, Sportname, TypeName
@@ -62,8 +63,8 @@ AS
 		- 20110809@Sophia: Not to use function f_GetChoice to get betteam (bettype <> 14, 16)
 		- 20110811@Sophia: Add new columns actual_stake and modds 
 		- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
-		- 20111216@Sophia: Remove function f_GetOddsByBettype , f_GetChoice , f_ShowOddsByBettype
-		- 20120230@Sophia: Add new bettype: Live Casino , add showtime for Table - Shoe - Hand of LiveCasino 
+		- 20111216@Sophia: Remove function f_GetOddsByBettype, f_GetChoice, f_ShowOddsByBettype
+		- 20120230@Sophia: Add new bettype: Live Casino, add showtime for Table - Shoe - Hand of LiveCasino
 		- 20120405@Hurri: Change bettype for P2P
 		- 20120409@Sophia: Remove check checktime with CURRENT_TIMETAMP for Casino, P2P, Bingo
 		- 20120419@Lukas: Show transid of main ticket for subticket of system parlay
@@ -90,20 +91,21 @@ AS
 		- 20150828@Kos: Support Colossus Bet
 		- 20150903@Bobby: Correct data type of sport bet type matrix for avoiding SQL data conversion
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
-		- 20151214@Kos: Support Cockfighting (#Redmine: 48850)
+		- 20151214@Kos: Support Cockfighting [#Redmine: 48850]
+		- 20160215@Kos: Support AllBet [#Redmine: 50864]
 */
 
 BEGIN
 	SET NOCOUNT ON;
-	
-	DECLARE	 @TransStatus 	[dbo].[TVP_BetTicketStatus]
+
+	DECLARE	 @TransStatus	[dbo].[TVP_BetTicketStatus]
 		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
 
 	-- Gather Ticket status
 	INSERT INTO @TransStatus
 	SELECT StatusId
 	FROM bodb02.dbo.All_f_TransStatus (1) stt
-	
+
 	-- Gather BettypeMatrix
 	INSERT INTO @BettypeMatrix
 	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 5
@@ -157,6 +159,8 @@ BEGIN
 		INSERT INTO @ProductFilter VALUES (15)
 	IF @ShowCF = 1
 		INSERT INTO @ProductFilter VALUES (19)
+	IF @ShowAB = 1
+		INSERT INTO @ProductFilter VALUES (21)
 
 	-- DELETE bettypes 
 	DELETE bt
@@ -181,10 +185,10 @@ BEGIN
 	
 	-- CALL to core bet list
 	EXEC [bodb02].[dbo].[Age_CoreBetList_MemTransDate_SelBetTicket]
-		@CustId 			= @CustId
+		@CustId				= @CustId
 		, @username			= @username
 		, @FromDate			= @FromDate
-		, @ToDate 			= @ToDate
+		, @ToDate			= @ToDate
 		, @TransStatus		= @TransStatus
 		, @BettypeMatrix	= @BettypeMatrix
 		, @ColumnOutput		= 'Username 
@@ -236,9 +240,11 @@ BEGIN
 								,transdesc,
 								OddsSpread'
 	;
-	
+
 	RETURN;
 END
+
+
 
 GO
 GRANT  EXECUTE  ON [dbo].[Age_BetList_SelAllByDate_Mem]  TO [bodbDownlineNet]
