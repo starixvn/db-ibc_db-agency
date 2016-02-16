@@ -1,25 +1,23 @@
-USE custdb
-GO 
-ALTER PROCEDURE dbo.Age_CustomerSelCustWinlimit @CustId INT
-	, @BetType SMALLINT
-	, @SportType SMALLINT
-	, @mrecommend INT = 0
-	, @recommend INT = 0
-	
-	, @PageSize INT = 500
-	, @PageIndex INT = 1
-	
-	, @TotalRows INT = 0 OUTPUT
+ALTER PROCEDURE	dbo.Age_CustomerSelCustWinlimit 
+					@CustId			INT
+				,	@BetType		SMALLINT
+				,	@SportType		SMALLINT
+				,	@mrecommend		INT			= 0
+				,	@recommend		INT			= 0
+				,	@PageSize		INT			= 500
+				,	@PageIndex		INT			= 1
+				,	@TotalRows		INT			= 0			OUTPUT
 AS
 /*
-Create: 20150715@Patrick
-Task: Member win limit of Super
-DB: DBCUST.custdb
+	Create:	20150715@Patrick
+	Task:	Member win limit of Super
+	DB:		DBCUST.custdb
 
-Revisions:
+	Revisions:
+		- 20160216@Billy:	Implement Max Win Loss Limit for DCS Product - [Redmine: #52268]
 
-Param's Explanation:
-• @CustID: SAgentID
+	Param's Explanation:
+		- @CustID: SAgentID
 */
 BEGIN
 
@@ -98,6 +96,49 @@ BEGIN
 		)tmp
 		WHERE tmp.RowNumber BETWEEN @RowStart AND @RowEnd
 		ORDER BY RowNumber
+		OPTION (RECOMPILE)
+	END
+	IF EXISTS (SELECT 1 FROM dbo.ProductSettingDetail AS psd WHERE psd.SportType = @SportType AND psd.BetType = @BetType)
+	BEGIN
+	    SELECT	tmp.RowNumber
+			,	tmp.closed
+			,	tmp.Enabled
+			,	tmp.suspended
+			,	tmp.username
+			,	tmp.firstname
+			,	tmp.lastname
+			,	tmp.credit
+			,	tmp.CustId
+			,	tmp.IsAutoReset
+			,	tmp.MaxWinLimit
+			,	tmp.MaxLossLimit
+		FROM	(
+			SELECT	ROW_NUMBER() OVER (ORDER BY ci.Enabled DESC, ci.closed, ISNULL(ci.reject, 0), ci.username) AS RowNumber
+				,	ci.username
+				,	ci.closed
+				,	ci.enabled
+				,	ISNULL(ci.reject, 0) AS suspended
+				,	ci.credit
+				,	mb.CustId
+				,	c.firstname
+				,	c.lastname
+				,	cwllm.IsAutoReset
+				,	cwllm.MaxWinLimit
+				,	cwllm.MaxLossLimit
+			FROM		#MemberBalance mb
+			INNER JOIN	dbo.custInfo ci WITH (NOLOCK) 
+					ON	mb.CustId = ci.custid
+			INNER JOIN	dbo.customer c WITH (NOLOCK) 
+					ON	mb.CustId = c.CustId
+			INNER JOIN	dbo.CustWinLossLimit_Member AS cwllm WITH (NOLOCK) 
+					ON	ci.CustId = cwllm.CustId 
+					AND	cwllm.SportType = @SportType 
+					AND	cwllm.BetType = @BetType
+			GROUP BY	ci.username, ci.closed, ci.Enabled, ISNULL(ci.reject, 0), ci.credit, c.firstname, c.lastname
+					,	cwllm.IsAutoReset, cwllm.MaxWinLimit, cwllm.MaxLossLimit, mb.custid
+		) tmp
+		WHERE	tmp.RowNumber BETWEEN @RowStart AND @RowEnd
+		ORDER BY	RowNumber
 		OPTION (RECOMPILE)
 	END
 	ELSE
