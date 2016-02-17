@@ -26,7 +26,6 @@ Revisions:
 	- 20140926@Sophia:  Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]
 	- 20150331@Cody: Apply sport bettype matrix	[Redmine: #30169]
 	- 20160104@Percy: Include new bettype range into RNG Casino [Redmine: #48283]
-	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 
 + Note: Review index=IX_srecommend when modifying this SP 
 */
@@ -81,7 +80,7 @@ BEGIN
 		,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-		,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
+		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans b WITH(NOLOCK, INDEX = IX_srecommend)
 		INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
 	WHERE 1 = 1
@@ -106,7 +105,7 @@ BEGIN
 		,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-		,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
+		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans b WITH(NOLOCK, INDEX = IX_srecommend)
 		INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
 	WHERE winlostdate BETWEEN @FromDate AND @ToDate
@@ -139,7 +138,7 @@ BEGIN
 		,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-		,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
+		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
 		LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 		INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
@@ -176,7 +175,7 @@ BEGIN
 		,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-		,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
+		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans14 b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
 	WHERE 1 = 1
@@ -200,7 +199,7 @@ BEGIN
 		,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-		,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
+		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans14 b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
 	WHERE winlostdate BETWEEN @FromDate AND @ToDate
@@ -234,7 +233,7 @@ BEGIN
 		,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
 		,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
 		,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-		,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS NoOfTicket
+		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans14 b WITH (NOLOCK)
 		LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
