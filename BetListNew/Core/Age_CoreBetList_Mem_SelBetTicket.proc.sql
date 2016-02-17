@@ -9,20 +9,20 @@ GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_Mem_SelBetTicket]
 (
 	-- MEM INFO
-	@CustId 			INT				= NULL
-	, @UserName 		NVARCHAR(30)	= NULL
+	@CustId				INT				= NULL
+	, @UserName			NVARCHAR(30)	= NULL
 	, @FromDate			DATE
-	, @ToDate 			DATE
-	, @MoveBetsDay 		DATE			= NULL
+	, @ToDate			DATE
+	, @MoveBetsDay		DATE			= NULL
 	, @BalanceupDay		DATE			= NULL
 	-- PRODUCT - BETTYPE - STATUS
-	, @TransStatus 		[dbo].[TVP_BetTicketStatus]		READONLY
+	, @TransStatus		[dbo].[TVP_BetTicketStatus]		READONLY
 	, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]	READONLY
 	, @TransType		INT 			= 0
 	-- PAGING
 	, @PageIndex		INT				= 1
 	, @PageSize			INT				= 5000
-	, @Language 		VARCHAR(2) 		= 'E'
+	, @Language			VARCHAR(2) 		= 'E'
 	--OPTIONAL
 	, @ColumnOutput		VARCHAR(MAX) 	= NULL
 	-- OUTPUT INFO
@@ -49,6 +49,7 @@ AS
 		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
 		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
 		- 20160216@Kos: Support yesterday running ticket for Casino products
+		- 20160217@Kos: Support AllBet [Redmine: #50864]
 		- 20160323@Kos: Hotfix - Colossus Bet Grand Prize ticket in bettrans14 [#Redmine: 54643]
 		- 20160328@Kos: Support Grand Prize ticket which status is Expired
 
@@ -69,21 +70,21 @@ AS
 
 BEGIN
 	SET NOCOUNT ON;
-	
+
 	DECLARE @Recommend	INT
 		, @tempCust		dbo.TVP_TicketSportBettype
 
 	-- CHECK for MoveBetsDay
 	IF @MoveBetsDay IS NULL
 	BEGIN
-		SELECT @MoveBetsDay = MAX(Winlostdate) 
+		SELECT @MoveBetsDay = MAX(Winlostdate)
 		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 	END
 
 	-- CHECK for BalanceupDay
 	IF @BalanceupDay IS NULL
 	BEGIN
-		SELECT @BalanceupDay = MIN(Winlostdate) 
+		SELECT @BalanceupDay = MIN(Winlostdate)
 		FROM bodb02.dbo.bettrans14 WITH (NOLOCK)
 	END
 
@@ -93,12 +94,12 @@ BEGIN
 		,@ErrorMsg		= ''
 
 	-- CHECK member info
-	IF( @CustID IS NULL AND @UserName IS NOT NULL )
+	IF @CustID IS NULL AND @UserName IS NOT NULL
 	BEGIN
-		SELECT @CustID 	= CustID
+		SELECT @CustID = CustID
 			, @Recommend = Recommend 
-		FROM bodb02.dbo.custinfo WITH (NOLOCK) 
-		WHERE UserName	= @UserName
+		FROM bodb02.dbo.custinfo WITH (NOLOCK)
+		WHERE UserName = @UserName
 	END
 
 	IF( @CustID > 0
@@ -109,7 +110,7 @@ BEGIN
 	BEGIN
 		SELECT @Recommend = Recommend 
 			,@UserName = UserName
-		FROM bodb02.dbo.custinfo WITH (NOLOCK) 
+		FROM bodb02.dbo.custinfo WITH (NOLOCK)
 		WHERE CustID = @CustID
 	END
 
@@ -151,24 +152,25 @@ BEGIN
 			FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
 				INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
-			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-				AND b.recommend	= @Recommend 
-				AND b.custid	= @CustID
+			WHERE b.winlostdate BETWEEN @fromdate AND @todate 
+				AND b.recommend = @Recommend 
+				AND b.custid = @CustID
 				--exclude running tickets of MetricGaming
 				AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
-					OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
+					OR ( bt.SubProduct IN ('MG-SuperLive') AND b.StatusId NOT IN (0, 1) )
 				)
-				AND (bt.ProductId <> 6 OR bt.SubProduct = ''
-					OR b.winlostdate < @Yesterday)
+				AND ((bt.ProductId <> 21		-- not yesterday and today AllBet, RNG Casino Single Wallet
+					AND (bt.ProductId <> 6 OR bt.SubProduct = ''))
+						OR b.winlostdate < @Yesterday)
 
-			/* 	select running tickets
-				- Keno 			: ProductId = 8
+			/* select running tickets
+				- Keno			: ProductId = 8
 				- Gold Deluxe	: ProductId = 12
 				- Colossus Bet	: ProductId = 15
 				- Cockfighting	: ProductId = 19
 				- Sportsbook	: Metric Gaming bettype(801-899)
 			*/
-			IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0,1))
+			IF EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1))
 			BEGIN
 				INSERT INTO @tempCust (
 					TransID
@@ -179,8 +181,8 @@ BEGIN
 					, EventType
 					, WhTicket)
 				SELECT 
-					b.translogid	AS transid
-					, b.translogid 	AS refno
+					b.translogid AS transid
+					, b.translogid AS refno
 					, b.custid
 					, bt.ProductId
 					, b.gameid
@@ -189,14 +191,21 @@ BEGIN
 				FROM bodb02.dbo.translog AS b WITH (NOLOCK)
 					INNER JOIN @BettypeMatrix bt ON b.gameid = bt.Bettype
 					INNER JOIN @TransStatus st ON b.statusID = st.StatusID
-				WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-					AND b.custid		= @CustID
-					AND	(bt.ProductId	IN (8, 12, 15, 19)
+				WHERE b.winlostdate BETWEEN @fromdate AND @todate 
+					AND b.custid = @CustID
+					AND	(bt.ProductId IN (8, 12, 15, 19)
 						OR bt.Bettype BETWEEN 801 AND 899
 					)
 					AND b.statusID IN (0, 1)
 			END
 
+			/* 
+				Yesterday and today RNG Casino/Live Casino summary ticket
+				+ RNG Casino (WhTicket = 4)
+					- RNG Casino Single Wallet	: ProductId = 6 AND bettype <> 71
+				+ Live Casino (WhTicket = 5)
+					- AllBet	: ProductId = 21
+			*/
 			IF @todate >= @Yesterday
 				AND @fromdate <= @Today
 				AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1, 111, 112, 113))
@@ -216,14 +225,18 @@ BEGIN
 					, bt.ProductId
 					, b.bettype
 					, bt.EventType
-					, 4 AS WhTicket
+					, CASE
+							WHEN bt.ProductId = 6 AND bt.SubProduct <> '' THEN 4
+							WHEN bt.ProductId = 21 THEN 5
+						END AS WhTicket
 				FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 					INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
 				WHERE b.winlostdate BETWEEN @fromdate AND @todate 
 					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND b.recommend = @Recommend 
 					AND b.custid = @CustID
-					AND (bt.ProductId = 6 AND bt.SubProduct <> '')
+					AND (bt.ProductId = 21
+						OR (bt.ProductId = 6 AND bt.SubProduct <> ''))
 			END
 		END
 		
@@ -252,9 +265,9 @@ BEGIN
 				FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 					INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
 					INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
-				WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-					AND	b.recommend	= @Recommend 
-					AND	b.custid	= @CustID
+				WHERE b.winlostdate BETWEEN @fromdate AND @todate 
+					AND b.recommend = @Recommend 
+					AND b.custid = @CustID
 					AND EXISTS (	SELECT 1 
 									FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
 									WHERE pt.refno = b.transid AND pt.PayoutStatus IN ('Completed', 'Expired'))
@@ -286,9 +299,9 @@ BEGIN
 			FROM bodb02.dbo.bettrans14 AS b WITH (NOLOCK)
 				INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
 				INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
-			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-				AND	b.recommend	= @Recommend 
-				AND	b.custid	= @CustID
+			WHERE b.winlostdate BETWEEN @fromdate AND @todate
+				AND b.recommend = @Recommend
+				AND b.custid = @CustID
 		END
 
 		-- Grand Prize ticket
@@ -316,22 +329,22 @@ BEGIN
 				FROM bodb02.dbo.bettrans14 AS b WITH (NOLOCK)
 					INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
 					INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
-				WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-					AND	b.recommend	= @Recommend 
-					AND	b.custid	= @CustID
+				WHERE b.winlostdate BETWEEN @fromdate AND @todate 
+					AND b.recommend = @Recommend 
+					AND b.custid = @CustID
 					AND EXISTS (	SELECT 1 
 									FROM DBACC.bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
 									WHERE pt.refno = b.transid AND pt.PayoutStatus IN ('Completed', 'Expired'))
 			END
 		END
 	END
-	
+
 	--CALL to get ticket info
-	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo] 
-		@tempCust = @tempCust, 
-		@TransStatus = @TransStatus, 
+	EXEC [dbo].[Age_CoreBetList_BetTicket_SelMainInfo]
+		@tempCust = @tempCust,
+		@TransStatus = @TransStatus,
 		@ColumnOutput = @ColumnOutput
-	
+
 	RETURN;
 END
 

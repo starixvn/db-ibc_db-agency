@@ -8,7 +8,7 @@ GO
 ALTER PROCEDURE [dbo].[Age_CoreBetList_BetTicket_SelBettrans14]
 (
 	@tempCust		[dbo].[TVP_TicketSportBettype]	READONLY
-	, @TransStatus 	[dbo].[TVP_BetTicketStatus]		READONLY
+	, @TransStatus	[dbo].[TVP_BetTicketStatus]		READONLY
 )
 AS
 
@@ -28,6 +28,7 @@ AS
 		- 20160107@Kos: Add @TransStatus param, support RNG Casino Single Wallet [Redmine: #48958]
 		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
+		- 20160217@Kos: Support AllBet [Redmine: #50864]
 	
 	Param's Explanation:
 	
@@ -45,38 +46,41 @@ BEGIN
 		- Bingo					: ProductID = 7
 		- Gold Deluxe			: ProductID = 12
 		- Cockfighting			: ProductID = 19
+		- AllBet				: ProductId = 21
 	*/
 	SELECT
 		CASE WHEN (b.bettype = 29 AND ISNULL(b.betid, 0) > 0) THEN b.betid
 			ELSE b.transid
-		END	AS transid
+		END AS transid
 		, b.refno
 		, b.custid
 		, b.Username
-		, CASE	WHEN c.ProductID = 9 THEN 253 
+		, CASE
 				WHEN c.ProductID = 6 AND b.bettype = 71 THEN 251
 				WHEN c.ProductID = 6 AND b.bettype <> 71 THEN b.matchid
 				WHEN c.ProductID = 7 THEN 252
 				WHEN c.ProductID = 8 THEN 202
+				WHEN c.ProductID = 9 THEN 253 
 				WHEN c.ProductID = 12 THEN 255
 				WHEN c.ProductID = 19 THEN 206
+				WHEN c.ProductID = 21 THEN 211
 				ELSE 0
-		END							AS Sporttype
+			END AS Sporttype
 		, b.bettype
 		, ISNULL(b.BetID, 0)
 		, CASE 
 			WHEN c.ProductID = 1 THEN b.Betteam 
 			WHEN c.ProductID = 8 THEN fnc.ChoiceId 
 			ELSE '' 
-		END						AS Betteam 
+		END AS Betteam
 		, CASE 
 			WHEN c.ProductID = 1 THEN b.hdp1 
 			ELSE 0
-		END						AS hdp1
+		END AS hdp1
 		, CASE 
 			WHEN c.ProductID = 1 THEN b.hdp2 
 			ELSE 0 
-		END						AS hdp2
+		END AS hdp2
 		, CASE 
 			WHEN c.ProductID IN (8, 19) THEN b.OddsType
 			ELSE 0
@@ -85,16 +89,15 @@ BEGIN
 		, CASE 
 			WHEN c.ProductID IN ( 1, 8, 12, 19 ) THEN b.Odds 
 			ELSE 0 
-		END						AS Odds
-		, CASE WHEN c.ProductID IN ( 1 )
-					THEN b.modds 
+		END AS Odds
+		, CASE WHEN c.ProductID IN ( 1 ) THEN b.modds 
 				ELSE 0 
-			END						AS modds
+			END AS modds
 		, b.Stake
 		, b.actual_stake 
-				, b.Status
+		, b.Status
 		, b.Transdate
-				, b.winlostdate
+		, b.winlostdate
 		, CASE WHEN b.bettype IN (23102, 23002, 23202) THEN 0 
 				ELSE (b.winlost - b.actual_stake) 
 			END	AS winlost
@@ -112,22 +115,19 @@ BEGIN
 		, b.discount
 		, b.adiscount
 		, b.sdiscount
-		, CASE WHEN c.ProductID = 1
-				THEN b.Liveindicator
+		, CASE WHEN c.ProductID = 1 THEN b.Liveindicator
 			ELSE 0
 		END		AS Liveindicator
-		, CASE WHEN c.ProductID = 1 
-				THEN b.Livehomescore
+		, CASE WHEN c.ProductID = 1 THEN b.Livehomescore
 			ELSE 0
 		END		AS Livehomescore
-		, CASE WHEN c.ProductID = 1 
-				THEN b.Liveawayscore
+		, CASE WHEN c.ProductID = 1 THEN b.Liveawayscore
 			ELSE 0
 		END		AS Liveawayscore
-		, 0 	AS finalhomescore
-		, 0 	AS finalawayscore
-		, 0 	AS hthomescore
-		, 0 	AS htawayscore
+		, 0 AS finalhomescore
+		, 0 AS finalawayscore
+		, 0 AS hthomescore
+		, 0 AS htawayscore
 		, b.IP
 		, 0		AS LeagueID
 		,CASE
@@ -150,8 +150,7 @@ BEGIN
 			WHEN c.ProductID = 19 THEN b.betcheck 
 			ELSE ''
 		END	AS betcheck
-		, CASE WHEN b.comstatus = '1' 
-					THEN '1' 
+		, CASE WHEN b.comstatus = '1' THEN '1' 
 				ELSE '0' 
 		END		AS comstatus
 		, CASE
@@ -311,15 +310,14 @@ BEGIN
 				THEN b.betcheck 
 				ELSE '' 
 			END	AS betcheck
-		, CASE WHEN b.comstatus = '1' 
-				THEN '1' 
+		, CASE WHEN b.comstatus = '1' THEN '1' 
 			ELSE '0' 
 		END		AS comstatus
 		, ISNULL(b.transdesc, '') AS transdesc
 		, ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans14 AS b WITH (NOLOCK)
 		INNER JOIN dbo.match14 AS m WITH (NOLOCK) ON b.matchid = m.matchid
-		INNER JOIN @tempCust c ON b.transid		= c.transid
+		INNER JOIN @tempCust c ON b.transid = c.transid
 --			AND b.custid	= c.custid
 	WHERE c.EventType	= 1
 		AND c.WhTicket	= 2
@@ -373,7 +371,7 @@ BEGIN
 		, 0 AS htawayscore
 		, b.IP
 		, m.LeagueID
-		, m.OrId AS MatchID	
+		, m.OrId AS MatchID
 		, m.MatchCode
 		, m.GroupMatch AS Race
 		, m.eventdate
@@ -430,7 +428,7 @@ BEGIN
 		, b.APositiontaking
 		, b.MPositiontaking
 		, b.SPositiontaking
-		, b.TPositiontaking	
+		, b.TPositiontaking
 		, b.discount
 		, b.adiscount
 		, b.sdiscount
@@ -467,9 +465,6 @@ BEGIN
 		
 	RETURN;
 END
-
-
-
 
 
 
