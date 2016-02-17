@@ -44,6 +44,7 @@ Revisions:
 	- 20151126@Percy: Apply 11 New Bettypes - PH All in One Phase I [RedmineID: #48050]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	- 20160104@Percy: Include new bettype range into current RNG Casino [Redmine: #48283]
+	- 20160217@Percy: Add bettype of Cricket [Redmine: #50027]
 */
 
 SET NOCOUNT ON
@@ -147,7 +148,7 @@ SELECT pvt.recommend, c.username,
 	ISNULL([157], 0) + ISNULL([178], 0) + ISNULL([183], 0) + ISNULL([184], 0) + ISNULL([185], 0) + ISNULL([189], 0) + ISNULL([190], 0) + ISNULL([191], 0) + ISNULL([194], 0) + ISNULL([197], 0) +
 	ISNULL([198], 0) + ISNULL([203], 0) + ISNULL([204], 0) + ISNULL([205], 0) +
 	ISNULL([801], 0) + ISNULL([802], 0) + ISNULL([803], 0) + ISNULL([804], 0) + ISNULL([805], 0) + ISNULL([806], 0) + ISNULL([807], 0) + ISNULL([808], 0) +
-	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0) as totalcomm_1,
+	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0) + ISNULL([501],0) as totalcomm_1,
 
 	
 	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) as [totalcomm_2],
@@ -184,9 +185,10 @@ SELECT pvt.recommend, c.username,
 	---Gold Deluxe_Comm
 	ISNULL([1701],0) + ISNULL([1702],0) + ISNULL([1703],0) AS Casino_comm,
 	ISNULL([301],0) + ISNULL([302],0) + ISNULL([303],0) + ISNULL([304],0) AS MO_comm,
-	
 	---Cock Fighting_Comm
-	ISNULL([1003],0) AS Other_comm
+	ISNULL([1003],0) AS Other_comm,
+	---Charge_Comm
+	ISNULL([500],0) AS Charge_comm
 	
 FROM #tmp AS p
 PIVOT
@@ -212,7 +214,8 @@ PIVOT
 					[203], [204], [205], [206], [207], [208], [209], [210], [211], [212], [213], [214], [215], [216], [217],
 					[301],[302],[303],[304],
 					[401], [402], [403], [404], [405], [406], [407], [408], [409], [410], [411], [412],
-					[1003]
+					[1003],
+					[500], [501]
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.recommend 
