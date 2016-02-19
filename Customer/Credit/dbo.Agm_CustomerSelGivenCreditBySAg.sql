@@ -15,14 +15,19 @@ Task: Get all master's given credit of super custid=@SRecommend. It's only use f
 DB: DBAGE.bodb02
 Original:
 Revisions:
-	-20110321@Kaden.Trinh: Rename @Keyword to @Username
-	-20110321@Kaden.Trinh: add parameter status(Enabled, Closed, Suspended), so that we can search for it.  
-	-20140403@Dom: Add Betcredit field
-	-20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	- 20110321@Kaden.Trinh: Rename @Keyword to @Username
+	- 20110321@Kaden.Trinh: add parameter status(Enabled, Closed, Suspended), so that we can search for it.  
+	- 20140403@Dom: Add Betcredit field
+	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
+	- 20160201@Percy: expand new RNG Casino [Redmine: #51952]
 */
 
 SET NOCOUNT ON
 
+DECLARE @today     DATE,
+		@yesterday DATE
+SELECT @today     = CONVERT(DATE, GETDATE())
+SELECT @yesterday = DATEADD(DD, -1, @today)
 
 DECLARE @RowCount int, @RowStart int, @RowEnd int  
 SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1   
@@ -55,17 +60,36 @@ BEGIN
 	LEFT JOIN 
 	(
 		SELECT
-			mrecommend as custid,
-			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
-		FROM bettrans with (NOLOCK)
-		WHERE srecommend = @SRecommend
-			and (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
-			AND ruben =0)
-			OR ruben <> 0
-			)
-		GROUP BY mrecommend
+			custid,
+			SUM(outstanding) AS outstanding,
+			SUM(balance) AS balance
+		FROM (
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+			FROM bettrans with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND (
+						((bettype NOT IN (801,802,803,804,805,806) OR bettype NOT BETWEEN 2101 AND 2399) AND ruben =0)
+						OR ruben <> 0
+					)
+				AND (
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+						OR CONVERT(DATE, winlostdate) < @yesterday
+					)
+			GROUP BY mrecommend
+			UNION ALL
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND gameID BETWEEN 2101 AND 2399
+			GROUP BY mrecommend
+			) AS A
+		GROUP BY custid
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
 	(
@@ -77,7 +101,6 @@ BEGIN
 		and statusID = 0
 		GROUP BY mrecommend
 	) translog ON translog.custid = c.custid
-
 	WHERE RowNum between @RowStart and @RowEnd
 END
 
@@ -116,17 +139,36 @@ BEGIN
 	LEFT JOIN 
 	(
 		SELECT
-			mrecommend as custid,
-			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
-		FROM bettrans with (NOLOCK)
-		WHERE srecommend = @SRecommend
-			and (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
-			AND ruben =0)
-			OR ruben <> 0
-			)
-		GROUP BY mrecommend
+			custid,
+			SUM(outstanding) AS outstanding,
+			SUM(balance) AS balance
+		FROM (
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+			FROM bettrans with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND (
+						((bettype NOT IN (801,802,803,804,805,806) OR bettype NOT BETWEEN 2101 AND 2399) AND ruben =0)
+						OR ruben <> 0
+					)
+				AND (
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+						OR CONVERT(DATE, winlostdate) < @yesterday
+					)
+			GROUP BY mrecommend
+			UNION ALL
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND gameID BETWEEN 2101 AND 2399
+			GROUP BY mrecommend
+			) AS A
+		GROUP BY custid
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
 	(
@@ -138,7 +180,6 @@ BEGIN
 		and statusID = 0
 		GROUP BY mrecommend
 	) translog ON translog.custid = c.custid
-
 	WHERE RowNum between @RowStart and @RowEnd
 END
 ELSE
@@ -177,17 +218,36 @@ BEGIN
 	LEFT JOIN 
 	(
 		SELECT
-			mrecommend as custid,
-			IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-			IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
-		FROM bettrans with (NOLOCK)
-		WHERE srecommend = @SRecommend
-			and (
-			(bettrans.bettype NOT IN (801,802,803,804,805,806)
-			AND ruben =0)
-			OR ruben <> 0
-			)
-		GROUP BY mrecommend
+			custid,
+			SUM(outstanding) AS outstanding,
+			SUM(balance) AS balance
+		FROM (
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when ruben=0 then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance
+			FROM bettrans with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND (
+						((bettype NOT IN (801,802,803,804,805,806) OR bettype NOT BETWEEN 2101 AND 2399) AND ruben =0)
+						OR ruben <> 0
+					)
+				AND (
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+						OR CONVERT(DATE, winlostdate) < @yesterday
+					)
+			GROUP BY mrecommend
+			UNION ALL
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND gameID BETWEEN 2101 AND 2399
+			GROUP BY mrecommend
+			) AS A
+		GROUP BY custid
 	) as t ON t.custid = c.custid
 	LEFT JOIN 
 	(
@@ -199,13 +259,12 @@ BEGIN
 		and statusID = 0
 		GROUP BY mrecommend
 	) translog ON translog.custid = c.custid
-
 	WHERE RowNum between @RowStart and @RowEnd
 END
-
-GO
-GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [bodbDownlineNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [vnteam]
 GO
 
+GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [vnteam] AS [dbo]
+GO
