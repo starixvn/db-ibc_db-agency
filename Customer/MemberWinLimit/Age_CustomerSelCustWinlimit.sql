@@ -2,11 +2,12 @@ ALTER PROCEDURE	dbo.Age_CustomerSelCustWinlimit
 					@CustId			INT
 				,	@BetType		SMALLINT
 				,	@SportType		SMALLINT
-				,	@mrecommend		INT			= 0
-				,	@recommend		INT			= 0
-				,	@PageSize		INT			= 500
-				,	@PageIndex		INT			= 1
-				,	@TotalRows		INT			= 0			OUTPUT
+				,	@username		NVARCHAR(50)	= ''
+				,	@mrecommend		INT				= 0
+				,	@recommend		INT				= 0
+				,	@PageSize		INT				= 500
+				,	@PageIndex		INT				= 1
+				,	@TotalRows		INT				= 0			OUTPUT
 AS
 /*
 	Create:	20150715@Patrick
@@ -34,6 +35,9 @@ BEGIN
 	FROM dbo.CustInfo c WITH(NOLOCK)
 	WHERE CustId = @CustId
 
+	IF	@username = ''
+		SELECT @username = NULL
+
 	IF @RoleId = 4
 	BEGIN
 		INSERT INTO #MemberBalance(CustId)
@@ -43,6 +47,7 @@ BEGIN
 			AND roleid = 1
 			AND c.mrecommend = @mrecommend
 			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
 	END
 	ELSE IF @RoleId = 3
@@ -54,6 +59,7 @@ BEGIN
 			AND roleid = 1
 			AND c.srecommend = @srecommend 
 			AND c.recommend = @recommend
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
 	END
 	ELSE IF @RoleId = 2
@@ -64,6 +70,7 @@ BEGIN
 		WHERE c.recommend = @CustId
 			AND roleid = 1
 			AND c.srecommend = @srecommend
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
 	END
 	
@@ -76,6 +83,7 @@ BEGIN
 		SELECT RowNumber, closed, enabled, suspended, username, firstname, lastname, credit, CustId
 			, isAutoResetLiveCasino AS IsAutoReset
 			, MaxWinLiveCasino AS MaxWinLimit
+			, NULL AS MaxLossLimit
 		FROM (
 			SELECT ROW_NUMBER() OVER (ORDER BY c.enabled DESC, c.closed, ISNULL(c.reject, 0), c.username) AS RowNumber
 				, c.username
@@ -143,7 +151,8 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		SELECT RowNumber, closed, enabled, suspended, username, firstname, lastname, credit, CustId, IsAutoReset, MaxWinLimit
+		SELECT	RowNumber, closed, enabled, suspended, username, firstname, lastname, credit, CustId, IsAutoReset, MaxWinLimit
+			,	NULL AS MaxLossLimit
 		FROM (
 			SELECT ROW_NUMBER() OVER (ORDER BY c.enabled DESC, c.closed, ISNULL(c.reject, 0), c.username) AS RowNumber
 				, c.username
