@@ -112,6 +112,7 @@ BEGIN
 		AND statusID NOT IN (0, 1, 101, 102, 103)
 		AND SRecommend = @CustID
 		AND s.ProductID = 6
+	GROUP BY s.ProductID
 
 	UNION ALL --- Not number Game not group by liveindicator
 	SELECT 
@@ -207,6 +208,7 @@ BEGIN
 		AND ruben = 1
 		AND SRecommend = @CustID
 		AND s.ProductID = 6
+	GROUP BY s.ProductID
 
 	UNION ALL --- Not number Game not group by liveindicator
 	SELECT 
