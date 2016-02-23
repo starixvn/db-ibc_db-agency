@@ -295,9 +295,7 @@ BEGIN
 	WHERE RowNum between @RowStart and @RowEnd
 END
 GO
-
 GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditByAg] TO [bodbDownlineNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Agm_CustomerSelGivenCreditByAg] TO [vnteam] AS [dbo]
 GO
