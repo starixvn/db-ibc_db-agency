@@ -28,6 +28,7 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20151222@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48601]
 	- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
+	- 20160222@Percy: Change formula when calculating bet credit [Redmine: #52653]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -57,7 +58,8 @@ CREATE TABLE #tmp_customer
 	[firstname] nvarchar(50) null,
 	[lastname] nvarchar(50) null,
 	[credit] money null,
-	[lastlogged] smalldatetime null
+	[lastlogged] smalldatetime null,
+	[usedCredit] money null
 )
 
 
@@ -161,7 +163,7 @@ SET @Username = isnull(@Username, '')
 IF @Username = ''
 	INSERT INTO #tmp_customer 
 	SELECT 
-		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged		
+		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged, (SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit
 	FROM 
 		CustInfo ci with (NOLOCK) inner join Customer c (nolock) on ci.custid = c.custid
 	WHERE 
@@ -172,7 +174,7 @@ IF @Username = ''
 ELSE
 	INSERT INTO #tmp_customer 
 	SELECT 
-		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged		
+		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged, (SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit
 	FROM 
 		CustInfo ci with (NOLOCK) inner join Customer c (nolock) on ci.custid = c.custid
 	WHERE 
@@ -203,7 +205,7 @@ SELECT * FROM
 		isnull(balance.outstanding,0) AS outstanding, 
 		isnull(balance.balance,0) AS balance,
 		isnull(balance.balance,0) - isnull(today_balance.balance,0) yesterday_balance,
-		isnull(balance.balance,0) + isnull(c.credit,0) - isnull(balance.outstanding,0) betCredit,
+		isnull(c.credit,0) - isnull(c.usedCredit,0) betCredit,
 		isnull(balance.turnover,0) AS turnover,
 		isnull(c.credit,0) credit,		
 		CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged
@@ -217,9 +219,12 @@ drop table #balance
 drop table #today_balance
 drop table #tmp_customer
 GO
+
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [bodbDownlineNet] AS [dbo]
 GO
+
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [bodbDownlineNetView] AS [dbo]
 GO
+
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [vnteam] AS [dbo]
 GO

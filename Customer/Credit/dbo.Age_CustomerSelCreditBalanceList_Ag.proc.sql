@@ -282,9 +282,12 @@ DROP TABLE #tmp_customer
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [bodbDownlineNet] AS [dbo]
 GO
+
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [bodbDownlineNetView] AS [dbo]
 GO
+
 GRANT ALTER ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [vnteam] AS [dbo]
 GO
+
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [vnteam] AS [dbo]
 GO
