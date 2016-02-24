@@ -230,21 +230,21 @@ BEGIN
 		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20,
 
 		-- Cricket
-		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN pt.AgentPT ELSE 0 END) AS v50apositiontaking_501_Live, 
-		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN pt.MasterPT ELSE 0 END) AS v50mpositiontaking_501_Live, 
-		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_501_Live, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.AgentPT AS SMALLMONEY)/100 ELSE 0 END) AS v50apositiontaking_501_Live, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_501_Live, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_501_Live, 
 		
-		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN pt.AgentPT ELSE 0 END) AS v50apositiontaking_501_NonLive, 
-		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN pt.MasterPT ELSE 0 END) AS v50mpositiontaking_501_NonLive, 
-		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_501_NonLive, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_501_NonLive, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_501_NonLive, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_501_NonLive, 
 		
-		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN pt.AgentPT ELSE 0 END) AS v50apositiontaking_599_Live, 
-		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN pt.MasterPT ELSE 0 END) AS v50mpositiontaking_599_Live, 
-		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_599_Live, 
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_599_Live, 
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_599_Live, 
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_599_Live, 
 		
-		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN pt.AgentPT ELSE 0 END) AS v50apositiontaking_599_NonLive, 
-		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN pt.MasterPT ELSE 0 END) AS v50mpositiontaking_599_NonLive,
-		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_599_NonLive
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_599_NonLive, 
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_599_NonLive,
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_599_NonLive
 		
 		   
 		FROM   

@@ -132,10 +132,10 @@ BEGIN
 			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20,
 			
 			-- Cricket
-			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_501_Live, 
-			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_501_NonLive,
-			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_599_Live,
-			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN pt.SuperPT ELSE 0 END) AS v50spositiontaking_599_NonLive
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_501_Live, 
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_501_NonLive,
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_599_Live,
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_599_NonLive
 
 		FROM 
 			custinfo AS ci WITH (NOLOCK)
@@ -159,3 +159,4 @@ GRANT EXECUTE ON [dbo].[Age_CustomerSelPositionTakingBySAg] TO [bodbDownlineNetV
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelPositionTakingBySAg] TO [VNTeam]
 GO 
+
