@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
+ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
 	@CustId INT
 AS
 /*
@@ -29,11 +29,11 @@ BEGIN
 	INSERT INTO @ProductList (ProductID, ProductName)
 	SELECT	ProductID, ProductName
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15) 
+	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19) 
 
 	UPDATE	@ProductList
 	SET		isShow = 1
-	WHERE	ProductID IN (1,6,2,3,7,4) ---SB, Casino, Racing, Number Game, Bingo, Live Casino: always show
+	WHERE	ProductID IN (1,6,2,3,4) ---SB, Casino, Racing, Number Game, Live Casino: always show
 
 	-----1. Virtual Sports
 	IF EXISTS (	SELECT	1
@@ -83,6 +83,29 @@ BEGIN
 		WHERE	ProductID = 15
 	END 
 
+	-----------------------------------------------------------
+	----------------------------DCS---------------------------
+	
+	 SELECT t.ProductID, MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden, t.bitmapOrder))) AS IsHide
+	 INTO #T
+	 FROM dbo.CustProductStatus cps  WITH (NOLOCK)  
+	 CROSS APPLY (	SELECT psp.bitmapOrder , psd.ProductID
+					FROM dbo.ProductSettingDetail psd WITH(NOLOCK)  
+					INNER JOIN dbo.ProductStatusProfile psp WITH (NOLOCK) 
+							ON psp.Sporttype = psd.SportType AND psp.Bettype = psd.BetType
+					WHERE psd.SettingType = 4) t
+	 INNER JOIN @TmpCustID C 
+			ON C.CustID = cps.CustID
+	 GROUP BY t.ProductID 
+
+	 
+	UPDATE	P
+	SET		isShow = 1
+	FROM	@ProductList P
+	INNER JOIN #T T
+		ON T.ProductID = P.ProductID
+	WHERE T.IsHide = 0  
+
 
 	--------------------------------------------
 	SELECT * 
@@ -96,5 +119,3 @@ GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroupProductSel] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_ConsolidatedGroupProductSel] TO [vnteam]
-
-
