@@ -119,6 +119,12 @@ BEGIN
 		RETURN;
 	END
 
+	DECLARE @Yesterday	SMALLDATETIME,
+		@Today			SMALLDATETIME
+
+	SELECT @Yesterday = DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0),
+		@Today = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+
 	-- do selecting from bettrans
 	IF @ToDate > @MoveBetsDay
 	BEGIN
@@ -151,7 +157,7 @@ BEGIN
 					OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
 				)
 				AND (bt.ProductId <> 6 OR bt.SubProduct = ''
-					OR b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0))
+					OR b.winlostdate < @Yesterday)
 
 			/* 	select running tickets
 				- Keno 			: ProductId = 8
@@ -189,8 +195,8 @@ BEGIN
 					AND b.statusID IN (0, 1)
 			END
 
-			IF @todate >= DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0)			-- Yesterday
-				AND @fromdate <= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- Today
+			IF @todate >= @Yesterday
+				AND @fromdate <= @Today
 				AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1, 111, 112, 113))
 			BEGIN
 				INSERT INTO @tempCust (
@@ -209,11 +215,10 @@ BEGIN
 					, b.bettype
 					, bt.EventType
 					, 4 AS WhTicket
-				FROM bodb02.dbo.bettrans b WITH (NOLOCK, INDEX=IX_custid_matchid_bettype)
+				FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 					INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
 				WHERE b.winlostdate BETWEEN @fromdate AND @todate 
-					AND b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0) 
-						AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) 
+					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND b.recommend = @Recommend 
 					AND b.custid = @CustID
 					AND (bt.ProductId = 6 AND bt.SubProduct <> '')
@@ -327,6 +332,8 @@ BEGIN
 	
 	RETURN;
 END
+
+
 
 
 GO
