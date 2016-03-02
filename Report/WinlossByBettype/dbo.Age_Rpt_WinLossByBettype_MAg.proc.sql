@@ -1,7 +1,4 @@
-﻿USE bodb02
-GO
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
 	@ToDate SMALLDATETIME,	
@@ -117,6 +114,7 @@ BEGIN
 			AND ruben = 1
 			AND mrecommend = @CustID
 			AND s.ProductID = 6
+		GROUP BY s.ProductID
 
 		UNION ALL --- Not number Game not group by liveindicator
 		SELECT
@@ -212,6 +210,7 @@ BEGIN
 			AND ruben = 1
 			AND mrecommend = @CustID
 			AND S.ProductID = 6
+		GROUP BY s.ProductID
 
 		UNION ALL
 		SELECT 

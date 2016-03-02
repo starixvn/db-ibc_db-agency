@@ -39,6 +39,7 @@ AS
 	- 20150831@Winnie: Include CB [Redmine: #42409]
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
+	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -285,7 +286,7 @@ BEGIN
 			,SUM(swinlost) swinlost
 			,SUM(scomm) scomm
 			,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-			,COUNT(transid) betcount
+			,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
 		FROM bettrans b WITH(NOLOCK) INNER JOIN @TmpCond t ON b.bettype = t.bettype
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND srecommend = @CustID 

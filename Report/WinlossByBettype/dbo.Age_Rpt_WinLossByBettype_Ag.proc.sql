@@ -1,7 +1,4 @@
-﻿USE bodb02
-GO
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Ag]
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Ag]
 	@CustID 	INT,
 	@FromDate 	SMALLDATETIME,
 	@ToDate 	SMALLDATETIME,	
@@ -117,6 +114,7 @@ BEGIN
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
 		   AND  s.ProductID = 6
+		GROUP BY s.ProductID
 		
 	    UNION ALL --- Not number Game not group by liveindicator
 		SELECT 
@@ -200,6 +198,7 @@ BEGIN
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
 		   AND s.ProductID = 6
+		GROUP BY s.ProductID
          UNION ALL
 		 SELECT 
 			  CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,

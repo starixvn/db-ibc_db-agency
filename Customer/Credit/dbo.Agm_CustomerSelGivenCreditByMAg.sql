@@ -90,6 +90,15 @@ BEGIN
 			WHERE mrecommend = @MRecommend
 				AND gameID BETWEEN 2101 AND 2399
 			GROUP BY recommend
+			UNION ALL
+			SELECT
+				recommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE mrecommend = @MRecommend
+				AND gameID BETWEEN 2101 AND 2399
+			GROUP BY recommend
 			) AS A
 		GROUP BY custid
 	) as t ON t.custid = c.custid

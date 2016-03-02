@@ -39,8 +39,9 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20150825@Helen: Colossus Bet - [Redmine: #41264]
 	- 20151014@Helen: Customer Setting for Sportsbook 2- [Redmine: #44604]
-	- 20151214@Percy: Do not check ticket running of Cock Fighting at bettrans table, because of the translog [#48601]
+	- 20151214@Percy: Do not check ticket running of Cock Fighting at bettrans table, because of the translog [Redmine: #48601]
 	- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
+	- 20160128@Percy: Support new sport Cricket [Redmine: #50027]
 
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -57,6 +58,8 @@ BEGIN
 			@todayCustCash MONEY
     DECLARE @today DATE
 	DECLARE @yesterday DATE
+
+	DECLARE @netPosition MONEY = 0 -- for member
 	
 	DECLARE @bettypemetric AS TABLE ( bettype INT)
 	INSERT INTO @bettypemetric (bettype)
@@ -173,7 +176,9 @@ BEGIN
 	    SELECT @Credit_Mem_Max = CASE WHEN @MaxCredit_Mem =0 THEN @Credit_Ag_Bal
 								      WHEN @MaxCredit_Mem > @Credit_Ag_Bal THEN @Credit_Ag_Bal 
 								      ELSE @MaxCredit_Mem 
-							     END  
+							     END 
+		-- Net Balance
+		SELECT @netPosition = ISNULL(SUM(Credit - Debit), 0) FROM DBPRO.bodb02.dbo.BalNetPosition WITH (NOLOCK) WHERE custid = @custid
     END 
     ELSE IF @roleID = 2 --for agent
     BEGIN
@@ -300,7 +305,8 @@ BEGIN
 	    lastlogged, 
 	    iplogin AS lastloginip, 
 	    pwdexpiry, 
-	    ci.credit, 
+	    ci.credit,
+		@netPosition AS netPosition,
 	    c.currency,	
     	
 	    ci.enabled, ci.closed, ci.reject AS suspended,
@@ -457,8 +463,7 @@ BEGIN
 			    SUM(ISNULL(Balance.BingoTransfer,0)) BingoTransfer,
 			    SUM(ISNULL(Balance.P2PTransfer,0)) P2PTransfer,
 			    MAX(Balance.lastTxn) lastTxn
-	    FROM Balance 
-
+	    FROM Balance
     END 
     ELSE IF @roleid = 2
     BEGIN

@@ -167,6 +167,15 @@ BEGIN
 			WHERE srecommend = @SRecommend
 				AND gameID BETWEEN 2101 AND 2399
 			GROUP BY mrecommend
+			UNION ALL
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND gameID BETWEEN 2101 AND 2399
+			GROUP BY mrecommend
 			) AS A
 		GROUP BY custid
 	) as t ON t.custid = c.custid
@@ -246,6 +255,15 @@ BEGIN
 			WHERE srecommend = @SRecommend
 				AND gameID BETWEEN 2101 AND 2399
 			GROUP BY mrecommend
+			UNION ALL
+			SELECT
+				mrecommend as custid,
+				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
+				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
+			FROM bettransRNG with (NOLOCK)
+			WHERE srecommend = @SRecommend
+				AND gameID BETWEEN 2101 AND 2399
+			GROUP BY mrecommend
 			) AS A
 		GROUP BY custid
 	) as t ON t.custid = c.custid
@@ -265,6 +283,4 @@ GO
 
 GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [bodbDownlineNet] AS [dbo]
 GO
-
-GRANT VIEW DEFINITION ON [dbo].[Agm_CustomerSelGivenCreditBySAg] TO [vnteam] AS [dbo]
 GO
