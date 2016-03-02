@@ -61,15 +61,6 @@ BEGIN
 		from custinfo ci with(nolock) 
 		where ci.mrecommend=@MRecommend and ci.roleid=2
 	) as c
-			UNION ALL
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end else 0 end),0) AS balance
-			FROM bettransRNG with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND gameID BETWEEN 2101 AND 2399
-			GROUP BY recommend
 	WHERE RowNum between @RowStart and @RowEnd
 END
 
@@ -143,6 +134,7 @@ BEGIN
 	) as c
 	WHERE RowNum between @RowStart and @RowEnd
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditByMAg] TO [bodbDownlineNet] AS [dbo]
 GO

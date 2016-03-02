@@ -95,15 +95,6 @@ BEGIN
 		AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
 		AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end
 	) as c
-			UNION ALL
-			SELECT
-				mrecommend as custid,
-				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
-			FROM bettransRNG with (NOLOCK)
-			WHERE srecommend = @SRecommend
-				AND gameID BETWEEN 2101 AND 2399
-			GROUP BY mrecommend
 	WHERE RowNum between @RowStart and @RowEnd
 END
 ELSE
@@ -140,15 +131,6 @@ BEGIN
 			AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
 			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end			
 	) as c
-			UNION ALL
-			SELECT
-				mrecommend as custid,
-				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * mpositiontaking else 0 end),0) AS outstanding,
-				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance
-			FROM bettransRNG with (NOLOCK)
-			WHERE srecommend = @SRecommend
-				AND gameID BETWEEN 2101 AND 2399
-			GROUP BY mrecommend
 	WHERE RowNum between @RowStart and @RowEnd
 END
 GO

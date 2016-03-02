@@ -169,8 +169,8 @@ ELSE
 		c.roleid=3 AND c.srecommend=@CustID and c.username like '%' + @Username + '%'  
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
 		AND isnull(closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(closed, 0)) end  
-		AND isnull(reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(reject, 0))end		
-		
+		AND isnull(reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(reject, 0))end
+
 --Calc total pages
 IF @TotalPages = 0
 BEGIN
@@ -199,7 +199,7 @@ SELECT * FROM
 		CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged
 	FROM #tmp_customer c 
 		LEFT JOIN #balance AS balance ON c.custid = balance.custid 
-		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
+		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid 
 )a
 WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 

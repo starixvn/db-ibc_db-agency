@@ -166,8 +166,8 @@ ELSE
 		ci.roleid=2 and ci.mrecommend=@CustID and ci.username like '%' + @Username + '%' 
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
 		and	isnull(ci.closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
-		and isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end	
-		
+		and isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end
+
 IF @TotalPages = 0
 BEGIN
 	SELECT 
@@ -195,7 +195,7 @@ SELECT * FROM
 		CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged
 	FROM #tmp_customer c
 		LEFT JOIN #balance AS balance ON c.custid = balance.custid 
-		LEFT JOIN #today_balance AS today_balance on c.custid = today_balance.custid
+		LEFT JOIN #today_balance AS today_balance on c.custid = today_balance.custid 
 		--Members'Bet is settled today @Phuong20080930 
 )a
 WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
