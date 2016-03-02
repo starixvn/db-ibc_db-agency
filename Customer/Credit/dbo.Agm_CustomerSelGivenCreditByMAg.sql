@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Agm_CustomerSelGivenCreditByMAg_xtest]
+﻿ALTER PROCEDURE [dbo].[Agm_CustomerSelGivenCreditByMAg]
 	@MRecommend int ,
 	@Username nvarchar(30)= null,
 	@Enabled bit = null,
@@ -20,6 +20,7 @@ Original:
 	- 20140403@Dom: Add Betcredit field
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20160201@Percy: expand new RNG Casino [Redmine: #51912]
+	- 20160222@Percy: Change formula when calculating bet credit [Redmine: #52653]
 */
 
 SET NOCOUNT ON
@@ -51,67 +52,15 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit-ISNULL(c.usedCredit, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
-		select custid, username, reject, closed, Enabled, credit as givencredit , ROW_NUMBER() over(order by enabled desc, closed, isnull(reject,0), username) as RowNum
-		from custinfo with(nolock) 
-		where mrecommend=@MRecommend and roleid=2
+		select ci.custid, ci.username, ci.reject, ci.closed, ci.Enabled, ci.credit as givencredit , ROW_NUMBER() over(order by ci.enabled desc, ci.closed, isnull(ci.reject,0), ci.username) as RowNum,
+			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = ci.custid) AS usedCredit
+		from custinfo ci with(nolock) 
+		where ci.mrecommend=@MRecommend and ci.roleid=2
 	) as c
-	LEFT JOIN 
-	(
-		SELECT
-			custid,
-			SUM(outstanding) AS outstanding,
-			SUM(balance) AS balance
-		FROM (
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when ruben=0 then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance
-			FROM bettrans with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND (
-						((bettype NOT IN (801,802,803,804,805,806) OR bettype NOT BETWEEN 2101 AND 2399) AND ruben =0)
-						OR ruben <> 0
-					)
-				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
-						OR CONVERT(DATE, winlostdate) < @yesterday
-					)
-			GROUP BY recommend
-			UNION ALL
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end else 0 end),0) AS balance
-			FROM bettransRNG with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND gameID BETWEEN 2101 AND 2399
-			GROUP BY recommend
-			UNION ALL
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end else 0 end),0) AS balance
-			FROM bettransRNG with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND gameID BETWEEN 2101 AND 2399
-			GROUP BY recommend
-			) AS A
-		GROUP BY custid
-	) as t ON t.custid = c.custid
-	LEFT JOIN 
-	(
-		SELECT
-			recommend as custid,
-			IsNull(sum(ABS(actual_stake)  * apositiontaking),0) AS outstanding
-		FROM translog with (NOLOCK)
-		WHERE mrecommend = @MRecommend
-		and statusID = 0
-		GROUP BY recommend
-	) translog ON translog.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
 
@@ -123,7 +72,7 @@ BEGIN
 		FROM
 			Custinfo as ci with (NOLOCK)			
 		WHERE ci.mrecommend = @MRecommend and ci.roleid=2 
-			AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
+			AND ci.enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, ci.enabled) end
 			AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end			
 			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end			
 	END
@@ -135,61 +84,18 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit-ISNULL(c.usedCredit, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
-		SELECT custid, username, reject, closed, Enabled, credit as givencredit , ROW_NUMBER() over(order by enabled desc, closed, isnull(reject,0), username) as RowNum
-		FROM Custinfo as ci with (NOLOCK)	
-		WHERE ci.mrecommend = @MRecommend and ci.roleid=2 
-			AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
+		select ci.custid, ci.username, ci.reject, ci.closed, ci.Enabled, ci.credit as givencredit , ROW_NUMBER() over(order by ci.enabled desc, ci.closed, isnull(ci.reject,0), ci.username) as RowNum,
+			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = ci.custid) AS usedCredit
+		from custinfo ci with(nolock) 
+		where ci.mrecommend=@MRecommend and ci.roleid=2
+			AND ci.enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, ci.enabled) end
 			AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end			
 			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end			
 	) as c
-	LEFT JOIN 
-	(
-		SELECT
-			custid,
-			SUM(outstanding) AS outstanding,
-			SUM(balance) AS balance
-		FROM (
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when ruben=0 then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance
-			FROM bettrans with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND (
-						((bettype NOT IN (801,802,803,804,805,806) OR bettype NOT BETWEEN 2101 AND 2399) AND ruben =0)
-						OR ruben <> 0
-					)
-				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
-						OR CONVERT(DATE, winlostdate) < @yesterday
-					)
-			GROUP BY recommend
-			UNION ALL
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end else 0 end),0) AS balance
-			FROM bettransRNG with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND gameID BETWEEN 2101 AND 2399
-			GROUP BY recommend
-			) AS A
-		GROUP BY custid
-	) as t ON t.custid = c.custid
-	LEFT JOIN 
-	(
-		SELECT
-			recommend as custid,
-			IsNull(sum(ABS(actual_stake) * apositiontaking),0) AS outstanding
-		FROM translog with (NOLOCK)
-		WHERE mrecommend = @MRecommend
-		and statusID = 0
-		GROUP BY recommend
-	) translog ON translog.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
 ELSE
@@ -213,68 +119,24 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(t.balance,0)-(ISNULL(t.outstanding,0)+ISNULL(translog.outstanding,0)) betcredit,
+		c.givencredit-ISNULL(c.usedCredit, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
-		SELECT custid, username, reject, closed, Enabled, credit as givencredit , ROW_NUMBER() over(order by enabled desc, closed, isnull(reject,0), username) as RowNum
-		FROM Custinfo as ci with (NOLOCK)	
-		WHERE ci.mrecommend = @MRecommend and ci.roleid=2 
+		select ci.custid, ci.username, ci.reject, ci.closed, ci.Enabled, ci.credit as givencredit , ROW_NUMBER() over(order by ci.enabled desc, ci.closed, isnull(ci.reject,0), ci.username) as RowNum,
+			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = ci.custid) AS usedCredit
+		from custinfo ci with(nolock) 
+		where ci.mrecommend=@MRecommend and ci.roleid=2
 			AND ci.username like '%' + @Username + '%'  
-			AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
+			AND ci.enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, ci.enabled) end
 			AND isnull(ci.closed,0) = case when @suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
 			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@suspended, isnull(ci.reject, 0))end			
 	) as c
-	LEFT JOIN 
-	(
-		SELECT
-			custid,
-			SUM(outstanding) AS outstanding,
-			SUM(balance) AS balance
-		FROM (
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when ruben=0 then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end),0) AS balance
-			FROM bettrans with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND (
-						((bettype NOT IN (801,802,803,804,805,806) OR bettype NOT BETWEEN 2101 AND 2399) AND ruben =0)
-						OR ruben <> 0
-					)
-				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
-						OR CONVERT(DATE, winlostdate) < @yesterday
-					)
-			GROUP BY recommend
-			UNION ALL
-			SELECT
-				recommend as custid,
-				IsNull(sum (case when statusID IN (0, 1) then ABS(actual_stake) * apositiontaking else 0 end),0) AS outstanding, 
-				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=recommend then winlost-actual_stake else awinlost+comm-playercomm end else 0 end),0) AS balance
-			FROM bettransRNG with (NOLOCK)
-			WHERE mrecommend = @MRecommend
-				AND gameID BETWEEN 2101 AND 2399
-			GROUP BY recommend
-			) AS A
-		GROUP BY custid
-	) as t ON t.custid = c.custid
-	LEFT JOIN 
-	(
-		SELECT
-			recommend as custid,
-			IsNull(sum(ABS(actual_stake) * apositiontaking),0) AS outstanding
-		FROM translog with (NOLOCK)
-		WHERE mrecommend = @MRecommend
-		and statusID = 0
-		GROUP BY recommend
-	) translog ON translog.custid = c.custid
 	WHERE RowNum between @RowStart and @RowEnd
 END
-GO
 
+GO
 GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditByMAg] TO [bodbDownlineNet] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Agm_CustomerSelGivenCreditByMAg] TO [vnteam] AS [dbo]
 GO

@@ -28,6 +28,7 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20151222@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48601]
 	- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
+	- 20160222@Percy: Change formula when calculating bet credit [Redmine: #52653]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -57,7 +58,8 @@ CREATE TABLE #tmp_customer
 	[firstname] nvarchar(50) null,
 	[lastname] nvarchar(50) null,
 	[credit] money null,
-	[lastlogged] smalldatetime null
+	[lastlogged] smalldatetime null,
+	[usedCredit] money null
 )
 
 
@@ -72,37 +74,26 @@ CREATE TABLE #balance
 ;WITH rt
 as (
 	SELECT
-		mrecommend
-			AS custid,
-		ISNULL(sum(case when ruben=0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * mpositiontaking else 0 end),0)
-			AS outstanding,
-		ISNULL(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0)
-			AS balance, 
-		ISNULL(sum(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0)
-			AS turnover
+		mrecommend as custid,
+		ISNULL(sum(case when ruben=0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END * mpositiontaking else 0 end),0) AS outstanding,
+		ISNULL(sum(case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end),0) AS balance, 
+		ISNULL(sum(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover
 	FROM bettrans with (NOLOCK)
 	WHERE srecommend = @CustID
 		AND (
-				(ruben = 0 AND bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2399)
+				(bettrans.bettype NOT IN (801,802,803,804,805,806,1003)	AND bettype NOT BETWEEN 2101 AND 2399 AND ruben =0)
 				OR ruben <> 0
 			)
 		AND (
 				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
 				OR CONVERT(DATE, winlostdate) < @yesterday
 			)
-		AND (
-				(matchid > 0 AND matchid NOT IN (208, 209, 210, 211))
-				OR matchid <= 0
-			)
 	GROUP BY mrecommend
 	UNION ALL
-	SELECT
-		mrecommend
-			AS custid,
-		ISNULL(SUM(CASE WHEN winlostdate >=@ABSDate THEN ABS(actual_stake) ELSE actual_stake end * mpositiontaking),0)
-			AS outstanding,
-		0	AS balance, 
-		0	AS turnover
+	SELECT mrecommend as custid,
+		ISNULL(SUM(CASE WHEN winlostdate >=@ABSDate THEN ABS(actual_stake) ELSE actual_stake end * mpositiontaking),0) AS outstanding,
+		0 balance, 
+		0 turnover
 	from translog with(NOLOCK)
 	WHERE statusid = 0
 		AND srecommend = @CustID
@@ -111,7 +102,7 @@ as (
 	SELECT
 		mrecommend as custid,
 		ISNULL(sum(case when statusID IN (0, 1) then actual_stake * mpositiontaking else 0 end),0) outstanding,
-		ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end else 0 end),0) AS balance, 
+		ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=mrecommend then winlost-actual_stake else mwinlost+acomm-comm end ELSE 0 END),0) AS balance, 
 		ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then actual_stake else 0 end), 0) as turnover
 	FROM bettransRNG with (NOLOCK)
 	WHERE srecommend = @CustID
@@ -133,13 +124,9 @@ CREATE TABLE #today_balance
 )
 INSERT INTO #today_balance
 SELECT custid, SUM(balance) AS balance FROM (
-SELECT
-	custid,
-	SUM(balance) AS balance
-FROM (
 	SELECT 
 		mrecommend as custid,
-		isnull(sum(mwinlost+acomm-comm), 0) AS balance
+		sum(mwinlost+acomm-comm) AS balance
 	FROM bettrans with (NOLOCK)
 	WHERE srecommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2399
 		AND CONVERT(DATE, winlostdate) = @today
@@ -147,13 +134,14 @@ FROM (
 	UNION ALL
 	SELECT 
 		mrecommend as custid,
-		isnull(sum(mwinlost+acomm-comm), 0)AS balance
+		sum(mwinlost+acomm-comm) AS balance
 	FROM bettransRNG with (NOLOCK)
 	WHERE srecommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2101 AND 2399
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY mrecommend
-	) AS A
+) AS A
 GROUP BY custid
+
 	    
 SET @Username = isnull(@Username, '')
 
@@ -161,7 +149,8 @@ SET @Username = isnull(@Username, '')
 IF @Username = ''
 	INSERT INTO #tmp_customer 
 	SELECT 
-		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged		
+		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
+		(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit
 	FROM 
 		CustInfo ci with (NOLOCK) inner join Customer c (nolock) on ci.custid = c.custid
 	WHERE 
@@ -172,15 +161,16 @@ IF @Username = ''
 ELSE
 	INSERT INTO #tmp_customer 
 	SELECT 
-		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged		
+		c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
+		(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit
 	FROM 
 		CustInfo ci with (NOLOCK) inner join Customer c (nolock) on ci.custid = c.custid
 	WHERE 
 		c.roleid=3 AND c.srecommend=@CustID and c.username like '%' + @Username + '%'  
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
 		AND isnull(closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(closed, 0)) end  
-		AND isnull(reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(reject, 0))end		
-		
+		AND isnull(reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(reject, 0))end
+
 --Calc total pages
 IF @TotalPages = 0
 BEGIN
@@ -203,13 +193,13 @@ SELECT * FROM
 		isnull(balance.outstanding,0) AS outstanding, 
 		isnull(balance.balance,0) AS balance,
 		isnull(balance.balance,0) - isnull(today_balance.balance,0) yesterday_balance,
-		isnull(balance.balance,0) + isnull(c.credit,0) - isnull(balance.outstanding,0) betCredit,
+		isnull(c.credit,0) - isnull(c.usedCredit,0) betCredit,
 		isnull(balance.turnover,0) AS turnover,
 		isnull(c.credit,0) credit,		
 		CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged
 	FROM #tmp_customer c 
 		LEFT JOIN #balance AS balance ON c.custid = balance.custid 
-		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
+		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid 
 )a
 WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 
