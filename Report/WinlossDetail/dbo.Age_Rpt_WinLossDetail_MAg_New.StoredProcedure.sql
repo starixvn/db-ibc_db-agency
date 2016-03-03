@@ -223,8 +223,9 @@ BEGIN
 	    SELECT Recommend,			
 			   SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
 			   SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 
-					WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) THEN ABS(b.stake)/2
-					WHEN b.StatusID = 111 AND s.ProductId = 1 THEN 0 ELSE ABS(b.stake) 
+					WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
+					WHEN b.StatusID = 111 AND s.ProductId = 1 THEN 0 
+					ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
 		    --SUM(acomm/(1-apositiontaking-mpositiontaking)) as GrossComm,
 			---- @Lukas20111024: hot fix - casino only
