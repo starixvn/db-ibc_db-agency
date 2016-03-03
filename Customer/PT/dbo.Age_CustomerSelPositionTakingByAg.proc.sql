@@ -1,5 +1,4 @@
-﻿
-ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByAg]
+﻿ALTER PROCEDURE [dbo].[Age_CustomerSelPositionTakingByAg]
 (
 	@Recommend INT,
 	@PageIndex	INT = 1,
@@ -25,63 +24,16 @@ AS
 		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 		- 20140630@Logan: Add BetRadar(9999) for Soccer and Tennis [Redmine: #18413]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20160114@Helen: Cricket - [Redmine: #50027]
 	Param's Explanation:  
-	• @Recommend: AgentID  
+	• @Recommend: AgentID 
+
 */  
 BEGIN
 
 	SET NOCOUNT ON  
 	  
-	/*
-	CREATE TABLE #setting3rd(custid INT PRIMARY KEY, 
-	 v201apt_3  smallmoney, v201mpt_3  smallmoney,  v201spt_3  smallmoney,
-	 v201apt_2  smallmoney, v201mpt_2  smallmoney,  v201spt_2  smallmoney,
-
-	--
-	 v151apt_31 smallmoney, v151apt_32 smallmoney, v151apt_41 smallmoney, v151apt_42 smallmoney,  
-	 v151mpt_31 smallmoney, v151mpt_32 smallmoney, v151mpt_41 smallmoney, v151mpt_42 smallmoney,  
-	 v151spt_31 smallmoney, v151spt_32 smallmoney, v151spt_41 smallmoney, v151spt_42 smallmoney
-	 )  
-	  
-	  
-	INSERT INTO #setting3rd  
-	SELECT  
-	 ci.custid ,  
-	-- Finance  
-	MAX(CASE WHEN cs3rd.bettype = 3 AND cs3rd.sporttype=201 THEN cs3rd.apositiontaking ELSE 0 END) v201apositiontaking_3,  
-	MAX(CASE WHEN cs3rd.bettype = 3 AND cs3rd.sporttype=201 THEN cs3rd.mpositiontaking ELSE 0 END) v201mpositiontaking_3,  
-	MAX(CASE WHEN cs3rd.bettype = 3 AND cs3rd.sporttype=201 THEN cs3rd.spositiontaking ELSE 0 END)v201spositiontaking_3,  
-	  
-	MAX(CASE WHEN cs3rd.bettype = 2 AND cs3rd.sporttype=201 THEN cs3rd.apositiontaking ELSE 0 END) v201apositiontaking_2,  
-	MAX(CASE WHEN cs3rd.bettype = 2 AND cs3rd.sporttype=201 THEN cs3rd.mpositiontaking ELSE 0 END) v201mpositiontaking_2,  
-	MAX(CASE WHEN cs3rd.bettype = 2 AND cs3rd.sporttype=201 THEN cs3rd.spositiontaking ELSE 0 END)v201spositiontaking_2
-	--   
-	 --Horse  
-	-- MAX(CASE WHEN cs3rd.bettype = 31 AND cs3rd.sporttype=151 THEN cs3rd.apositiontaking ELSE 0 END) v151apt_31,  
-	-- MAX(CASE WHEN cs3rd.bettype = 32 AND cs3rd.sporttype=151 THEN cs3rd.apositiontaking ELSE 0 END) v151apt_32,  
-	-- MAX(CASE WHEN cs3rd.bettype = 41 AND cs3rd.sporttype=151 THEN cs3rd.apositiontaking ELSE 0 END) v151apt_41,  
-	-- MAX(CASE WHEN cs3rd.bettype = 42 AND cs3rd.sporttype=151 THEN cs3rd.apositiontaking ELSE 0 END) v151apt_42,  
-	--  
-	-- MAX(CASE WHEN cs3rd.bettype = 31 AND cs3rd.sporttype=151 THEN cs3rd.mpositiontaking ELSE 0 END) v151mpt_31,  
-	-- MAX(CASE WHEN cs3rd.bettype = 32 AND cs3rd.sporttype=151 THEN cs3rd.mpositiontaking ELSE 0 END) v151mpt_32,  
-	-- MAX(CASE WHEN cs3rd.bettype = 41 AND cs3rd.sporttype=151 THEN cs3rd.mpositiontaking ELSE 0 END) v151mpt_41,  
-	-- MAX(CASE WHEN cs3rd.bettype = 42 AND cs3rd.sporttype=151 THEN cs3rd.mpositiontaking ELSE 0 END) v151mpt_42,  
-	--   
-	-- MAX(CASE WHEN cs3rd.bettype = 31 AND cs3rd.sporttype=151 THEN cs3rd.spositiontaking ELSE 0 END)v151spt_31,  
-	-- MAX(CASE WHEN cs3rd.bettype = 32 AND cs3rd.sporttype=151 THEN cs3rd.spositiontaking ELSE 0 END)v151spt_32,  
-	-- MAX(CASE WHEN cs3rd.bettype = 41 AND cs3rd.sporttype=151 THEN cs3rd.spositiontaking ELSE 0 END) v151spt_41,  
-	-- MAX(CASE WHEN cs3rd.bettype = 42 AND cs3rd.sporttype=151 THEN cs3rd.spositiontaking ELSE 0 END) v151spt_42  
-	FROM  
-	 custinfo AS ci WITH (NOLOCK)   
-	 INNER JOIN CustSetting3rd AS cs3rd WITH (NOLOCK) ON ci.custid = cs3rd.custid   
-	WHERE   
-	 ci.Recommend = @recommend AND ci.roleid=1   
-	GROUP BY  
-	 ci.enabled, ci.closed, ci.reject, ci.username, ci.custid  
-	ORDER BY   
-	CASE WHEN ISNULL(ci.enabled,0) = 0 THEN 3 WHEN ISNULL(ci.closed,0) = 1 THEN 2 WHEN ISNULL(ci.reject,0) = 1 THEN 1 ELSE 0 END,   
-	ci.username  
-	*/  
+	
 	SELECT 
 		@TotalPages = COUNT(ci.custid),@TotalPages=@TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
 	FROM 
@@ -89,7 +41,12 @@ BEGIN
 	WHERE 
 		ci.Recommend = @recommend AND ci.roleid=1   
 	
-	SELECT *
+	DECLARE @IsIMBC BIT = 0
+	
+	IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @Recommend AND [Site] = 'IMBC')
+		SET @IsIMBC = 1
+		
+	SELECT *, @IsIMBC AS IsIMBC
 	FROM 
 	(
 		SELECT   
@@ -270,38 +227,44 @@ BEGIN
 		 -- HR Fixed Odds
 		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.apositiontaking else 0 end) as v154apositiontaking_20,
 		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.mpositiontaking else 0 end) as v154mpositiontaking_20,
-		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20
-		   
-		 -- Finance
-		-- MAX(cs3rd.v201apt_3) as v201apositiontaking_3,	
-		-- MAX(cs3rd.v201mpt_3) as v201mpositiontaking_3,	
-		-- MAX(cs3rd.v201spt_3) as v201spositiontaking_3, 
-		--
-		-- MAX(cs3rd.v201apt_2) as v201apositiontaking_2,	
-		-- MAX(cs3rd.v201mpt_2) as v201mpositiontaking_2,	
-		-- MAX(cs3rd.v201spt_2) as v201spositiontaking_2
-		 
-		---- Horse  
-		-- MAX(cs3rd.v151apt_31) as v151apositiontaking_31,  
-		-- MAX(cs3rd.v151apt_32) as v151apositiontaking_32,  
-		-- MAX(cs3rd.v151apt_41) as v151apositiontaking_41,  
-		-- MAX(cs3rd.v151apt_41) as v151apositiontaking_42,  
-		--   
-		-- MAX(cs3rd.v151mpt_31) as v151mpositiontaking_31,  
-		-- MAX(cs3rd.v151mpt_32) as v151mpositiontaking_32,  
-		-- MAX(cs3rd.v151mpt_41) as v151mpositiontaking_41,  
-		-- MAX(cs3rd.v151mpt_41) as v151mpositiontaking_42,  
-		--   
-		-- MAX(cs3rd.v151spt_31) as v151spositiontaking_31,  
-		-- MAX(cs3rd.v151spt_32) as v151spositiontaking_32,  
-		-- MAX(cs3rd.v151spt_41) as v151spositiontaking_41,  
-		-- MAX(cs3rd.v151spt_41) as v151spositiontaking_42  
+		 max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20,
+
+		-- Cricket
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.AgentPT AS SMALLMONEY)/100 ELSE 0 END) AS v50apositiontaking_501_Live, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_501_Live, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_501_Live, 
+		
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_501_NonLive, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_501_NonLive, 
+		MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_501_NonLive, 
+		
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_599_Live, 
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_599_Live, 
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_599_Live, 
+		
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_599_NonLive, 
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_599_NonLive,
+		MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50spositiontaking_599_NonLive
+		
 		   
 		FROM   
 		 custinfo AS ci WITH (NOLOCK)  
 		 INNER JOIN CustSetting AS cs WITH (NOLOCK) ON ci.custid = cs.custid  
-		 --INNER JOIN #setting3rd AS cs3rd WITH (NOLOCK) ON ci.custid = cs3rd.custid   
-		WHERE   
+		 OUTER APPLY (SELECT csm.Custid,pt.SportType,pt.BetType,PT.IsLive, pt.AgentPT,pt.MasterPT , pt.SuperPT
+					  FROM  CustSettingMode3rd csm WITH (NOLOCK)
+							INNER JOIN CustPTGroupSetting3rd_Member pt WITH (NOLOCK) ON pt.AgentID = @Recommend 
+											AND pt.SportType = 50 AND pt.BetType IN (501,599) AND @IsIMBC = 1 
+					  WHERE csm.CustID =ci.custid AND csm.IsGrouped = 1
+					  
+					  UNION ALL
+					  
+					  SELECT csm.Custid,pt.SportType,pt.BetType,PT.IsLive, pt.AgentPT,pt.MasterPT , pt.SuperPT
+					  FROM  CustSettingMode3rd csm WITH (NOLOCK)
+							INNER JOIN CustPTSetting3rd_Member pt WITH (NOLOCK) ON csm.CustID = pt.CustID 
+											AND pt.SportType = 50 AND pt.BetType IN (501,599) AND @IsIMBC = 1 
+					  WHERE csm.CustID =ci.custid AND csm.IsGrouped = 0
+					) AS pt
+		WHERE  
 		 ci.Recommend = @recommend AND ci.roleid=1   
 		GROUP BY  
 		 ci.enabled, ci.closed, ci.reject, ci.username, ci.custid  				

@@ -21,7 +21,7 @@ AS
 		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 		- 20140630@Logan: Add BetRadar(9999) for Soccer and Tennis [Redmine: #18413]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
-
+		- 20160114@Helen: Cricket - [Redmine: #50027]
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
 */
@@ -36,13 +36,18 @@ BEGIN
 	WHERE 
 		ci.MRecommend = @MRecommend AND ci.roleid=2 
 
-	SELECT *
+	DECLARE @IsIMBC BIT = 0
+	
+	IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @MRecommend AND [Site] = 'IMBC')
+		SET @IsIMBC = 1
+	
+	SELECT *, @IsIMBC AS IsIMBC
 	FROM 
 	(
 		SELECT 
 			ROW_NUMBER() OVER(ORDER BY CASE WHEN ISNULL(ci.enabled,0) = 0 THEN 3 
 											WHEN ISNULL(ci.closed,0) = 1 THEN 2 
-								 			WHEN ISNULL(ci.reject,0) = 1 THEN 1 
+							 				WHEN ISNULL(ci.reject,0) = 1 THEN 1 
 											ELSE 0 
 										END, ci.username) AS RowNumber,
 			ci.closed, ci.enabled, 
@@ -184,11 +189,27 @@ BEGIN
 			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.mpositiontaking ELSE 0 END) AS v99mpositiontaking_9,
 
 			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.apositiontaking else 0 end) as v154apositiontaking_20,
-			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.mpositiontaking else 0 end) as v154mpositiontaking_20
+			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.mpositiontaking else 0 end) as v154mpositiontaking_20,
+			
+			-- Cricket
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_501_Live, 
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_501_Live, 
+			
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_501_NonLive, 
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_501_NonLive, 
+			
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_599_Live, 
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_599_Live, 
+			
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.AgentPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50apositiontaking_599_NonLive, 
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.MasterPT AS SMALLMONEY) / 100 ELSE 0 END) AS v50mpositiontaking_599_NonLive
+			
 		FROM 
 			custinfo AS ci WITH (NOLOCK)
 			INNER JOIN CustSetting AS cs WITH (NOLOCK) ON ci.custid = cs.custid
-			--INNER JOIN CustSetting3rd AS cs3rd WITH (NOLOCK) ON ci.custid = cs3rd.custid 
+			LEFT JOIN CustPTSetting3rd_Agent pt WITH (NOLOCK) ON pt.CustID = ci.custid 
+								AND pt.SportType = 50 AND pt.BetType IN (501,599) AND @IsIMBC = 1 
+			
 		WHERE ci.MRecommend = @MRecommend AND ci.roleid=2 
 		GROUP BY
 			ci.enabled,
@@ -198,6 +219,7 @@ BEGIN
 			ci.custid	
 	) t
 	WHERE RowNumber >= (@PageIndex-1)*@PageSize + 1 AND RowNumber <= @PageIndex*@PageSize
+		
 END
 
 

@@ -21,6 +21,7 @@ AS
 		- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
 		- 20140630@Logan: Add BetRadar(9999) for Soccer and Tennis [Redmine: #18413]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20160114@Helen: Cricket - [Redmine: #50027]
 
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
@@ -35,8 +36,13 @@ BEGIN
 		custinfo AS ci WITH (NOLOCK)		
 	WHERE 
 		ci.SRecommend = @SRecommend AND ci.roleid=3
-
-	SELECT * 
+	
+	DECLARE @IsIMBC BIT = 0
+	
+	IF EXISTS (SELECT 1 FROM Customer WITH (NOLOCK) WHERE custid = @SRecommend AND [Site] = 'IMBC')
+		SET @IsIMBC = 1
+		
+	SELECT *, @IsIMBC AS IsIMBC  
 	FROM 
 	(
 		SELECT 
@@ -123,12 +129,19 @@ BEGIN
 			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=99 THEN cs.spositiontaking ELSE 0 END) AS v99spositiontaking_9,
 
 			-- HR Fixed Odds
-			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20
+			max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.spositiontaking else 0 end) as v154spositiontaking_20,
+			
+			-- Cricket
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_501_Live, 
+			MAX(CASE WHEN pt.bettype = 501 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_501_NonLive,
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 1 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_599_Live,
+			MAX(CASE WHEN pt.bettype = 599 and pt.IsLive = 0 THEN CAST(pt.SuperPT AS SMALLMONEY) /100 ELSE 0 END) AS v50spositiontaking_599_NonLive
 
 		FROM 
 			custinfo AS ci WITH (NOLOCK)
 			INNER JOIN CustSetting AS cs WITH (NOLOCK) ON ci.custid = cs.custid	
-			--INNER JOIN CustSetting3rd AS cs3rd WITH (NOLOCK) ON ci.custid = cs3rd.custid	
+			LEFT JOIN CustPTSetting3rd_Agent pt WITH (NOLOCK) ON pt.CustID = ci.custid 
+								AND pt.SportType = 50 AND pt.BetType IN (501,599) AND @IsIMBC = 1 
 		WHERE ci.SRecommend = @SRecommend AND ci.roleid=3
 		GROUP BY
 			ci.enabled, ci.closed, ci.reject, ci.username, ci.custid
@@ -146,3 +159,4 @@ GRANT EXECUTE ON [dbo].[Age_CustomerSelPositionTakingBySAg] TO [bodbDownlineNetV
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelPositionTakingBySAg] TO [VNTeam]
 GO 
+
