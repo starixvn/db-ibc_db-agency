@@ -71,6 +71,7 @@ Revisions:
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
+	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
 	
 */
 
@@ -108,6 +109,7 @@ CREATE TABLE #MAgWinLossDetails
 (
     CustID			INT
     ,TurnOver		MONEY
+	,TurnoverNoDraw	MONEY
     ,GrossComm		MONEY
     ,MemberWinLost	MONEY
 	,PlayerComm		MONEY
@@ -220,6 +222,10 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT Recommend,			
 			   SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
+			   SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 
+					WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) THEN ABS(b.stake)/2
+					WHEN b.StatusID = 111 AND s.ProductId = 1 THEN 0 ELSE ABS(b.stake) 
+					END) AS TurnoverNoDraw,
 		    --SUM(acomm/(1-apositiontaking-mpositiontaking)) as GrossComm,
 			---- @Lukas20111024: hot fix - casino only
 			   SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN (apositiontaking + mpositiontaking = 1) THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
@@ -276,6 +282,7 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
+			   SUM(ABS(TurnoverNoDraw)) as TurnoverNoDraw,
 		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
@@ -306,6 +313,7 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
+			   SUM(ABS(TurnoverNoDraw)) as TurnoverNoDraw,
 		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
@@ -334,6 +342,7 @@ BEGIN
     SELECT w.CustID, 
 	       c.UserName, 
 	       SUM(TurnOver) AS TurnOver,
+		   SUM(TurnoverNoDraw) as TurnoverNoDraw,
 	       SUM(GrossComm) AS GrossComm,
 	       SUM(MemberWinLost) AS MemberWinlost,
 	       SUM(PlayerComm) AS PlayerComm,
@@ -369,6 +378,7 @@ SELECT wl.*
   FROM (SELECT w.CustID, 
 	           c.UserName, 
 	           SUM(TurnOver) AS TurnOver,
+			   SUM(TurnoverNoDraw) AS TurnoverNoDraw,
 	           SUM(GrossComm) AS GrossComm,
 	           SUM(MemberWinLost) AS MemberWinlost,
 	           SUM(PlayerComm) AS PlayerComm,
