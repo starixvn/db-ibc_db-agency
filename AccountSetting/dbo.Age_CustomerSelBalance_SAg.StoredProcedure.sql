@@ -48,6 +48,7 @@ Revisions:
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789)
 	- 20151209@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48604]
 	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
+	- 20160219@Percy: support AllBet [Redmine: #52553]
 */
 SET NOCOUNT ON
 
@@ -108,11 +109,11 @@ SELECT
 FROM bettrans WITH (NOLOCK)  
 WHERE srecommend= @CustID 
 	AND(
-			(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2399 AND ruben = 0)
+			(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben = 0)
 			OR ruben <> 0
 		)
 	AND(
-			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2399)
+			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
 			OR CONVERT(DATE, winlostdate) < @yesterday
 	   )
 
@@ -123,10 +124,22 @@ SELECT
 	@TotalBalance        = @TotalBalance        + ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= srecommend then winlost-actual_stake else swinlost+scomm-acomm end ELSE 0 END),0)
 													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= mrecommend then winlost-actual_stake else mwinlost+acomm-comm end ELSE 0 END),0)
 													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= recommend then winlost-actual_stake else awinlost+comm-playercomm end ELSE 0 END),0)
-													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday AND custid <> recommend and custid <> mrecommend and custid <> srecommend and statusID NOT IN (0, 1, 101, 102) then winlost-actual_stake+playercomm else 0 end),0)		
+													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday AND custid <> recommend and custid <> mrecommend and custid <> srecommend and statusID NOT IN (0, 1) then winlost-actual_stake+playercomm else 0 end),0)		
 FROM bettransRNG WITH (NOLOCK)  
 WHERE srecommend= @CustID 
 	AND gameID BETWEEN 2101 AND 2399
+
+SELECT 
+	@CashBalance         = @CashBalance         + ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= srecommend then winlost-actual_stake else swinlost+scomm-acomm end ELSE 0 END),0),  	
+	@SuperOutstanding    = @SuperOutstanding    + ISNULL(sum(case when statusID IN (0, 1) then ABS(actual_stake) * spositiontaking else 0 end),0), 
+	@TotalOutstanding    = @TotalOutstanding    + ISNULL(sum(case when statusID IN (0, 1) then ABS(actual_stake) else 0 end),0),
+	@TotalBalance        = @TotalBalance        + ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= srecommend then winlost-actual_stake else swinlost+scomm-acomm end ELSE 0 END),0)
+													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= mrecommend then winlost-actual_stake else mwinlost+acomm-comm end ELSE 0 END),0)
+													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= recommend then winlost-actual_stake else awinlost+comm-playercomm end ELSE 0 END),0)
+													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday AND custid <> recommend and custid <> mrecommend and custid <> srecommend and statusID NOT IN (0, 1) then winlost-actual_stake+playercomm else 0 end),0)		
+FROM bettransLC WITH (NOLOCK)  
+WHERE srecommend= @CustID 
+	AND gameID BETWEEN 2401 AND 2499
 
 SELECT 
 	@Yesterday_CashBalance  = @CashBalance - ISNULL(today_balance.cashBalance,0),
@@ -138,7 +151,7 @@ FROM
 		FROM bettrans WITH (NOLOCK)  
 		WHERE srecommend= @CustID
 			AND ruben = 1
-			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2399
+			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499
 			AND CONVERT(DATE, winlostdate) = @today
 	 )today_balance
 
@@ -153,10 +166,22 @@ FROM
 		WHERE srecommend= @CustID
 			AND gameID BETWEEN 2101 AND 2399
 			AND CONVERT(DATE, winlostdate) = @today
-			AND statusID NOT IN (0, 1, 101, 102)
+			AND statusID NOT IN (0, 1)
 	 )today_balanceRNG
 
-
+SELECT 
+ @Yesterday_CashBalance  = @Yesterday_CashBalance  - isnull(today_balanceLC.cashBalance,0),
+ @Yesterday_TotalBalance = @Yesterday_TotalBalance - isnull(today_balanceLC.totalBalance,0)
+FROM 
+	(	SELECT
+			ISNULL(sum(swinlost+scomm-acomm),0) cashBalance,  
+			ISNULL(sum(swinlost+scomm + mwinlost + awinlost + winlost-actual_stake),0) totalBalance
+		FROM bettransLC WITH (NOLOCK)  
+		WHERE srecommend= @CustID
+			AND gameID BETWEEN 2401 AND 2499
+			AND CONVERT(DATE, winlostdate) = @today
+			AND statusID NOT IN (0, 1)
+	 )today_balanceLC
 
 GO
 

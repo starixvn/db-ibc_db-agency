@@ -52,7 +52,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(c.usedCredit, 0) betcredit,
+		c.givencredit-ISNULL(c.usedCredit, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -84,7 +84,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(c.usedCredit, 0) betcredit,
+		c.givencredit-ISNULL(c.usedCredit, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
@@ -119,7 +119,7 @@ BEGIN
 		c.givencredit,
 		c.enabled,
 		c.closed, 
-		c.givencredit+ISNULL(c.usedCredit, 0) betcredit,
+		c.givencredit-ISNULL(c.usedCredit, 0) betcredit,
 		isnull(c.reject,0) as suspended 
 	FROM
 	(
