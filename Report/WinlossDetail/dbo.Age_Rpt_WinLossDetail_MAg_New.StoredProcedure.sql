@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+﻿
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 3/7/2016 2:06:04 PM ******/
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -283,7 +290,7 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
-			   SUM(ABS(TurnoverNoDraw)) as TurnoverNoDraw,
+			   SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
 		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
@@ -314,7 +321,7 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
-			   SUM(ABS(TurnoverNoDraw)) as TurnoverNoDraw,
+			   SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
 		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
@@ -401,19 +408,23 @@ SELECT wl.*
    AND wl.RowNum BETWEEN @RowStart AND @RowEnd
 
 DROP TABLE #MAgWinLossDetails
+
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet] AS [dbo]
-GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam] AS [dbo]
-GO
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet]
+GO 
