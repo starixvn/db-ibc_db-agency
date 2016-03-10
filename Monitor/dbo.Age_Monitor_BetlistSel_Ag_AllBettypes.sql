@@ -1,11 +1,10 @@
-﻿USE bodb02
+﻿USE [bodb02]
 GO
-
 ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]
 	@custid			INT,
 	@transid		BIGINT	= 0,
 	@LimitRowCount	INT		= 20 
-WITH RECOMPILE
+--WITH RECOMPILE
 AS
 
 /*
@@ -24,7 +23,7 @@ AS
 		- 20150904@Kos: Correct data type of temp table
 		- 20160104@Kos: Support Sportsbook only
 		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
-
+		- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
 	Parameter's Explanation:
 		- @custid : agent's ID
 		- @transid: lastest transid 
@@ -34,14 +33,25 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @SportBettype TABLE (ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
+	DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
 
-	INSERT INTO @SportBettype
-	EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+	IF  (@SQL like '%_xtest%' OR @SQL like '%_xpre%' OR @SQL like '%_UAT1%' OR @SQL like '%_UAT2%' OR @SQL like '%_UAT3%' OR @SQL like '%_UAT4%')
+	BEGIN
+		SELECT @isTest = 1
+	END
+	ELSE
+	BEGIN
+		SELECT @isTest = 0
+	END
 
-	-- Only support Sportsbook
-	DELETE FROM @SportBettype
-	WHERE ProductID <> 1
+	--DECLARE @SportBettype TABLE (ProductID TINYINT, Bettype SMALLINT, EventType TINYINT)
+
+	--INSERT INTO @SportBettype
+	--			EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+
+	---- Only support Sportsbook
+	--DELETE FROM @SportBettype
+	--WHERE ProductID <> 1
 
 	SELECT TOP(@LimitRowCount)
 		b.custid,
@@ -78,7 +88,8 @@ BEGIN
 		ISNULL(b.transdesc, '') AS transdesc,
 		ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
-		INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
+		--INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
+		INNER JOIN dbo.f_SportBettypeMatrix_Sel_Mode4_UAT4(1, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
 	WHERE b.recommend = @custid 
 		AND b.transid > @transid
 		AND b.statusID BETWEEN 0 AND 1
@@ -87,10 +98,9 @@ BEGIN
 
 END
 
-
 GO
-GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [bodbDownlineNet]
+GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [bodbDownlineNet] AS [dbo]
 GO
-GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [bodbDownlineNetView]
+GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [bodbDownlineNetView] AS [dbo]
 GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [vnteam]
+GRANT VIEW DEFINITION ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [vnteam] AS [dbo]
