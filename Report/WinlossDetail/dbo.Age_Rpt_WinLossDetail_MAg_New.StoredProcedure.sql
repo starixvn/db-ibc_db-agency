@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+﻿
+SET QUOTED_IDENTIFIER ON 
+GO
+SET ANSI_NULLS ON 
+GO
+
+/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 3/7/2016 2:06:04 PM ******/
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -71,6 +78,7 @@ Revisions:
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
+	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
 	
 */
 
@@ -108,6 +116,7 @@ CREATE TABLE #MAgWinLossDetails
 (
     CustID			INT
     ,TurnOver		MONEY
+	,TurnoverNoDraw	MONEY
     ,GrossComm		MONEY
     ,MemberWinLost	MONEY
 	,PlayerComm		MONEY
@@ -220,6 +229,11 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT Recommend,			
 			   SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
+			   SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 
+					WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
+					WHEN b.StatusID = 111 AND s.ProductId = 1 THEN 0 
+					ELSE ABS(b.stake) 
+					END) AS TurnoverNoDraw,
 		    --SUM(acomm/(1-apositiontaking-mpositiontaking)) as GrossComm,
 			---- @Lukas20111024: hot fix - casino only
 			   SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN (apositiontaking + mpositiontaking = 1) THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
@@ -276,6 +290,7 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
+			   SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
 		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
@@ -306,6 +321,7 @@ BEGIN
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
+			   SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
 		       SUM(grosscomm) AS GrossComm,
 		       SUM(winlost), --MemberWinlost
 		       SUM(playercomm), -- PlayerComm
@@ -334,6 +350,7 @@ BEGIN
     SELECT w.CustID, 
 	       c.UserName, 
 	       SUM(TurnOver) AS TurnOver,
+		   SUM(TurnoverNoDraw) as TurnoverNoDraw,
 	       SUM(GrossComm) AS GrossComm,
 	       SUM(MemberWinLost) AS MemberWinlost,
 	       SUM(PlayerComm) AS PlayerComm,
@@ -369,6 +386,7 @@ SELECT wl.*
   FROM (SELECT w.CustID, 
 	           c.UserName, 
 	           SUM(TurnOver) AS TurnOver,
+			   SUM(TurnoverNoDraw) AS TurnoverNoDraw,
 	           SUM(GrossComm) AS GrossComm,
 	           SUM(MemberWinLost) AS MemberWinlost,
 	           SUM(PlayerComm) AS PlayerComm,
@@ -390,19 +408,23 @@ SELECT wl.*
    AND wl.RowNum BETWEEN @RowStart AND @RowEnd
 
 DROP TABLE #MAgWinLossDetails
+
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet] AS [dbo]
+SET QUOTED_IDENTIFIER OFF 
+GO
+SET ANSI_NULLS ON 
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet] AS [dbo]
-GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam] AS [dbo]
-GO
+GO 
+ GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet]
+GO 
+ GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet]
+GO 
