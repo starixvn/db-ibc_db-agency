@@ -48,6 +48,7 @@ AS
 		- 20160108@Kos: Support Colossus Bet ticket flow change [Redmine: #49967]
 		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
 		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
+		- 20160216@Kos: Support yesterday running ticket for Casino products
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -114,9 +115,15 @@ BEGIN
 	BEGIN
 		SELECT @Error 	= 100
 			, @ErrorMsg	= 'The customer was not found.'
-			
+
 		RETURN;
 	END
+
+	DECLARE @Yesterday	SMALLDATETIME,
+		@Today			SMALLDATETIME
+
+	SELECT @Yesterday = DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0),
+		@Today = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
 
 	-- do selecting from bettrans
 	IF @ToDate > @MoveBetsDay
@@ -143,14 +150,14 @@ BEGIN
 				INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
 				INNER JOIN @TransStatus stt ON b.statusid = stt.statusid
 			WHERE b.winlostdate	BETWEEN @fromdate AND @todate 
-				AND	b.recommend	= @Recommend 
-				AND	b.custid	= @CustID
+				AND b.recommend	= @Recommend 
+				AND b.custid	= @CustID
 				--exclude running tickets of MetricGaming
 				AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
 					OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
 				)
 				AND (bt.ProductId <> 6 OR bt.SubProduct = ''
-					OR b.winlostdate < DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0))
+					OR b.winlostdate < @Yesterday)
 
 			/* 	select running tickets
 				- Keno 			: ProductId = 8
@@ -188,8 +195,8 @@ BEGIN
 					AND b.statusID IN (0, 1)
 			END
 
-			IF @todate >= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
-				AND @fromdate <= DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)	-- Today
+			IF @todate >= @Yesterday
+				AND @fromdate <= @Today
 				AND EXISTS(SELECT TOP 1 1 FROM @TransStatus WHERE StatusId IN (0, 1, 111, 112, 113))
 			BEGIN
 				INSERT INTO @tempCust (
@@ -210,7 +217,8 @@ BEGIN
 					, 4 AS WhTicket
 				FROM bodb02.dbo.bettrans b WITH (NOLOCK)
 					INNER JOIN @BettypeMatrix bt ON b.bettype = bt.bettype
-				WHERE b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) AND @todate 
+				WHERE b.winlostdate BETWEEN @fromdate AND @todate 
+					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND b.recommend = @Recommend 
 					AND b.custid = @CustID
 					AND (bt.ProductId = 6 AND bt.SubProduct <> '')
@@ -324,6 +332,9 @@ BEGIN
 	
 	RETURN;
 END
+
+
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CoreBetList_Mem_SelBetTicket] TO [bodbDownlineNet]

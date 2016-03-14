@@ -35,6 +35,7 @@ AS
 		- 20160111@Kos: Add column list in INSERT statement
 		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
 		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
+		- 20160216@Kos: Support yesterday running ticket for Casino products
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -52,11 +53,11 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @Recommend		INT
-		, @tempCust			dbo.TVP_TicketSportBettype
+	DECLARE @Recommend	INT
+		, @tempCust		dbo.TVP_TicketSportBettype
 
-	SELECT @Error			= 0
-		, @ErrorMsg			= ''
+	SELECT @Error	= 0
+		, @ErrorMsg	= ''
 
 	-- CHECK member info
 	IF @CustID IS NULL AND @UserName IS NOT NULL
@@ -103,15 +104,18 @@ BEGIN
 		, b.bettype
 		, bt.EventType
 		, CASE
-			WHEN bt.ProductId = 6 AND bt.SubProduct <> '' AND b.winlostdate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) THEN 4	-- Today RNG Casino Single Wallet summary
+			WHEN bt.ProductId = 6 AND bt.SubProduct <> '' 
+				AND b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0) 
+					AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0)
+				THEN 4	-- Today RNG Casino Single Wallet summary
 			ELSE 1 
 		END AS WhTicket
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
 		INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
-	WHERE b.transdate	BETWEEN @fromdate AND @todate 
-		AND	b.recommend	= @Recommend 
-		AND	b.custid	= @CustID
+	WHERE b.transdate BETWEEN @fromdate AND @todate 
+		AND b.recommend	= @Recommend 
+		AND b.custid	= @CustID
 		--exclude running tickets of MetricGaming
 		AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
 			OR ( bt.SubProduct	IN ('MG-SuperLive')	AND b.StatusId NOT IN (0, 1) )
@@ -162,6 +166,7 @@ BEGIN
 	
 	RETURN;
 END
+
 
 
 GO
