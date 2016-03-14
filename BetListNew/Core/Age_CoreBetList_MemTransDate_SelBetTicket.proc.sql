@@ -106,7 +106,7 @@ BEGIN
 		, bt.EventType
 		, CASE
 			WHEN b.winlostdate BETWEEN DATEADD(DAY, DATEDIFF(DAY, 1, GETDATE()), 0) 
-			AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) THEN		-- Yesterday and today summary ticket
+				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) THEN		-- Yesterday and today summary ticket
 				CASE
 					WHEN bt.ProductId = 6 AND bt.SubProduct <> '' THEN 4	-- RNG Casino Single Wallet
 					WHEN bt.ProductId = 21 THEN 5							-- AllBet
