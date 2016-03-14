@@ -1,11 +1,12 @@
-﻿
+﻿USE [bodb02]
+GO
 SET QUOTED_IDENTIFIER ON 
 GO
 SET ANSI_NULLS ON 
 GO
 
 /****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 3/7/2016 2:06:04 PM ******/
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -262,7 +263,7 @@ BEGIN
 		       COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) --No Of Ticket
 	    FROM dbo.bettrans b WITH(NOLOCK)
 				--INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
-				INNER JOIN dbo.f_SportBettypeMatrix_Sel_Mode4_UAT4(0, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
+				CROSS APPLY dbo.f_SportBettypeMatrix_Sel_Mode4(0, 0, 0, 2, '', '', @IsTest) s -- ON b.bettype = s.Bettype
 		WHERE 
 				1 = 1
 				AND (s.ProductID = CASE WHEN @showSB = 1 THEN 1 ELSE 0 END
