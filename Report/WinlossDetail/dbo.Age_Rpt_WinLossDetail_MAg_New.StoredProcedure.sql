@@ -1,11 +1,12 @@
-﻿
+﻿USE [bodb02]
+GO
 SET QUOTED_IDENTIFIER ON 
 GO
 SET ANSI_NULLS ON 
 GO
 
 /****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 3/7/2016 2:06:04 PM ******/
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -79,7 +80,7 @@ Revisions:
 	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
-	
+	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
 */
 
 
@@ -215,14 +216,26 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(206, 1003) 
 END
-DECLARE @SportBettype TABLE(
-	ProductID INT
-	,Bettype INT
-	,EventType INT
-)
 
-INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
+
+IF  (@SQL like '%_xtest%' OR @SQL like '%_xpre%' OR @SQL like '%_UAT1%' OR @SQL like '%_UAT2%' OR @SQL like '%_UAT3%' OR @SQL like '%_UAT4%')
+BEGIN
+	SELECT @isTest = 1
+END
+ELSE
+BEGIN
+	SELECT @isTest = 0
+END
+
+--DECLARE @SportBettype TABLE(
+--	ProductID INT
+--	,Bettype INT
+--	,EventType INT
+--)
+
+--INSERT INTO @SportBettype
+--EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 
 IF @Todate >= @BalanceUpDay
 BEGIN 
@@ -249,7 +262,8 @@ BEGIN
 		       -(ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost - actual_stake), 0)),--Company
 		       COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) --No Of Ticket
 	    FROM dbo.bettrans b WITH(NOLOCK)
-				INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
+				--INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
+				CROSS APPLY dbo.f_SportBettypeMatrix_Sel_Mode4(0, 0, 0, 2, '', '', @IsTest) s -- ON b.bettype = s.Bettype
 		WHERE 
 				1 = 1
 				AND (s.ProductID = CASE WHEN @showSB = 1 THEN 1 ELSE 0 END
