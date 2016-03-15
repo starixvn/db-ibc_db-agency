@@ -266,6 +266,7 @@ BEGIN
 				CROSS APPLY dbo.f_SportBettypeMatrix_Sel_Mode4(0, 0, 0, 2, '', '', @IsTest) s -- ON b.bettype = s.Bettype
 		WHERE 
 				1 = 1
+				AND b.bettype = s.Bettype
 				AND (s.ProductID = CASE WHEN @showSB = 1 THEN 1 ELSE 0 END
 					OR s.ProductID = CASE WHEN @ShowRB = 1 THEN 2 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showCasino = 1 THEN 6 ELSE 0 END
