@@ -1,10 +1,4 @@
-﻿USE [bodb02]
-GO
-SET QUOTED_IDENTIFIER ON 
-GO
-SET ANSI_NULLS ON 
-GO
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
