@@ -405,10 +405,7 @@ BEGIN
 		, '' AS showtime
 		, '' AS betcheck
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END AS comstatus
-		, CASE
-			WHEN c.ProductId = 6 THEN b.transdesc
-			ELSE ''
-		END AS transdesc
+		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust AS c ON b.transid = c.transid
@@ -499,10 +496,7 @@ BEGIN
 		, '' AS showtime
 		, '' AS betcheck
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END	AS comstatus
-		, CASE
-			WHEN c.ProductId = 6 THEN b.transdesc
-			ELSE ''
-		END AS transdesc
+		, '' AS transdesc
 		, 0 AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		INNER JOIN @tempCust AS c ON b.transid = c.transid
