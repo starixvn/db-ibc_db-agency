@@ -12,10 +12,11 @@ AS
 /*
 	Create:	20150715@Patrick
 	Task:	Member win limit of Super
-	DB:		DBCUST.custdb
+	DB:		DBCUST/Custdb
 
 	Revisions:
 		- 20160216@Billy:	Implement Max Win Loss Limit for DCS Product - [Redmine: #52268]
+		- 20160318@Billy:	Fix MaxLossLimit for RnG Casino - [Redmine: #54335]
 
 	Param's Explanation:
 		- @CustID: SAgentID
