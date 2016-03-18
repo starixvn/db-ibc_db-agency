@@ -238,7 +238,7 @@ INSERT INTO #net_position
 SELECT
 	TC.custid,
 	ISNULL(SUM(NP.Credit - NP.Debit), 0) AS netPosition
-FROM DBPRO.bodb02.dbo.BalNetPosition NP WITH (NOLOCK)
+FROM DBTXN.bodb02.dbo.BalNetPosition NP WITH (NOLOCK)
 INNER JOIN #tmp_customer TC
 	ON NP.custid = TC.custid
 GROUP BY TC.custid

@@ -178,7 +178,7 @@ BEGIN
 								      ELSE @MaxCredit_Mem 
 							     END 
 		-- Net Balance
-		SELECT @netPosition = ISNULL(SUM(Credit - Debit), 0) FROM DBPRO.bodb02.dbo.BalNetPosition WITH (NOLOCK) WHERE custid = @custid
+		SELECT @netPosition = ISNULL(SUM(Credit - Debit), 0) FROM DBTXN.bodb02.dbo.BalNetPosition WITH (NOLOCK) WHERE custid = @custid
     END 
     ELSE IF @roleID = 2 --for agent
     BEGIN
