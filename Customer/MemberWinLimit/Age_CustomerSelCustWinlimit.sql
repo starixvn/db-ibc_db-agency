@@ -1,4 +1,4 @@
-ALTER PROCEDURE	dbo.Age_CustomerSelCustWinlimit 
+ALTER PROCEDURE	dbo.Age_CustomerSelCustWinlimit
 					@CustId			INT
 				,	@BetType		SMALLINT
 				,	@SportType		SMALLINT
@@ -151,8 +151,7 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		SELECT	RowNumber, closed, enabled, suspended, username, firstname, lastname, credit, CustId, IsAutoReset, MaxWinLimit
-			,	NULL AS MaxLossLimit
+		SELECT	RowNumber, closed, enabled, suspended, username, firstname, lastname, credit, CustId, IsAutoReset, MaxWinLimit, MaxLossLimit
 		FROM (
 			SELECT ROW_NUMBER() OVER (ORDER BY c.enabled DESC, c.closed, ISNULL(c.reject, 0), c.username) AS RowNumber
 				, c.username
@@ -165,12 +164,13 @@ BEGIN
 				, cc.lastname
 				, IsAutoReset
 				, MaxWinLimit
+				, MaxLossLimit
 			FROM #MemberBalance b 
 				INNER JOIN dbo.custInfo c WITH(NOLOCK) ON b.CustId = c.custid
 				INNER JOIN dbo.customer cc WITH(NOLOCK) ON b.CustId = cc.CustId
 				INNER JOIN dbo.CustWinLimit cwl WITH(NOLOCK) ON c.CustId = cwl.CustId AND cwl.SportType = @SportType AND cwl.BetType = @BetType
 			GROUP BY c.username, closed, enabled, ISNULL(c.reject, 0), credit, firstname, lastname
-				, IsAutoReset, MaxWinLimit, b.custid
+				, IsAutoReset, MaxWinLimit, MaxLossLimit, b.custid
 		)tmp
 		WHERE tmp.RowNumber BETWEEN @RowStart AND @RowEnd
 		ORDER BY RowNumber
