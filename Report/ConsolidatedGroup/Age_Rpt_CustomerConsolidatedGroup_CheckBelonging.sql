@@ -46,7 +46,7 @@ IF @custid IS NULL
 -- Check SessionRoleID ------------
 SELECT	@SessionRoleID = roleid,
 		@IsActive = CASE WHEN closed = 1 OR Enabled = 0 THEN 0 ELSE 1 END
-FROM custinfo WITH(NOLOCK)
+FROM custinfo WITH (NOLOCK)
 WHERE custID = @SessionCustID
 
 IF ISNULL(@sessionRoleid ,0) = 0 RETURN
@@ -64,7 +64,7 @@ WHERE c.custid = @custid
 IF @SubAccountID <> 0
 BEGIN
 	SELECT @IsActive = CASE WHEN closed = 0 THEN 1 ELSE 0 END 
-	FROM dbo.custSub WITH(NOLOCK) 
+	FROM dbo.custSub WITH (NOLOCK) 
 	WHERE subaccID = @SubAccountID AND custid = @SessionCustID
 END
 
@@ -72,7 +72,7 @@ IF ISNULL(@RoleID, 0) <> 0 RETURN -- is inline --> don't check outline
 
 -- Check Out line----------------------------------------------------------------
 -- Check SessionCustID is Headline
-SELECT @IsHeadline = (SELECT ISNULL(IsGroupHeadline, 0) FROM bodb02.dbo.custAccount WHERE custid = @SessionCustID)
+SELECT @IsHeadline = (SELECT ISNULL(IsGroupHeadline, 0) FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid = @SessionCustID)
 ---------------------------------
 
 -- if is not headline, return failed
@@ -97,7 +97,7 @@ BEGIN
 		(
 			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid = @SessionCustID
 			EXCEPT
-			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid IN (SELECT srecommend FROM custInfo WHERE custid = @CustID
+			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid IN (SELECT srecommend FROM custInfo WITH (NOLOCK) WHERE custid = @CustID
 																					  UNION
 																					  SELECT @CustID)
 		)
@@ -106,9 +106,9 @@ BEGIN
 		(
 			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid = @SessionCustID
 			EXCEPT
-			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid IN (SELECT srecommend FROM custInfo WHERE custid = @CustID
+			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid IN (SELECT srecommend FROM custInfo WITH (NOLOCK) WHERE custid = @CustID
 																					  UNION
-																					  SELECT mrecommend FROM custInfo WHERE custid = @CustID
+																					  SELECT mrecommend FROM custInfo WITH (NOLOCK) WHERE custid = @CustID
 																					  UNION
 																					  SELECT @CustID)
 		)
@@ -117,11 +117,11 @@ BEGIN
 		(
 			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid = @SessionCustID
 			EXCEPT
-			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid IN (SELECT srecommend FROM custInfo WHERE custid = @CustID
+			SELECT GroupID FROM bodb02.dbo.custAccount WITH (NOLOCK) WHERE custid IN (SELECT srecommend FROM custInfo WITH (NOLOCK) WHERE custid = @CustID
 																					  UNION
-																					  SELECT mrecommend FROM custInfo WHERE custid = @CustID
+																					  SELECT mrecommend FROM custInfo WITH (NOLOCK) WHERE custid = @CustID
 																					  UNION
-																					  SELECT recommend FROM custInfo WHERE custid = @CustID
+																					  SELECT recommend FROM custInfo WITH (NOLOCK) WHERE custid = @CustID
 																					  UNION
 																					  SELECT @CustID)
 		)

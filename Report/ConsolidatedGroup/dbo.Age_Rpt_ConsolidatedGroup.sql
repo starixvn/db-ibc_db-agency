@@ -15,6 +15,7 @@
 	@showGD			BIT = 0,
 	@showCB			BIT = 0,
 	@showCF			BIT = 0,
+	@showAB			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 WITH RECOMPILE
@@ -34,6 +35,7 @@ AS
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 		- 20160108@Percy: Include new bettype range into the current RNG Casino [Redmine: #48283]
 		- 20160129@Percy: Support new sport Cricket [Redmine: #50027]
+		- 20160318@Percy: Support AllBet [Redmine: #50605]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -101,11 +103,6 @@ EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
 IF @ShowSB = 1  
 BEGIN  
 	--bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype) 
-	--SELECT 0 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-	--WHERE (typeid>0 and typeid<31) OR (typeid>=121 and typeid<=999)
-	--	OR (typeid>=1301 and typeid<=1399)
-
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	0 AS sporttype, Bettype 
 	FROM	@SportBettype  
@@ -118,21 +115,22 @@ END
 IF @ShowCasino = 1  
 BEGIN  
 	--bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
-
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	208 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 6 AND Bettype BETWEEN 2101 AND 2199
-	UNION
+	
+	INSERT INTO @TmpCond(Sporttype, Bettype)
 	SELECT	209 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 6 AND Bettype BETWEEN 2201 AND 2299
-	UNION
+	
+	INSERT INTO @TmpCond(Sporttype, Bettype)
 	SELECT	210 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 6 AND Bettype BETWEEN 2301 AND 2399
-	UNION
+	
+	INSERT INTO @TmpCond(Sporttype, Bettype)
 	SELECT	251 AS sporttype, 71 AS Bettype
 		
 	--Sum_winloss  
@@ -142,13 +140,6 @@ END
 IF @ShowRB = 1  
 BEGIN  	
 	--bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype)  
-	--SELECT 151, 31
-	--UNION ALL
-	--SELECT 151, 32
-	--UNION ALL
-	--SELECT 151, 33
-
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	151 AS sporttype, Bettype 
 	FROM	@SportBettype  
@@ -161,9 +152,6 @@ END
 IF @ShowNG = 1  
 BEGIN  	
 	-- bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype) 
-	--SELECT 161, typeid FROM bettype WITH(NOLOCK) WHERE typeid BETWEEN 81 AND 120
-
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	161 AS sporttype, Bettype 
 	FROM	@SportBettype  
@@ -176,9 +164,6 @@ END
 IF @ShowBI = 1  
 BEGIN  	
 	-- bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype)  
-	--SELECT 252, 73
-
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	252 AS sporttype, Bettype 
 	FROM	@SportBettype  
@@ -191,9 +176,6 @@ END
 IF @ShowP2P = 1
 BEGIN
 	-- bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype)  
-	--SELECT 253, 1000
-
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	253 AS sporttype, Bettype 
 	FROM	@SportBettype  
@@ -206,53 +188,41 @@ END
 	
 IF @ShowLiveCasino = 1
 BEGIN
--- bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype)  
-	--SELECT 162 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-	--WHERE typeid between 1101 and 1199
-
+	-- bettrans
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	162 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 4
 
 	--Sum_winloss  
-		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		VALUES(162,0)
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(162,0)
 END
 	
 IF @ShowVS = 1
 BEGIN
--- bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype)  
-	--SELECT 180 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-	--WHERE typeid between 1201 and 1299
-
+	-- bettrans
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	180 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 5
 
 	--Sum_winloss  
-		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		VALUES(180,0)
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(180,0)
 END
 
 IF @ShowKeno = 1
 BEGIN
--- bettrans
-	--INSERT INTO @TmpCond(Sporttype, Bettype)  
-	--SELECT 202 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-	--WHERE typeid between 1501 and 1599
-
+	-- bettrans
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
 	SELECT	202 AS sporttype, Bettype 
 	FROM	@SportBettype  
 	WHERE	ProductId = 8
 
 	--Sum_winloss  
-		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-		VALUES(202,0)
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(202,0)
 END
 	
 IF @showGD = 1
@@ -292,7 +262,20 @@ BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, bettype)
 	VALUES(206, 1003)
-END	
+END
+
+IF @showAB = 1
+BEGIN
+	-- bettrans
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	211 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 21
+
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, bettype)
+	VALUES(211, 0)
+END
 		
 IF @tdate >= @BalanceUpDate
 BEGIN
@@ -646,10 +629,6 @@ GROUP BY
 			 ELSE '0' 
 		END 
 		,custID, username, currency, roleid
-
-
-
-
 GO
 
 GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNet] AS [dbo]

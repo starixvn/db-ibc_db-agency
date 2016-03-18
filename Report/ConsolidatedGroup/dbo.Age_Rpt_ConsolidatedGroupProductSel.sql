@@ -8,7 +8,8 @@ AS
 	DB: DBAGE/bodb02
 	Original:  
 
-	Revisions:    
+	Revisions:
+		- 20160318@Percy: Support AllBet [Redmine: #50605]
 	
 	Param's Explanation:
 
@@ -29,7 +30,7 @@ BEGIN
 	INSERT INTO @ProductList (ProductID, ProductName)
 	SELECT	ProductID, ProductName
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19) 
+	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21) 
 
 	UPDATE	@ProductList
 	SET		isShow = 1
@@ -110,6 +111,7 @@ BEGIN
 	--------------------------------------------
 	SELECT * 
 	FROM @ProductList
+	DROP TABLE #T
 
 END 
 GO
