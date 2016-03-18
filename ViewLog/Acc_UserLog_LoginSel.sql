@@ -1,11 +1,4 @@
-﻿USE [bodb_CustomerLog]
-GO
-/****** Object:  StoredProcedure [dbo].[Acc_UserLog_LoginSel]    Script Date: 10/19/2010 12:09:51 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-ALTER PROCEDURE [dbo].[Acc_UserLog_LoginSel]
+﻿ALTER PROCEDURE [dbo].[Acc_UserLog_LoginSel]
     @UserId INT,
 	@UserName AS VARCHAR(50),
     @FromDate DATETIME,
@@ -23,8 +16,15 @@ AS
 	Revisions:
 	- 20100710@Kiwi: put in a check to return retrieving data if roleid = 1
 	- 20100711@Thien: add index hint
-	- 20101018@Anders: query columns Browser, Domain, Planform, CountryCode
+	- 20101019@Anders: query extra columns: Browser, Domain, Platform, CountryCode
+	- 20101214@Thien: comment out "OR (SubAccID = @UserId)" for performance improvement
+	- 20110526@Jamie: Allow agency/admin view sub-account log
+	- 20110608@Sophia: Show nickname for account site when customer login nickname
+	- 20110623@Sophia: Do not allow to search for Nickname if @IsAdminAccess = 0
+	- 20110715@Sophia: Edit prefix of username2
+	- 20120914@Viet: hide IP/country for customer under super ZZ from agentsite's viewlog only
 	- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+	
 	
     Param's Explaination:    
 	- @UserId: a customer which we want to view actions affect to.
@@ -54,13 +54,16 @@ IF ( @PageIndex > 0 )
 --		PAGING QUERY
 
 --RETURN TO RETRIEVE DATA IF ROLEID = 1 
-DECLARE @RoleID tinyint
-SELECT @RoleID = roleid from bodb02.dbo.custinfo(nolock) where custid = @UserId
+DECLARE @RoleID tinyint, @srecommend int
+SELECT @RoleID = roleid, @srecommend = srecommend from bodb02.dbo.custinfo(nolock) where custid = @UserId
 IF (@RoleID = 1)
 	RETURN
-print @RoleID 
+--------------- hardcode for super ZZ---------------
+declare @hideLocation bit
+select @hideLocation = case when @srecommend=5532706 and SYSTEM_USER like 'bodbdownlinen%' then 1 else 0 end
+----------------------------------------------------
 
-IF (@IsAdminAccess = 0)
+IF (@IsAdminAccess = 0) AND NOT EXISTS (SELECT TOP 1 1 FROM bodb02.dbo.Customer WITH (NOLOCK) WHERE username2 = @UserName)
 BEGIN
 	SELECT  LogID,
 			UserID,
@@ -71,21 +74,21 @@ BEGIN
 			IsInternal,				
 			ActionName,
 			SPName,
-			IP,
+			case @hideLocation when 1 then '' else IP end IP,
 			ServerID,
 			Browser,
 			Domain,
 			[Platform],
-			CountryCode
+			case @hideLocation when 1 then '' else CountryCode end CountryCode
 	FROM    (
 				 SELECT    ROW_NUMBER() OVER (ORDER BY  LogDate DESC) AS RowNum,
 							LogID,
 							UserID,
-							@UserName AS Username,
+							@Username as  Username,
 							Doing,
 							LogDate,
-							la.ActionID,				
-							IsInternal,							
+							la.ActionID,	
+							IsInternal,												
 							la.ActionNameEN AS ActionName,
 							la.SPName AS SPName,
 							IP,
@@ -93,61 +96,74 @@ BEGIN
 							BrowserName as Browser,
 							DomainName as Domain,
 							[Platform],
-							CountryCode
+							CountryCode,
+							username2
 				  FROM      dbo.UserLog_Login AS ul WITH(NOLOCK, index=CIX_LogDate_User)
 							INNER JOIN dbo.LogAction AS la WITH(NOLOCK) ON ul.ActionID = la.ActionID
 							INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = ul.UserID
-				  WHERE     LogDate BETWEEN @FromDate AND @ToDate			
+				  WHERE     LogDate BETWEEN @FromDate AND @ToDate	
 							AND IsInternal <= @IsAdminAccess
-							AND ((	UserID = @UserId AND SubAccID = 0)
-									OR (SubAccID = @UserId))
+							AND ((	UserID = @UserId AND SubAccID >= 0)
+										--OR (SubAccID = @UserId)
+									) 
 							AND ci.roleid <=4
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
+			
 END
 ELSE
+IF (@IsAdminAccess = 1) 
 BEGIN
 	SELECT  LogID,
 			UserID,
 			Username,
-			Doing,
+			Doing + CASE WHEN ISNULL(username2,'') <>'' THEN ' - Nickname: '+ username2 ELSE '' END as Doing,
 			LogDate,
 			ActionID,				
 			IsInternal,
 			ActionName,
 			SPName,
-			IP,
+			case @hideLocation when 1 then '' else IP end IP,
 			ServerID,
 			Browser,
 			Domain,
 			[Platform],
-			CountryCode
+			case @hideLocation when 1 then '' else CountryCode end CountryCode
 	FROM    (
 				 SELECT    ROW_NUMBER() OVER ( ORDER BY LogDate DESC) AS RowNum,
 							LogID,
 							UserID,
-							@UserName AS Username,
+							@Username as Username,
 							Doing,
 							LogDate,
-							la.ActionID,				
-							IsInternal,										
+							la.ActionID,	
+							IsInternal,											
 							la.ActionNameEN AS ActionName,
 							la.SPName AS SPName,
 							IP,
 							ServerID,BrowserName as Browser,
 							DomainName as Domain,
 							[Platform],
-							CountryCode
+							CountryCode, 
+							username2
 				  FROM      dbo.UserLog_Login AS ul WITH(NOLOCK, index=CIX_LogDate_User)
 							INNER JOIN dbo.LogAction AS la WITH(NOLOCK) ON ul.ActionID = la.ActionID
-							INNER JOIN bodb02.dbo.CustInfo AS ci with(nolock) ON ci.custid = ul.UserID
-				  WHERE     LogDate BETWEEN @FromDate AND @ToDate			
+				  WHERE     LogDate BETWEEN @FromDate AND @ToDate								
 							AND IsInternal <= @IsAdminAccess
-							AND ((	UserID = @UserId AND SubAccID <= 0)
-									OR (SubAccID = @UserId))
-							AND ci.roleid <=4
+							AND UserID = @UserId
+									--AND SubAccID <= 0)
+									--OR (SubAccID = @UserId)
+							
+									
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 END
-
-
+GO
+GRANT EXECUTE ON [dbo].[Acc_UserLog_LoginSel] TO [bodbAdminNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_UserLog_LoginSel] TO [bodbDownlineNet] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Acc_UserLog_LoginSel] TO [bodbDownlineNetView] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Acc_UserLog_LoginSel] TO [vnteam] AS [dbo]
+GO
