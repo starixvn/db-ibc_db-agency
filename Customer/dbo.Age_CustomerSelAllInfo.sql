@@ -422,8 +422,9 @@ BEGIN
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE custid = @custid
 				AND (
-						(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0))
+						(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
 						OR ruben <> 0
+					)
 				AND (
 						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
 						OR CONVERT(DATE, winlostdate) < @yesterday
