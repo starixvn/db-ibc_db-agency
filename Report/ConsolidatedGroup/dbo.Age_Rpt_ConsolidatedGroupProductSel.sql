@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
+ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel_xpre]
 	@CustId INT
 AS
 /*
@@ -87,7 +87,9 @@ BEGIN
 	-----------------------------------------------------------
 	----------------------------DCS---------------------------
 	
-	 SELECT t.ProductID, MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden, t.bitmapOrder))) AS IsHide
+	 SELECT t.ProductID,
+		MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden, t.bitmapOrder))) AS IsHide,
+		MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
 	 INTO #T
 	 FROM dbo.CustProductStatus cps  WITH (NOLOCK)  
 	 CROSS APPLY (	SELECT psp.bitmapOrder , psd.ProductID
@@ -105,15 +107,24 @@ BEGIN
 	FROM	@ProductList P
 	INNER JOIN #T T
 		ON T.ProductID = P.ProductID
-	WHERE T.IsHide = 0  
+	WHERE T.IsHide = 0
+		AND T.ProductID <> 21 -- AllBet
 
+	-- AllBet
+	UPDATE	P
+	SET		isShow = 1
+	FROM	@ProductList P
+	INNER JOIN #T T
+		ON T.ProductID = P.ProductID
+	WHERE T.IsHide = 0 AND T.IsSync = 1
+		AND T.ProductID = 21 -- AllBet
 
 	--------------------------------------------
 	SELECT * 
 	FROM @ProductList
 	DROP TABLE #T
 
-END 
+END
 GO
 
 GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroupProductSel] TO [bodbDownlineNet]

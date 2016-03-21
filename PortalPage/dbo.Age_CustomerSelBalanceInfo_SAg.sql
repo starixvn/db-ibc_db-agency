@@ -82,7 +82,7 @@ WHERE srecommend = @custid
 
 SELECT
 	@cashBalance  = @cashBalance + ISNULL(SUM(CASE WHEN custid = srecommend THEN winlost - actual_stake ELSE swinlost + scomm - acomm END),0),
-	@totalBalance = @cashBalance + ISNULL(SUM(CASE WHEN custid = srecommend THEN winlost - actual_stake ELSE swinlost+ scomm - acomm END)
+	@totalBalance = @totalBalance + ISNULL(SUM(CASE WHEN custid = srecommend THEN winlost - actual_stake ELSE swinlost+ scomm - acomm END)
 					+ SUM(CASE WHEN custid = mrecommend THEN winlost - actual_stake ELSE mwinlost + acomm - comm END)
 					+ SUM(CASE WHEN custid = recommend THEN winlost - actual_stake ELSE awinlost + comm - playercomm END)
 					+ SUM(CASE WHEN custid <> srecommend AND custid <> mrecommend AND custid <> recommend AND statusID NOT IN (0, 1) THEN winlost - actual_stake + playercomm ELSE 0 END),0)
@@ -93,7 +93,7 @@ WHERE srecommend = @custid
 
 SELECT
 	@cashBalance  = @cashBalance + ISNULL(SUM(CASE WHEN custid = srecommend THEN winlost - actual_stake ELSE swinlost + scomm - acomm END),0),
-	@totalBalance = @cashBalance + ISNULL(SUM(CASE WHEN custid = srecommend THEN winlost - actual_stake ELSE swinlost+ scomm - acomm END)
+	@totalBalance = @totalBalance + ISNULL(SUM(CASE WHEN custid = srecommend THEN winlost - actual_stake ELSE swinlost+ scomm - acomm END)
 					+ SUM(CASE WHEN custid = mrecommend THEN winlost - actual_stake ELSE mwinlost + acomm - comm END)
 					+ SUM(CASE WHEN custid = recommend THEN winlost - actual_stake ELSE awinlost + comm - playercomm END)
 					+ SUM(CASE WHEN custid <> srecommend AND custid <> mrecommend AND custid <> recommend AND statusID NOT IN (0, 1) THEN winlost - actual_stake + playercomm ELSE 0 END),0)
