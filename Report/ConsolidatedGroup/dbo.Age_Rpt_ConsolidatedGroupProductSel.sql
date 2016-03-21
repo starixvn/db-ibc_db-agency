@@ -1,4 +1,4 @@
-ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel_xpre]
+ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
 	@CustId INT
 AS
 /*
