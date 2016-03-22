@@ -1,22 +1,17 @@
 ﻿ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_Ag]
-	@CustID INT
-	,@PageSize INT = 500
-	,@PageIndex INT = 1
-	,@Username VARCHAR(30) = NULL
-	,@Enabled BIT = NULL
-	,@Closed BIT = NULL
-	,@Suspended BIT = NULL
-	,@TotalPages INT = 0 OUTPUT
+	@CustID		INT,
+	@PageSize	INT = 500,
+	@PageIndex	INT = 1,
+	@Username	VARCHAR(30) = NULL,
+	@Enabled	BIT = NULL,
+	@Closed		BIT = NULL,
+	@Suspended	BIT = NULL,
+	@TotalPages INT = 0 OUTPUT
 AS
 /*
-
 Task : Credit/Balance of Agent
-
 DB: DBAGE/bodb02
-
 Original: CustAccountSelCreditList_Ag_1
-
-
 
 Revisions:
 
@@ -36,6 +31,9 @@ Revisions:
 	- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
 	- 20160128@Percy: Support new sport Cricket [Redmine: #50027]
 	- 20160215@Percy: Support AllBet Live Casino [Redmine: #50605]
+	- 20160322@Percy:
+		1. Change formula turnover [Redmine: #32974, #53007]
+		2. Remove @ABSDate
 
 Param's Explanation:
 
@@ -44,55 +42,50 @@ Param's Explanation:
 */
 SET NOCOUNT ON
 
-DECLARE @ABSDate DATETIME,
+DECLARE /* @ABSDate DATETIME,*/
 		@today DATE,
 		@yesterday DATE
 
-SET @ABSDate = '2011-09-01'
+-- SET @ABSDate = '2011-09-01'
 SELECT @today = CONVERT(DATE, GETDATE())
 SELECT @yesterday = DATEADD(DD, -1, @today)
 
-DECLARE @RowCount INT
-	,@RowStart INT
-	,@RowEnd INT
+DECLARE @RowCount INT, @RowStart INT, @RowEnd INT
+SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
 
-SELECT @PageIndex = @PageIndex - 1
-	,@RowStart = @PageSize * @PageIndex + 1
-	,@RowEnd = @RowStart + @PageSize - 1
+CREATE TABLE #tmp_customer
+(
+	[custid]		INT PRIMARY KEY,
+	[enabled]		BIT,
+	[username]		VARCHAR(30),
+	[iplogin]		NVARCHAR(20) NULL,
+	[closed]		BIT,
+	[suspended]		BIT,
+	[firstname]		NVARCHAR(50) NULL,
+	[lastname]		NVARCHAR(50) NULL,
+	[credit]		MONEY NULL,
+	[lastlogged]	SMALLDATETIME NULL
+)
 
-SET @Username = isnull(@Username, '')
+CREATE TABLE #balance
+(
+	custid		INT PRIMARY KEY,
+	outstanding MONEY,		
+	balance		MONEY,
+	turnover	MONEY
+)
 
---SET @Username = @Username + '%'
-CREATE TABLE #tmp_customer (
-	[custid] INT PRIMARY KEY
-	,[enabled] BIT
-	,[username] VARCHAR(30)
-	,[iplogin] NVARCHAR(20) NULL
-	,[closed] BIT
-	,[suspended] BIT
-	,[firstname] NVARCHAR(50) NULL
-	,[lastname] NVARCHAR(50) NULL
-	,[credit] MONEY NULL
-	,[lastlogged] SMALLDATETIME NULL
-	)
-
-CREATE TABLE #balance (
-	custid INT PRIMARY KEY
-	,outstanding MONEY
-	,balance MONEY
-	,turnover MONEY
-	);
-
-WITH rt
-AS (
-	SELECT custid
-		,ISNULL(SUM(CASE WHEN ruben = 0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake	END	ELSE 0 END), 0) outstanding
-		,ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(CASE WHEN matchid > 0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake)	ELSE actual_stake END ELSE 0 END), 0) turnover
-	FROM bettrans WITH (NOLOCK)
+;WITH rt AS
+(
+	SELECT custid,
+		--ISNULL(SUM(CASE WHEN ruben = 0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake	END	ELSE 0 END), 0) outstanding,
+		ISNULL(SUM(CASE WHEN ruben = 0 THEN actual_stake ELSE 0 END), 0) outstanding,
+		ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance,
+		ISNULL(SUM(CASE WHEN matchid > 0 AND ruben <> 0 THEN stake ELSE 0 END), 0) turnover
+	FROM  bettrans WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND (
-				(bettype NOT IN (801,802,803,804,805,806,1003)	AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
+				(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
 				OR ruben <> 0
 			)
 		AND (
@@ -103,68 +96,70 @@ AS (
 	
 	UNION ALL
 	SELECT custid
-		,ISNULL(sum(CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END), 0) outstanding
+		--,ISNULL(sum(CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END), 0) outstanding
+		,ISNULL(SUM(actual_stake), 0) outstanding
 		,0 balance
 		,0 turnover
-	FROM translog WITH (NOLOCK)
+	FROM  translog WITH (NOLOCK)
 	WHERE statusid = 0 AND recommend = @custid
 	GROUP BY custid
 
 	UNION ALL
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake ELSE 0 END), 0) outstanding
-		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday
-					THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN actual_stake ELSE 0 END),0) turnover
-	FROM bettransRNG WITH (NOLOCK)
+		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
+		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday AND statusID NOT IN (0, 1) THEN stake ELSE 0 END),0) turnover
+	FROM  bettransRNG WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2101 AND 2399
 	GROUP BY custid
 
-		UNION ALL
+	UNION ALL
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake ELSE 0 END), 0) outstanding
-		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday
-					THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN actual_stake ELSE 0 END),0) turnover
-	FROM bettransLC WITH (NOLOCK)
+		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
+		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday AND statusID NOT IN (0, 1) THEN stake ELSE 0 END),0) turnover
+	FROM  bettransLC WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2401 AND 2499
 	GROUP BY custid
-	)
+)
 INSERT INTO #balance
-SELECT custid
-	,sum(outstanding)
-	,sum(balance)
-	,sum(turnover)
+SELECT custid,
+	SUM(outstanding),
+	SUM(balance),
+	SUM(turnover)
 FROM rt
 GROUP BY custid
 
-CREATE TABLE #today_balance (
-	custid INT PRIMARY KEY
-	,balance MONEY
-	)
+CREATE TABLE #today_balance
+(
+	custid	INT PRIMARY KEY,
+	balance MONEY
+)
 
+;WITH today_balance AS (
+	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
+	FROM   bettrans WITH (NOLOCK)
+	WHERE  recommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499
+		AND CONVERT(DATE, winlostdate) = @today
+	GROUP BY custid
+	UNION ALL
+	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
+	FROM   bettransRNG WITH (NOLOCK)
+	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2101 AND 2399
+		AND CONVERT(DATE, winlostdate) = @today
+	GROUP BY custid
+	UNION ALL
+	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
+	FROM   bettransLC WITH (NOLOCK)
+	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2401 AND 2499
+		AND CONVERT(DATE, winlostdate) = @today
+	GROUP BY custid
+)
 INSERT INTO #today_balance
-SELECT custid, SUM(balance) AS balance FROM (
-	SELECT custid
-		,sum(winlost - actual_stake + playercomm) balance
-	FROM bettrans WITH (NOLOCK)
-		WHERE recommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499 AND CONVERT(DATE, winlostdate) = @today
-	GROUP BY custid
-	UNION ALL
-	SELECT custid
-		,sum(winlost - actual_stake + playercomm) balance
-	FROM bettransRNG WITH (NOLOCK)
-	WHERE recommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2101 AND 2399 AND CONVERT(DATE, winlostdate) = @today
-	GROUP BY custid
-	UNION ALL
-	SELECT custid
-		,sum(winlost - actual_stake + playercomm) balance
-	FROM bettransLC WITH (NOLOCK)
-	WHERE recommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2401 AND 2499 AND CONVERT(DATE, winlostdate) = @today
-	GROUP BY custid
-) AS A
+SELECT	custid, SUM(balance) AS balance
+FROM	today_balance
 GROUP BY custid
 
 --Filter user

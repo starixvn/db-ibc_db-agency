@@ -415,14 +415,14 @@ BEGIN
 			    SUM(CASE WHEN bettype = 23002 AND ruben=0 THEN actual_stake ELSE 0 END) csOutstanding,
 			    SUM(CASE WHEN bettype = 23202 AND ruben=0 THEN actual_stake ELSE 0 END) BingoOutstanding,
 			    SUM(CASE WHEN bettype = 23102 AND ruben=0 THEN actual_stake ELSE 0 END) P2POutstanding,
-			    SUM(CASE WHEN bettype= 23001 AND ruben=0 THEN actual_stake ELSE 0 END) csTransfer,
-			    SUM(CASE WHEN bettype= 23201 AND ruben=0 THEN actual_stake ELSE 0 END) BingoTransfer,
-			    SUM(CASE WHEN bettype= 23101 AND ruben=0 THEN actual_stake ELSE 0 END) P2PTransfer,
+			    SUM(CASE WHEN bettype = 23001 AND ruben=0 THEN actual_stake ELSE 0 END) csTransfer,
+			    SUM(CASE WHEN bettype = 23201 AND ruben=0 THEN actual_stake ELSE 0 END) BingoTransfer,
+			    SUM(CASE WHEN bettype = 23101 AND ruben=0 THEN actual_stake ELSE 0 END) P2PTransfer,
 			    MAX(transdate) lastTxn 
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE custid = @custid
 				AND (
-						(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
+						(bettype NOT IN (SELECT bettype FROM @bettypemetric) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
 						OR ruben <> 0
 					)
 				AND (
@@ -689,7 +689,7 @@ BEGIN
 			UNION ALL
 		    SELECT	
 					SUM(CASE WHEN custid = mrecommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake ELSE mwinlost+acomm-comm END) masterCash,
-				    SUM(CASE WHEN custid = mrecommend AND statusID IN (0, 1) THEN actual_stake * mpositiontaking ELSE 0 END) masterPositionTaking, 
+				    SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * mpositiontaking ELSE 0 END) masterPositionTaking, 
 				    SUM(CASE WHEN custid = recommend  AND statusID NOT IN (0, 1) THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
 					SUM(CASE WHEN custid <> recommend AND custid <> mrecommend  AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0  END) customerCash,
 				    SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END) customerOutstanding, 
@@ -710,7 +710,7 @@ BEGIN
 			UNION ALL
 		    SELECT	
 					SUM(CASE WHEN custid = mrecommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake ELSE mwinlost+acomm-comm END) masterCash,
-				    SUM(CASE WHEN custid = mrecommend AND statusID IN (0, 1) THEN actual_stake * mpositiontaking ELSE 0 END) masterPositionTaking, 
+				    SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * mpositiontaking ELSE 0 END) masterPositionTaking, 
 				    SUM(CASE WHEN custid = recommend  AND statusID NOT IN (0, 1) THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
 					SUM(CASE WHEN custid <> recommend AND custid <> mrecommend  AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0  END) customerCash,
 				    SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END) customerOutstanding, 
