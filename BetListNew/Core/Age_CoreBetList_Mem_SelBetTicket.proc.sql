@@ -49,6 +49,7 @@ AS
 		- 20160111@Kos: Add @TransStatus param to support RNG Casino Single Wallet [#Redmine: 48958]
 		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
 		- 20160216@Kos: Support yesterday running ticket for Casino products
+		- 20160323@Kos: Hotfix - Colossus Bet Grand Prize ticket in bettrans14 [#Redmine: 54643]
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -310,7 +311,7 @@ BEGIN
 					, bt.ProductId
 					, b.bettype
 					, bt.EventType
-					, 1 AS WhTicket
+					, 2 AS WhTicket
 				FROM bodb02.dbo.bettrans14 AS b WITH (NOLOCK)
 					INNER JOIN @BettypeMatrix AS bt ON b.bettype = bt.bettype
 					INNER JOIN @TransStatus AS stt ON b.statusid = stt.statusid
