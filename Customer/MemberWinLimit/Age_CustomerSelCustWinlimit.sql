@@ -165,7 +165,7 @@ BEGIN
 				, cc.lastname
 				, IsAutoReset
 				, MaxWinLimit
-				, MaxLossLimit
+				, CASE WHEN cwl.SportType = 255 THEN NULL ELSE MaxLossLimit END MaxLossLimit
 			FROM #MemberBalance b 
 				INNER JOIN dbo.custInfo c WITH(NOLOCK) ON b.CustId = c.custid
 				INNER JOIN dbo.customer cc WITH(NOLOCK) ON b.CustId = cc.CustId
