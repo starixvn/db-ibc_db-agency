@@ -9,7 +9,7 @@
 AS 
 /* Created:20100121@Lewin
     Task: ViewLog function 331
-    DB: bodb_CustomerLog
+    DB: DBLOG.bodb_CustomerLog
 
 	Description:
 	- Get paged log credit
@@ -24,6 +24,7 @@ AS
 	- 20110715@Sophia: Edit prefix of username2
 	- 20120914@Viet: hide IP/country for customer under super ZZ from agentsite's viewlog only
 	- 20140708@Dom: Do not show any log info (including log of Supers, Masters, Agents and Members) updated by Admin relate to all log categories [Redmine: #18125]
+	- 20160321@Percy: Do not show any Internal Admin's log for External Admin [Redmine: #53932]
 	
 	
     Param's Explaination:    
@@ -153,8 +154,7 @@ BEGIN
 							AND UserID = @UserId
 									--AND SubAccID <= 0)
 									--OR (SubAccID = @UserId)
-							
-									
+							AND la.ActionID <> 1301								
 			) AS MyTable
 	WHERE   RowNum BETWEEN @lbound AND @ubound
 END
