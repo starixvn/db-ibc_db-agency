@@ -32,7 +32,7 @@ Revisions:
 	- 20160128@Percy: Support new sport Cricket [Redmine: #50027]
 	- 20160215@Percy: Support AllBet Live Casino [Redmine: #50605]
 	- 20160322@Percy:
-		1. Change formula turnover [Redmine: #32974, #53007]
+		1. Change formula turnover [Redmine: #32974]
 		2. Remove @ABSDate
 
 Param's Explanation:
@@ -81,7 +81,7 @@ CREATE TABLE #balance
 		--ISNULL(SUM(CASE WHEN ruben = 0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake	END	ELSE 0 END), 0) outstanding,
 		ISNULL(SUM(CASE WHEN ruben = 0 THEN actual_stake ELSE 0 END), 0) outstanding,
 		ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance,
-		ISNULL(SUM(CASE WHEN matchid > 0 AND ruben <> 0 THEN stake ELSE 0 END), 0) turnover
+		ISNULL(SUM(CASE WHEN matchid > 0 THEN stake ELSE 0 END), 0) turnover
 	FROM  bettrans WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND (
@@ -108,7 +108,7 @@ CREATE TABLE #balance
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday AND statusID NOT IN (0, 1) THEN stake ELSE 0 END),0) turnover
+		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END),0) turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2101 AND 2399
@@ -118,7 +118,7 @@ CREATE TABLE #balance
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday AND statusID NOT IN (0, 1) THEN stake ELSE 0 END),0) turnover
+		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END),0) turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2401 AND 2499

@@ -31,7 +31,7 @@ Revisions:
 	- 20160222@Percy: Change formula when calculating bet credit [Redmine: #52653]
 	- 20160215@Percy: Support AllBet Live Casino [Redmine: #50605]
 	- 20160322@Percy:
-		1. Change formula turnover [Redmine: #32974, #53007]
+		1. Change formula turnover [Redmine: #32974]
 		2. Remove @ABSDate
 	
 Param's Explanation:
@@ -81,7 +81,7 @@ CREATE TABLE #balance
 		ISNULL(SUM(CASE WHEN ruben = 0 THEN actual_stake * apositiontaking ELSE 0 END), 0) AS outstanding,
 		ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0) AS balance,
 		-- ISNULL(SUM(case when matchid > 0 then CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END else 0 end), 0) as turnover
-		ISNULL(SUM(CASE WHEN matchid > 0 AND ruben <> 0 THEN stake ELSE 0 END), 0) AS turnover
+		ISNULL(SUM(CASE WHEN matchid > 0 THEN stake ELSE 0 END), 0) AS turnover
 	FROM  bettrans WITH (NOLOCK)
 	WHERE mrecommend = @CustID
 		AND (
@@ -108,7 +108,7 @@ CREATE TABLE #balance
 		recommend AS custid,
 		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * apositiontaking ELSE 0 END),0) outstanding, 
 		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0) AS balance,
-		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday AND statusID NOT IN (0, 1) THEN stake ELSE 0 END), 0) AS turnover
+		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END), 0) AS turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE mrecommend = @CustID
 		AND gameID BETWEEN 2101 AND 2399
@@ -118,7 +118,7 @@ CREATE TABLE #balance
 		recommend AS custid,
 		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * apositiontaking ELSE 0 END),0) outstanding, 
 		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0) AS balance,
-		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday AND statusID NOT IN (0, 1) THEN stake ELSE 0 END), 0) AS turnover
+		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END), 0) AS turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE mrecommend = @CustID
 		AND gameID BETWEEN 2401 AND 2499
