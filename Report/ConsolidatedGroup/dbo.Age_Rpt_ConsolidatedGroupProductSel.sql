@@ -87,21 +87,23 @@ BEGIN
 	-----------------------------------------------------------
 	----------------------------DCS---------------------------
 	
-	 SELECT t.ProductID,
-		MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden, t.bitmapOrder))) AS IsHide,
-		MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
-	 INTO #T
-	 FROM dbo.CustProductStatus cps  WITH (NOLOCK)  
-	 CROSS APPLY (	SELECT psp.bitmapOrder , psd.ProductID
-					FROM dbo.ProductSettingDetail psd WITH(NOLOCK)  
-					INNER JOIN dbo.ProductStatusProfile psp WITH (NOLOCK) 
-							ON psp.Sporttype = psd.SportType AND psp.Bettype = psd.BetType
-					WHERE psd.SettingType = 4) t
-	 INNER JOIN @TmpCustID C 
-			ON C.CustID = cps.CustID
-	 GROUP BY t.ProductID 
+	SELECT t.ProductID,
+	MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden , t.bitmapOrder))) AS IsHide,
+	MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
+	INTO #T
+	FROM
+		dbo.CustProductStatus cps  WITH (NOLOCK)  
+		CROSS APPLY
+		(
+			SELECT p.bitmapOrder , c.ProductID
+			FROM
+				dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) c
+				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
+					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
+		) t
+		INNER JOIN @TmpCustID c ON c.CustID = cps.CustID
+	GROUP BY t.ProductID
 
-	 
 	UPDATE	P
 	SET		isShow = 1
 	FROM	@ProductList P
