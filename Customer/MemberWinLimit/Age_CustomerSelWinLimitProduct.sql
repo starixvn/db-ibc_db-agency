@@ -39,23 +39,29 @@ BEGIN
 
 	-- For DCS Product
 	INSERT INTO	@Products
-				(	BetType    , SportType    , ProductName)
-	SELECT DISTINCT psd.BetType, psd.SportType, p.ProductName
+				(	BetType     , SportType     , ProductName  )
+	SELECT DISTINCT sbss.BetType, sbss.SportType, p.ProductName
 	FROM		dbo.CustProductStatus		AS cps	WITH (NOLOCK)
 	CROSS JOIN	dbo.ProductStatusProfile	AS psp	WITH (NOLOCK)
-	INNER JOIN	dbo.ProductSettingDetail	AS psd	WITH (NOLOCK)
-			ON	psd.SportType = psp.Sporttype
-			AND	psd.BetType = psp.Bettype
-			AND	psd.SettingType = 6
+	INNER JOIN	dbo.f_CustSetting_SportBetTypeSettingSelect(NULL, 6) AS sbss
+			ON	sbss.SportType = psp.Sporttype
+			AND	sbss.BetType = psp.Bettype
 	INNER JOIN	dbo.Products				AS p	WITH (NOLOCK)
-			ON	p.ProductID = psd.ProductID
+			ON	p.ProductID = sbss.ProductID
 	CROSS APPLY	(
 		SELECT	dbo.f_GetProductStatus(cps.bitmapHasSynced, psp.bitmapOrder)
 			,	dbo.f_GetProductStatus(cps.bitmapIsHidden, psp.bitmapOrder)
 	) ps(isSynced, isHidden)
-	WHERE	cps.CustID = 1176070
+	WHERE	cps.CustID = @CustId
 		AND	ps.isSynced = 1
 		AND	ps.isHidden = 0
+
+	DELETE	p
+	FROM		@Products AS p
+	INNER JOIN	dbo.f_CustSetting_SportBetTypeHiddenBySiteCurrency(@CustId, NULL) AS sbhsc
+			ON	sbhsc.SportType = p.SportType
+			AND	sbhsc.BetType = p.BetType
+	WHERE	sbhsc.IsHidden = 1
 
 	SELECT BetType, SportType, ProductName
 	FROM @Products
