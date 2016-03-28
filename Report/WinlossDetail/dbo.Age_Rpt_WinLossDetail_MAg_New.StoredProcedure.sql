@@ -4,8 +4,6 @@ SET QUOTED_IDENTIFIER ON
 GO
 SET ANSI_NULLS ON 
 GO
-
-/****** Object:  Stored Procedure dbo.Age_Rpt_WinLossDetail_MAg_New    Script Date: 3/7/2016 2:06:04 PM ******/
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
@@ -81,6 +79,7 @@ Revisions:
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
 	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
+	- 20150325@Francis: Use local variables for sum_winloss to avoid parameter sniffing and sp recompilation
 */
 
 
@@ -228,6 +227,13 @@ BEGIN
 	SELECT @isTest = 0
 END
 
+--Avoid Parameter Sniffing
+DECLARE @FDate			SMALLDATETIME
+		,@TDate			SMALLDATETIME
+		,@BUDate		SMALLDATETIME
+	
+SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay
+
 --DECLARE @SportBettype TABLE(
 --	ProductID INT
 --	,Bettype INT
@@ -263,7 +269,7 @@ BEGIN
 		       COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) --No Of Ticket
 	    FROM dbo.bettrans b WITH(NOLOCK)
 				--INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
-				CROSS APPLY dbo.f_SportBettypeMatrix_Sel_Mode4(0, 0, 0, 2, '', '', @IsTest) s -- ON b.bettype = s.Bettype
+				cross apply dbo.f_SportBettypeMatrix_Sel_Mode4(0, 0, 0, 2, '', '', @IsTest) s -- ON b.bettype = s.Bettype
 		WHERE 
 				1 = 1
 				AND b.bettype = s.Bettype
@@ -299,8 +305,8 @@ BEGIN
 			AND mrecommend = @custid
 	  GROUP BY Recommend, b.bettype
 		
-	IF @BalanceUpDay < @FromDate
-	    SELECT @BalanceUpDay = @FromDate
+	IF @BUDate < @FDate
+	    SELECT @BUDate = @FDate
 	
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
@@ -322,7 +328,7 @@ BEGIN
 	        ON b.sporttype = t.sporttype
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1
-		   AND winlostdate BETWEEN @BalanceUpDay AND @todate			
+		   AND winlostdate BETWEEN @BUDate AND @Tdate			
 		   AND MRecommend = @custid
 		   AND RoleID = 2
 	  GROUP BY CustID
@@ -423,23 +429,13 @@ SELECT wl.*
    AND wl.RowNum BETWEEN @RowStart AND @RowEnd
 
 DROP TABLE #MAgWinLossDetails
-
 GO
-
-SET QUOTED_IDENTIFIER OFF 
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet] AS [dbo]
 GO
-SET ANSI_NULLS ON 
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet] AS [dbo]
 GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet]
-GO 
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView] AS [dbo]
+GO
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet] AS [dbo]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam] AS [dbo]
