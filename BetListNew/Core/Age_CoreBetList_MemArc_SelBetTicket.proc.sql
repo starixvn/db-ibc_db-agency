@@ -37,6 +37,7 @@ AS
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20160111@Kos: Add column list in INSERT statement
 		- 20160323@Kos: Support Colossus Bet Grand Prize [Redmine: #54643]
+		- 20160328@Kos: Support Grand Prize ticket which status is Expired
 
 	Param's Explanation:
 		- @TransStatus		: string formation (0,1,102,103,111,112,113)
@@ -127,7 +128,7 @@ BEGIN
 				AND b.custid = @CustId
 				AND EXISTS (	SELECT 1 
 								FROM bodb02.dbo.PayoutTrans AS pt WITH (NOLOCK)
-								WHERE pt.refno = b.transid AND pt.PayoutStatus = 'Completed')
+								WHERE pt.refno = b.transid AND pt.PayoutStatus IN ('Completed', 'Expired'))
 		END
 	END
 
@@ -136,6 +137,7 @@ BEGIN
 
 	RETURN;
 END
+
 
 
 GO
