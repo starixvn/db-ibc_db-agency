@@ -163,7 +163,12 @@ Param's Explanation:
 			CAST(CASE WHEN @IsHidden_CockFighting = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_CockFighting),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideCockFighting,
 			-- For AllBet
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_AllBet), 1) AS DisableAllBet,
-			CAST(CASE WHEN @IsHidden_AllBet = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_AllBet), 1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideAllBet,
+			CAST(	CASE	WHEN	@IsHidden_AllBet = 0 
+								AND	sbhsc.IsHidden = 0
+								AND	ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_AllBet), 1) = 0 
+								THEN 0
+							ELSE 1 
+					END AS BIT) AS HideAllBet,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_AllBet), 0) AS SyncedAllBet,
 			-- Cricket
 			@IsIMBC AS IsIMBC,
@@ -178,7 +183,11 @@ Param's Explanation:
 				 on Customer.CustID = ci.CustID --Shifu
 		 INNER JOIN Exchange as e with (NOLOCK)
 				 ON Customer.currency = e.exchangeid
-		 LEFT JOIN CustProductStatus cps WITH (NOLOCK) ON cps.CustID = ci.custid		 
+		 LEFT JOIN CustProductStatus cps WITH (NOLOCK) ON cps.CustID = ci.custid		
+
+		-- Check isHidden AllBet
+		OUTER APPLY	dbo.f_CustSetting_SportBetTypeHiddenBySiteCurrency(Customer.custid, @AllBet) AS sbhsc
+		    
 		 
 	 WHERE Customer.custid = @custid
 
