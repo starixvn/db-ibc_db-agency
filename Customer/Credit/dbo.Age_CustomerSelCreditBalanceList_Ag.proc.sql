@@ -79,9 +79,9 @@ CREATE TABLE #balance
 (
 	SELECT custid,
 		--ISNULL(SUM(CASE WHEN ruben = 0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake	END	ELSE 0 END), 0) outstanding,
-		ISNULL(SUM(CASE WHEN ruben = 0 THEN actual_stake ELSE 0 END), 0) outstanding,
+		ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) ELSE 0 END), 0) outstanding,
 		ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance,
-		ISNULL(SUM(CASE WHEN matchid > 0 THEN stake ELSE 0 END), 0) turnover
+		ISNULL(SUM(CASE WHEN matchid > 0 THEN ABS(stake) ELSE 0 END), 0) turnover
 	FROM  bettrans WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND (
@@ -97,7 +97,7 @@ CREATE TABLE #balance
 	UNION ALL
 	SELECT custid
 		--,ISNULL(sum(CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE actual_stake END), 0) outstanding
-		,ISNULL(SUM(actual_stake), 0) outstanding
+		,ISNULL(SUM(ABS(actual_stake)), 0) outstanding
 		,0 balance
 		,0 turnover
 	FROM  translog WITH (NOLOCK)
@@ -106,9 +106,9 @@ CREATE TABLE #balance
 
 	UNION ALL
 	SELECT custid
-		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake ELSE 0 END), 0) outstanding
+		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END),0) turnover
+		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END),0) turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2101 AND 2399
@@ -116,9 +116,9 @@ CREATE TABLE #balance
 
 	UNION ALL
 	SELECT custid
-		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake ELSE 0 END), 0) outstanding
+		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END),0) turnover
+		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END),0) turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2401 AND 2499

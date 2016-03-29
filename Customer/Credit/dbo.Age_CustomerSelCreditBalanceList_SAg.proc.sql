@@ -78,10 +78,10 @@ CREATE TABLE #balance
 (
 	SELECT mrecommend AS custid,
 		-- ISNULL(SUM(CASE WHEN ruben=0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE  actual_stake END * mpositiontaking ELSE  0 END),0) AS outstanding,
-		ISNULL(SUM(CASE WHEN ruben = 0 THEN actual_stake * mpositiontaking ELSE 0 END),0) AS outstanding,
+		ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) * mpositiontaking ELSE 0 END),0) AS outstanding,
 		ISNULL(SUM(CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END), 0) AS balance, 
 		-- ISNULL(SUM(CASE WHEN matchid > 0 THEN CASE WHEN winlostdate >= @ABSDate THEN ABS(actual_stake) ELSE  actual_stake END ELSE  0 END), 0) AS turnover
-		ISNULL(SUM(CASE WHEN matchid > 0 THEN stake ELSE  0 END), 0) AS turnover
+		ISNULL(SUM(CASE WHEN matchid > 0 THEN ABS(stake) ELSE  0 END), 0) AS turnover
 	FROM  bettrans WITH (NOLOCK)
 	WHERE srecommend = @CustID
 		AND (
@@ -96,7 +96,7 @@ CREATE TABLE #balance
 	UNION ALL
 	SELECT mrecommend AS custid,
 		-- ISNULL(SUM(CASE WHEN winlostdate >=@ABSDate THEN ABS(actual_stake) ELSE  actual_stake END * mpositiontaking),0) AS outstanding,
-		ISNULL(SUM(actual_stake * mpositiontaking), 0) AS outstanding,
+		ISNULL(SUM(ABS(actual_stake) * mpositiontaking), 0) AS outstanding,
 		0 balance, 
 		0 turnover
 	FROM  translog WITH(NOLOCK)
@@ -106,9 +106,9 @@ CREATE TABLE #balance
 	UNION ALL
 	SELECT
 		mrecommend AS custid,
-		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * mpositiontaking ELSE  0 END),0) outstanding,
+		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE  0 END),0) outstanding,
 		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END ELSE  0 END),0) AS balance, 
-		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END), 0) AS turnover
+		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END), 0) AS turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE srecommend = @CustID
 		AND gameID BETWEEN 2101 AND 2399
@@ -116,9 +116,9 @@ CREATE TABLE #balance
 	UNION ALL
 	SELECT
 		mrecommend AS custid,
-		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * mpositiontaking ELSE  0 END),0) outstanding,
+		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE  0 END),0) outstanding,
 		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END ELSE  0 END),0) AS balance, 
-		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN stake ELSE 0 END), 0) AS turnover
+		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END), 0) AS turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE srecommend = @CustID
 		AND gameID BETWEEN 2401 AND 2499
