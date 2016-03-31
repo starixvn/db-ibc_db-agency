@@ -1,12 +1,15 @@
 ALTER FUNCTION [dbo].[f_NewTotalBetsForecast_GetWinLost_OU]
-(	@bettype INT
-	, @hdp1 SMALLMONEY = NULL, @hdp2 SMALLMONEY = NULL
-	, @betteam VARCHAR(1) = NULL,@PositionTaking SMALLMONEY = 0
+(	
+	@hdp1 SMALLMONEY = NULL
+	, @hdp2 SMALLMONEY = NULL
+	, @betteam NVARCHAR(10) = NULL
 	, @totalGoals SMALLINT = NULL
-	, @actual_stake MONEY = 0, @stake MONEY = 0
+	, @TurnOver_Actualstake MONEY = 0
+	, @TurnOver_stake MONEY = 0
+	, @Odds SMALLMONEY = 1
 	
 )
-RETURNS MONEY
+RETURNS TABLE 
 AS 
 /*      
 	Created By: Helen
@@ -17,37 +20,43 @@ AS
 	Parameter explaination:
 		- Home win: @scorediff > 0
 		- Home loss: @scorediff < 0
+		- Member View
+			Negative number in black indicates the amount SMA may win and Members may lose.	
+			Positive number in red indicates the amount SMA may lose and Members may win.
+				WHEN Modds >  0.25  THEN 1
+				WHEN Modds =  0.25  THEN 0.5
+				WHEN Modds =  0		THEN 0
+				WHEN Modds = -0.25  THEN -0.5
+				WHEN Modds < -0.25  THEN -1 
+			
 */	       
-BEGIN
-		
-		DECLARE @Modds INT,@Ratio INT
-	
-		
-		SET @Modds = CASE 
-						WHEN @betteam = N'h' THEN @totalGoals - @hdp1
-						WHEN @betteam = N'a' THEN @hdp1 - @totalGoals
-					 END	
-		SET @Ratio = CASE 
-				WHEN @Modds >  0.25  THEN -1
-				WHEN @Modds =  0.25  THEN -0.5
-				WHEN @Modds =  0		THEN 0
-				WHEN @Modds = -0.25  THEN 0.5
-				WHEN @Modds < -0.25  THEN 1 
-			END
-		
-		IF @Modds >= 0
-		BEGIN
-			RETURN @Ratio * @PositionTaking * @stake 
-		END
-		ELSE
-			RETURN @Ratio * @PositionTaking * @actual_stake
-		
-		RETURN 0
-	
-END
+RETURN (
+	SELECT
+		CASE  
+			WHEN Modds >= 0 THEN (Ratio * @TurnOver_stake)
+			ELSE (Ratio * @TurnOver_Actualstake)
+		END AS outputNumber
+	FROM 
+		(
+			SELECT 
+				Modds
+				,CASE 
+					WHEN Modds >  0.25  THEN @Odds
+					WHEN Modds =  0.25  THEN 0.5 * @Odds
+					WHEN Modds =  0		THEN 0.00
+					WHEN Modds = -0.25  THEN -0.5
+					WHEN Modds < -0.25  THEN -1.00 
+				END Ratio
+			FROM
+				(
+					SELECT
+						CASE @betteam 
+							WHEN 'h' THEN @totalGoals - @hdp1
+							WHEN 'a' THEN @hdp1 - @totalGoals
+						END AS Modds
+				) tmp01
+		) tmp02
+)
 
 GO
-GRANT EXEC ON f_NewTotalBetsForecast_GetWinLost_OU TO [bodbDownlineNet]
-GO
-GRANT EXEC ON f_NewTotalBetsForecast_GetWinLost_OU TO [bodbDownlineNetView]
-GO
+
