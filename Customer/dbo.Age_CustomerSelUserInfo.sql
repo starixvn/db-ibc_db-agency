@@ -170,6 +170,21 @@ Param's Explanation:
 							ELSE 1 
 					END AS BIT) AS HideAllBet,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_AllBet), 0) AS SyncedAllBet,
+			ISNULL(dbo.f_GetProductStatus(cpsUpline.bitmapHasSynced, @bitmapOrder_AllBet), 0) AS SyncedAllBetUpline,
+			CASE	WHEN Customer.roleid = 1 THEN 1
+					WHEN EXISTS	(	SELECT	1
+									FROM		dbo.CustProductStatus AS cpsDownline WITH (NOLOCK)
+									INNER JOIN	dbo.custInfo AS ciDownline WITH (NOLOCK)
+											ON	ciDownline.custid = cpsDownline.CustID
+									WHERE	Customer.custid =	CASE	WHEN Customer.roleid = 2 THEN ciDownline.recommend
+																		WHEN Customer.roleid = 3 THEN ciDownline.mrecommend
+																		WHEN Customer.roleid = 4 THEN ciDownline.srecommend
+																		ELSE -1
+																END
+										AND	dbo.f_GetProductStatus(cpsDownline.bitmapHasSynced, @bitmapOrder_AllBet) = 0)
+						THEN 0
+					ELSE 1
+			END AS SyncedAllBetDownline,
 			-- Cricket
 			@IsIMBC AS IsIMBC,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_Cricket),1) AS DisableCricket,
@@ -187,6 +202,13 @@ Param's Explanation:
 
 		-- Check isHidden AllBet
 		OUTER APPLY	dbo.f_CustSetting_SportBetTypeHiddenBySiteCurrency(Customer.custid, @AllBet) AS sbhsc
+		
+		-- Upline Status
+		INNER JOIN	dbo.CustProductStatus AS cpsUpline WITH (NOLOCK)
+				ON	cpsUpline.CustID =	CASE	WHEN Customer.roleid = 1 THEN Customer.recommend
+												WHEN Customer.roleid = 2 THEN Customer.mrecommend
+												ELSE Customer.srecommend
+										END
 		    
 		 
 	 WHERE Customer.custid = @custid
