@@ -1,4 +1,4 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelUserInfo]
+ALTER PROCEDURE [dbo].[Age_CustomerSelUserInfo]
 	@custid int
 AS
 BEGIN
