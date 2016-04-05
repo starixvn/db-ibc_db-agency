@@ -4,7 +4,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 SET ANSI_NULLS ON 
 GO
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New_UAT4] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -79,7 +79,7 @@ Revisions:
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
 	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
-	- 20150325@Francis: Use local variables for sum_winloss to avoid parameter sniffing and sp recompilation
+	- 20150325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
 */
 
 
@@ -231,19 +231,11 @@ END
 DECLARE @FDate			SMALLDATETIME
 		,@TDate			SMALLDATETIME
 		,@BUDate		SMALLDATETIME
-	
-SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay
+	    ,@CID			INT
+	    
+SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay, @CID = @custid
 
---DECLARE @SportBettype TABLE(
---	ProductID INT
---	,Bettype INT
---	,EventType INT
---)
-
---INSERT INTO @SportBettype
---EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
-
-IF @Todate >= @BalanceUpDay
+IF @TDate >= @BUDate
 BEGIN 
     INSERT INTO #MAgWinLossDetails
 	    SELECT Recommend,			
@@ -298,11 +290,11 @@ BEGIN
 				--OR bettype BETWEEN 1201 AND (CASE WHEN @showVS = 1 THEN 1299 ELSE 0 END)
 				--OR b.bettype BETWEEN 1501 AND CASE WHEN @showKeno = 1 then 1599 ELSE 0 END
 			 --  )
-			AND winlostdate BETWEEN @FromDate AND @todate
+			AND winlostdate BETWEEN @FDate AND @TDate
 			--status not in ('running','waiting','VOID', 'REJECT', 'Refund') and
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
-			AND mrecommend = @custid
+			AND mrecommend = @CID
 	  GROUP BY Recommend, b.bettype
 		
 	IF @BUDate < @FDate
@@ -329,7 +321,7 @@ BEGIN
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1
 		   AND winlostdate BETWEEN @BUDate AND @Tdate			
-		   AND MRecommend = @custid
+		   AND MRecommend = @CID
 		   AND RoleID = 2
 	  GROUP BY CustID
 END
@@ -429,6 +421,7 @@ SELECT wl.*
    AND wl.RowNum BETWEEN @RowStart AND @RowEnd
 
 DROP TABLE #MAgWinLossDetails
+
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet] AS [dbo]
 GO
