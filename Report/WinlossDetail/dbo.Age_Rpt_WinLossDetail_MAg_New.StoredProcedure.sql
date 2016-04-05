@@ -79,7 +79,7 @@ Revisions:
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
 	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
-	- 20150325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
+	- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
 */
 
 
