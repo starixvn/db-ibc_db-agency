@@ -52,6 +52,7 @@ AS
 		- 20160217@Kos: Support AllBet [Redmine: #50864]
 		- 20160323@Kos: Hotfix - Colossus Bet Grand Prize ticket in bettrans14 [#Redmine: 54643]
 		- 20160328@Kos: Support Grand Prize ticket which status is Expired
+		- 20160404@Kos: Support Voidbridge [Redmine: #54925]
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -159,7 +160,7 @@ BEGIN
 				AND ( bt.SubProduct NOT IN ('MG-SuperLive') 
 					OR ( bt.SubProduct IN ('MG-SuperLive') AND b.StatusId NOT IN (0, 1) )
 				)
-				AND ((bt.ProductId <> 21		-- not yesterday and today AllBet, RNG Casino Single Wallet
+				AND ((bt.ProductId NOT IN (21, 22)		-- not yesterday and today AllBet, RNG Casino Single Wallet, Voidbridge
 					AND (bt.ProductId <> 6 OR bt.SubProduct = ''))
 						OR b.winlostdate < @Yesterday)
 
@@ -203,6 +204,7 @@ BEGIN
 				Yesterday and today RNG Casino/Live Casino summary ticket
 				+ RNG Casino (WhTicket = 4)
 					- RNG Casino Single Wallet	: ProductId = 6 AND bettype <> 71
+					- Voidbridge				: ProductId = 22
 				+ Live Casino (WhTicket = 5)
 					- AllBet	: ProductId = 21
 			*/
@@ -227,6 +229,7 @@ BEGIN
 					, bt.EventType
 					, CASE
 							WHEN bt.ProductId = 6 AND bt.SubProduct <> '' THEN 4
+							WHEN bt.ProductId = 22 THEN 4
 							WHEN bt.ProductId = 21 THEN 5
 						END AS WhTicket
 				FROM bodb02.dbo.bettrans b WITH (NOLOCK)
@@ -235,7 +238,7 @@ BEGIN
 					AND b.winlostdate BETWEEN @Yesterday AND @Today
 					AND b.recommend = @Recommend 
 					AND b.custid = @CustID
-					AND (bt.ProductId = 21
+					AND (bt.ProductId IN (21, 22)
 						OR (bt.ProductId = 6 AND bt.SubProduct <> ''))
 			END
 		END

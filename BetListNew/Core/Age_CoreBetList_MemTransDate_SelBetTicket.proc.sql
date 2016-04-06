@@ -37,6 +37,7 @@ AS
 		- 20160125@Kos: Fix performance issue with today RNG Casino Single Wallet ticket [#Redmine: 51388]
 		- 20160216@Kos: Support yesterday running ticket for Casino products
 		- 20160217@Kos: Support AllBet [Redmine: #50864]
+		- 20160404@Kos: Support Voidbridge [Redmine: #54925]
 
 	Param's Explanation:
 		- @BettypeMatrix	: XML.format(<BettypeMatrix><row ProductID="1" Bettype="1" EventType="1" /></BettypeMatrix>)
@@ -109,6 +110,7 @@ BEGIN
 				AND DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0) THEN		-- Yesterday and today summary ticket
 				CASE
 					WHEN bt.ProductId = 6 AND bt.SubProduct <> '' THEN 4	-- RNG Casino Single Wallet
+					WHEN bt.ProductId = 22 THEN 4							-- Voidbridge
 					WHEN bt.ProductId = 21 THEN 5							-- AllBet
 					ELSE 1
 				END

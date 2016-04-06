@@ -30,6 +30,7 @@ AS
 		- 20160125@Kos: Support PH All In One 1.2 [Redmine: #50897]
 		- 20160125@Kos: Fix Colossus Bet result issue
 		- 20160217@Kos: Support AllBet [Redmine: #50864]
+		- 20160404@Kos: Support Voidbridge [Redmine: #54925]
 
 	Param's Explanation:
 
@@ -49,6 +50,7 @@ BEGIN
 		- Gold Deluxe			: ProductId = 12
 		- Cockfighting			: ProductId = 19
 		- AllBet				: ProductId = 21
+		- Voidbridge			: ProductId = 22
 	*/
 	SELECT
 		CASE WHEN (b.bettype = 29 AND ISNULL(b.betid, 0) > 0) THEN b.betid
@@ -66,6 +68,7 @@ BEGIN
 			WHEN c.ProductID = 12 THEN 255
 			WHEN c.ProductId = 19 THEN 206
 			WHEN c.ProductId = 21 THEN 211
+			WHEN c.ProductId = 22 THEN 212
 			ELSE 0
 		END AS Sporttype
 		, b.bettype
@@ -154,7 +157,7 @@ BEGIN
 		END AS comstatus
 		, CASE
 			WHEN c.ProductID = 6 AND b.bettype <> 71 THEN b.transdesc
-			WHEN c.ProductId = 19 THEN b.transdesc
+			WHEN c.ProductId IN (19, 22) THEN b.transdesc
 			ELSE ''
 		END AS transdesc
 		, 0 AS OddsSpread
@@ -169,6 +172,7 @@ BEGIN
 	/*
 		RNG Casino today running tickets (WhTicket = 4)
 		- RNG Casino Single Wallet	: ProductId = 6 AND bettype <> 71
+		- Voidbridge				: ProductId = 22
 	*/
 	UNION ALL
 	SELECT
@@ -176,7 +180,10 @@ BEGIN
 		, b.refno
 		, b.custid
 		, b.Username
-		, b.matchid AS Sporttype
+		, CASE
+			WHEN c.ProductID = 6 THEN b.matchid
+			WHEN c.ProductID = 22 THEN 212
+		END AS Sporttype
 		, b.bettype
 		, ISNULL(b.BetID, 0)
 		, '' AS Betteam
@@ -228,7 +235,7 @@ BEGIN
 		, '' AS betcheck
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END	AS comstatus
 		, CASE
-			WHEN c.ProductId = 6 THEN b.transdesc
+			WHEN c.ProductId IN (6, 22) THEN b.transdesc
 			ELSE ''
 		END AS transdesc
 		, 0 AS OddsSpread
@@ -263,7 +270,10 @@ BEGIN
 		, b.refno
 		, b.custid
 		, b.Username
-		, b.matchid AS Sporttype
+		, CASE
+			WHEN c.ProductID = 6 THEN b.matchid
+			WHEN c.ProductID = 22 THEN 212
+		END AS Sporttype
 		, b.bettype
 		, ISNULL(b.BetID, 0)
 		, '' AS Betteam 
@@ -319,7 +329,7 @@ BEGIN
 		, '' AS betcheck
 		, CASE WHEN b.comstatus = '1' THEN '1' ELSE '0' END	AS comstatus
 		, CASE
-			WHEN c.ProductId = 6 THEN b.transdesc
+			WHEN c.ProductId IN (6, 22) THEN b.transdesc
 			ELSE ''
 		END AS transdesc
 		, 0 AS OddsSpread
