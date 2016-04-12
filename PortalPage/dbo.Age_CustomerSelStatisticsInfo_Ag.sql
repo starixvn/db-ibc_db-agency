@@ -14,6 +14,7 @@ AS
 	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789
 	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
 	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
+	- 20160318@Percy: Support AllBet [Redmine: #50605]
 */
 SET NOCOUNT ON
 
@@ -57,16 +58,23 @@ SELECT
 		@total_P2PTransfer    = ISNULL(SUM(CASE WHEN bettype = 23101 THEN actual_stake ELSE 0 END),0),
 		@total_P2POutstanding = ISNULL(SUM(CASE WHEN bettype = 23102 THEN actual_stake ELSE 0 END),0)
 FROM bettrans WITH(NOLOCK)
-WHERE recommend = @custid AND ruben =0 
+WHERE recommend = @custid AND ruben = 0 
 		AND bettype NOT IN (801,802,803,804,805,806,1003) -- Exclude Metric gaming, Cockfighting from bettrans
-		AND bettype NOT BETWEEN 2101 AND 2399 -- Exclude new bettype RNG Casino
+		AND bettype NOT BETWEEN 2101 AND 2499 -- Exclude new bettype RNG Casino + Allbet
 
-SELECT  -- get outstanding for new bettype RNG Casino
+SELECT  
 		@OutStanding       = @OutStanding       + ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
 		@total_outstanding = @total_outstanding + ISNULL(SUM(ABS(actual_stake)),0)
 FROM bettransRNG WITH(NOLOCK)
 WHERE recommend = @custid AND statusID IN (0, 1)
 	AND gameID BETWEEN 2101 AND 2399
+
+SELECT  
+		@OutStanding       = @OutStanding       + ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
+		@total_outstanding = @total_outstanding + ISNULL(SUM(ABS(actual_stake)),0)
+FROM bettransLC WITH(NOLOCK)
+WHERE recommend = @custid AND statusID IN (0, 1)
+	AND gameID BETWEEN 2401 AND 2499
 			 
 SELECT @Total_memberActive = ISNULL(SUM(CASE WHEN Closed = 0 AND ISNULL(reject,0) = 0 THEN 1 ELSE 0 END), 0),
 	@Total_memberClosed = ISNULL(SUM(CASE WHEN Closed = 1 THEN 1 ELSE 0 END), 0),

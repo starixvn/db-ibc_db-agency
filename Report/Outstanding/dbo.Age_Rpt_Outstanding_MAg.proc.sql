@@ -22,6 +22,7 @@ Revisions:
 	- 20150907@Winnie: Do not check ticket running of Colosus bet at bettrans table, because of the translog [#43180]
 	- 20151214@Percy: Do not check ticket running of Cock Fighting at bettrans table, because of the translog [#48601]
 	- 20160108@Percy: Get data new bettype RNG Casino from bettransRNG [Redmine: #48283]
+	- 20160204@Percy: Get data new product AllBet from bettransLC [Redmine: #50605]
 */
 SET NOCOUNT ON
  
@@ -40,8 +41,9 @@ AS (
 	FROM	bettrans with (nolock) 
 	WHERE	ruben=0
 			AND bettype NOT BETWEEN 801 AND 899 -- Metric gaming
-			AND bettype NOT IN (1003) -- Colosus bet, Cock Fighting
+			AND bettype NOT IN (1003) -- Cock Fighting
 			AND bettype NOT BETWEEN 2101 AND 2399 -- new RNG Casino
+			AND bettype NOT BETWEEN 2401 AND 2499 -- AllBet
 			AND mrecommend =  @CustID
 	GROUP BY recommend
 
@@ -74,6 +76,22 @@ AS (
 	WHERE	statusid=0
 			AND mrecommend =  @CustID
 			AND gameID BETWEEN 2101 AND 2399
+	GROUP BY recommend
+
+	UNION ALL -- bettransLC
+	SELECT	recommend,  
+		SUM(ABS(actual_stake)) Outstanding,  
+		SUM(actual_stake * mpositiontaking) positiontaking,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0
+	FROM bettransLC with (nolock) 
+	WHERE	statusid=0
+			AND mrecommend =  @CustID
+			AND gameID BETWEEN 2401 AND 2499
 	GROUP BY recommend
 )
 SELECT	username, b.recommend as custid, 

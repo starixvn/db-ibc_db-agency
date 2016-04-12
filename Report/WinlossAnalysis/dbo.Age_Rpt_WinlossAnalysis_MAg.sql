@@ -14,6 +14,7 @@
 	@showGD			BIT = 0,
 	@showCB			BIT = 0,
 	@showCF			BIT = 0,
+	@showAB			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -40,6 +41,7 @@ AS
 	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
+	- 20160204@Percy: Support new product AllBet [Redmine: #50605]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -86,7 +88,8 @@ BEGIN
 		--Sum_winloss  
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
 		VALUES(0,0)   
-	END  
+	END
+
 	IF @ShowCasino = 1  
 	BEGIN  
 		--bettrans
@@ -113,6 +116,7 @@ BEGIN
 		INSERT INTO @TmpCondSumWL(sporttype, Bettype)  
 		VALUES(251, 71), (208, 0), (209, 0), (210, 0)  
 	END
+
 	IF @ShowRB = 1  
 	BEGIN  	
 		--bettrans
@@ -132,6 +136,7 @@ BEGIN
 		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		SELECT 151,0
 	END
+
 	IF @ShowNG = 1  
 	BEGIN  	
 		-- bettrans
@@ -146,7 +151,8 @@ BEGIN
 		-- sum_winloss
 		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		VALUES(161,0)  
-	END  
+	END
+
 	IF @ShowBI = 1  
 	BEGIN  	
 		-- bettrans
@@ -161,7 +167,8 @@ BEGIN
 		-- sum_winloss
 		INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 		VALUES(252,73) 
-	END  
+	END
+
 	IF @ShowP2P = 1
 	BEGIN
 		-- bettrans
@@ -266,6 +273,19 @@ BEGIN
 		--Sum_winloss
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(206, 1003)
+	END
+
+	IF @showAB = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	211 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 21
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(211, 0)
 	END	
 		
 	IF @ToDate >= @BalanceUpDate
