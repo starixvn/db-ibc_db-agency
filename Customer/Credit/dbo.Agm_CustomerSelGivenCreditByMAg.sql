@@ -134,7 +134,6 @@ BEGIN
 	) as c
 	WHERE RowNum between @RowStart and @RowEnd
 END
-
 GO
 GRANT EXECUTE ON [dbo].[Agm_CustomerSelGivenCreditByMAg] TO [bodbDownlineNet] AS [dbo]
 GO
