@@ -1,27 +1,26 @@
-USE custdb
-GO 
-ALTER PROCEDURE dbo.Age_CustomerSelWinlimitInfo @CustId INT
-	, @BetType SMALLINT
-	, @mrecommend INT = 0
-	, @recommend INT = 0
-	
-	, @PageSize INT = 500
-	, @PageIndex INT = 1
-	
-	, @TotalRows INT = 0 OUTPUT
+ALTER PROCEDURE	dbo.Age_CustomerSelWinlimitInfo
+					@CustId			INT
+				,	@BetType		SMALLINT
+				,	@mrecommend		INT				= 0
+				,	@recommend		INT				= 0
+				,	@username		NVARCHAR(50)	= ''
+				,	@PageSize		INT				= 500
+				,	@PageIndex		INT				= 1
+				,	@TotalRows		INT				= 0			OUTPUT
 AS
 /*
-Create: 20150715@Patrick
-Task: Member win limit of Super
-DB: DBTXN.custdb
-Original: Age_CustomerSelCreditBalanceList_SAg
-
-Revisions:
-	- 20160118@Patrick: 
-		+ inlcude ticket from bettransRnG table
-
-Param's Explanation:
-• @CustID: SAgentID
+	Create:		20150715@Patrick
+	Task:		Member win limit of Super
+	DB:			DBTXN/CustDB
+	Original:	Age_CustomerSelCreditBalanceList_SAg
+	
+	Revisions:
+		- 20160118@Patrick:	inlcude ticket from bettransRnG table
+		- 20160219@Billy:	Add filter by username - apply for AllBet - [Redmine: #52268]
+		- 20160318@Billy:	Include tickets from [bettransLC] table - [Redmine: #54306]
+	
+	Param's Explanation:
+		- @CustID: SAgentID
 */
 BEGIN
 
@@ -33,6 +32,9 @@ BEGIN
 	SELECT @PageIndex = @PageIndex - 1
 		, @RowStart = @PageSize * @PageIndex + 1
 		, @RowEnd = @RowStart + @PageSize - 1
+
+	IF	@username = ''
+		SELECT	@username = NULL
 
 	CREATE TABLE #MemberBalance (CustId INT, Balance MONEY)
 
@@ -54,6 +56,7 @@ BEGIN
 			AND c.mrecommend = @mrecommend
 			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
 			AND b.statusID NOT IN (0,1,101,102)
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
 
 		--get data from bettransRnG table within 2 days: today & yesterday
@@ -67,8 +70,23 @@ BEGIN
 			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
 			AND b.statusID NOT IN (0,1,101,102)
 			AND winlostdate >= @yesterday
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
-
+		
+		-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
+		UNION ALL
+		SELECT	ci.custid, ISNULL(SUM(blc.winlost - blc.actual_stake + blc.playercomm), 0) AS Balance
+		FROM		dbo.custInfo AS ci WITH (NOLOCK)
+		LEFT JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)
+				ON	blc.custid = ci.custid
+		WHERE	ci.srecommend = @CustId
+			AND	ci.roleid = 1
+			AND	ci.mrecommend = @mrecommend
+			AND	(@recommend = 0 OR (@recommend <> 0 AND ci.recommend = @recommend))
+			AND	blc.statusID NOT IN (0, 1, 101, 102)
+			AND	blc.winlostdate >= @yesterday
+			AND	ci.username LIKE '%' + ISNULL(@username, ci.username) + '%'
+		GROUP BY ci.custid
 	END
 	ELSE IF @RoleId = 3
 	BEGIN
@@ -82,6 +100,7 @@ BEGIN
 			AND c.srecommend = @srecommend 
 			AND c.recommend = @recommend
 			AND b.statusID NOT IN (0,1,101,102)
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
 
 		--get data from bettransRnG table within 2 days: today & yesterday
@@ -95,8 +114,23 @@ BEGIN
 			AND c.recommend = @recommend
 			AND b.statusID NOT IN (0,1,101,102)
 			AND winlostdate >= @yesterday
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
-
+		
+		-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
+		UNION ALL
+		SELECT	ci.custid, ISNULL(SUM(blc.winlost - blc.actual_stake + blc.playercomm), 0) AS Balance
+		FROM		dbo.custInfo AS ci WITH (NOLOCK)
+		LEFT JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)
+				ON	blc.custid = ci.custid
+		WHERE	ci.mrecommend = @CustId
+			AND	ci.roleid = 1
+			AND	ci.srecommend = @srecommend
+			AND	ci.recommend = @recommend
+			AND	blc.statusID NOT IN (0, 1, 101, 102)
+			AND	blc.winlostdate >= @yesterday
+			AND	ci.username LIKE '%' + ISNULL(@username, ci.username) + '%'
+		GROUP BY ci.custid
 	END
 	ELSE IF @RoleId = 2
 	BEGIN
@@ -109,6 +143,7 @@ BEGIN
 			AND roleid = 1
 			AND c.srecommend = @srecommend
 			AND b.statusID NOT IN (0,1,101,102)
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
 
 		--get data from bettransRnG table within 2 days: today & yesterday
@@ -121,8 +156,22 @@ BEGIN
 			AND c.srecommend = @srecommend
 			AND b.statusID NOT IN (0,1,101,102)
 			AND winlostdate >= @yesterday
+			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 		GROUP BY c.custid
-
+		
+		-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
+		UNION ALL
+		SELECT	ci.custid, ISNULL(SUM(blc.winlost - blc.actual_stake + blc.playercomm), 0) AS Balance
+		FROM		dbo.custInfo AS ci WITH (NOLOCK)
+		LEFT JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)
+				ON	blc.custid = ci.custid
+		WHERE	ci.recommend = @CustId
+			AND	ci.roleid = 1
+			AND	ci.srecommend = @srecommend
+			AND	blc.statusID NOT IN (0, 1, 101, 102)
+			AND	blc.winlostdate >= @yesterday
+			AND	ci.username LIKE '%' + ISNULL(@username, ci.username) + '%'
+		GROUP BY ci.custid
 	END
 	
 	--Calc total rows

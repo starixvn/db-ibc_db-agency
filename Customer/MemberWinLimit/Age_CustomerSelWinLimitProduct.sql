@@ -1,5 +1,3 @@
-USE bodb02
-GO
 ALTER PROCEDURE dbo.Age_CustomerSelWinLimitProduct @CustId INT
 AS
 /*  
@@ -7,7 +5,8 @@ AS
 	Task : Get product list
 	DB: DBAGE/bodb02
 	Revisions: 
-		- 20151223@Patrick: Add Max/Loss limit for RnG Casino [Redmine: #49528]
+		- 20151223@Patrick:	Add Max/Loss limit for RnG Casino [Redmine: #49528]
+		- 20160216@Billy:	Integrate to support DCS Products - [Redmine: #52268]
 
 	Param's Explanation: 
 */  
@@ -37,6 +36,32 @@ BEGIN
 		SELECT 2101, 208, ProductName
 		FROM dbo.Products WITH(NOLOCK) WHERE ProductID = 6
 	END
+
+	-- For DCS Product
+	INSERT INTO	@Products
+				(	BetType     , SportType     , ProductName  )
+	SELECT DISTINCT sbss.BetType, sbss.SportType, p.ProductName
+	FROM		dbo.CustProductStatus		AS cps	WITH (NOLOCK)
+	CROSS JOIN	dbo.ProductStatusProfile	AS psp	WITH (NOLOCK)
+	INNER JOIN	dbo.f_CustSetting_SportBetTypeSettingSelect(NULL, 6) AS sbss
+			ON	sbss.SportType = psp.Sporttype
+			AND	sbss.BetType = psp.Bettype
+	INNER JOIN	dbo.Products				AS p	WITH (NOLOCK)
+			ON	p.ProductID = sbss.ProductID
+	CROSS APPLY	(
+		SELECT	dbo.f_GetProductStatus(cps.bitmapHasSynced, psp.bitmapOrder)
+			,	dbo.f_GetProductStatus(cps.bitmapIsHidden, psp.bitmapOrder)
+	) ps(isSynced, isHidden)
+	WHERE	cps.CustID = @CustId
+		AND	ps.isSynced = 1
+		AND	ps.isHidden = 0
+
+	DELETE	p
+	FROM		@Products AS p
+	INNER JOIN	dbo.f_CustSetting_SportBetTypeHiddenBySiteCurrency(@CustId, NULL) AS sbhsc
+			ON	sbhsc.SportType = p.SportType
+			AND	sbhsc.BetType = p.BetType
+	WHERE	sbhsc.IsHidden = 1
 
 	SELECT BetType, SportType, ProductName
 	FROM @Products
