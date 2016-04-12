@@ -22,6 +22,7 @@ AS
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151203@Kos: Change odds, modds data type from SMALLMONEY to MONEY [Redmine: #48660]
 		- 20160111@Kos: Add @TransStatus to support RNG Casino Single Wallet [Redmine: #48958]
+		- 20162017@Kos: Add WhTicket = 5 to support AllBet [Redmine: #50864]
 
 	Param's Explanation:
 		- @tempCust  AS TABLE
@@ -41,25 +42,25 @@ BEGIN
 	-- CREATE output main info ticket
 	CREATE TABLE #MemBetTicket
 	(
-		TransId 			BIGINT
-		, RefNo 			BIGINT
-		, custid 			INT
-		, Username 			NVARCHAR(30)
-		, Sporttype 		SMALLINT
+		TransId				BIGINT
+		, RefNo				BIGINT
+		, custid			INT
+		, Username			NVARCHAR(30)
+		, Sporttype			SMALLINT
 		, Bettype 			SMALLINT
-		, BetId 			BIGINT
-		, Betteam 			NVARCHAR(20)
-		, hdp1 				SMALLMONEY
-		, hdp2 				SMALLMONEY 
-		, OddsType 			TINYINT
+		, BetId				BIGINT
+		, Betteam			NVARCHAR(20)
+		, hdp1				SMALLMONEY
+		, hdp2				SMALLMONEY
+		, OddsType			TINYINT
 		, oddsid			INT
-		, Odds 				MONEY 
-		, modds 			MONEY
-		, Stake 			MONEY
+		, Odds				MONEY 
+		, modds				MONEY
+		, Stake				MONEY
 		, actual_stake		MONEY
-		, Status 			NVARCHAR(10)
-		, transdate 		DATETIME
-		, winlostdate 		DATETIME
+		, Status			NVARCHAR(10)
+		, transdate			DATETIME
+		, winlostdate		DATETIME
 		, winlost			MONEY
 		, awinlost			MONEY
 		, mwinlost			MONEY
@@ -75,27 +76,27 @@ BEGIN
 		, adiscount			SMALLMONEY
 		, mdiscount			SMALLMONEY
 		, sdiscount			SMALLMONEY
-		, liveindicator 	BIT
-		, livehomescore 	SMALLINT
-		, liveawayscore 	SMALLINT
-		, finalhomescore 	SMALLINT
-		, finalawayscore 	SMALLINT 
-		, hthomescore 		SMALLINT
-		, htawayscore 		SMALLINT 
-		, IP 				NVARCHAR(15)
-		, LeagueId 			INT
-		, MatchId 			INT
-		, MatchCode 		NVARCHAR(50)
-		, Race 				NVARCHAR(20)
-		, eventdate 		DATETIME
-		, HomeId 			INT
-		, AwayId 			INT 	
-		, Betstatus 		NVARCHAR(50)
-		, isNeutral 		BIT
-		, Placing 			NVARCHAR(20)
-		, showtime 			NVARCHAR(50)
-		, betcheck 			NVARCHAR(50)
-		, comstatus 		NVARCHAR(20)
+		, liveindicator		BIT
+		, livehomescore		SMALLINT
+		, liveawayscore		SMALLINT
+		, finalhomescore	SMALLINT
+		, finalawayscore	SMALLINT
+		, hthomescore		SMALLINT
+		, htawayscore		SMALLINT
+		, IP				NVARCHAR(15)
+		, LeagueId			INT
+		, MatchId			INT
+		, MatchCode			NVARCHAR(50)
+		, Race				NVARCHAR(20)
+		, eventdate			DATETIME
+		, HomeId			INT
+		, AwayId			INT
+		, Betstatus			NVARCHAR(50)
+		, isNeutral			BIT
+		, Placing			NVARCHAR(20)
+		, showtime			NVARCHAR(50)
+		, betcheck			NVARCHAR(50)
+		, comstatus			NVARCHAR(20)
 		, transdesc			NVARCHAR(300)
 		, OddsSpread		SMALLMONEY
 	);
@@ -107,8 +108,8 @@ BEGIN
 		EXEC [dbo].[Age_CoreBetList_BetTicket_SelTranslog] @tempCust = @tempCust, @TransStatus = @TransStatus
 	END
 
-	-- CHECK for selecting from bettrans
-	IF EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket IN (1, 4))
+	-- CHECK for selecting from bettrans, bettransRnG, bettransLC
+	IF EXISTS (SELECT TOP 1 1 FROM @tempCust WHERE WhTicket IN (1, 4, 5))
 	BEGIN
 		INSERT INTO #MemBetTicket
 		EXEC [dbo].[Age_CoreBetList_BetTicket_SelBettrans] @tempCust = @tempCust, @TransStatus = @TransStatus
@@ -144,7 +145,7 @@ BEGIN
 	FROM #MemBetTicket t
 	ORDER BY t.transid DESC
 
-	-- 	OUTPUT ticket in detail
+	-- OUTPUT ticket in detail
 	EXEC [dbo].[Age_CoreBetList_BetTicket_SelDetail] @tempCust = @tempCust
 
 	RETURN;
