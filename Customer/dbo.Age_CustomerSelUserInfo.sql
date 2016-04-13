@@ -25,6 +25,7 @@ Revisions:
 	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
 	- 20160114@Helen: Cricket - [Redmine: #50027]
 	- 20160127@Billy: Member information for AllBet - [Redmine: #51698]
+	- 20160413@Winnie: VoidBridge - [Redmine: #55531]
 	- 20160421@Elodie: Modidy code to get info for deposit account - [Redmine: #56438]
 
 Param's Explanation:
