@@ -44,6 +44,7 @@ Revisions:
 	- 20151209@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48604]
 	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
 	- 20160219@Percy: support AllBet [Redmine: #52553]
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 SET NOCOUNT ON
 
@@ -99,11 +100,11 @@ SELECT
 FROM bettrans WITH (NOLOCK, index=bettrans16)  
 WHERE mrecommend=@CustID 
 	AND(
-			(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben = 0)
+			(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben = 0)
 			OR ruben <> 0
 		)
 	AND(
-			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 			OR CONVERT(DATE, winlostdate) < @yesterday
 	   )
 
@@ -117,7 +118,7 @@ SELECT
 			
 FROM bettransRNG WITH (NOLOCK)  
 WHERE mrecommend=@CustID 
-	AND gameID BETWEEN 2101 AND 2399
+	AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 
 SELECT 
 	@CashBalance         = @CashBalance       + ISNULL(sum(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),0),  	
@@ -141,7 +142,7 @@ FROM
 		FROM bettrans WITH (NOLOCK)  
 		WHERE mrecommend=@CustID
 			AND ruben = 1
-			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499
+			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
 			AND CONVERT(DATE, winlostdate) = @today
 	 )today_balance 
 
@@ -154,7 +155,7 @@ FROM
 			ISNULL(sum(mwinlost + acomm + awinlost + winlost-actual_stake),0) totalBalance
 		FROM bettransRNG WITH (NOLOCK)  
 		WHERE mrecommend=@CustID
-			AND gameID BETWEEN 2101 AND 2399
+			AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			AND CONVERT(DATE, winlostdate) = @today
 			AND statusID NOT IN (0, 1)
 	 )today_balanceRNG

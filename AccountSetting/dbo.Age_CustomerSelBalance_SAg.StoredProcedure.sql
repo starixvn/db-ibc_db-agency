@@ -49,6 +49,7 @@ Revisions:
 	- 20151209@Percy: exclude Cockfighting running ticket from bettrans [Redmine: #48604]
 	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
 	- 20160219@Percy: support AllBet [Redmine: #52553]
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 SET NOCOUNT ON
 
@@ -109,11 +110,11 @@ SELECT
 FROM bettrans WITH (NOLOCK)  
 WHERE srecommend= @CustID 
 	AND(
-			(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben = 0)
+			(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben = 0)
 			OR ruben <> 0
 		)
 	AND(
-			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 			OR CONVERT(DATE, winlostdate) < @yesterday
 	   )
 
@@ -127,7 +128,7 @@ SELECT
 													+ ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday AND custid <> recommend and custid <> mrecommend and custid <> srecommend and statusID NOT IN (0, 1) then winlost-actual_stake+playercomm else 0 end),0)		
 FROM bettransRNG WITH (NOLOCK)  
 WHERE srecommend= @CustID 
-	AND gameID BETWEEN 2101 AND 2399
+	AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 
 SELECT 
 	@CashBalance         = @CashBalance         + ISNULL(sum(case when CONVERT(DATE, winlostdate) >= @yesterday THEN CASE WHEN custid= srecommend then winlost-actual_stake else swinlost+scomm-acomm end ELSE 0 END),0),  	
@@ -151,7 +152,7 @@ FROM
 		FROM bettrans WITH (NOLOCK)  
 		WHERE srecommend= @CustID
 			AND ruben = 1
-			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499
+			AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
 			AND CONVERT(DATE, winlostdate) = @today
 	 )today_balance
 
@@ -164,7 +165,7 @@ FROM
 			ISNULL(sum(swinlost+scomm + mwinlost + awinlost + winlost-actual_stake),0) totalBalance
 		FROM bettransRNG WITH (NOLOCK)  
 		WHERE srecommend= @CustID
-			AND gameID BETWEEN 2101 AND 2399
+			AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			AND CONVERT(DATE, winlostdate) = @today
 			AND statusID NOT IN (0, 1)
 	 )today_balanceRNG
