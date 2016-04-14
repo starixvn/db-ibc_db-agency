@@ -15,6 +15,7 @@
 	@showCB			BIT = 0,
 	@showCF			BIT = 0,
 	@showAB			BIT = 0,
+	@showVB			BIT = 0,
 	@BalanceUpDate	DATETIME
 AS	
 /*
@@ -37,6 +38,7 @@ AS
 		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
 		- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
 		- 20160204@Percy: Support new product AllBet [Redmine: #50605]
+		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 
 	Parameters Explanation:
 */
@@ -55,9 +57,12 @@ SET NOCOUNT ON
 	DECLARE @Srecommend int, @mrecommend int  
 	SELECT @Srecommend =  Srecommend, @Mrecommend =  Mrecommend FROM custInfo WITH (NOLOCK) WHERE custID = @agentID 
   
-	DECLARE @SportBettype TABLE(ProductID INT,  Bettype INT, EventType INT)	
-	INSERT INTO @SportBettype
-	EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+	DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
+	INSERT INTO @SportBettype (ProductID, Bettype)
+	SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
 	IF @ShowSB = 1  
 	BEGIN  
@@ -273,9 +278,30 @@ SET NOCOUNT ON
 		--Sum_winloss
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(211, 0)
-	END	
+	END
+
+	IF @showVB = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	212 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 22
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(212, 0)
+	END
+
+	--Avoid Parameter Sniffing for bettrans and sum_winloss
+	DECLARE @FDate			SMALLDATETIME
+			,@TDate			SMALLDATETIME
+			,@BUDate		SMALLDATETIME
+			,@CID			INT
+	    
+	SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDate, @CID = @AgentID
 	
-	IF @ToDate >= @BalanceUpDate
+	IF @TDate >= @BUDate
 	BEGIN
 		INSERT INTO @AgencyWinloss
 		SELECT winlostdate
@@ -283,14 +309,14 @@ SET NOCOUNT ON
 			,SUM(awinlost + comm - playercomm) winlost			
 		FROM bettrans b WITH(NOLOCK) 
 			INNER JOIN @TmpCond t ON b.bettype = t.bettype
-		WHERE winlostdate BETWEEN @FromDate AND @ToDate
-			AND recommend = @AgentID 
+		WHERE winlostdate BETWEEN @FDate AND @TDate
+			AND recommend = @CID 
 			AND StatusID NOT IN (0,1,101,102,103)			
 		GROUP BY winlostdate
 		
 		-- get data from sum_winloss
-		IF @BalanceUpDate < @FromDate --if this case occurs then there is no data from sum_winloss_old
-			SELECT @BalanceUpDate=@FromDate
+		IF @BUDate < @FDate --if this case occurs then there is no data from sum_winloss_old
+			SELECT @BUDate=@FDate
 		
 		INSERT INTO @AgencyWinloss
 		SELECT winlostdate
@@ -298,8 +324,8 @@ SET NOCOUNT ON
 			,awinlost + comm - playercomm
 		FROM sum_winloss b WITH(NOLOCK) 
 			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
-		WHERE winlostdate BETWEEN @BalanceUpDate AND @ToDate
-			AND recommend = @AgentID
+		WHERE winlostdate BETWEEN @BUDate AND @TDate
+			AND recommend = @CID
 			AND roleid = 2
 	END
 	
