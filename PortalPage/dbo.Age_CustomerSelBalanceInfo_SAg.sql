@@ -12,6 +12,7 @@ AS
 		- 20110803@Johnson: Include commission into today winloss and yesterday winloss
 		- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
 		- 20160204@Percy: Support new product AllBet [Redmine: #50605]
+		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 SET NOCOUNT ON 
 
@@ -46,7 +47,8 @@ SELECT  @today_cashBalance  = ISNULL(SUM(swinlost + scomm - acomm),0),
 FROM bettrans WITH(NOLOCK)
 WHERE srecommend = @custid 
 	AND ruben = 1
-	AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499 -- RNG Casino, AllBet
+	AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499
+	AND bettype NOT BETWEEN 4001 AND 7999
 	AND CONVERT(DATE, winlostdate) = @today
 
 SELECT  @today_cashBalance  = @today_cashBalance  + ISNULL(SUM(swinlost + scomm - acomm),0),
@@ -55,7 +57,7 @@ SELECT  @today_cashBalance  = @today_cashBalance  + ISNULL(SUM(swinlost + scomm 
 FROM bettransRNG WITH(NOLOCK)
 WHERE srecommend = @custid 
 	AND statusID NOT IN (0, 1)
-	AND gameID BETWEEN 2101 AND 2399
+	AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 	AND CONVERT(DATE, winlostdate) = @today
 
 SELECT  @today_cashBalance  = @today_cashBalance  + ISNULL(SUM(swinlost + scomm - acomm),0),
@@ -76,7 +78,7 @@ SELECT
 FROM bettrans WITH(NOLOCK) 
 WHERE srecommend = @custid
 	AND (
-			(CONVERT(DATE, winlostdate) >= @yesterday AND (bettype NOT BETWEEN 2101 AND 2499))
+			(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 			OR (CONVERT(DATE, winlostdate) < @yesterday)
 		)
 
@@ -88,7 +90,7 @@ SELECT
 					+ SUM(CASE WHEN custid <> srecommend AND custid <> mrecommend AND custid <> recommend AND statusID NOT IN (0, 1) THEN winlost - actual_stake + playercomm ELSE 0 END),0)
 FROM bettransRNG WITH(NOLOCK) 
 WHERE srecommend = @custid
-	AND gameID BETWEEN 2101 AND 2399
+	AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 	AND CONVERT(DATE, winlostdate) >= @yesterday
 
 SELECT
@@ -108,14 +110,14 @@ IF @yesterday <= @MoveBetsDay
 		FROM bettrans14 WITH(NOLOCK)
 		WHERE srecommend = @custid
 			AND ruben = 1 
-			AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499
+			AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
 			AND CONVERT(DATE, winlostdate) = @yesterday
 
 		SELECT @yesterday_Winloss = @yesterday_Winloss + ISNULL(SUM(swinlost + scomm - acomm),0)
 		FROM bettransRNG14 WITH(NOLOCK)
 		WHERE srecommend = @custid
 			AND statusID NOT IN (0, 1)
-			AND gameID BETWEEN 2101 AND 2399
+			AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			AND CONVERT(DATE, winlostdate) = @yesterday
 
 		SELECT @yesterday_Winloss = @yesterday_Winloss + ISNULL(SUM(swinlost + scomm - acomm),0)
@@ -131,14 +133,14 @@ BEGIN
 		FROM bettrans WITH(NOLOCK)
 		WHERE srecommend = @custid
 			AND ruben = 1 
-			AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499
+			AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
 			AND CONVERT(DATE, winlostdate) = @yesterday
 
 		SELECT @yesterday_Winloss = @yesterday_Winloss + ISNULL(SUM(swinlost + scomm - acomm),0)
 		FROM bettransRNG WITH(NOLOCK)
 		WHERE srecommend = @custid
 			AND statusID NOT IN (0, 1)
-			AND gameID BETWEEN 2101 AND 2399
+			AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			AND CONVERT(DATE, winlostdate) = @yesterday
 
 		SELECT @yesterday_Winloss = @yesterday_Winloss + ISNULL(SUM(swinlost + scomm - acomm),0)
