@@ -119,7 +119,7 @@ BEGIN
 	FROM bettransLC14 WITH(NOLOCK)
 	WHERE mrecommend = @custid
 		 AND statusID NOT IN (0, 1, 101, 102)
-		 AND gameID BETWEEN 2101 AND 2399
+		 AND gameID BETWEEN 2401 AND 2499
 		 AND CONVERT(DATE, winlostdate) = @yesterday
 END
 ELSE
