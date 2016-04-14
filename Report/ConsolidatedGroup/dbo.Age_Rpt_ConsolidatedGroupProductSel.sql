@@ -10,6 +10,7 @@ AS
 
 	Revisions:
 		- 20160318@Percy: Support AllBet [Redmine: #50605]
+		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	
 	Param's Explanation:
 
@@ -30,7 +31,7 @@ BEGIN
 	INSERT INTO @ProductList (ProductID, ProductName)
 	SELECT	ProductID, ProductName
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21) 
+	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22) 
 
 	UPDATE	@ProductList
 	SET		isShow = 1
@@ -104,22 +105,23 @@ BEGIN
 		INNER JOIN @TmpCustID c ON c.CustID = cps.CustID
 	GROUP BY t.ProductID
 
+	-- Check IsHidden only --
 	UPDATE	P
 	SET		isShow = 1
 	FROM	@ProductList P
 	INNER JOIN #T T
 		ON T.ProductID = P.ProductID
 	WHERE T.IsHide = 0
-		AND T.ProductID <> 21 -- AllBet
+		AND T.ProductID NOT IN (21, 22)
 
-	-- AllBet
+	-- Check IsHidden and IsSync --
 	UPDATE	P
 	SET		isShow = 1
 	FROM	@ProductList P
 	INNER JOIN #T T
 		ON T.ProductID = P.ProductID
 	WHERE T.IsHide = 0 AND T.IsSync = 1
-		AND T.ProductID = 21 -- AllBet
+		AND T.ProductID IN (21, 22)
 
 	--------------------------------------------
 	SELECT * 

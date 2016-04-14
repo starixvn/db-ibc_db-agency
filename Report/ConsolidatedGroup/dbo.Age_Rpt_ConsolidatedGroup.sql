@@ -16,6 +16,7 @@
 	@showCB			BIT = 0,
 	@showCF			BIT = 0,
 	@showAB			BIT = 0,
+	@showVB			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 WITH RECOMPILE
@@ -36,6 +37,7 @@ AS
 		- 20160108@Percy: Include new bettype range into the current RNG Casino [Redmine: #48283]
 		- 20160129@Percy: Support new sport Cricket [Redmine: #50027]
 		- 20160318@Percy: Support AllBet [Redmine: #50605]
+		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -95,10 +97,12 @@ FROM custAccount WITH (NOLOCK)
 INNER JOIN custInfo c WITH (NOLOCK) ON c.custid = custAccount.custid
 WHERE groupID = @GroupID
 
+DECLARE @isTest BIT = 0
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-DECLARE @SportBettype TABLE(ProductID INT,  Bettype INT, EventType INT)	
-INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
+INSERT INTO @SportBettype (ProductID, Bettype)
+SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
 IF @ShowSB = 1  
 BEGIN  
@@ -275,6 +279,19 @@ BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, bettype)
 	VALUES(211, 0)
+END
+
+IF @showAB = 1
+BEGIN
+	-- bettrans
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	212 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 22
+
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, bettype)
+	VALUES(212, 0)
 END
 		
 IF @tdate >= @BalanceUpDate
