@@ -180,6 +180,9 @@ BEGIN
 	VALUES(212, 0) 
 END
 
+DECLARE @isTest BIT = 0
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
 --Avoid Parameter Sniffing for bettrans and sum_winloss
 DECLARE @FDate			SMALLDATETIME
 		,@TDate			SMALLDATETIME
@@ -187,10 +190,7 @@ DECLARE @FDate			SMALLDATETIME
 	    ,@CID			INT    	    
 SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay, @CID = @custid
 
-DECLARE @isTest BIT = 0
-SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
-
-IF @Todate >= @BalanceUpDay   
+IF @TDate >= @BUDate   
 BEGIN   
      INSERT INTO @SAgWinLoss  
       SELECT  
