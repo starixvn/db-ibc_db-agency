@@ -21,6 +21,7 @@ Original:
 	- 20160201@Percy: expand new RNG Casino [Redmine: #51912]
 	- 20160202@Percy: support new sport Cricket [Redmine: #50027]
 	- 20160219@Percy: Support AllBet Live Casino [Redmine: #52553]
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 
 SET NOCOUNT ON
@@ -73,11 +74,11 @@ BEGIN
 			FROM bettrans with (NOLOCK)
 			WHERE recommend = @Recommend
 				AND (
-						(bettype NOT IN (801,802,803,804,805,806) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
+						(bettype NOT IN (801,802,803,804,805,806) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 			GROUP BY custid
@@ -88,7 +89,7 @@ BEGIN
 				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when statusID NOT IN (0, 1) then winlost - actual_stake + playercomm else 0 end else 0 end),0) AS balance
 			FROM bettransRNG with (NOLOCK)
 			WHERE recommend = @Recommend
-				AND gameID BETWEEN 2101 AND 2399
+				AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			GROUP BY custid
 			UNION ALL
 			SELECT
@@ -171,11 +172,11 @@ BEGIN
 			FROM bettrans with (NOLOCK)
 			WHERE recommend = @Recommend
 				AND (
-						(bettype NOT IN (801,802,803,804,805,806) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
+						(bettype NOT IN (801,802,803,804,805,806) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 			GROUP BY custid
@@ -186,7 +187,7 @@ BEGIN
 				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when statusID NOT IN (0, 1) then winlost - actual_stake + playercomm else 0 end else 0 end),0) AS balance
 			FROM bettransRNG with (NOLOCK)
 			WHERE recommend = @Recommend
-				AND gameID BETWEEN 2101 AND 2399
+				AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			GROUP BY custid
 			UNION ALL
 			SELECT
@@ -270,11 +271,11 @@ BEGIN
 			FROM bettrans with (NOLOCK)
 			WHERE recommend = @Recommend AND recommend <> custid
 				AND (
-						(bettype NOT IN (801,802,803,804,805,806) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
+						(bettype NOT IN (801,802,803,804,805,806) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 			GROUP BY custid
@@ -285,7 +286,7 @@ BEGIN
 				IsNull(sum(case when CONVERT(DATE, winlostdate) >= @yesterday then case when statusID NOT IN (0, 1) then winlost - actual_stake + playercomm else 0 end else 0 end),0) AS balance
 			FROM bettransRNG with (NOLOCK)
 			WHERE recommend = @Recommend AND recommend <> custid
-				AND gameID BETWEEN 2101 AND 2399
+				AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			GROUP BY custid
 			UNION ALL
 			SELECT
