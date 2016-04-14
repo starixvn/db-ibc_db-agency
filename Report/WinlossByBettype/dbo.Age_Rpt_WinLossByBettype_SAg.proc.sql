@@ -26,6 +26,7 @@ Revisions:
 	- 20140926@Sophia:  Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]
 	- 20150331@Cody: Apply sport bettype matrix	[Redmine: #30169]
 	- 20160104@Percy: Include new bettype range into RNG Casino [Redmine: #48283]
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 
 + Note: Review index=IX_srecommend when modifying this SP 
 */
@@ -48,14 +49,12 @@ DECLARE @SAgWinLoss TABLE
 DECLARE @ABSDate DATETIME
 SET @ABSDate = '2011-09-01'
 
-DECLARE @SportBettype TABLE(
-	ProductID INT
-	,Bettype INT
-	,EventType INT
-)
+DECLARE @isTest BIT = 0
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
+INSERT INTO @SportBettype (ProductID, Bettype)
+SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
 IF @Todate >= @BalanceUpDay 
 BEGIN	
@@ -95,8 +94,12 @@ BEGIN
 		AND s.ProductID = 3
 	GROUP BY b.bettype, liveindicator
 	
-	UNION ALL -- RNG Casino not group by bettype
-	SELECT 71 AS bettype
+	UNION ALL -- RNG Casino, Voidbridge not group by bettype
+	SELECT
+		CASE s.ProductID
+			WHEN 6  THEN 71
+			WHEN 22 THEN 4001
+			ELSE 0 END AS bettype
 		,0 AS liveindicator
 		,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
 		,SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver
@@ -111,8 +114,12 @@ BEGIN
 	WHERE winlostdate BETWEEN @FromDate AND @ToDate
 		AND statusID NOT IN (0, 1, 101, 102, 103)
 		AND SRecommend = @CustID
-		AND s.ProductID = 6
-	GROUP BY s.ProductID
+		AND s.ProductID IN (6, 22)
+	GROUP BY
+		CASE s.ProductID
+			WHEN 6  THEN 71
+			WHEN 22 THEN 4001
+			ELSE 0 END
 
 	UNION ALL --- Not number Game not group by liveindicator
 	SELECT 
@@ -152,7 +159,7 @@ BEGIN
 		AND SRecommend = @CustID
 		--AND b.bettype < 19001
 		--AND b.bettype NOT BETWEEN 81 AND 120
-		AND s.ProductID NOT IN (3, 6)
+		AND s.ProductID NOT IN (3, 6, 22)
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 	INSERT INTO @SAgWinLoss
@@ -190,8 +197,12 @@ BEGIN
 		AND s.ProductID = 3
 	GROUP BY b.bettype, liveindicator
 	
-	UNION ALL -- RNG Casino not group by bettype
-	SELECT 71 AS bettype
+	UNION ALL -- RNG Casino, Voidbridge not group by bettype
+	SELECT
+		CASE s.ProductID
+			WHEN 6  THEN 71
+			WHEN 22 THEN 4001
+			ELSE 0 END AS bettype
 		,0 AS liveindicator
 		,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
 		,SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver
@@ -207,8 +218,12 @@ BEGIN
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
 		AND SRecommend = @CustID
-		AND s.ProductID = 6
-	GROUP BY s.ProductID
+		AND s.ProductID IN (6, 22)
+	GROUP BY
+		CASE s.ProductID
+			WHEN 6  THEN 71
+			WHEN 22 THEN 4001
+			ELSE 0 END
 
 	UNION ALL --- Not number Game not group by liveindicator
 	SELECT 
@@ -247,7 +262,7 @@ BEGIN
 		AND SRecommend = @CustID
 		--AND b.bettype < 19001
 		--AND b.bettype NOT BETWEEN 81 AND 120
-		AND s.ProductID NOT IN (3, 6)
+		AND s.ProductID NOT IN (3, 6, 22)
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 END
 
