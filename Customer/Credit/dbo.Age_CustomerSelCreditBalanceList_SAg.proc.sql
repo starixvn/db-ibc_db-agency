@@ -33,6 +33,7 @@ Revisions:
 	- 20160322@Percy:
 		1. Change formula turnover [Redmine: #32974]
 		2. Remove @ABSDate
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -85,11 +86,11 @@ CREATE TABLE #balance
 	FROM  bettrans WITH (NOLOCK)
 	WHERE srecommend = @CustID
 		AND (
-				(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
+				(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
 				OR ruben <> 0
 			)
 		AND (
-				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 				OR CONVERT(DATE, winlostdate) < @yesterday
 			)
 	GROUP BY mrecommend
@@ -111,7 +112,7 @@ CREATE TABLE #balance
 		ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END), 0) AS turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE srecommend = @CustID
-		AND gameID BETWEEN 2101 AND 2399
+		AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 	GROUP BY mrecommend
 	UNION ALL
 	SELECT
@@ -141,13 +142,13 @@ CREATE TABLE #today_balance
 ;WITH today_balance AS (
 	SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
 	FROM   bettrans WITH (NOLOCK)
-	WHERE  srecommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499
+	WHERE  srecommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY mrecommend
 	UNION ALL
 	SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
 	FROM   bettransRNG WITH (NOLOCK)
-	WHERE  srecommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2101 AND 2399
+	WHERE  srecommend = @CustID AND statusID NOT IN (0, 1) AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY mrecommend
 	UNION ALL
