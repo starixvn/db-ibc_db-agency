@@ -15,6 +15,7 @@ AS
 	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
 	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
 	- 20160318@Percy: Support AllBet [Redmine: #50605]
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 SET NOCOUNT ON
 
@@ -59,6 +60,7 @@ FROM bettrans WITH(NOLOCK)
 WHERE srecommend = @custid AND ruben =0
 	AND bettrans.bettype NOT IN (801,802,803,804,805,806,1003) -- Exlude Metric gaming, Cock Fighting from bettrans
 	AND bettype NOT BETWEEN 2101 AND 2499 -- Exclude new bettype RNG Casino + Allbet
+	AND bettype NOT BETWEEN 4001 AND 7999 -- Voidbridge
 
 SELECT 
 		@Outstanding          = @Outstanding          + ISNULL(SUM(spositiontaking * ABS(actual_stake)),0),
@@ -66,7 +68,7 @@ SELECT
 FROM bettransRNG WITH(NOLOCK)
 WHERE srecommend = @custid
 	AND statusID IN (0, 1)
-	AND gameID BETWEEN 2101 AND 2399
+	AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 
 SELECT 
 		@Outstanding          = @Outstanding          + ISNULL(SUM(spositiontaking * ABS(actual_stake)),0),
