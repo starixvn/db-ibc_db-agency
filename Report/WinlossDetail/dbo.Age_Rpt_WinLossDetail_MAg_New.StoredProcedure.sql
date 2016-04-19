@@ -339,7 +339,7 @@ BEGIN
 		       ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) - SUM(comm), --MAgTotal
 		       -(ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost), 0)),--Company
 		       SUM(betcount) --NoOfTicket
-	      FROM DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t
+	      FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t
 	        ON b.sporttype = t.sporttype
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1

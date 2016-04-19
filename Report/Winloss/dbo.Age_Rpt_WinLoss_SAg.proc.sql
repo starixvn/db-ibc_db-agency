@@ -256,7 +256,7 @@ BEGIN
 		,ISNULL(SUM(swinlost), 0) + ISNULL(SUM(scomm), 0) - SUM(acomm)
 		,-(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost), 0))     
      FROM   
-		DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
+		bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
 		INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
      WHERE  
 		Winlostdate BETWEEN @FromDate AND @ToDate  
