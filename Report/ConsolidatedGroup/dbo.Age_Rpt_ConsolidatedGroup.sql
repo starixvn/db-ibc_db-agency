@@ -281,7 +281,7 @@ BEGIN
 	VALUES(211, 0)
 END
 
-IF @showAB = 1
+IF @showVB = 1
 BEGIN
 	-- bettrans
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
