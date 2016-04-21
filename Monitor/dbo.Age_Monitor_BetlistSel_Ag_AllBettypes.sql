@@ -1,5 +1,13 @@
 ﻿USE [bodb02]
 GO
+/****** Object:  StoredProcedure [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]    Script Date: 04/21/2016 04:37:07 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+/****** Object:  Stored Procedure dbo.Age_Monitor_BetlistSel_Ag_AllBettypes    Script Date: 3/10/2016 11:14:13 PM ******/
+/****** Object:  Stored Procedure dbo.Age_Monitor_BetlistSel_Ag_AllBettypes    Script Date: 3/9/2016 10:34:23 ******/
+
 ALTER PROCEDURE [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes]
 	@custid			INT,
 	@transid		BIGINT	= 0,
@@ -89,7 +97,7 @@ BEGIN
 		ISNULL(b.oddsspread, 0) AS OddsSpread
 	FROM dbo.bettrans AS b WITH (NOLOCK)
 		--INNER JOIN @SportBettype AS s ON b.bettype = s.BetType
-		INNER JOIN dbo.f_SportBettypeMatrix_Sel_Mode4_UAT4(1, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
+		INNER JOIN dbo.f_SportBettypeMatrix_Sel_Mode4(1, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
 	WHERE b.recommend = @custid 
 		AND b.transid > @transid
 		AND b.statusID BETWEEN 0 AND 1
@@ -97,6 +105,7 @@ BEGIN
 	ORDER BY b.transid DESC
 
 END
+
 
 GO
 GRANT EXECUTE ON [dbo].[Age_Monitor_BetlistSel_Ag_AllBettypes] TO [bodbDownlineNet] AS [dbo]
