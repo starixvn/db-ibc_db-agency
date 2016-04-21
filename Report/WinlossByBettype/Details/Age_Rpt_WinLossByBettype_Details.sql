@@ -148,6 +148,10 @@ BEGIN
 		END
 		ELSE IF @RoleID = 4
 		BEGIN
+			DECLARE @recommend TABLE (recommend INT)
+			INSERT INTO @recommend (recommend)
+			SELECT custID FROM custInfo (NOLOCK) WHERE srecommend = @CustID AND roleID = 2
+
 			INSERT INTO @WinLoss
 			(	bettype, TurnOver,
 				MasterTotal,
@@ -182,10 +186,11 @@ BEGIN
 			FROM
 				dbo.bettrans14 b WITH(NOLOCK)
 				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN @recommend r ON b.recommend = r.recommend
 			WHERE
 				winlostdate BETWEEN @FromDate AND @ToDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)
-				AND SRecommend = @CustID
+				--AND SRecommend = @CustID
 			GROUP BY b.bettype
 		END
 	END

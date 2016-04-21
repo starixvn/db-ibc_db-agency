@@ -56,6 +56,10 @@ DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
 INSERT INTO @SportBettype (ProductID, Bettype)
 SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
+DECLARE @recommend TABLE (recommend INT)
+INSERT INTO @recommend (recommend)
+SELECT custID FROM custInfo (NOLOCK) WHERE srecommend = @CustID AND roleID = 2
+
 IF @Todate >= @BalanceUpDay 
 BEGIN	
 	INSERT INTO @SAgWinLoss
@@ -186,12 +190,13 @@ BEGIN
 		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans14 b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
+		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FromDate AND @ToDate
 				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
-		AND SRecommend = @CustID
+		--AND SRecommend = @CustID
 		--AND bettype < 19001
 		--AND bettype BETWEEN 81 AND 120
 		AND s.ProductID = 3
@@ -214,10 +219,11 @@ BEGIN
 		,COUNT(transid) AS NoOfTicket
 	FROM dbo.bettrans14 b WITH (NOLOCK)
 		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
+		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE winlostdate BETWEEN @FromDate AND @ToDate
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
-		AND SRecommend = @CustID
+		--AND SRecommend = @CustID
 		AND s.ProductID IN (6, 22)
 	GROUP BY
 		CASE s.ProductID
@@ -254,12 +260,13 @@ BEGIN
 	FROM dbo.bettrans14 b WITH (NOLOCK)
 		LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 		INNER JOIN @SportBettype s ON(b.bettype = s.bettype)
+		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FromDate AND @ToDate
 				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
-		AND SRecommend = @CustID
+		--AND SRecommend = @CustID
 		--AND b.bettype < 19001
 		--AND b.bettype NOT BETWEEN 81 AND 120
 		AND s.ProductID NOT IN (3, 6, 22)
