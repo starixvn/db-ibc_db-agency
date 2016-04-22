@@ -109,20 +109,28 @@ CREATE TABLE #balance
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END),0) turnover
+		,ISNULL(SUM(ABS(stake)),0) turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+		AND (
+				statusID IN (0, 1)
+				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
+			)
 	GROUP BY custid
 
 	UNION ALL
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END),0) turnover
+		,ISNULL(SUM(ABS(stake)),0) turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2401 AND 2499
+		AND (
+				statusID IN (0, 1)
+				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
+			)
 	GROUP BY custid
 )
 INSERT INTO #balance
