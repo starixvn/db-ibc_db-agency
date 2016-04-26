@@ -7,7 +7,7 @@ Created: 20090211@nqminh
 Updated: 20090227@Shifu
 	-- get more customer information from custinfo
 Task : Select customer information
-DB: DBCUST.CustDB
+DB: DBCUST/CustDB
 Original:
 
 Revisions:
@@ -25,9 +25,10 @@ Revisions:
 	- 20151209@Helen: Member information for Cockfighting [Redmine: #48133]
 	- 20160114@Helen: Cricket - [Redmine: #50027]
 	- 20160127@Billy: Member information for AllBet - [Redmine: #51698]
+	- 20160421@Elodie: Modidy code to get info for deposit account - [Redmine: #56438]
 
 Param's Explanation:
-• @custid: custid that need to be viewed.   
+â€¢ @custid: custid that need to be viewed.   
 */
 
 	SET NOCOUNT ON
@@ -204,7 +205,7 @@ Param's Explanation:
 		OUTER APPLY	dbo.f_CustSetting_SportBetTypeHiddenBySiteCurrency(Customer.custid, @AllBet) AS sbhsc
 		
 		-- Upline Status
-		INNER JOIN	dbo.CustProductStatus AS cpsUpline WITH (NOLOCK)
+		LEFT JOIN	dbo.CustProductStatus AS cpsUpline WITH (NOLOCK)
 				ON	cpsUpline.CustID =	CASE	WHEN Customer.roleid = 1 THEN Customer.recommend
 												WHEN Customer.roleid = 2 THEN Customer.mrecommend
 												ELSE Customer.srecommend
@@ -212,9 +213,8 @@ Param's Explanation:
 		    
 		 
 	 WHERE Customer.custid = @custid
-
-	
 END
+
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelUserInfo] TO [bodbAdminNet]
 GO
