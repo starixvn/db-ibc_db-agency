@@ -20,6 +20,7 @@ AS
 	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738
 	- 20150828@Winnie: Myanmar odds
 	- 20151126@Percy: Add Correct Score into the Live Ball Section [RedmineID: #48050]
+	- 20160509@Percy: Re-calculate 1H Correct Score [RedmineID: #48785]
 					
  Parameter
 	EvenType : 0 DeadBall 1 LiveBall
@@ -163,15 +164,15 @@ BEGIN
 	UNION ALL
 	SELECT 4 typeid
 		,0 EvenType
-		,'4,30' [1stId]
-		,'4,30' [InfoId]
+		,'4,30,413,414' [1stId]
+		,'4,30,413,414' [InfoId]
 		,4000 OrderID
 	UNION ALL
 	
 	SELECT 4 typeid
 		,1 EvenType
-		,'4,30' [1stId]
-		,'4,30' [InfoId]
+		,'4,30,413,414' [1stId]
+		,'4,30,413,414' [InfoId]
 		,4000 OrderID
 	UNION ALL
 	
