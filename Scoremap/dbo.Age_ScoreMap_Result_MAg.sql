@@ -123,8 +123,8 @@ BEGIN
 						WHEN ((home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd)) AND bt IN (4) THEN 1
 						WHEN ((home >= 4 AND hc = 4 AND home - away >= hc ) OR (away >= 4 AND hd = 4 AND away - home >= hd)) AND bt IN (30) THEN 1
 						--- AOS choice ---
-						WHEN betteam  = 'AOS' AND (home >= 4 OR away >= 4) AND bt IN (413) THEN 1
-						WHEN betteam  = 'AOS' AND (home >= 3 OR away >= 3) AND bt IN (414) THEN 1
+						WHEN betteam  = 'AOS' AND (home >= 5 OR away >= 5) AND bt IN (413) THEN 1
+						WHEN betteam  = 'AOS' AND (home >= 4 OR away >= 4) AND bt IN (414) THEN 1
 
 						WHEN home>away AND betteam = '1' AND bt IN (5, 15,167) THEN 1	--Radar
 						WHEN away>home AND betteam = '2' AND bt IN (5, 15,167) THEN 1	--Radar
