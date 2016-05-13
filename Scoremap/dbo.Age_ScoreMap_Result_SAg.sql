@@ -31,6 +31,7 @@ AS
 		- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
 		- 20150903@Winnie: Myanmar Odds
 		- 20151127@Percy: Add AOS choice for Correct Score [RedmineID: #48050]
+		- 20160509@Percy: Re-calculate 1H Correct Score [RedmineID: #48785]
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -46,7 +47,7 @@ BEGIN
 	DECLARE @tblBetTypeHT_FT TABLE(BetType INT,isHT BIT)
 
 	INSERT INTO @tblBetTypeHT_FT(BetType,isHT)
-	SELECT val AS BetType,1 AS isHT  FROM strSplit('7,303, 8,304, 12, 15, 21,30, 126, 136, 138, 167, 179, 181, 182, 188, 191',',') 
+	SELECT val AS BetType,1 AS isHT  FROM strSplit('7, 303, 8, 304, 12, 15, 21,30, 126, 136, 138, 167, 179, 181, 182, 188, 191, 414',',') 
 
 	-- get scores template
 	INSERT INTO @tmpScores (home, away) SELECT home, away FROM scores WITH(NOLOCK) WHERE (home BETWEEN @homeBeginScore AND @homeEndScore) AND (away BETWEEN @awayBeginScore AND @awayEndScore )	
@@ -79,7 +80,8 @@ BEGIN
 					+/*once bt = 1,3,7,8 will calculate equation above ,the other way will calculate below*/
 						ISNULL(-SUM(CASE
 							WHEN r=0 AND bt IN (2,4,5,6,12,13,15,24,26,27,28,30,123,126,151,145,146,131,132,136,137,138,139
-												,157,167,170,188,159,161,162,165,166,179,181,182 --Bet Radar
+												,157,167,170,188,159,161,162,179,181,182 --Bet Radar
+												,413,414 -- AOS choice
 												)THEN 1--Dom
 							WHEN r = 0 AND bt IN (20,21,25,191) AND home <> away THEN 1		--Bet Radar
 							WHEN r = 0 AND bt = 121 THEN CASE WHEN home > away THEN 0 ELSE 1 END
@@ -88,7 +90,8 @@ BEGIN
 						END * risk) 
 						+SUM(CASE
 							WHEN r=1 AND bt IN (2,4,5,6,12,13,15,20,21,24,25,26,27,28,30,121,122,123,126,151,145,146,131,132,136,137,138,139
-												,157,167,170,188,159,161,162,165,166,179,181,182,191--Bet Radar
+												,157,167,170,188,159,161,162,179,181,182,191--Bet Radar
+												,413,414 -- AOS choice
 												)THEN 1 --Dom
 							ELSE 0
 						END * risk * trueodds)
@@ -113,9 +116,16 @@ BEGIN
 						WHEN betteam <> 'h' AND bt IN (2,12,136,137,138,139,157) THEN 1-( (home+away)&1) --Dom & Radar
 						WHEN betteam  = 'h' AND bt IN (3,8,302,304) THEN (home+away) - hc 
 						WHEN betteam <> 'h' AND bt IN (3,8,302,304) THEN hc - (home+away)
-						WHEN betteam  <> 'AOS' AND home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,30,165,166) THEN 1  
-						WHEN betteam  <> 'AOS' AND ((home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd)) AND bt IN (4,30,165,166) THEN 1 
-						WHEN betteam  = 'AOS' AND (home >= 5 OR away >= 5) AND bt IN (4,30,165,166) THEN 1 -- Percy: AOS choice
+						--- Correct Score 0:0 --> 5:5 (4,413) and 0:0 --> 4:4 (30,414) ---
+						WHEN betteam <> 'AOS' AND home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,413) THEN 1
+						WHEN betteam <> 'AOS' AND home < 4 AND away < 4 AND hc=home AND hd=away AND bt IN (30,414) THEN 1
+						--- 5:0UP, 0:5UP (4) and 4:0UP, 0:4UP (30) ---
+						WHEN ((home >= 5 AND hc = 5 AND home - away >= hc ) OR (away >= 5 AND hd = 5 AND away - home >= hd)) AND bt IN (4) THEN 1
+						WHEN ((home >= 4 AND hc = 4 AND home - away >= hc ) OR (away >= 4 AND hd = 4 AND away - home >= hd)) AND bt IN (30) THEN 1
+						--- AOS choice ---
+						WHEN betteam  = 'AOS' AND (home >= 5 OR away >= 5) AND bt IN (413) THEN 1
+						WHEN betteam  = 'AOS' AND (home >= 4 OR away >= 4) AND bt IN (414) THEN 1
+
 						WHEN home>away AND betteam = '1' AND bt IN (5,15,167) THEN 1 	--Radar
 						WHEN away>home AND betteam = '2' AND bt IN (5,15,167) THEN 1	--Radar
 						WHEN home=away AND betteam = 'x' AND bt IN (5,15,167) THEN 1 	--Radar
@@ -228,8 +238,7 @@ BEGIN
 							hdp2,
 							bettype bt
 						FROM @tmpBettrans b
-						WHERE bettype IN (4,30)
-						--WHERE bettype IN (4,30,165,166)
+						WHERE bettype IN (4,30,413,414)
 						GROUP BY betteam, bettype, hdp1,hdp2, matchid
 					UNION ALL
 						SELECT	matchid , betteam,

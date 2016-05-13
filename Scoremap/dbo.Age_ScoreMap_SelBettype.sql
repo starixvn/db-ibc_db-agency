@@ -6,23 +6,23 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
- ALTER PROCEDURE [dbo].[Age_ScoreMap_SelBettype]  
+ALTER PROCEDURE [dbo].[Age_ScoreMap_SelBettype]  
     
 AS  
 /*  
- Task: Get bet types for Score Map function  
- Date: 20110919@Johnson  
- DB: DB053.bodb02   
- Revisions:  
-	- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
-    - 20140417@Dom: Add new bettype 126
-	- 20140807@Dom: Include 11 new bettypes of Soccer [feature: #19632]
-	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738
-	- 20150828@Winnie: Myanmar odds
-	- 20151126@Percy: Add Correct Score into the Live Ball Section [RedmineID: #48050]
-					
- Parameter
-	EvenType : 0 DeadBall 1 LiveBall
+	Task: Get bet types for Score Map function  
+	Date: 20110919@Johnson  
+	DB: DB053.bodb02   
+	Revisions:  
+		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
+		- 20140417@Dom: Add new bettype 126
+		- 20140807@Dom: Include 11 new bettypes of Soccer [feature: #19632]
+		- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738
+		- 20150828@Winnie: Myanmar odds
+		- 20151126@Percy: Add Correct Score into the Live Ball Section [RedmineID: #48050]
+		- 20160509@Percy: Add 2 bettype Correct Score (AOS) [RedmineID: #48785]				
+	Parameter's Explanations:
+		EvenType : 0 DeadBall 1 LiveBall
 */  
 BEGIN
 	SET NOCOUNT ON
@@ -163,15 +163,15 @@ BEGIN
 	UNION ALL
 	SELECT 4 typeid
 		,0 EvenType
-		,'4,30' [1stId]
-		,'4,30' [InfoId]
+		,'4,30,413,414' [1stId]
+		,'4,30,413,414' [InfoId]
 		,4000 OrderID
 	UNION ALL
 	
 	SELECT 4 typeid
 		,1 EvenType
-		,'4,30' [1stId]
-		,'4,30' [InfoId]
+		,'4,30,413,414' [1stId]
+		,'4,30,413,414' [InfoId]
 		,4000 OrderID
 	UNION ALL
 	
