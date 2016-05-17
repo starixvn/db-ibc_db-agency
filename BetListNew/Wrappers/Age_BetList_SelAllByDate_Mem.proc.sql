@@ -27,6 +27,7 @@ ALTER PROCEDURE [dbo].[Age_BetList_SelAllByDate_Mem]
 	, @ShowCB			BIT = 0
 	, @ShowCF			BIT = 0
 	, @ShowAB			BIT = 0
+	, @ShowVB			BIT = 0
 	, @Error			INT				= 0
 	, @ErrorMsg			NVARCHAR(250)	= NULL
 AS
@@ -93,12 +94,13 @@ AS
 		- 20150910@Bobby: Enhance performance for SP core. Apply TVP for input parameters
 		- 20151214@Kos: Support Cockfighting [#Redmine: 48850]
 		- 20160215@Kos: Support AllBet [#Redmine: 50864]
+		- 20160401@Kos: Support Voidbridge [#Redmine: 54643]
 */
 
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE	 @TransStatus	[dbo].[TVP_BetTicketStatus]
+	DECLARE @TransStatus	[dbo].[TVP_BetTicketStatus]
 		, @BettypeMatrix	[dbo].[TVP_SportBettypeMatrix]
 
 	-- Gather Ticket status
@@ -161,6 +163,8 @@ BEGIN
 		INSERT INTO @ProductFilter VALUES (19)
 	IF @ShowAB = 1
 		INSERT INTO @ProductFilter VALUES (21)
+	IF @ShowVB = 1
+		INSERT INTO @ProductFilter VALUES (22)
 
 	-- DELETE bettypes 
 	DELETE bt
@@ -243,7 +247,6 @@ BEGIN
 
 	RETURN;
 END
-
 
 
 GO
