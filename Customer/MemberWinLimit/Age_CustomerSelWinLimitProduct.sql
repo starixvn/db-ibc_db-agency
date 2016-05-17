@@ -7,6 +7,7 @@ AS
 	Revisions: 
 		- 20151223@Patrick:	Add Max/Loss limit for RnG Casino [Redmine: #49528]
 		- 20160216@Billy:	Integrate to support DCS Products - [Redmine: #52268]
+		- 20160413@Billy:	Remove Site Currency check - [Redmine: #54672]
 
 	Param's Explanation: 
 */  
@@ -56,12 +57,12 @@ BEGIN
 		AND	ps.isSynced = 1
 		AND	ps.isHidden = 0
 
-	DELETE	p
-	FROM		@Products AS p
-	INNER JOIN	dbo.f_CustSetting_SportBetTypeHiddenBySiteCurrency(@CustId, NULL) AS sbhsc
-			ON	sbhsc.SportType = p.SportType
-			AND	sbhsc.BetType = p.BetType
-	WHERE	sbhsc.IsHidden = 1
+	--DELETE	p
+	--FROM		@Products AS p
+	--INNER JOIN	dbo.f_CustSetting_SportBetTypeHiddenBySiteCurrency(@CustId, NULL) AS sbhsc
+	--		ON	sbhsc.SportType = p.SportType
+	--		AND	sbhsc.BetType = p.BetType
+	--WHERE	sbhsc.IsHidden = 1
 
 	SELECT BetType, SportType, ProductName
 	FROM @Products
