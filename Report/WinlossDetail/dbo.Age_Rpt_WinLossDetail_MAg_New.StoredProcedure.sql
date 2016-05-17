@@ -15,7 +15,8 @@
 	,@showGD		 BIT = 0
 	,@showCB		 BIT = 0
 	,@showCF		 BIT = 0
-	,@showAB			BIT = 0
+	,@showAB		 BIT = 0
+	,@showVB		 BIT = 0
 	,@BalanceUpDay   SMALLDATETIME
 	,@PageSize       INT = 0
 	,@PageIndex      INT = 0
@@ -76,6 +77,7 @@ Revisions:
 	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
 	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
 	- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 
 
@@ -217,20 +219,17 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(211, 0) 
 END
-
-
-DECLARE @isTest BIT,@SQL NVARCHAR(100) = OBJECT_NAME(@@PROCID)
-
-IF  (@SQL like '%_xtest%' OR @SQL like '%_xpre%' OR @SQL like '%_UAT1%' OR @SQL like '%_UAT2%' OR @SQL like '%_UAT3%' OR @SQL like '%_UAT4%')
-BEGIN
-	SELECT @isTest = 1
-END
-ELSE
-BEGIN
-	SELECT @isTest = 0
+IF @showVB = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(212, 0) 
 END
 
---Avoid Parameter Sniffing
+DECLARE @isTest BIT
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+--Avoid Parameter Sniffing for bettrans and sum_winloss
 DECLARE @FDate			SMALLDATETIME
 		,@TDate			SMALLDATETIME
 		,@BUDate		SMALLDATETIME
@@ -263,11 +262,9 @@ BEGIN
 		       -(ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost - actual_stake), 0)),--Company
 		       COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) --No Of Ticket
 	    FROM dbo.bettrans b WITH(NOLOCK)
-				--INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
-				cross apply dbo.f_SportBettypeMatrix_Sel_Mode4(0, 0, 0, 2, '', '', @IsTest) s -- ON b.bettype = s.Bettype
+				INNER JOIN dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
 		WHERE 
 				1 = 1
-				AND b.bettype = s.Bettype
 				AND (  s.ProductID = CASE WHEN @showSB			= 1 THEN 1 ELSE 0 END
 					OR s.ProductID = CASE WHEN @ShowRB			= 1 THEN 2 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showCasino		= 1 THEN 6 ELSE 0 END
@@ -281,6 +278,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showCB			= 1 THEN 15 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showCF			= 1 THEN 19 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showAB			= 1 THEN 21 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showVB			= 1 THEN 22 ELSE 0 END
 				)
 			AND winlostdate BETWEEN @FDate AND @TDate
 			--status not in ('running','waiting','VOID', 'REJECT', 'Refund') and

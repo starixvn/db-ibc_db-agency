@@ -34,6 +34,7 @@ Revisions:
 	- 20160322@Percy:
 		1. Change formula turnover [Redmine: #32974]
 		2. Remove @ABSDate
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 
 Param's Explanation:
 
@@ -85,11 +86,11 @@ CREATE TABLE #balance
 	FROM  bettrans WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND (
-				(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND ruben =0)
+				(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
 				OR ruben <> 0
 			)
 		AND (
-				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
 				OR CONVERT(DATE, winlostdate) < @yesterday
 			)
 	GROUP BY custid
@@ -108,20 +109,28 @@ CREATE TABLE #balance
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END),0) turnover
+		,ISNULL(SUM(ABS(stake)),0) turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE recommend = @custid
-		AND gameID BETWEEN 2101 AND 2399
+		AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+		AND (
+				statusID IN (0, 1)
+				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
+			)
 	GROUP BY custid
 
 	UNION ALL
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(CASE WHEN CONVERT(DATE, winlostdate) >= @yesterday THEN ABS(stake) ELSE 0 END),0) turnover
+		,ISNULL(SUM(ABS(stake)),0) turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE recommend = @custid
 		AND gameID BETWEEN 2401 AND 2499
+		AND (
+				statusID IN (0, 1)
+				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
+			)
 	GROUP BY custid
 )
 INSERT INTO #balance
@@ -141,13 +150,13 @@ CREATE TABLE #today_balance
 ;WITH today_balance AS (
 	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 	FROM   bettrans WITH (NOLOCK)
-	WHERE  recommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499
+	WHERE  recommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY custid
 	UNION ALL
 	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 	FROM   bettransRNG WITH (NOLOCK)
-	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2101 AND 2399
+	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY custid
 	UNION ALL

@@ -11,12 +11,13 @@
  ,@showBI				BIT = 0  
  ,@showLiveCasino		BIT = 0
  ,@showVS				BIT = 0
- ,@showProgressiveBonus BIT =0
+ ,@showProgressiveBonus BIT = 0
  ,@showKeno				BIT = 0
  ,@showGD				BIT = 0
  ,@showCB				BIT = 0
  ,@showCF				BIT = 0
  ,@showAB				BIT = 0
+ ,@showVB				BIT = 0
  ,@BalanceUpDay			SMALLDATETIME  
   
 WITH RECOMPILE  
@@ -64,6 +65,7 @@ AS
   - 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
   - 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
   - 20160204@Percy: Support new product AllBet [Redmine: #50605]
+  - 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -171,17 +173,24 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(211, 0) 
 END
+IF @showVB = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(212, 0) 
+END
 
-DECLARE @SportBettype TABLE(
-	ProductID INT
-	,Bettype INT
-	,EventType INT
-)
+DECLARE @isTest BIT = 0
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-INSERT INTO @SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode = 4
+--Avoid Parameter Sniffing for bettrans and sum_winloss
+DECLARE @FDate			SMALLDATETIME
+		,@TDate			SMALLDATETIME
+		,@BUDate		SMALLDATETIME
+	    ,@CID			INT    	    
+SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay, @CID = @custid
 
-IF @Todate >= @BalanceUpDay   
+IF @TDate >= @BUDate   
 BEGIN   
      INSERT INTO @SAgWinLoss  
       SELECT  
@@ -195,7 +204,7 @@ BEGIN
        ,-(ISNULL(SUM(swinlost), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(scomm), 0) + ISNULL(SUM(winlost - actual_stake), 0))     
       FROM   
 		dbo.bettrans b WITH (NOLOCK, index = IX_srecommend)  
-		INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
+		INNER JOIN dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest) s ON b.bettype = s.Bettype
       WHERE  
 			1 = 1 				
 				AND (  s.ProductID = CASE WHEN @showSB         = 1 THEN 1  ELSE 0 END
@@ -211,15 +220,16 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showCB         = 1 THEN 15 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showCF         = 1 THEN 19 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showAB         = 1 THEN 21 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showVB         = 1 THEN 22 ELSE 0 END
 				)
-		AND SRecommend = @CustID 
-		AND  winlostdate BETWEEN @FromDate AND @ToDate 
+		AND SRecommend = @CID 
+		AND  winlostdate BETWEEN @FDate AND @TDate 
 		AND  b.statusID NOT IN (0, 1, 101, 102, 103)   
 		--AND ruben = 1
       GROUP BY mrecommend, b.bettype  
    
- IF @BalanceUpDay < @FromDate  
-  SELECT @BalanceUpDay=@FromDate  
+	IF @BUDate < @FDate 
+		SELECT @BUDate = @FDate 
   
     INSERT INTO @SAgWinLoss  
      SELECT     
@@ -235,8 +245,8 @@ BEGIN
 		dbo.sum_winloss b WITH (NOLOCK) 
 		INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
      WHERE  
-		winlostdate BETWEEN @BalanceUpDay AND @todate  
-		AND Srecommend = @custid
+		winlostdate BETWEEN @BUDate AND @TDate
+		AND Srecommend = @CID
 		AND roleid = 3  
      GROUP BY custid  
 END  

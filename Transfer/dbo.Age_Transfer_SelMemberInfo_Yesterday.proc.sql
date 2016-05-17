@@ -29,6 +29,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday_1
 		- 20120403@Lukas: Get more column DisableCasino
 		- 20160127@Percy: Balance changes with RNG Casino [Redmine: #50674]
 		- 20160321@Percy: Support AllBet [Redmine: #50605]
+		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 SET NOCOUNT ON
 DECLARE @today DATE,
@@ -62,7 +63,10 @@ IF (@IsAllowTotalBalance = 0)
 						FROM bettrans as b with (NOLOCK) 
 						WHERE custid = @CustID and ruben  =1
 							AND (
-									(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+									(CONVERT(DATE, winlostdate) >= @yesterday
+										AND bettype NOT BETWEEN 2101 AND 2499
+										AND bettype NOT BETWEEN 4001 AND 7999
+									)
 									OR CONVERT(DATE, winlostdate) < @yesterday
 								)
 						GROUP BY custid
@@ -70,7 +74,7 @@ IF (@IsAllowTotalBalance = 0)
 						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance 
 						FROM bettransRNG as b with (NOLOCK) 
 						WHERE custid = @CustID and statusID NOT IN (0, 1)
-							AND gameID BETWEEN 2101 AND 2399
+							AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 							AND CONVERT(DATE, winlostdate)= @yesterday
 						GROUP BY custid
 						UNION ALL
@@ -104,7 +108,10 @@ ELSE
 						FROM bettrans as b with (NOLOCK) 
 						WHERE custid = @CustID and ruben  =1
 							AND (
-									(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+									(CONVERT(DATE, winlostdate) >= @yesterday
+										AND bettype NOT BETWEEN 2101 AND 2499
+										AND bettype NOT BETWEEN 4001 AND 7999
+									)
 									OR CONVERT(DATE, winlostdate) < @yesterday
 								)
 						GROUP BY custid
@@ -112,7 +119,7 @@ ELSE
 						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance 
 						FROM bettransRNG as b with (NOLOCK) 
 						WHERE custid = @CustID and statusID NOT IN (0, 1)
-							AND gameID BETWEEN 2101 AND 2399
+							AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 							AND CONVERT(DATE, winlostdate) >= @yesterday
 						GROUP BY custid
 						UNION ALL
@@ -132,12 +139,12 @@ select @BetCredit = @GivenCredit + @CashBalance
 
 SELECT @Oustanding = ISNULL(SUM(actual_stake), 0) FROM bettrans WITH (NOLOCK)
 WHERE bettype < 19001
-	AND (bettype NOT IN (801, 802, 803, 804, 805, 806, 1003) OR (Bettype NOT BETWEEN 2101 AND 2499))
+	AND (bettype NOT IN (801, 802, 803, 804, 805, 806, 1003) OR (bettype NOT BETWEEN 2101 AND 2499) OR (bettype NOT BETWEEN 4001 AND 7999))
 	AND ruben = 0
 	AND custid = @custid
 
 SELECT @Oustanding = @Oustanding + ISNULL(SUM(actual_stake), 0) FROM bettransRNG WITH (NOLOCK)
-WHERE GameID BETWEEN 2101 AND 2399
+WHERE (GameID BETWEEN 2101 AND 2399 OR GameID BETWEEN 4001 AND 7999)
 	AND StatusID IN (0,1)
 	AND custid = @custid
 
@@ -160,7 +167,10 @@ BEGIN
 	WHERE custid = @CustID
 		AND ruben = 1
 		AND (
-				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499)
+				(CONVERT(DATE, winlostdate) >= @yesterday
+					AND bettype NOT BETWEEN 2101 AND 2499
+					AND bettype NOT BETWEEN 4001 AND 7999
+				)
 				OR CONVERT(DATE, winlostdate) < @yesterday
 			)
 
@@ -168,7 +178,7 @@ BEGIN
 	FROM bettransRNG WITH (NOLOCK)
 	WHERE custid = @CustID
 		AND statusID NOT IN (0, 1)
-		AND gameID BETWEEN 2101 AND 2399
+		AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 		AND CONVERT(DATE, winlostdate) >= @yesterday
 
 	SELECT  @TotalCash      = @TotalCash + ISNULL(SUM(winlost-actual_stake+playercomm), 0)

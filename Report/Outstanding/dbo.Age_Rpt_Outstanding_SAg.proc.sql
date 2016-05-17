@@ -22,6 +22,7 @@ Revisions:
 	- 20151214@Percy: Do not check ticket running of Cock Fighting at bettrans table, because of the translog [#48601]
 	- 20160108@Percy: Get data new bettype RNG Casino from bettransRNG [Redmine: #48283]
 	- 20160204@Percy: Get data new product AllBet from bettransLC [Redmine: #50605]
+	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 */
 SET NOCOUNT ON
 /*
@@ -47,6 +48,7 @@ AS (
 			AND bettype NOT IN (1003) -- Cock Fighting
 			AND bettype NOT BETWEEN 2101 AND 2399 -- new RNG Casino
 			AND bettype NOT BETWEEN 2401 AND 2499 -- AllBet
+			AND bettype NOT BETWEEN 4001 AND 7999 -- Voidbridge
 			AND srecommend =  @CustID
 	GROUP BY mrecommend
 	
@@ -78,7 +80,7 @@ AS (
 	FROM bettransRNG with (nolock) 
 	WHERE	statusid=0
 			AND srecommend =  @CustID
-			AND gameID BETWEEN 2101 AND 2399
+			AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 	GROUP BY mrecommend
 
 	UNION ALL -- bettransLC
