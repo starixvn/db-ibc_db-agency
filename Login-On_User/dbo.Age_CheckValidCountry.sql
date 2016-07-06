@@ -1,4 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_CheckValidCountry]
+﻿USE [CustDB]
+GO
+/****** Object:  StoredProcedure [dbo].[Age_CheckValidCountry_xpre]    Script Date: 7/6/2016 9:04:14 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[Age_CheckValidCountry]
 	@IP NVARCHAR(15),
 	@countryCode VARCHAR(2) = '' OUTPUT
 AS
@@ -6,9 +13,10 @@ AS
 		Created: Johnson
 		Date: 2014-11-18
 		Task: Check IP from block countries	
-		DB: DBTXN/CustDB
+		DB: DBCUST/CustDB
 		
 		Revisions:
+			- 20160507@Sophia: Block users from CountryCode except Office IPs [Redmine: #60347]
 		
 		Parameter's Explanation:
 	*/
@@ -16,16 +24,23 @@ BEGIN
 	SET NOCOUNT ON 
 	
 	DECLARE @countryLONG nvarchar(64)
-			
-	EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countryCode OUTPUT, @countryLONG = @countryLONG OUTPUT
-	
-	--hardcode for testing on local
-	IF @IP IN ('10.21.10.38')
-		SELECT @CountryCode = 'SG'
-	
+
+	DECLARE @PrefixLoginIP NVARCHAR(11)						
+	SELECT  @PrefixLoginIP = left(@IP, (len(@IP) - (charindex('.',reverse(@IP)))+1))
+
+	IF @IP IN (select IP FROM IPDB.dbo.IPOffice WITH (NOLOCK)) -- In IP's Office then return CountryCode as 'OF'
+	BEGIN 
+		SELECT @CountryCode = 'OF'
+	END
+	ELSE 
+	BEGIN 	----Not In IP's Office then keep as current
+		EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countryCode OUTPUT, @countryLONG = @countryLONG OUTPUT
+	END
+ 
 END
 GO
 
 GRANT EXECUTE ON [dbo].[Age_CheckValidCountry] TO [bodbDownlineNet]
 GO
 GRANT EXECUTE ON [dbo].[Age_CheckValidCountry] TO [bodbDownlineNetView]
+GO
