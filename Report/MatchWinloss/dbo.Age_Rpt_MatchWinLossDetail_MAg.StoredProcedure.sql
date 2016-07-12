@@ -124,7 +124,7 @@ IF @showVS	= 1
 	END	
 	
 INSERT INTO #SportBettype
-EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductPrefix=@ProductPrefix
+EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductPrefix=@ProductPrefix
 
 IF @league = ''
 BEGIN

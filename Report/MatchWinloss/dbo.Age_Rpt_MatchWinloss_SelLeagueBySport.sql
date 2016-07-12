@@ -40,7 +40,7 @@ AS
 SET NOCOUNT ON
 
 DECLARE @isTest BIT
-SELECT  @isTest = dbo.f_CheckSPVersion(@@SPID)
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
 IF OBJECT_ID('tempdb..#SportBettype') IS NOT NULL
 BEGIN
