@@ -47,6 +47,7 @@ Revisions:
 	- 20160217@Percy: Add bettype of Cricket [Redmine: #50027]
 	- 20160215@Percy: Support AllBet [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160711@Helen: Change Moneyline Commission [Redmine: #58493]
 */
 
 SET NOCOUNT ON
@@ -129,16 +130,17 @@ END
 
 SELECT pvt.mrecommend, c.username, 
 	
-	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([20],0) + isnull([21],0) + isnull([25],0) + isnull([27],0) + isnull([28],0) +
+	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([25],0) + isnull([27],0) + isnull([28],0) +
 	isnull([121],0) + isnull([122],0) + isnull([123],0) + isnull([124],0) + isnull([125],0) +
-	isnull([153],0) + isnull([154],0) + isnull([155],0) + isnull([156],0) + 
-	isnull([1301],0) + isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0) + isnull([1311],0) + isnull([1312],0) + isnull([1316],0) + isnull([1318],0) + isnull([1324],0) +
+	isnull([153],0)  + isnull([155],0) + isnull([156],0) + 
+	isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0)  + isnull([1312],0) + isnull([1316],0) + isnull([1318],0)  +
 	ISNULL([157], 0) + ISNULL([178], 0) + ISNULL([183], 0) + ISNULL([184], 0) + ISNULL([185], 0) + ISNULL([189], 0) + ISNULL([190], 0) + ISNULL([191], 0) + ISNULL([194], 0) + ISNULL([197], 0) +
 	ISNULL([198], 0) + ISNULL([203], 0) + ISNULL([204], 0) + ISNULL([205], 0) +
 	ISNULL([801], 0) + ISNULL([802], 0) + ISNULL([803], 0) + ISNULL([804], 0) + ISNULL([805], 0) + ISNULL([806], 0) + ISNULL([807], 0) + ISNULL([808], 0) +
-	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0) + ISNULL([501],0) as totalcomm_1,
+	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0)  as totalcomm_1,
 	
-	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) as [totalcomm_2],
+	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) + 
+	isnull([20],0) + isnull([21],0) + isnull([1301],0) + ISNULL([501],0) + isnull([154],0) + isnull([1311],0) + isnull([1324],0) as [totalcomm_2],
 		
 	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([29],0) +
 	isnull([133],0) + isnull([134],0) + isnull([135],0) + isnull([145],0) + isnull([146],0) + isnull([147],0) + isnull([24],0) +  isnull([26],0) +
