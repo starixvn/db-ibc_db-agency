@@ -66,6 +66,8 @@ AS
   - 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
   - 20160204@Percy: Support new product AllBet [Redmine: #50605]
   - 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+  - 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
+
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -183,6 +185,22 @@ END
 DECLARE @isTest BIT = 0
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
+
+-----Get Special Super to hide data of them before specific date 
+DECLARE @SuperId AS TABLE (Srecommend INT)
+DECLARE @IsHide BIT = 0 
+
+INSERT INTO @SuperId (Srecommend)
+SELECT Srecommend FROM dbo.f_SpecialSuper()
+	
+IF EXISTS (SELECT Srecommend FROM @SuperId WHERE Srecommend = @CustID)
+	SELECT @IsHide = 1 
+
+----Get Account Login to detect Interal or not
+DECLARE @LoginName NVARCHAR(128)
+SELECT @LoginName = SUSER_NAME()
+
+
 --Avoid Parameter Sniffing for bettrans and sum_winloss
 DECLARE @FDate			SMALLDATETIME
 		,@TDate			SMALLDATETIME
@@ -252,9 +270,14 @@ BEGIN
 END  
 IF @FromDate < @BalanceUpDay   
 BEGIN  
- IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)  
-  SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDay)  
+	IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)  
+		SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDay)  
    
+
+	IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
+		SELECT @FromDate = '2016-06-01'
+			
+
     INSERT INTO @SAgWinLoss  
      SELECT     
 		CustID          
@@ -271,6 +294,8 @@ BEGIN
      WHERE  
 		Winlostdate BETWEEN @FromDate AND @ToDate  
 		AND SRecommend = @CustID  
+		AND mrecommend = mrecommend
+		AND recommend = recommend
 		AND RoleID = 3  
      GROUP BY CustID  
   

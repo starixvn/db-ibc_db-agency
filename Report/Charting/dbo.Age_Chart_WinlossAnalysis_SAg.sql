@@ -38,6 +38,7 @@ AS
 		- 20160112@Percy: Expand new bettype for RNG Casino [Redmine: #48283]
 		- 20160204@Percy: Support new product AllBet [Redmine: #50605]
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+		- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
 
 	Parameters Explanation:
 */
@@ -288,6 +289,21 @@ SET NOCOUNT ON
 		VALUES(212, 0)
 	END
 
+	-----Get Special Super to hide data of them before specific date 
+	DECLARE @SuperId AS TABLE (Srecommend INT)
+	DECLARE @IsHide BIT = 0 
+
+	INSERT INTO @SuperId (Srecommend)
+	SELECT Srecommend FROM dbo.f_SpecialSuper()
+	
+	IF EXISTS (SELECT Srecommend FROM @SuperId WHERE Srecommend = @AgentID)
+		SELECT @IsHide = 1 
+
+	----Get Account Login to detect Interal or not
+	DECLARE @LoginName NVARCHAR(128)
+	SELECT @LoginName = SUSER_NAME()
+
+
 	--Avoid Parameter Sniffing for bettrans and sum_winloss
 	DECLARE @FDate			SMALLDATETIME
 			,@TDate			SMALLDATETIME
@@ -329,12 +345,15 @@ SET NOCOUNT ON
 		IF @Todate >= DATEADD(dd, -1, @BalanceUpDate)		
 			SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDate)
 		
+		IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- is internal login 
+			SELECT @FromDate = '2016-06-01'
+
 		
 		INSERT INTO @AgencyWinloss
 		SELECT winlostdate
 			,ABS(turnover)
 			,swinlost + scomm - acomm
-		FROM DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
+		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK)  --- Remove link server DBSUM
 			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND srecommend = @AgentID  
@@ -351,6 +370,8 @@ SET NOCOUNT ON
 	FROM @AgencyWinloss
 	GROUP BY CONVERT(VARCHAR(6),winlostdate,112)
 	ORDER BY CONVERT(VARCHAR(6),winlostdate,112) ASC
+	 
+
 GO
 
 GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_SAg] TO [bodbDownlineNet] AS [dbo]

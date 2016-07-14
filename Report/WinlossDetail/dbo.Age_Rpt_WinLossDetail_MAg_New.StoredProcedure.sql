@@ -78,6 +78,7 @@ Revisions:
 	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
 	- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
 */
 
 
@@ -229,6 +230,25 @@ END
 DECLARE @isTest BIT
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
+
+------Get @Srecommend
+DECLARE @Srecommend int 
+SELECT @Srecommend =  Srecommend FROM dbo.CustInfo WITH (NOLOCK) WHERE CustID = @CustID 
+
+-----Get Special Super to hide data of them before specific date 
+DECLARE @SuperId AS TABLE (Srecommend INT)
+DECLARE @IsHide BIT = 0 
+
+INSERT INTO @SuperId (Srecommend)
+SELECT Srecommend FROM dbo.f_SpecialSuper()
+	
+IF EXISTS (SELECT Srecommend FROM @SuperId WHERE Srecommend = @Srecommend)
+	SELECT @IsHide = 1 
+
+----Get Account Login to detect Interal or not
+DECLARE @LoginName NVARCHAR(128)
+SELECT @LoginName = SUSER_NAME()
+
 --Avoid Parameter Sniffing for bettrans and sum_winloss
 DECLARE @FDate			SMALLDATETIME
 		,@TDate			SMALLDATETIME
@@ -321,6 +341,9 @@ BEGIN
 	IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)
 		SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDay)
 	
+	IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
+		SELECT @FromDate = '2016-06-01'	
+		
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
 		       SUM(ABS(TurnOver)) AS TurnOver,
@@ -342,7 +365,9 @@ BEGIN
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1
 		   AND winlostdate BETWEEN @fromdate AND @ToDate			
-		   AND MRecommend = @custid
+		   and Srecommend = @Srecommend --- Add Srecommend to get the index seek 
+		   and MRecommend = @custid
+		   and recommend = recommend
 		   AND RoleID = 2
 	  GROUP BY CustID
 END	
