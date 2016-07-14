@@ -1,6 +1,6 @@
 ﻿USE [CustDB]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_CheckValidCountry_xpre]    Script Date: 7/6/2016 9:04:14 AM ******/
+
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,6 +17,7 @@ AS
 		
 		Revisions:
 			- 20160507@Sophia: Block users from CountryCode except Office IPs [Redmine: #60347]
+			- 20160714@Victor: Allow users that have IP in White list [Redmine: #60347]
 		
 		Parameter's Explanation:
 	*/
@@ -32,8 +33,12 @@ BEGIN
 	BEGIN 
 		SELECT @CountryCode = 'OF'
 	END
+	ELSE IF @IP IN (SELECT IP FROM IPDB.dbo.IPWhiteList WITH (NOLOCK) WHERE IsActive = 1) -- In White list IP then return CountryCode as 'WL'
+	BEGIN 
+		SELECT @CountryCode = 'WL'
+	END
 	ELSE 
-	BEGIN 	----Not In IP's Office then keep as current
+	BEGIN 	----Not In IP's Office or White list then keep as current
 		EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countryCode OUTPUT, @countryLONG = @countryLONG OUTPUT
 	END
  
