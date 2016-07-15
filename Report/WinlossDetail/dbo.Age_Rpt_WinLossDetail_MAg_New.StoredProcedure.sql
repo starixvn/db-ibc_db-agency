@@ -236,15 +236,11 @@ DECLARE @Srecommend int
 SELECT @Srecommend =  Srecommend FROM dbo.CustInfo WITH (NOLOCK) WHERE CustID = @CustID 
 
 -----Get Special Super to hide data of them before specific date 
-DECLARE @SuperId AS TABLE (Srecommend INT)
 DECLARE @IsHide BIT = 0 
 
-INSERT INTO @SuperId (Srecommend)
-SELECT Srecommend FROM dbo.f_SpecialSuper()
-	
-IF EXISTS (SELECT Srecommend FROM @SuperId WHERE Srecommend = @Srecommend)
+IF EXISTS (SELECT 1 FROM dbo.f_SpecialSuper() WHERE Srecommend = @Srecommend)
 	SELECT @IsHide = 1 
-
+		
 ----Get Account Login to detect Interal or not
 DECLARE @LoginName NVARCHAR(128)
 SELECT @LoginName = SUSER_NAME()

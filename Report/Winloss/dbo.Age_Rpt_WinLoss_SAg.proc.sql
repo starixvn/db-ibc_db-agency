@@ -185,15 +185,10 @@ END
 DECLARE @isTest BIT = 0
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-
 -----Get Special Super to hide data of them before specific date 
-DECLARE @SuperId AS TABLE (Srecommend INT)
 DECLARE @IsHide BIT = 0 
 
-INSERT INTO @SuperId (Srecommend)
-SELECT Srecommend FROM dbo.f_SpecialSuper()
-	
-IF EXISTS (SELECT Srecommend FROM @SuperId WHERE Srecommend = @CustID)
+IF EXISTS (SELECT 1 FROM dbo.f_SpecialSuper() WHERE Srecommend = @CustId)
 	SELECT @IsHide = 1 
 
 ----Get Account Login to detect Interal or not

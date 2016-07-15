@@ -311,15 +311,11 @@ BEGIN
 
 	
 	-----Get Special Super to hide data of them before specific date 
-	DECLARE @SuperId AS TABLE (Srecommend INT)
 	DECLARE @IsHide BIT = 0 
-
-	INSERT INTO @SuperId (Srecommend)
-	SELECT Srecommend FROM dbo.f_SpecialSuper()
-		
-	IF EXISTS (SELECT Srecommend FROM @SuperId WHERE Srecommend = @CustId)
+	
+	IF EXISTS (SELECT 1 FROM dbo.f_SpecialSuper() WHERE Srecommend = @custid)
 		SELECT @IsHide = 1 
-
+		
 	----Get Account Login to detect Interal or not
 	DECLARE @LoginName NVARCHAR(128)
 	SELECT @LoginName = SUSER_NAME()

@@ -289,14 +289,10 @@ SET NOCOUNT ON
 		VALUES(212, 0)
 	END
 
-	-----Get Special Super to hide data of them before specific date 
-	DECLARE @SuperId AS TABLE (Srecommend INT)
+		-----Get Special Super to hide data of them before specific date 
 	DECLARE @IsHide BIT = 0 
-
-	INSERT INTO @SuperId (Srecommend)
-	SELECT Srecommend FROM dbo.f_SpecialSuper()
 	
-	IF EXISTS (SELECT Srecommend FROM @SuperId WHERE Srecommend = @AgentID)
+	IF EXISTS (SELECT 1 FROM dbo.f_SpecialSuper() WHERE Srecommend = @AgentID)
 		SELECT @IsHide = 1 
 
 	----Get Account Login to detect Interal or not
