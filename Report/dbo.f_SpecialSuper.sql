@@ -9,7 +9,7 @@ RETURN
 	Created: Sophia
 	Date: 20160713
 	Task: Return srecommend of Special Line which want to hide winloss report [Redmine: #60767]
-	DB: DBAGE/BODB02
+	DB: DBAGE/BODB02, DBACC/bod02
 
 */
 
