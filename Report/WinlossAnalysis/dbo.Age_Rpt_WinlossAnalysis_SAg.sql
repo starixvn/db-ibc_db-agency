@@ -44,6 +44,7 @@ AS
 	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
 	- 20160204@Percy: Support new product AllBet [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
 
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -308,6 +309,18 @@ BEGIN
 		VALUES(212, 0)
 	END
 
+	
+	-----Get Special Super to hide data of them before specific date 
+	DECLARE @IsHide BIT = 0 
+	
+	IF EXISTS (SELECT 1 FROM dbo.f_SpecialSuper() WHERE Srecommend = @custid)
+		SELECT @IsHide = 1 
+		
+	----Get Account Login to detect Interal or not
+	DECLARE @LoginName NVARCHAR(128)
+	SELECT @LoginName = SUSER_NAME()
+
+	
 	--Avoid Parameter Sniffing for bettrans and sum_winloss
 	DECLARE @FDate			SMALLDATETIME
 			,@TDate			SMALLDATETIME
@@ -369,6 +382,9 @@ BEGIN
 			SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDate)
 		END
 		
+		IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
+			SELECT @FromDate = '2016-06-01'	
+		
 		INSERT INTO @AgencyWinloss
 		SELECT winlostdate, custid, b.sporttype
 			,ABS(turnover)
@@ -382,9 +398,12 @@ BEGIN
 			,scomm
 			,awinlost + mwinlost + swinlost + scomm + winlost
 			,betcount
-		FROM DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
+		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK)   --- Remove link server DBSUM 
+			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 		WHERE winlostdate BETWEEN @FromDate AND @ToDate
 			AND srecommend = @CustID
+			AND mrecommend = mrecommend
+			AND recommend = recommend
 			AND roleid = 4
 	END
 
