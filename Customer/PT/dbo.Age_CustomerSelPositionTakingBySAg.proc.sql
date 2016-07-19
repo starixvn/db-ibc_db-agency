@@ -22,7 +22,7 @@ AS
 		- 20140630@Logan: Add BetRadar(9999) for Soccer and Tennis [Redmine: #18413]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20160114@Helen: Cricket - [Redmine: #50027]
-
+		- 20160627@Helen: Provide dedicated Outright PT for each sport - [Redmine: 59438]
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
 */
@@ -66,6 +66,15 @@ BEGIN
 			MAX(CASE WHEN cs.bettype = 8 AND cs.sporttype=1 THEN cs.spositiontaking ELSE 0 END) AS spositiontaking_8,
 			MAX(CASE WHEN cs.bettype = 9 AND cs.sporttype=1 THEN cs.spositiontaking ELSE 0 END) AS spositiontaking_9,
 			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=1 THEN cs.spositiontaking ELSE 0 END) AS spositiontaking_10,
+			-- Outright PT
+			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=2 THEN cs.spositiontaking ELSE 0 END) AS v2spositiontaking_10,
+			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=3 THEN cs.spositiontaking ELSE 0 END) AS v3spositiontaking_10,
+			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=5 THEN cs.spositiontaking ELSE 0 END) AS v5spositiontaking_10,
+			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=8 THEN cs.spositiontaking ELSE 0 END) AS v8spositiontaking_10,
+			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=10 THEN cs.spositiontaking ELSE 0 END) AS v10spositiontaking_10,
+			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=11 THEN cs.spositiontaking ELSE 0 END) AS v11spositiontaking_10,
+			MAX(CASE WHEN cs.bettype = 10 AND cs.sporttype=99 THEN cs.spositiontaking ELSE 0 END) AS v99spositiontaking_10,
+			
 			MAX(CASE WHEN cs.bettype = 9999 AND cs.sporttype=1 THEN cs.spositiontaking ELSE 0 END) AS spositiontaking_9999,
 
 			MAX(CASE WHEN cs.bettype = 1 AND cs.sporttype=1 THEN cs.slivepositiontaking ELSE 0 END) AS slivepositiontaking_1,
