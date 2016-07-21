@@ -1,4 +1,4 @@
-CREATE FUNCTION [dbo].[f_AGE_IsCrossLevelUpdate](@custid INT,@roleID TINYINT, @userid INT) 
+ALTER FUNCTION [dbo].[f_AGE_IsCrossLevelUpdate](@custid INT,@roleID TINYINT, @userid INT) 
 RETURNS TABLE 
 AS
 /*
