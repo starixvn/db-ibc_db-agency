@@ -1,10 +1,5 @@
 ﻿USE [bodb02]
 GO
-/****** Object:  StoredProcedure [dbo].[Age_ScoreMap_SelBettype]    Script Date: 10/7/2015 11:20:23 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 
 ALTER PROCEDURE [dbo].[Age_ScoreMap_SelBettype]  
     
@@ -20,7 +15,8 @@ AS
 		- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738
 		- 20150828@Winnie: Myanmar odds
 		- 20151126@Percy: Add Correct Score into the Live Ball Section [RedmineID: #48050]
-		- 20160509@Percy: Add 2 bettype Correct Score (AOS) [RedmineID: #48785]				
+		- 20160509@Percy: Add 2 bettype Correct Score (AOS) [RedmineID: #48785]
+		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 	Parameter's Explanations:
 		EvenType : 0 DeadBall 1 LiveBall
 */  
@@ -102,22 +98,22 @@ BEGIN
 	UNION ALL
 	SELECT 24 typeid
 		,0 EvenType
-		,'24,151' [1stId]
-		,'24' [InfoId]
+		,'24,151,410' [1stId]
+		,'24,151,410' [InfoId]
 		,240 OrderID
 		
 	UNION ALL
 	SELECT 24 typeid
 		,1 EvenType
-		,'24,151' [1stId]
-		,'24' [InfoId]
+		,'24,410' [1stId]
+		,'24,410' [InfoId]
 		,240 OrderID
 		
 	UNION ALL
 	SELECT 26 typeid
 		,0 EvenType
-		,'26,170,188' [1stId]
-		,'26,170,188' [InfoId]
+		,'26,170,188,427' [1stId]
+		,'26,170,188,427' [InfoId]
 		,260 OrderID
 		
 	UNION ALL
@@ -130,15 +126,15 @@ BEGIN
 	UNION ALL
 	SELECT 25 typeid
 		,0 EvenType
-		,'25,191' [1stId]
-		,'25,191' [InfoId]
+		,'25,191,411' [1stId]
+		,'25,191,411' [InfoId]
 		,2500 OrderID
 		
 	UNION ALL
 	SELECT 25 typeid
 		,1 EvenType
-		,'25' [1stId]
-		,'25' [InfoId]
+		,'25,411' [1stId]
+		,'25,411' [InfoId]
 		,2500 OrderID
 		
 	UNION ALL
@@ -177,15 +173,15 @@ BEGIN
 	
 	SELECT 6 typeid
 		,0 EvenType
-		,'6,126,131,132,159,161,162' [1stId]
-		,'6,126,131,132,159,161,162' [InfoId] --Dom add 126
+		,'6,126,131,132,159,406,161,407,162,409' [1stId]
+		,'6,126,131,132,159,406,161,407,162,409' [InfoId] --Dom add 126
 		,6000 OrderID
 		
 	UNION ALL
 	SELECT 6 typeid
 		,1 EvenType
-		,'6,126,131,132,159,161,162,179,181,182' [1stId]
-		,'6,126,131,132,159,161,162,179,181,182' [InfoId] --Dom add 126
+		,'6,126,131,132,159,406,161,407,162,409,179,181,182' [1stId]
+		,'6,126,131,132,159,406,161,407,162,409,179,181,182' [InfoId] --Dom add 126
 		,6000 OrderID
 		
 	UNION ALL
