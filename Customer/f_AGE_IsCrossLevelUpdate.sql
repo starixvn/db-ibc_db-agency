@@ -11,18 +11,16 @@ RETURN
 	SELECT custid
 	FROM dbo.custInfo ci WITH(NOLOCK)
 	WHERE custid = @custid 
-		AND (	@custid = @userid
-			OR (@roleID = 1 AND ci.recommend = @userid)
-			OR (@roleID = 2 AND ci.mrecommend = @userid)
-			OR (@roleID = 3 AND ci.srecommend = @userid)
-			OR (@roleID = 4 AND @custid = @userid)
+		AND ( 	EXISTS (SELECT 1 FROM custInfo ci_tmp WITH (NOLOCK) WHERE ci_tmp.custid = @userid AND ci_tmp.roleid > 4)
+				OR (@roleID = 1 AND ci.recommend = @userid)
+				OR (@roleID = 2 AND ci.mrecommend = @userid)
+				OR (@roleID = 3 AND ci.srecommend = @userid)
 			)
 
 
 GO
-
-GRANT SELECT ON [f_NAP_IsCrossLevelUpdate] TO [bodbDownlineNet] 
+GRANT SELECT ON [f_AGE_IsCrossLevelUpdate] TO [bodbDownlineNet] 
 GO
-GRANT SELECT ON [f_NAP_IsCrossLevelUpdate] TO [bodbDownlineNetView]
+GRANT SELECT ON [f_AGE_IsCrossLevelUpdate] TO [bodbDownlineNetView]
 GO
 
