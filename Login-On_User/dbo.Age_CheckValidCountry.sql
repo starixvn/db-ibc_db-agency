@@ -29,19 +29,16 @@ BEGIN
 	DECLARE @PrefixLoginIP NVARCHAR(11)						
 	SELECT  @PrefixLoginIP = left(@IP, (len(@IP) - (charindex('.',reverse(@IP)))+1))
 
+	EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countryCode OUTPUT, @countryLONG = @countryLONG OUTPUT
+
 	IF @IP IN (select IP FROM IPDB.dbo.IPOffice WITH (NOLOCK)) -- In IP's Office then return CountryCode as 'OF'
 	BEGIN 
 		SELECT @CountryCode = 'OF'
 	END
-	ELSE IF @IP IN (SELECT IP FROM IPDB.dbo.IPWhiteList WITH (NOLOCK) WHERE IsActive = 1) -- In White list IP then return CountryCode as 'WL'
+	IF (@CountryCode = 'PH' AND @IP IN (SELECT IP FROM IPDB.dbo.IPWhiteList WITH (NOLOCK) WHERE IsActive = 1)) -- IP in PH and in White list then return CountryCode as 'WL'	
 	BEGIN 
 		SELECT @CountryCode = 'WL'
 	END
-	ELSE 
-	BEGIN 	----Not In IP's Office or White list then keep as current
-		EXEC IPDB.dbo.GetIPInfo_out @IP= @IP, @countrySHORT = @countryCode OUTPUT, @countryLONG = @countryLONG OUTPUT
-	END
- 
 END
 GO
 
