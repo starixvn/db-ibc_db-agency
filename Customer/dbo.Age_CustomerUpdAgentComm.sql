@@ -28,7 +28,7 @@ BEGIN
  /*
 Created: 20090713@nqminh
 Task : Update commission for Agent
-DB: DBTXN/bodb02
+DB: DBCUST/CUSTDB
 Original:
 
 Revisions:    
@@ -41,6 +41,7 @@ Revisions:
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
 	- 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable to DBCUST.CustDB) [Redmine:#36216]
 	- 20150904@Helen: commission setting for MO [Redmine #41470]
+	- 20160613@Helen: Security Prevention Step 1 - Cross level update -  [Redmine:55377]			            
 	
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -65,6 +66,17 @@ Param's Explanation:
 	if @ErrCode <>0 return
 	--end
 
+	DECLARE @roleid TINYINT
+	
+	SET @roleid = (SELECT roleid FROM Custinfo WITH (NOLOCK) WHERE custid = @custid)	
+	
+	-- Only direct upline have update permission
+	IF NOT EXISTS (SELECT 1 FROM dbo.f_AGE_IsCrossLevelUpdate(@custid,@roleid,@userid))
+	BEGIN
+		SELECT @ErrMsg = 'You don''t have permission to perform this action.',
+			   @ErrCode = 103
+		RETURN
+	END
 	----------------------------------------------
 	--Update Commission
 	Declare @updatecomm_old bit
