@@ -2,7 +2,7 @@
 GO
 
 ALTER PROCEDURE dbo.Age_Transfer_AllowIn24HoursCheck @CurrentDateTime DATETIME
-	, @IsMultipleTransfer BIT = 0
+	--, @IsMultipleTransfer BIT = 0
 	, @Language VARCHAR(2) = 'E'
 	, @ErrMsg NVARCHAR(2048) OUTPUT
 	, @ErrCode INT OUTPUT
@@ -43,11 +43,11 @@ BEGIN
 		WHERE VName = 'isArchivingBet'
 
 		SET @IsArchivingBet = ISNULL(@IsArchivingBet, 0)
-		IF @IsArchivingBet = 0 AND @IsMultipleTransfer = 0
-		BEGIN
-			PRINT 'OK'
-			RETURN
-		END
+		--IF @IsArchivingBet = 0 AND @IsMultipleTransfer = 0
+		--BEGIN
+		--	PRINT 'OK'
+		--	RETURN
+		--END
 
 		--set default value
 		SELECT @Config_BUStartTime = '16:35:00', @Config_BUDuration = 240
@@ -69,8 +69,8 @@ BEGIN
 			SET @BUEndTime = DATEADD(MINUTE, 15, @CurrentDateTime)
 
 		--subtract 30 minutes in case multiple transfer
-		IF @IsMultipleTransfer = 1
-			SET @BUStartTime = DATEADD(MINUTE, -30, @BUStartTime)
+		--IF @IsMultipleTransfer = 1
+		SET @BUStartTime = DATEADD(MINUTE, -30, @BUStartTime)
 
 		--SELECT @BUStartTime as '@BUStartTime', @BUEndTime as '@BUEndTime'
 		IF @IsArchivingBet = 1 OR @CurrentDateTime BETWEEN @BUStartTime AND @BUEndTime
@@ -93,12 +93,12 @@ BEGIN
 		FROM DBACC.bodb02.dbo.SystemSettings WITH(NOLOCK)
 		WHERE VName = 'isMovingBet'
 
-		SET @IsMovingBet = ISNULL(@IsMovingBet, 0)
-		IF @IsMovingBet = 0 AND @IsMultipleTransfer = 0
-		BEGIN
-			PRINT 'OK'
-			RETURN
-		END
+		--SET @IsMovingBet = ISNULL(@IsMovingBet, 0)
+		--IF @IsMovingBet = 0 AND @IsMultipleTransfer = 0
+		--BEGIN
+		--	PRINT 'OK'
+		--	RETURN
+		--END
 
 		DECLARE @MoveBetSchedule TABLE(ScheduleId TINYINT, MoveBetDay SMALLDATETIME)
 		INSERT INTO @MoveBetSchedule(ScheduleId, MoveBetDay)
@@ -135,8 +135,8 @@ BEGIN
 			SET @MBEndTime = DATEADD(MINUTE, 15, @CurrentDateTime)
 
 		--subtract 30 minutes in case multiple transfer
-		IF @IsMultipleTransfer = 1
-			SET @MBStartTime = DATEADD(MINUTE, -30, @MBStartTime)
+		--IF @IsMultipleTransfer = 1
+		SET @MBStartTime = DATEADD(MINUTE, -30, @MBStartTime)
 
 		IF @IsMovingBet = 1 OR @CurrentDateTime BETWEEN @MBStartTime AND @MBEndTime
 		BEGIN
