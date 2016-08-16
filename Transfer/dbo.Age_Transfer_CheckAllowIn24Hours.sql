@@ -76,7 +76,7 @@ BEGIN
 		IF @IsArchivingBet = 1 OR @CurrentDateTime BETWEEN @BUStartTime AND @BUEndTime
 		BEGIN
 			PRINT 'NOT OK'
-			SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'Data is being calculated to ensure accuracy, and thus transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.' --GMT+8
+			SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'To ensure the accuracy of data while being processed, all transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.' --GMT+8
 								ELSE dbo.f_Get_MsgNamebyMsgID(50010, @Language)	END
 				, @ErrCode = 103
 				, @RemainingTime = CONVERT(VARCHAR(8), DATEADD(HOUR, 11, @BUStartTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 11, @BUStartTime), 101) --convert time to GMT +8
@@ -141,7 +141,7 @@ BEGIN
 		IF @IsMovingBet = 1 OR @CurrentDateTime BETWEEN @MBStartTime AND @MBEndTime
 		BEGIN
 			PRINT 'NOT OK'
-			SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'Data is being calculated to ensure accuracy, and thus transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.' --GMT+8
+			SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'To ensure the accuracy of data while being processed, all transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.' --GMT+8
 								ELSE dbo.f_Get_MsgNamebyMsgID(50010, @Language)	END
 				, @ErrCode = 104
 				, @RemainingTime = CONVERT(VARCHAR(8), DATEADD(HOUR, 11, @MBEndTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 11, @MBEndTime), 101) --convert time to GMT +8
