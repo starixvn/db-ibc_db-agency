@@ -1,4 +1,4 @@
-﻿USE BODB02
+﻿USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinloss_SelLeagueBySport]
@@ -30,6 +30,7 @@ AS
 		- 20131126@Kathy: Add Virtual Greyhounds (182), Motor Racing (184) [Redmine:#7234]
 		- 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185)
 		- 20150425@Tom: Select League By Custid
+		- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #53152]
 	Parameter's Explanation
 		- @custid : Agent's ID	
 		- @IsShowAll: indicate whether to show test leagues or not
@@ -37,6 +38,10 @@ AS
 				0: Not show test leagues
 */
 SET NOCOUNT ON
+
+DECLARE @isTest BIT
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
 IF OBJECT_ID('tempdb..#SportBettype') IS NOT NULL
 BEGIN
 	DROP TABLE #SportBettype
@@ -75,8 +80,8 @@ IF @showVS	= 1
 		SET @ProductPrefix=@ProductPrefix+',VS'
 	END	
 	
-INSERT INTO #SportBettype
-EXEC bodb02.dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductPrefix=@ProductPrefix
+INSERT INTO #SportBettype (ProductID, Bettype, EventType)
+SELECT ProductID, Bettype, EventType FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', @ProductPrefix, @isTest)
 
 SELECT @IsShowAll = CASE @IsShowAll WHEN 1 THEN NULL ELSE 0 END
 DECLARE @RoleID INT
@@ -391,7 +396,7 @@ FROM #tmpLeagues l
 ORDER BY l1.sporttype  
 
 DROP TABLE #tmpLeagues
-
+DROP TABLE #SportBettype
 	
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_SelLeagueBySport] TO [bodbDownlineNet]
