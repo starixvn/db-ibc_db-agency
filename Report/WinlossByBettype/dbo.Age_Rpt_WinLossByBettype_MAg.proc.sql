@@ -32,6 +32,7 @@ Revisions:
 	- 20150331@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20160104@Percy: Include new bettype range into RNG Casino [Redmine: #48283]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
 */
 SET NOCOUNT ON
 DECLARE @MAgWinLoss TABLE
@@ -100,6 +101,7 @@ BEGIN
 			CASE s.ProductID
 				WHEN 6  THEN 71
 				WHEN 22 THEN 4001
+				WHEN 23 THEN 2502
 				ELSE 0 END AS bettype
 			,0 AS liveindicator
 			,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
@@ -116,11 +118,12 @@ BEGIN
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
 			AND mrecommend = @CustID
-			AND s.ProductID IN (6, 22)
+			AND s.ProductID IN (6, 22, 23)
 		GROUP BY
 			CASE s.ProductID
 				WHEN 6  THEN 71
 				WHEN 22 THEN 4001
+				WHEN 23 THEN 2502
 				ELSE 0 END
 
 		UNION ALL --- Not number Game not group by liveindicator
@@ -160,7 +163,7 @@ BEGIN
 			AND mrecommend = @CustID
 			--AND b.bettype < 19001
 			--AND b.bettype NOT BETWEEN 81 AND 120
-			AND s.ProductID NOT IN (3, 6, 22)
+			AND s.ProductID NOT IN (3, 6, 22, 23)
 		GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 		INSERT INTO @MAgWinLoss
@@ -204,6 +207,7 @@ BEGIN
 			CASE s.ProductID
 				WHEN 6  THEN 71
 				WHEN 22 THEN 4001
+				WHEN 23 THEN 2502
 				ELSE 0 END AS bettype
 			,0 AS liveindicator
 			,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
@@ -220,11 +224,12 @@ BEGIN
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
 			AND mrecommend = @CustID
-			AND S.ProductID IN (6, 22)
+			AND S.ProductID IN (6, 22, 23)
 		GROUP BY
 			CASE s.ProductID
 				WHEN 6  THEN 71
 				WHEN 22 THEN 4001
+				WHEN 23 THEN 2502
 				ELSE 0 END
 
 		UNION ALL
@@ -264,7 +269,7 @@ BEGIN
 			AND mrecommend = @CustID
 			--AND b.bettype < 19001
 			--AND b.bettype NOT BETWEEN 81 AND 120
-			AND s.ProductID NOT IN (3, 6, 22)
+			AND s.ProductID NOT IN (3, 6, 22, 23)
 		GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
  
 END

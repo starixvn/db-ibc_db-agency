@@ -54,6 +54,7 @@ Revisions:
 	- 20160711@Helen: Change Moneyline Commission [Redmine: #58493]
 	- 20160712@Percy: PHAIO Phase 2a - Add new bettypes [RedmineID: #53152]
 	- 20160831@Percy: PHAIO Phase 2b - Add new bettypes [RedmineID: #62861]
+	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
 */
 
 SET NOCOUNT ON
@@ -87,6 +88,7 @@ BEGIN
 			WHEN 8  THEN 1501
 			WHEN 21 THEN 2401
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE b.bettype END AS bettype,
 		mrecommend
 	FROM dbo.bettrans b with(nolock) 
@@ -100,6 +102,7 @@ BEGIN
 			WHEN 8  THEN 1501
 			WHEN 21 THEN 2401
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE b.bettype END,
 		mrecommend
 END
@@ -119,6 +122,7 @@ BEGIN
 			WHEN 8  THEN 1501
 			WHEN 21 THEN 2401
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE b.bettype END AS bettype,
 		mrecommend
 	FROM dbo.bettrans14 b with(nolock) 
@@ -133,6 +137,7 @@ BEGIN
 			WHEN 8  THEN 1501
 			WHEN 21 THEN 2401
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE b.bettype END,
 		mrecommend
 END
@@ -192,7 +197,9 @@ SELECT pvt.mrecommend, c.username,
 	---AllBet
 	ISNULL([2401],0) +
 	---Voidbridge
-	ISNULL([4001],0) AS Casino_comm,
+	ISNULL([4001],0) +
+	---NG2
+	ISNULL([2502],0) AS Casino_comm,
 	
 	ISNULL([301],0) + ISNULL([302],0) + ISNULL([303],0) + ISNULL([304],0) AS MO_comm,
 	---Cock Fighting_Comm
@@ -229,6 +236,7 @@ PIVOT
 					[4001],
 					[415], [416], [427], [428], [430], [431], [432], [433], [434], [435], [436], [437], [438], [439], [440], [441], [442], [443], [444],
 					[17], [18],
+					[2502]
 					[417], [418], [419], [420], [421], [422], [423], [424], [425], [426], [429], [445], [446], [447]
 					)
 ) AS pvt

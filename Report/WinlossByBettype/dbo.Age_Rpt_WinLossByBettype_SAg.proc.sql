@@ -31,7 +31,7 @@ Revisions:
 	- 20160104@Percy: Include new bettype range into RNG Casino [Redmine: #48283]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20160607@Percy: Enhance Performance - Using index recommend on bettrans table [Redmine: #58268]
-
+	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
 + Note: Review index=IX_srecommend when modifying this SP 
 */
 SET NOCOUNT ON
@@ -106,11 +106,12 @@ BEGIN
 		AND s.ProductID = 3
 	GROUP BY b.bettype, liveindicator
 	
-	UNION ALL -- RNG Casino, Voidbridge not group by bettype
+	UNION ALL -- RNG Casino, Voidbridge, NG2 not group by bettype
 	SELECT
 		CASE s.ProductID
 			WHEN 6  THEN 71
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE 0 END AS bettype
 		,0 AS liveindicator
 		,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
@@ -127,11 +128,12 @@ BEGIN
 	WHERE winlostdate BETWEEN @FDate AND @TDate
 		AND statusID NOT IN (0, 1, 101, 102, 103)
 		--AND SRecommend = @CustID
-		AND s.ProductID IN (6, 22)
+		AND s.ProductID IN (6, 22, 23)
 	GROUP BY
 		CASE s.ProductID
 			WHEN 6  THEN 71
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE 0 END
 
 	UNION ALL --- Not number Game not group by liveindicator
@@ -173,7 +175,7 @@ BEGIN
 		--AND SRecommend = @CustID
 		--AND b.bettype < 19001
 		--AND b.bettype NOT BETWEEN 81 AND 120
-		AND s.ProductID NOT IN (3, 6, 22)
+		AND s.ProductID NOT IN (3, 6, 22, 23)
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 	INSERT INTO @SAgWinLoss
@@ -217,6 +219,7 @@ BEGIN
 		CASE s.ProductID
 			WHEN 6  THEN 71
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE 0 END AS bettype
 		,0 AS liveindicator
 		,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
@@ -234,11 +237,12 @@ BEGIN
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
 		--AND SRecommend = @CustID
-		AND s.ProductID IN (6, 22)
+		AND s.ProductID IN (6, 22, 23)
 	GROUP BY
 		CASE s.ProductID
 			WHEN 6  THEN 71
 			WHEN 22 THEN 4001
+			WHEN 23 THEN 2502
 			ELSE 0 END
 
 	UNION ALL --- Not number Game not group by liveindicator
@@ -279,7 +283,7 @@ BEGIN
 		--AND SRecommend = @CustID
 		--AND b.bettype < 19001
 		--AND b.bettype NOT BETWEEN 81 AND 120
-		AND s.ProductID NOT IN (3, 6, 22)
+		AND s.ProductID NOT IN (3, 6, 22, 23)
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 END
 

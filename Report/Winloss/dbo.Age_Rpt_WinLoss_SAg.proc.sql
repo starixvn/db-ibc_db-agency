@@ -21,6 +21,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]
  ,@showCF				BIT = 0
  ,@showAB				BIT = 0
  ,@showVB				BIT = 0
+ ,@showNG2				BIT = 0
  ,@BalanceUpDay			SMALLDATETIME  
 AS  
 
@@ -68,6 +69,7 @@ AS
   - 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
   - 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE, link-server DBSUM [Redmine: #58288]
   - 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
+  - 20160808@Johnson: Integrate NG2 [Redmine: #61397]
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
@@ -181,6 +183,12 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(212, 0) 
 END
+IF @showNG2 =1 
+BEGIN
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(213, 0)
+END
 
 DECLARE @isTest BIT = 0
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
@@ -234,6 +242,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showCF         = 1 THEN 19 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showAB         = 1 THEN 21 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showVB         = 1 THEN 22 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showNG2        = 1 THEN 23 ELSE 0 END
 				)
 		AND SRecommend = @CID 
 		AND  winlostdate BETWEEN @FDate AND @TDate 
