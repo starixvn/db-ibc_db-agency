@@ -1,8 +1,11 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_MAg]
-	@CustID INT, 
-	@FromDate SMALLDATETIME,
-	@ToDate SMALLDATETIME,
-	@MoveBetsDay datetime 
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_MAg]
+	@CustID			INT, 
+	@FromDate		SMALLDATETIME,
+	@ToDate			SMALLDATETIME,
+	@MoveBetsDay	DATETIME 
 AS
 
 /*
@@ -47,21 +50,25 @@ Revisions:
 	- 20160217@Percy: Add bettype of Cricket [Redmine: #50027]
 	- 20160215@Percy: Support AllBet [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160622@Percy: Enhance Performance - change to use right index on bettrans14 [RedmineID: #58288]
 	- 20160711@Helen: Change Moneyline Commission [Redmine: #58493]
+	- 20160712@Percy: PHAIO Phase 2 - Add new bettypes [RedmineID: #53152]
 */
 
 SET NOCOUNT ON
 
 DECLARE @FDate SMALLDATETIME
 DECLARE @TDate SMALLDATETIME
+DECLARE @CID   INT
+SELECT  @CID = @CustID
 
 CREATE TABLE #tmp(ma_comm money, bettype int, recommend int)
 
 DECLARE @isTest BIT = 0
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
-INSERT INTO @SportBettype (ProductID, Bettype)
+CREATE TABLE #SportBettype (ProductID INT, Bettype INT)
+INSERT INTO #SportBettype (ProductID, Bettype)
 SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
 IF @Todate > @MoveBetsDay
@@ -82,7 +89,7 @@ BEGIN
 			ELSE b.bettype END AS bettype,
 		recommend
 	FROM dbo.bettrans b with(nolock) 
-		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
+		INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 	WHERE b.mrecommend = @CustID and ruben = 1 and
 		winlostdate between @FDate and @ToDate 
 		AND s.ProductID NOT IN(2,15)
@@ -112,10 +119,11 @@ BEGIN
 			WHEN 21 THEN 2401
 			WHEN 22 THEN 4001
 			ELSE b.bettype END AS bettype,
-		recommend
+		b.recommend
 	FROM dbo.bettrans14 b with(nolock) 
-		INNER JOIN @SportBettype s ON b.bettype = s.Bettype
-	WHERE b.mrecommend = @CustID and ruben = 1 and
+		INNER JOIN #SportBettype s ON b.bettype = s.Bettype
+		INNER JOIN (SELECT custid AS recommend FROM custInfo WITH (NOLOCK) WHERE mrecommend = @CID AND roleid = 2) r ON b.recommend = r.recommend -- to use faster index: recommend
+	WHERE -- b.mrecommend = @CustID and ruben = 1 and (ruben = 1: no need)
 		winlostdate between @FromDate and @TDate
 		AND s.ProductID NOT IN(2,15)
 	GROUP BY
@@ -125,23 +133,25 @@ BEGIN
 			WHEN 21 THEN 2401
 			WHEN 22 THEN 4001
 			ELSE b.bettype END,
-		recommend
+		b.recommend
 END
 		
 SELECT pvt.recommend, c.username, 
 	
 	isnull([1],0) + isnull([3],0) + isnull([7],0) + isnull([8],0) + isnull([2],0) + isnull([12],0) + isnull([13],0) + isnull([25],0) + isnull([27],0) + isnull([28],0) +
 	isnull([121],0) + isnull([122],0) + isnull([123],0) + isnull([124],0) + isnull([125],0) +
-	isnull([153],0)  + isnull([155],0) + isnull([156],0) + 
+	isnull([153],0) + isnull([155],0) + isnull([156],0) + 
 	isnull([1303],0) + isnull([1305],0) + isnull([1306],0) + isnull([1308],0) + isnull([1312],0) + isnull([1316],0) + isnull([1318],0) +
 	ISNULL([157], 0) + ISNULL([178], 0) + ISNULL([183], 0) + ISNULL([184], 0) + ISNULL([185], 0) + ISNULL([189], 0) + ISNULL([190], 0) + ISNULL([191], 0) + ISNULL([194], 0) + ISNULL([197], 0) +
 	ISNULL([198], 0) + ISNULL([203], 0) + ISNULL([204], 0) + ISNULL([205], 0) +
 	ISNULL([801], 0) + ISNULL([802], 0) + ISNULL([803], 0) + ISNULL([804], 0) + ISNULL([805], 0) + ISNULL([806], 0) + ISNULL([807], 0) + ISNULL([808], 0) +
-	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0)  as totalcomm_1,
-
+	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0) +
+	ISNULL([428],0) + ISNULL([432],0) + ISNULL([434],0) + ISNULL([435],0) +
+	ISNULL([17], 0) + ISNULL([18], 0) as totalcomm_1,
 	
-	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) + 
-	isnull([20],0) + isnull([21],0) + isnull([1301],0) + ISNULL([501],0) + isnull([154],0) + isnull([1311],0) + isnull([1324],0) as [totalcomm_2],
+	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) + isnull([20],0) + isnull([21],0) + isnull([154],0) +
+	isnull([1301],0) + isnull([1311],0) + isnull([1324],0) + ISNULL([501],0) +
+	ISNULL([430], 0) as [totalcomm_2],
 		
 	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([29],0) +
 	isnull([133],0) + isnull([134],0) + isnull([135],0) + isnull([145],0) + isnull([146],0) + isnull([147],0) + isnull([24],0) +  isnull([26],0) +
@@ -153,7 +163,9 @@ SELECT pvt.recommend, c.username,
 	ISNULL([181],0) + ISNULL([182],0) +	ISNULL([186],0) + ISNULL([187],0) + ISNULL([188],0) + ISNULL([192],0) + ISNULL([193],0) + ISNULL([195],0) + ISNULL([196],0) + 
 	ISNULL([199],0) + ISNULL([200],0) + ISNULL([201],0) + ISNULL([202],0) +	ISNULL([206],0) + ISNULL([207],0) + ISNULL([208],0) + ISNULL([209],0) + ISNULL([210],0) + 
 	ISNULL([211],0) + ISNULL([212],0) +	ISNULL([213],0) + ISNULL([214],0) + ISNULL([215],0) + ISNULL([216],0) + ISNULL([217],0) +
-	ISNULL([405],0) + ISNULL([406],0) + ISNULL([407],0) + ISNULL([408],0) + ISNULL([409],0) + ISNULL([410],0) + ISNULL([412],0) as totalcomm_3,
+	ISNULL([405],0) + ISNULL([406],0) + ISNULL([407],0) + ISNULL([408],0) + ISNULL([409],0) + ISNULL([410],0) + ISNULL([412],0) +
+	ISNULL([415],0) + ISNULL([416],0) + ISNULL([427],0) + ISNULL([431],0) + ISNULL([433],0) + ISNULL([436],0) + ISNULL([437],0) +
+	ISNULL([438],0) + ISNULL([439],0) + ISNULL([440],0) + ISNULL([441],0) + ISNULL([442],0) + ISNULL([443],0) + ISNULL([444],0) as totalcomm_3,
 	
 	---Casino_comm
 	isnull([71],0) + 
@@ -212,23 +224,21 @@ PIVOT
 					[1003],
 					[500], [501],
 					[2401],
-					[4001]
+					[4001],
+					[415], [416], [427], [428], [430], [431], [432], [433], [434], [435], [436], [437], [438], [439], [440], [441], [442], [443], [444],
+					[17], [18]
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.recommend 
 ORDER BY c.username
 
 DROP TABLE #tmp
-GO
-
-GO
+DROP TABLE #SportBettype
 GO
 
 GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [vnteam] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [vnteam] AS [dbo]
 GO
