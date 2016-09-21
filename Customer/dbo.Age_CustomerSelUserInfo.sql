@@ -243,7 +243,7 @@ Param's Explanation:
 										AND	(SELECT value FROM dbo.f_CustSetting_ProductStatusSel(cpsDownline.bitmapHasSynced, @bitmapOrder_NG2)) = 0)
 						THEN 0
 					ELSE 1
-			END AS SyncedVoidBridgeDownline,
+			END AS SyncedNG2Downline,
 
 			-- Cricket
 			@IsIMBC AS IsIMBC,
