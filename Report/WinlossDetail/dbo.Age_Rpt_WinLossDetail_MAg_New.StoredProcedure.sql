@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
 	,@ToDate         SMALLDATETIME
@@ -79,6 +82,7 @@ Revisions:
 	- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
+	- 20160809@Percy: Modify Net Turnover for Allbet [RedmineID: #61873]
 */
 
 
@@ -261,6 +265,7 @@ BEGIN
 			   SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 
 					WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
 					WHEN b.StatusID = 111 AND s.ProductId = 1 THEN 0 
+					WHEN s.ProductID = 21 THEN b.oddsspread -- Allbet
 					ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
 		    --SUM(acomm/(1-apositiontaking-mpositiontaking)) as GrossComm,
