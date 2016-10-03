@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@CustID			INT, 
 	@Currency		INT,
 	@FromDate		SMALLDATETIME,  
@@ -19,7 +22,6 @@
 	@showVB			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
-WITH RECOMPILE
 AS  
 /*	
 	Created: Elodie
@@ -38,6 +40,7 @@ AS
 		- 20160129@Percy: Support new sport Cricket [Redmine: #50027]
 		- 20160318@Percy: Support AllBet [Redmine: #50605]
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+		- 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE, link-server DBSUM [Redmine: #58288]
 				
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -514,7 +517,7 @@ BEGIN
 				b.sporttype, b.bettype, b.betCount,
 				ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
 				b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover
-	FROM	DBSUM.bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
+	FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
 			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 	WHERE	winlostdate BETWEEN @fdate AND @tdate
 			AND custid IN (SELECT custid fROM @TmpCust)

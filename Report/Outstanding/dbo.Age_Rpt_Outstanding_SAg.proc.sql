@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_SAg]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_SAg]
 	@CustID int 
 AS
 
@@ -23,12 +26,17 @@ Revisions:
 	- 20160108@Percy: Get data new bettype RNG Casino from bettransRNG [Redmine: #48283]
 	- 20160204@Percy: Get data new product AllBet from bettransLC [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160607@Percy: Enhance Performance - using right index on translog table [Redmine: #58288]
 */
 SET NOCOUNT ON
 /*
 DECLARE @ABSDate DATETIME
 SET @ABSDate = '2011-09-01'
 */
+
+DECLARE @mrecommend TABLE (CustId INT PRIMARY KEY)
+INSERT INTO @mrecommend (CustId)
+SELECT CustId FROM dbo.custInfo (NOLOCK) WHERE roleid = 3 AND srecommend = @CustID
 
 ;with rt 
 AS (
@@ -62,9 +70,9 @@ AS (
 			0,					
 			0,
 			0	
-	FROM translog with (nolock) 
+	FROM translog t with (nolock)
+		INNER JOIN @mrecommend m ON t.mrecommend = m.CustId
 	WHERE	statusid=0
-			AND srecommend =  @CustID
 	GROUP BY mrecommend
 
 	UNION ALL -- bettransRNG
@@ -123,12 +131,9 @@ INNER JOIN (SELECT mrecommend,
 			) b ON c.custid = b.mrecommend
 ORDER BY username
 GO
-
 GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_SAg] TO [bodbDownlineNet] AS [dbo]
 GO
-
 GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_SAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_Outstanding_SAg] TO [vnteam] AS [dbo]
 GO

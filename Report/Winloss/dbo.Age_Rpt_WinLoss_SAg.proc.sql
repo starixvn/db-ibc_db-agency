@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
  @CustID				INT --srecommend  
  ,@FromDate				SMALLDATETIME
  ,@ToDate				SMALLDATETIME  
@@ -19,9 +22,6 @@
  ,@showAB				BIT = 0
  ,@showVB				BIT = 0
  ,@BalanceUpDay			SMALLDATETIME  
-  
-WITH RECOMPILE  
-  
 AS  
 
 /*  
@@ -66,8 +66,8 @@ AS
   - 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
   - 20160204@Percy: Support new product AllBet [Redmine: #50605]
   - 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+  - 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE, link-server DBSUM [Redmine: #58288]
   - 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
-
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  

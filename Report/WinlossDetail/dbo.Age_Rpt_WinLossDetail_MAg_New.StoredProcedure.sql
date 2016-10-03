@@ -81,6 +81,7 @@ Revisions:
 	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
 	- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160607@Percy: Enhance Performance - using custInfo table instead of Customer table [Redmine: #58288]
 	- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
 	- 20160809@Percy: Modify Net Turnover for Allbet [RedmineID: #61873]
 */
@@ -429,7 +430,7 @@ SELECT wl.*
 	           SUM(Company) AS Company,
 	           SUM(NoOfTicket) AS NoOfTicket,
 	           ROW_NUMBER() OVER (ORDER BY c.UserName) AS RowNum
-          FROM #MAgWinLossDetails w INNER JOIN Customer c WITH(NOLOCK)
+          FROM #MAgWinLossDetails w INNER JOIN dbo.custInfo c WITH(NOLOCK)
             ON w.CustID = c.CustID 
       GROUP BY w.CustID, c.UserName
        ) wl

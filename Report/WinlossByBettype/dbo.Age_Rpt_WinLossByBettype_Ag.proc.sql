@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Ag]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Ag]
 	@CustID 	INT,
 	@FromDate 	SMALLDATETIME,
 	@ToDate 	SMALLDATETIME,	
@@ -33,6 +36,7 @@ Revisions:
 	- 20150331@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20160104@Percy: Include new bettype range into RNG Casino [Redmine: #48283]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20160607@Percy: Enhance Performance - Using index recommend on bettrans table [Redmine: #58268]
 */
 SET NOCOUNT ON
 DECLARE @AgWinLoss TABLE
@@ -61,7 +65,10 @@ DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
 INSERT INTO @SportBettype (ProductID, Bettype)
 SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-IF @Todate >= @BalanceUpDay
+DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @BUDate SMALLDATETIME
+SELECT  @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay
+
+IF @TDate >= @BUDate
 BEGIN 
 	INSERT INTO @AgWinLoss
 		SELECT b.bettype,
@@ -83,7 +90,7 @@ BEGIN
          FROM Bettrans b WITH(NOLOCK)
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		 WHERE 1 = 1
-		   and winlostdate between @FromDate and @ToDate
+		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)
@@ -112,7 +119,7 @@ BEGIN
 			   COUNT(transid) as NoOfTicket
          FROM Bettrans b WITH(NOLOCK)
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
-		 WHERE winlostdate between @FromDate and @ToDate
+		 WHERE winlostdate between @FDate and @TDate
 		   and ruben = 1
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
@@ -145,7 +152,7 @@ BEGIN
 			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		 WHERE 1 = 1
-		   and winlostdate between @FromDate and @ToDate
+		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)
@@ -173,10 +180,10 @@ BEGIN
 			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
 			   -SUM(winlost - actual_stake + awinlost + comm),
 			   COUNT(transid) as NoOfTicket
-		 FROM Bettrans14 b WITH(NOLOCK, index = bettrans143)
+		 FROM Bettrans14 b WITH(NOLOCK)--, index = bettrans143)
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		 WHERE 1 = 1
-		   and winlostdate between @FromDate and @ToDate
+		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)
@@ -202,9 +209,9 @@ BEGIN
 			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
 			   -SUM(winlost - actual_stake + awinlost + comm),
 			   COUNT(transid) as NoOfTicket
-		 FROM Bettrans14 b WITH(NOLOCK, index = bettrans143)
+		 FROM Bettrans14 b WITH(NOLOCK)--, index = bettrans143)
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
-		 WHERE winlostdate between @FromDate and @ToDate
+		 WHERE winlostdate between @FDate and @TDate
 		   and ruben = 1
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
@@ -233,11 +240,11 @@ BEGIN
 			   isnull(SUM(awinlost), 0) + isnull(SUM(comm-playercomm), 0) as AgTotal,
 			   -SUM(winlost - actual_stake + awinlost+comm),
 			   COUNT(transid) as NoOfTicket
-		 FROM Bettrans14 b WITH(NOLOCK, index = bettrans143)
+		 FROM Bettrans14 b WITH(NOLOCK)--, index = bettrans143)
 			LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 			INNER JOIN @SportBettype s ON(b.bettype = s.Bettype)
 		 WHERE 1 = 1
-		   and winlostdate between @FromDate and @ToDate
+		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
 			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)

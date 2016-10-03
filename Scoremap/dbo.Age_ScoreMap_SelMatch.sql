@@ -4,12 +4,11 @@ GO
 ALTER PROCEDURE [dbo].[Age_ScoreMap_SelMatch]
  	@agentid INT,
  	@leagueid	INT
- WITH RECOMPILE
 AS
 /*
 	Task: Get matchs have bets under this Agent for Score Map function
 	Date: 20110919@Johnson
-	DB: DB053.bodb02	
+	DB: DBAGE.bodb02	
 	Revisions:
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
 		- 20130311@Elodie: Get matchs which have eventstatus <> 'completed'
@@ -18,6 +17,7 @@ AS
 		- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
 		- 20150828@Winnie: Myanmar odds
 		- 20160509@Percy: Add 2 bettype Correct Score (AOS) [RedmineID: #48785]
+		- 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE [RedmineID: #58288]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 	Parameter's Explanations:
 		
