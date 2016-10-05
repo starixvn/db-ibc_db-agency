@@ -1,7 +1,7 @@
 USE bodb02
 GO
 
-CREATE PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] 
+ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] 
 	@CustID				INT
 	,@fromdate			SMALLDATETIME   
 	,@todate			SMALLDATETIME   

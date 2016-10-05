@@ -49,6 +49,7 @@ Revisions:
 	- 20140926@Sophia:  Expand the range of Sporting Solution (1301 -> 1399)
 						Grouping duplicate bettypes of Sporting Solution and IBC [Redmine: #23444]
 	- 20150313@Cody: Apply sporttype bettype matrix [Redmine: #30169]
+	- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #62861]
 */
 
 SET NOCOUNT ON
@@ -123,8 +124,11 @@ IF @showVS	= 1
 		SET @ProductPrefix=@ProductPrefix+',VS'
 	END	
 	
-INSERT INTO #SportBettype
-EXEC dbo.Acc_SportBettypeMatrix_Sel @mode=4,@ProductPrefix=@ProductPrefix
+DECLARE @isTest BIT
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+INSERT INTO #SportBettype (ProductID, Bettype, EventType)
+SELECT ProductID, Bettype, EventType FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'',@ProductPrefix,@isTest)
 
 IF @league = ''
 BEGIN
