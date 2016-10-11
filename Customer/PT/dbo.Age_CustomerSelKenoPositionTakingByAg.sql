@@ -16,6 +16,7 @@ AS
 	Revisions: 
 		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20160919@Helen: Page list navigation disappears when select small page size number of Keno product in Position Talking (%) - [Redmine:59432]
 	Param's Explanation: 
 	• @Recommend: Agent ID
 */
@@ -40,8 +41,8 @@ BEGIN
 		@TotalPages = @TotalPages/@PageSize + CASE WHEN @TotalPages%@PageSize > 0 THEN 1 ELSE 0 END
 	FROM custinfo AS ci WITH(NOLOCK)
 	WHERE 1 = 1
-	and ci.SRecommend = @Recommend
-	AND ci.roleid = 2
+	and ci.Recommend = @Recommend
+	AND ci.roleid = 1
 
 	SELECT *
 	FROM (
