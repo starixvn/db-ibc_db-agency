@@ -225,25 +225,11 @@ Param's Explanation:
 					ELSE 1
 			END AS SyncedVoidBridgeDownline,
 
-			-- For NG2
-			(SELECT ISNULL(value,1) FROM dbo.f_CustSetting_ProductStatusSel(cps.bitmapIsDisabled, @bitmapOrder_NG2)) AS DisableNG2,
-			CAST(CASE WHEN @IsHidden_NG2 = 0 AND (SELECT ISNULL(value,1) FROM dbo.f_CustSetting_ProductStatusSel(cps.bitmapIsHidden, @bitmapOrder_NG2)) = 0 THEN 0 ELSE 1 END AS BIT) AS HideNG2,			
-			(SELECT ISNULL(value,0) FROM dbo.f_CustSetting_ProductStatusSel(cps.bitmapHasSynced, @bitmapOrder_NG2)) AS SyncedNG2,
-			(SELECT ISNULL(value,0) FROM dbo.f_CustSetting_ProductStatusSel(cpsUpline.bitmapHasSynced, @bitmapOrder_NG2)) AS SyncedNG2Upline,
-			CASE	WHEN Customer.roleid = 1 THEN 1
-					WHEN EXISTS	(	SELECT	TOP 1 1
-									FROM		dbo.CustProductStatus AS cpsDownline WITH (NOLOCK)
-									INNER JOIN	dbo.custInfo AS ciDownline WITH (NOLOCK)
-											ON	ciDownline.custid = cpsDownline.CustID
-									WHERE	Customer.custid =	CASE	WHEN Customer.roleid = 2 THEN ciDownline.recommend
-																		WHEN Customer.roleid = 3 THEN ciDownline.mrecommend
-																		WHEN Customer.roleid = 4 THEN ciDownline.srecommend
-																		ELSE -1
-																END
-										AND	(SELECT value FROM dbo.f_CustSetting_ProductStatusSel(cpsDownline.bitmapHasSynced, @bitmapOrder_NG2)) = 0)
-						THEN 0
-					ELSE 1
-			END AS SyncedNG2Downline,
+			-- NG2
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_NG2),1) AS DisableNG2,
+			CAST(CASE WHEN @IsHidden_NG2 = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_NG2),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideNG2,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_NG2), 0) AS SyncedNG2,
+			ISNULL(dbo.f_GetProductStatus(cpsUpline.bitmapHasSynced, @bitmapOrder_NG2), 0) AS SyncedNG2Upline,
 
 			-- Cricket
 			@IsIMBC AS IsIMBC,
