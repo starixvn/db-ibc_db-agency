@@ -18,36 +18,63 @@ BEGIN
 	SET NOCOUNT ON;
 
 	CREATE TABLE #TmpProducts(
-		ProductId TINYINT
+		ProductId TINYINT,
+		IsDisabled	BIT,
+		IsHidden	BIT,
+		IsSynced	BIT
 	);
 
-	CREATE TABLE #StatusSettings(
-		ProductId	TINYINT,
-		IsSync		BIT,
-		IsHide		BIT
+	CREATE TABLE #TmpCustInfo(
+		CustID					INT,
+		DisableVirtualSports	BIT,
+		HideVirtualSports		BIT,
+		HideKeno				BIT,
+		DisableGoldDeluxe		BIT,
+		HideGoldDeluxe			BIT,
+		DisableColossusBet		BIT,
+		HideColossusBet			BIT
 	);
 
-	INSERT INTO #TmpProducts(ProductID) VALUES (1), (2), (3), (4), (6); ---SB, Casino, Racing, Number Game, Live Casino: always show
+	INSERT INTO #TmpProducts(ProductID, IsDisabled, IsHidden, IsSynced) 
+	VALUES (1, 0, 0, 1), (2, 0, 0, 1), (3, 0, 0, 1), (4, 0, 0, 1), (6, 0, 0, 1); ---SB, Casino, Racing, Number Game, Live Casino: always show
+
+	INSERT INTO #TmpCustInfo(CustID, DisableVirtualSports, HideVirtualSports, HideKeno, DisableGoldDeluxe, HideGoldDeluxe, DisableColossusBet, HideColossusBet)
+	SELECT CustID, DisableVirtualSports, HideVirtualSports, HideKeno, DisableGoldDeluxe, HideGoldDeluxe, DisableColossusBet, HideColossusBet
+	FROM dbo.custinfo ci WITH(NOLOCK)
+	WHERE ci.custid = @CustID;
 
 	--Add VirtualSports, Keno, GoldDeluxe, ColossusBet
-	INSERT INTO #TmpProducts(ProductID)
-	SELECT unp.ProductID
-	FROM (
-		SELECT	CASE WHEN COALESCE(ci.HideVirtualSports, 1) = 1 THEN 0 ELSE 5 END AS VirtualSports,
-				CASE WHEN COALESCE(ci.HideKeno, 1) = 1 THEN 0 ELSE 8 END AS Keno,
-				CASE WHEN COALESCE(ci.HideGoldDeluxe, 1) = 1 THEN 0 ELSE 12 END AS GoldDeluxe,
-				CASE WHEN COALESCE(ci.HideColossusBet, 1) = 1 THEN 0 ELSE 15 END AS ColossusBet
-		FROM dbo.custinfo ci WITH(NOLOCK)
-		WHERE ci.custid = @CustID
-	) p
-	UNPIVOT (ProductID FOR ProductName IN (VirtualSports, Keno, GoldDeluxe, ColossusBet)) AS unp
-	WHERE unp.ProductID <> 0;
+	INSERT INTO #TmpProducts(ProductID, IsDisabled, IsHidden, IsSynced)
+	SELECT	5 AS ProductID, --VirtualSports
+			ISNULL(DisableVirtualSports, 1) AS IsDisabled,
+			ISNULL(HideVirtualSports, 1) AS IsHidden,
+			1 AS IsSynced
+	FROM #TmpCustInfo
+	UNION ALL
+	SELECT	8 AS ProductID, --Keno
+			0 AS IsDisabled,
+			ISNULL(HideKeno, 1),
+			1 AS IsSynced
+	FROM #TmpCustInfo
+	UNION ALL
+	SELECT	12 AS ProductID, --GoldDeluxe
+			ISNULL(DisableGoldDeluxe, 1) AS IsDisabled,
+			ISNULL(HideGoldDeluxe, 1) AS IsHidden,
+			1 AS IsSynced
+	FROM #TmpCustInfo
+	UNION ALL
+	SELECT	15 AS ProductID, --ColossusBet
+			ISNULL(DisableColossusBet, 1) AS IsDisabled,
+			ISNULL(HideColossusBet, 1) AS IsHidden,
+			1 AS IsSynced
+	FROM #TmpCustInfo;
 
-	--Get customer products in Group 0
-	INSERT INTO #StatusSettings(ProductId, IsHide, IsSync)
+	--Get customer products based on DCS
+	INSERT INTO #TmpProducts(ProductID, IsDisabled, IsHidden, IsSynced)
 	SELECT	t.ProductID,
-			MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden , t.bitmapOrder))) AS IsHide,
-			MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
+			MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsDisabled, t.bitmapOrder))) AS IsDisabled,
+			MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden, t.bitmapOrder))) AS IsHidden,
+			MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSynced
 	FROM
 		dbo.CustProductStatus cps  WITH (NOLOCK)  
 		CROSS APPLY
@@ -61,32 +88,17 @@ BEGIN
 	WHERE cps.CustID = @CustId
 	GROUP BY t.ProductID;
 
-	--Only Get Allbet, Macau Games if IsSync = 1 AND IsHide = 0
-	DELETE #StatusSettings
-	WHERE ProductId IN (21, 22)
-		AND (IsSync = 0 OR IsHide = 1);
-
-	--Remove hidden products
-	DELETE #StatusSettings
-	WHERE IsHide = 1;
-
 	SELECT	p.ProductId,
-			p.ProductName
-	FROM (
-			SELECT ProductId
-			FROM #TmpProducts
-
-			UNION ALL	
-
-			SELECT ProductId
-			FROM #StatusSettings
-		) tmp_p
+			p.ProductName,
+			tmp_p.IsDisabled,
+			tmp_p.IsHidden,
+			tmp_p.IsSynced
+	FROM #TmpProducts tmp_p
 		INNER JOIN dbo.Products p WITH(NOLOCK) ON tmp_p.ProductID = p.ProductID
-	WHERE p.GroupType = 0
 	ORDER BY p.ProductId;
 
 	DROP TABLE #TmpProducts;
-	DROP TABLE #StatusSettings;
+	DROP TABLE #TmpCustInfo;
 
 	SET NOCOUNT OFF;
 END
