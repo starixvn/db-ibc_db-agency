@@ -129,6 +129,32 @@ BEGIN
 			@BUDate = @BalanceUpDay,
 			@CID = @custid;
 
+	DECLARE @SportBettypeMatrix TABLE(
+		ProductID	tinyint,
+		BetType	smallint,
+		EventType	tinyint,
+		SubProduct	varchar(500),
+		RefTable	tinyint,
+		CasinoType	tinyint
+	);
+
+	INSERT INTO @SportBettypeMatrix(
+		ProductID,
+		BetType,
+		EventType,
+		SubProduct,
+		RefTable,
+		CasinoType
+	)
+	SELECT	s.ProductID,
+			BetType,
+			EventType,
+			SubProduct,
+			RefTable,
+			CasinoType
+	FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) s
+		INNER JOIN #SelectedProducts p on p.ProductID = s.ProductID;
+
 	IF @TDate >= @BUDate
 	BEGIN 
 		INSERT INTO #SAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, SAgWinLost, SAgComm, NoOfTicket)
@@ -151,15 +177,10 @@ BEGIN
 				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK, index = IX_srecommend)
-			INNER JOIN dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
+			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE winlostdate between @FDate and @Tdate
 			AND srecommend = @CID
 			AND b.statusID not in (0, 1, 101, 102, 103) 
-			AND EXISTS(
-				SELECT 1
-				FROM #SelectedProducts p
-				WHERE p.ProductID = s.ProductID
-			)
 		GROUP BY MRecommend, b.bettype;
 
 		IF @BUDate < @FDate
