@@ -224,14 +224,14 @@ BEGIN
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT	w.CustID, 
-				c.UserName,
-				SUM(TurnOver) AS TurnOver,
+		SELECT	w.CustID AS CustId, 
+				c.UserName AS CustName,
+				SUM(TurnOver) AS Turnover,
 				SUM(TurnoverNoDraw) AS TurnoverNoDraw,
 				SUM(GrossComm) AS GrossComm,
-				SUM(MemberWinLost) AS MemberWinlost,
-				SUM(PlayerComm) AS PlayerComm,
-				SUM(AgWinlost) AS AgWinlost,
+				SUM(MemberWinLost) AS MemberWinLoss,
+				SUM(PlayerComm) AS MemberComm,
+				SUM(AgWinlost) AS AgWinLoss,
 				SUM(AgComm) AS AgComm,
 				SUM(NoOfTicket) AS NoOfTicket
 		FROM #AgWinLossDetails w 
@@ -254,14 +254,14 @@ BEGIN
 
 	SELECT wl.*
 	FROM (
-		SELECT	w.CustID,
-				c.UserName,
-				SUM(TurnOver) AS TurnOver,
+		SELECT	w.CustID AS CustId,
+				c.UserName AS CustName,
+				SUM(TurnOver) AS Turnover,
 				SUM(TurnoverNoDraw) AS TurnoverNoDraw,
 				SUM(GrossComm) AS GrossComm,
-				SUM(MemberWinLost) AS MemberWinlost,
-				SUM(PlayerComm) AS PlayerComm,
-				SUM(AgWinlost) AS AgWinlost,
+				SUM(MemberWinLost) AS MemberWinLoss,
+				SUM(PlayerComm) AS MemberComm,
+				SUM(AgWinlost) AS AgWinLoss,
 				SUM(AgComm) AS AgComm,
 				SUM(NoOfTicket) AS NoOfTicket,
 				ROW_NUMBER() OVER (ORDER BY c.UserName) AS RowNum	

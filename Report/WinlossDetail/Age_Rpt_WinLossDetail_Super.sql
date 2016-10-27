@@ -1,19 +1,19 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Master]    Script Date: 10/26/2016 8:20:21 AM ******/
-IF OBJECT_ID('[dbo].[Age_Rpt_WinLossDetail_Master]') IS NOT NULL
-	DROP PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Super]    Script Date: 10/26/2016 10:34:04 AM ******/
+IF OBJECT_ID('[dbo].[Age_Rpt_WinLossDetail_Super]') IS NOT NULL
+	DROP PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Super]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Master]    Script Date: 10/26/2016 8:20:21 AM ******/
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Super]    Script Date: 10/26/2016 10:34:04 AM ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master] 
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Super]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
@@ -22,29 +22,31 @@ CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRecords	INT = 0 OUTPUT
+
+
 AS
 
 /*
 Created: 
 Task : Smartphone friendly - Win Loss Detail Report
 DB: DBAGE/bodb02
-Original SP: Age_Rpt_WinLossDetail_MAg_New
+Original SP: Age_Rpt_WinLossDetail_SAg
 Revisions:
-	- 20161024@Paul: Smartphone Friendly UI for Microsite Report [RedmineID: #61531]
+	- 20161024@Paul: Smartphone Friendly UI for Microsite Report - [Redmine: #61531]
+	
 */
 
 BEGIN
+	SET NOCOUNT ON;
 
-	SET NOCOUNT ON
+	DECLARE @RowStart INT,
+			@RowEnd INT;  
 
-	DECLARE @RowStart	INT,
-			@RowEnd		INT;
-		
 	SELECT	@PageIndex = @PageIndex - 1,
 			@RowStart = @PageSize * @PageIndex + 1,
 			@RowEnd = @RowStart + @PageSize - 1;
 
-	CREATE TABLE #MAgWinLossDetails
+	CREATE TABLE #SAgWinLossDetails
 	(
 		CustID			INT,
 		TurnOver		MONEY,
@@ -56,8 +58,10 @@ BEGIN
 		AgComm			MONEY,
 		MAgWinLost		MONEY,
 		MAgComm			MONEY,
+		SAgWinLost		MONEY,
+		SAgComm			MONEY,
 		NoOfTicket		INT
-	)
+	);
 
 	CREATE TABLE #SelectedProducts(
 		ProductID TINYINT
@@ -98,26 +102,20 @@ BEGIN
 
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
-	------Get @Srecommend
-	DECLARE @Srecommend int;
-
-	SELECT @Srecommend = Srecommend 
-	FROM dbo.CustInfo WITH(NOLOCK)
-	WHERE CustID = @CustID;
-
 	-----Get Special Super to hide data of them before specific date 
 	DECLARE @IsHide BIT = 0;
 
 	IF EXISTS (	SELECT 1 
 				FROM dbo.f_SpecialSuper() 
-				WHERE Srecommend = @Srecommend)
+				WHERE Srecommend = @CustID)
 	BEGIN
 		SELECT @IsHide = 1;
 	END
-		
+ 
 	----Get Account Login to detect Interal or not
 	DECLARE @LoginName NVARCHAR(128);
 	SELECT @LoginName = SUSER_NAME();
+
 
 	--Avoid Parameter Sniffing for bettrans and sum_winloss
 	DECLARE @FDate	SMALLDATETIME,
@@ -132,58 +130,61 @@ BEGIN
 
 	IF @TDate >= @BUDate
 	BEGIN 
-		INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
-		SELECT	Recommend,			
-				SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
+		INSERT INTO #SAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, SAgWinLost, SAgComm, NoOfTicket)
+		SELECT	MRecommend,
+				SUM(case when b.liveawayscore = 0 and b.bettype in (33, 43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
 				SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 
 						WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
 						WHEN b.StatusID = 111 AND s.ProductId = 1 THEN 0 
 						WHEN s.ProductID = 21 THEN b.oddsspread -- Allbet
 						ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
-				SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN (apositiontaking + mpositiontaking = 1) THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
+				SUM(case when b.bettype = 1000 then oddsspread else case when tpositiontaking = 1 then 0 else scomm/(1 - tpositiontaking) end end) as GrossComm,
 				SUM(winlost - actual_stake) AS MemberWinlost,
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,
-				ISNULL(SUM(comm - playercomm), 0) AS AgComm,
+				ISNULL(SUM(comm - playercomm),0) AS AgComm,
 				SUM(mwinlost) AS MAgWinlost,
-				SUM(acomm) - SUM(comm) AS MAgComm,
+				SUM(acomm)-SUM(comm) AS MAgComm,
+				SUM(swinlost) AS SAgWinlost,
+				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) AS NoOfTicket
-		FROM dbo.bettrans b WITH(NOLOCK)
+		FROM dbo.bettrans b WITH(NOLOCK, index = IX_srecommend)
 			INNER JOIN dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
-		WHERE winlostdate BETWEEN @FDate AND @TDate
-			AND statusID NOT IN (101, 102, 103)
-			AND ruben = 1
-			AND mrecommend = @CID
+		WHERE winlostdate between @FDate and @Tdate
+			AND srecommend = @CID
+			AND b.statusID not in (0, 1, 101, 102, 103) 
 			AND EXISTS(
 				SELECT 1
 				FROM #SelectedProducts p
 				WHERE p.ProductID = s.ProductID
 			)
-		GROUP BY Recommend, b.bettype;
-		
+		GROUP BY MRecommend, b.bettype;
+
 		IF @BUDate < @FDate
 		BEGIN
-			SELECT @BUDate = @FDate;
+			SELECT @BUDate=@FDate;
 		END
-	
-		INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
+		
+		INSERT INTO #SAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, SAgWinLost, SAgComm, NoOfTicket)
 		SELECT	CustID,			
 				SUM(ABS(TurnOver)) AS TurnOver,
-				SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
+				SUM(ABS(TunroverNoDraw)) AS TurnoverNoDraw,
 				SUM(grosscomm) AS GrossComm,
 				SUM(winlost) AS MemberWinlost,
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,
-				ISNULL(SUM(comm - playercomm), 0) AS AgComm,
+				ISNULL(SUM(comm - playercomm),0) AS AgComm,
 				SUM(mwinlost) AS MAgWinlost,
 				SUM(acomm) - SUM(comm) AS MAgComm,
+				SUM(swinlost) AS SAgWinlost,
+				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				SUM(betcount) AS NoOfTicket
 		FROM dbo.SUM_winloss b WITH(NOLOCK)
 			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
-		WHERE winlostdate BETWEEN @BUDate AND @Tdate			
-			AND MRecommend = @CID
-			AND RoleID = 2
+		WHERE winlostdate BETWEEN @BUDate AND @TDate
+			AND SRecommend = @CID
+			AND RoleID = 3
 		GROUP BY CustID;
 	END
 
@@ -193,50 +194,54 @@ BEGIN
 		BEGIN
 			SELECT @TDate = DATEADD(dd, -1, @BUDate);
 		END
-	
+		
 		IF @FDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
 		BEGIN
 			SELECT @FDate = '2016-06-01';
 		END
-		
-		INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
+	
+		INSERT INTO #SAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, SAgWinLost, SAgComm, NoOfTicket)
 		SELECT	CustID,			
 				SUM(ABS(TurnOver)) AS TurnOver,
-				SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
+				SUM(ABS(TunroverNoDraw)) AS TurnoverNoDraw,
 				SUM(grosscomm) AS GrossComm,
 				SUM(winlost) AS MemberWinlost,
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,
-				ISNULL(SUM(comm - playercomm), 0) AS AgComm,
+				ISNULL(SUM(comm - playercomm),0) AS AgComm,
 				SUM(mwinlost) AS MAgWinlost,
 				SUM(acomm) - SUM(comm) AS MAgComm,
+				SUM(swinlost) AS SAgWinlost,
+				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				SUM(betcount) AS NoOfTicket
-		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
+		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK)
 			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
 		WHERE winlostdate BETWEEN @FDate AND @TDate			
-			AND Srecommend = @Srecommend --- Add Srecommend to get the index seek 
-			AND MRecommend = @custid
+			AND Srecommend = @custid
+			AND Mrecommend = Mrecommend
 			AND recommend = recommend
-			AND RoleID = 2
+			AND RoleID = 3
 		GROUP BY CustID;
 	END	
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT w.CustID, 
-			   c.UserName, 
-			   SUM(TurnOver) AS TurnOver,
+		SELECT w.CustID AS CustId, 
+			   c.UserName AS CustName, 
+			   SUM(TurnOver) as Turnover,
 			   SUM(TurnoverNoDraw) as TurnoverNoDraw,
-			   SUM(GrossComm) AS GrossComm,
-			   SUM(MemberWinLost) AS MemberWinlost,
-			   SUM(PlayerComm) AS PlayerComm,
-			   SUM(AgWinlost) AS AgWinlost,
-			   SUM(AgComm) AS AgComm,
-			   SUM(MAgWinlost) AS MAgWinlost,
-			   SUM(MAgComm) AS MAgComm,
-			   SUM(NoOfTicket) AS NoOfTicket
-		FROM #MAgWinLossDetails w 
-			INNER JOIN dbo.custInfo c WITH(NOLOCK) ON w.CustID = c.CustID 
+			   SUM(GrossComm) as GrossComm,
+			   SUM(MemberWinLost) as MemberWinLoss,
+			   SUM(PlayerComm) as MemberComm,
+			   SUM(AgWinlost) as AgWinLoss,
+			   SUM(AgComm) as AgComm,
+			   SUM(MAgWinlost) as MAgWinLoss,
+			   SUM(MAgComm) as MAgComm,
+			   SUM(SAgWinlost) as SAgWinLoss,
+			   SUM(SAgComm) as SAgComm,
+			   SUM(NoOfTicket) as NoOfTicket
+		FROM #SAgWinLossDetails w 
+			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
 		GROUP BY w.CustID, c.UserName
 		ORDER BY c.Username;
 
@@ -248,53 +253,54 @@ BEGIN
 		SELECT @TotalRecords = count(tmp.CustID)
 		FROM (
 			SELECT CustID
-			FROM #MAgWinLossDetails
+			FROM #SAgWinLossDetails
 			GROUP BY CustID
-		) tmp; 
+		) tmp;
+ 
 	END
 
 	SELECT wl.*
 	FROM (
-		SELECT	w.CustID, 
-				c.UserName, 
-				SUM(TurnOver) AS TurnOver,
-				SUM(TurnoverNoDraw) AS TurnoverNoDraw,
-				SUM(GrossComm) AS GrossComm,
-				SUM(MemberWinLost) AS MemberWinlost,
-				SUM(PlayerComm) AS PlayerComm,
-				SUM(AgWinlost) AS AgWinlost,
-				SUM(AgComm) AS AgComm,
-				SUM(MAgWinlost) AS MAgWinlost,
-				SUM(MAgComm) AS MAgComm,
-				SUM(NoOfTicket) AS NoOfTicket,
-				ROW_NUMBER() OVER (ORDER BY c.UserName) AS RowNum
-		FROM #MAgWinLossDetails w
-			INNER JOIN dbo.custInfo c WITH(NOLOCK) ON w.CustID = c.CustID 
+		SELECT	w.CustID AS CustId, 
+				c.UserName AS CustName, 
+				SUM(TurnOver) as Turnover,
+				SUM(TurnoverNoDraw) as TurnoverNoDraw,
+				SUM(GrossComm) as GrossComm,
+				SUM(MemberWinLost) as MemberWinLoss,
+				SUM(PlayerComm) as MemberComm,
+				SUM(AgWinlost) as AgWinLoss,
+				SUM(AgComm) as AgComm,
+				SUM(MAgWinlost) as MAgWinLoss,
+				SUM(MAgComm) as MAgComm,
+				SUM(SAgWinlost) as SAgWinLoss,
+				SUM(SAgComm) as SAgComm,
+				SUM(NoOfTicket) as NoOfTicket,
+				ROW_NUMBER() over(order by c.UserName) as RowNum
+		FROM #SAgWinLossDetails w 
+			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
 		GROUP BY w.CustID, c.UserName
 	) wl
 	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
-	DROP TABLE #MAgWinLossDetails;
+	DROP TABLE #SAgWinLossDetails;
 	DROP TABLE #SelectedProducts;
 	DROP TABLE #TmpCondSumWL;
-
-	SET NOCOUNT OFF;
 END
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Master] TO [bodbAdminNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Super] TO [bodbAdminNet] AS [dbo]
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Master] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Super] TO [bodbDownlineNet] AS [dbo]
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Master] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Super] TO [bodbDownlineNetView] AS [dbo]
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Master] TO [bodbExtAccNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Super] TO [bodbExtAccNet] AS [dbo]
 GO
 
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_Master] TO [vnteam] AS [dbo]
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_Super] TO [vnteam] AS [dbo]
 GO
 
 
