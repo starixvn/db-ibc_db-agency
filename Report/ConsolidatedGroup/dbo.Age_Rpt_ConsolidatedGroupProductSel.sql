@@ -1,3 +1,6 @@
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
 	@CustId INT
 AS
@@ -12,6 +15,7 @@ AS
 		- 20160318@Percy: Support AllBet [Redmine: #50605]
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]	
+		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	Param's Explanation:
 
 */
@@ -31,7 +35,7 @@ BEGIN
 	INSERT INTO @ProductList (ProductID, ProductName)
 	SELECT	ProductID, ProductName
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22,23) 
+	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22,23,24) 
 
 	UPDATE	@ProductList
 	SET		isShow = 1
@@ -114,7 +118,7 @@ BEGIN
 	INNER JOIN #T T
 		ON T.ProductID = P.ProductID
 	WHERE T.IsHide = 0
-		AND T.ProductID NOT IN (21, 22)
+		AND T.ProductID NOT IN (21, 22, 24)
 
 	-- Check IsHidden and IsSync --
 	UPDATE	P
@@ -123,7 +127,7 @@ BEGIN
 	INNER JOIN #T T
 		ON T.ProductID = P.ProductID
 	WHERE T.IsHide = 0 AND T.IsSync = 1
-		AND T.ProductID IN (21, 22)
+		AND T.ProductID IN (21, 22, 24)
 
 	--------------------------------------------
 	SELECT * 

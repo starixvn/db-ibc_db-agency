@@ -21,6 +21,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@showAB			BIT = 0,
 	@showVB			BIT = 0,
 	@showNG2		BIT = 0,
+	@showFW			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -43,6 +44,7 @@ AS
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE, link-server DBSUM [Redmine: #58288]
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]			
+		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
 						2: Report by Daily
@@ -309,6 +311,19 @@ BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, bettype)
 	VALUES(213, 0)
+END
+
+IF @showFW = 1
+BEGIN
+	-- bettrans
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	219 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 24
+
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, bettype)
+	VALUES(219, 0)
 END
 		
 IF @tdate >= @BalanceUpDate

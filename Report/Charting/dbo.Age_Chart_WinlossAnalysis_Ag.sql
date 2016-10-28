@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_Ag]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_Ag]
 	@agentID		INT,	
 	@fromdate		DATETIME,
 	@todate			DATETIME,	
@@ -17,6 +20,7 @@
 	@showAB			BIT = 0,
 	@showVB			BIT = 0,
 	@showNG2		BIT = 0,
+	@showFW			BIT = 0,
 	@BalanceUpDate	DATETIME
 AS	
 /*
@@ -42,6 +46,7 @@ AS
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
+		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		
 	Parameters Explanation:
 */
@@ -307,6 +312,19 @@ SET NOCOUNT ON
 		--Sum_winloss
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(213, 0)
+	END
+	
+	IF @showFW = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	219 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 24
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(219, 0)
 	END
 
 	-----Get Special Super to hide data of them before specific date 

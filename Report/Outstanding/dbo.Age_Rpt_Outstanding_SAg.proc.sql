@@ -27,12 +27,20 @@ Revisions:
 	- 20160204@Percy: Get data new product AllBet from bettransLC [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20160607@Percy: Enhance Performance - using right index on translog table [Redmine: #58288]
+	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 */
 SET NOCOUNT ON
 /*
 DECLARE @ABSDate DATETIME
 SET @ABSDate = '2011-09-01'
 */
+
+DECLARE @isTest BIT
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
+INSERT INTO #SportBettype (ProductID, bettype, RefTable)
+SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
 
 DECLARE @mrecommend TABLE (CustId INT PRIMARY KEY)
 INSERT INTO @mrecommend (CustId)
@@ -52,11 +60,14 @@ AS (
 			SUM(case when bettype = 23202 then actual_stake end) BingoOutstanding	
 	FROM bettrans with (nolock) 
 	WHERE	ruben=0
+			/*
 			AND bettype NOT BETWEEN 801 AND 899 -- Metric gaming
 			AND bettype NOT IN (1003) -- Cock Fighting
 			AND bettype NOT BETWEEN 2101 AND 2399 -- new RNG Casino
 			AND bettype NOT BETWEEN 2401 AND 2499 -- AllBet
 			AND bettype NOT BETWEEN 4001 AND 7999 -- Voidbridge
+			*/
+			AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0)
 			AND srecommend =  @CustID
 	GROUP BY mrecommend
 	
@@ -88,7 +99,7 @@ AS (
 	FROM bettransRNG with (nolock) 
 	WHERE	statusid=0
 			AND srecommend =  @CustID
-			AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+			--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 	GROUP BY mrecommend
 
 	UNION ALL -- bettransLC
@@ -104,7 +115,7 @@ AS (
 	FROM bettransLC with (nolock) 
 	WHERE	statusid=0
 			AND srecommend =  @CustID
-			AND gameID BETWEEN 2401 AND 2499
+			--AND gameID BETWEEN 2401 AND 2499
 	GROUP BY mrecommend
 )
 SELECT	username, b.mrecommend as custid, 
@@ -130,6 +141,7 @@ INNER JOIN (SELECT mrecommend,
 			GROUP BY mrecommend
 			) b ON c.custid = b.mrecommend
 ORDER BY username
+DROP TABLE #SportBettype
 GO
 GRANT EXECUTE ON [dbo].[Age_Rpt_Outstanding_SAg] TO [bodbDownlineNet] AS [dbo]
 GO

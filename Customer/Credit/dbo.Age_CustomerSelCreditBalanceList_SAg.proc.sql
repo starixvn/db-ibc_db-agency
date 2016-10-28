@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_SAg]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_SAg]
 	@CustID		INT,
 	@PageSize	INT = 500,
 	@PageIndex	INT = 1,
@@ -34,12 +37,20 @@ Revisions:
 		1. Change formula turnover [Redmine: #32974]
 		2. Remove @ABSDate
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 
 Param's Explanation:
 • @CustID: SAgentID
 */
 
 SET NOCOUNT ON
+
+DECLARE @isTest BIT
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+CREATE TABLE #SportBettype (bettype INT, RefTable TINYINT)
+INSERT INTO #SportBettype (bettype, RefTable)
+SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 
 DECLARE /* @ABSDate DATETIME,*/
 		@today DATE,
@@ -86,11 +97,11 @@ CREATE TABLE #balance
 	FROM  bettrans WITH (NOLOCK)
 	WHERE srecommend = @CustID
 		AND (
-				(bettype NOT IN (801,802,803,804,805,806,1003) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
+				(bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0) AND ruben =0)
 				OR ruben <> 0
 			)
 		AND (
-				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
+				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN(0,3)))
 				OR CONVERT(DATE, winlostdate) < @yesterday
 			)
 	GROUP BY mrecommend
@@ -112,7 +123,7 @@ CREATE TABLE #balance
 		ISNULL(SUM(ABS(stake)), 0) AS turnover
 	FROM  bettransRNG WITH (NOLOCK)
 	WHERE srecommend = @CustID
-		AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+		--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 		AND (
 				statusID IN (0, 1)
 				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
@@ -126,7 +137,7 @@ CREATE TABLE #balance
 		ISNULL(SUM(ABS(stake)), 0) AS turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE srecommend = @CustID
-		AND gameID BETWEEN 2401 AND 2499
+		--AND gameID BETWEEN 2401 AND 2499
 		AND (
 				statusID IN (0, 1)
 				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
@@ -150,19 +161,19 @@ CREATE TABLE #today_balance
 ;WITH today_balance AS (
 	SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
 	FROM   bettrans WITH (NOLOCK)
-	WHERE  srecommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
+	WHERE  srecommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN(0,3))
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY mrecommend
 	UNION ALL
 	SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
 	FROM   bettransRNG WITH (NOLOCK)
-	WHERE  srecommend = @CustID AND statusID NOT IN (0, 1) AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+	WHERE  srecommend = @CustID AND statusID NOT IN (0, 1) --AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY mrecommend
 	UNION ALL
 	SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
 	FROM   bettransLC WITH (NOLOCK)
-	WHERE  srecommend = @CustID AND statusID NOT IN (0, 1) AND gameID BETWEEN 2401 AND 2499
+	WHERE  srecommend = @CustID AND statusID NOT IN (0, 1) --AND gameID BETWEEN 2401 AND 2499
 		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY mrecommend
 )
@@ -235,6 +246,7 @@ WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 drop table #balance
 drop table #today_balance
 drop table #tmp_customer
+DROP TABLE #SportBettype
 GO
 
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [bodbDownlineNet] AS [dbo]
