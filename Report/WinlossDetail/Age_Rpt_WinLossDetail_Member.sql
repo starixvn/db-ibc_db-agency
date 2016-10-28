@@ -261,6 +261,18 @@ BEGIN
 		GROUP BY w.CustID, c.UserName
 		ORDER BY c.Username;
 
+		SELECT	NULL AS CustId,
+				'Total' AS CustName,
+				SUM(TurnOver) AS Turnover,
+				SUM(TurnoverNoDraw) AS NetTurnover,
+				SUM(GrossComm) AS GrossComm,
+				SUM(MemberWinLost) AS MemberWinLoss,
+				SUM(PlayerComm) AS MemberComm,
+				SUM(AgWinlost) AS AgWinLoss,
+				SUM(AgComm) AS AgComm,
+				SUM(NoOfTicket) AS NumberOfTickets
+		FROM #AgWinLossDetails;
+
 		RETURN;
 	END
 
@@ -293,11 +305,23 @@ BEGIN
 	) wl
 	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
-	SET NOCOUNT OFF;
+	SELECT	NULL AS CustId,
+			'Total' AS CustName,
+			SUM(TurnOver) AS Turnover,
+			SUM(TurnoverNoDraw) AS NetTurnover,
+			SUM(GrossComm) AS GrossComm,
+			SUM(MemberWinLost) AS MemberWinLoss,
+			SUM(PlayerComm) AS MemberComm,
+			SUM(AgWinlost) AS AgWinLoss,
+			SUM(AgComm) AS AgComm,
+			SUM(NoOfTicket) AS NumberOfTickets
+	FROM #AgWinLossDetails;
 
 	DROP TABLE #AgWinLossDetails;
 	DROP TABLE #SelectedProducts;
 	DROP TABLE #TmpCondSumWL;
+
+	SET NOCOUNT OFF;
 END
 GO
 

@@ -245,22 +245,36 @@ BEGIN
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT w.CustID AS CustId, 
-			   c.UserName AS CustName, 
-			   SUM(TurnOver) AS Turnover,
-			   SUM(TurnoverNoDraw) as NetTurnover,
-			   SUM(GrossComm) AS GrossComm,
-			   SUM(MemberWinLost) AS MemberWinLoss,
-			   SUM(PlayerComm) AS MemberComm,
-			   SUM(AgWinlost) AS AgWinLoss,
-			   SUM(AgComm) AS AgComm,
-			   SUM(MAgWinlost) AS MAgWinLoss,
-			   SUM(MAgComm) AS MAgComm,
-			   SUM(NoOfTicket) AS NumberOfTickets
+		SELECT	w.CustID AS CustId, 
+				c.UserName AS CustName, 
+				SUM(TurnOver) AS Turnover,
+				SUM(TurnoverNoDraw) as NetTurnover,
+				SUM(GrossComm) AS GrossComm,
+				SUM(MemberWinLost) AS MemberWinLoss,
+				SUM(PlayerComm) AS MemberComm,
+				SUM(AgWinlost) AS AgWinLoss,
+				SUM(AgComm) AS AgComm,
+				SUM(MAgWinlost) AS MAgWinLoss,
+				SUM(MAgComm) AS MAgComm,
+				SUM(NoOfTicket) AS NumberOfTickets
 		FROM #MAgWinLossDetails w 
 			INNER JOIN dbo.custInfo c WITH(NOLOCK) ON w.CustID = c.CustID 
 		GROUP BY w.CustID, c.UserName
 		ORDER BY c.Username;
+
+		SELECT	NULL AS CustId,
+				'Total' AS CustName,
+				SUM(TurnOver) AS Turnover,
+				SUM(TurnoverNoDraw) as NetTurnover,
+				SUM(GrossComm) AS GrossComm,
+				SUM(MemberWinLost) AS MemberWinLoss,
+				SUM(PlayerComm) AS MemberComm,
+				SUM(AgWinlost) AS AgWinLoss,
+				SUM(AgComm) AS AgComm,
+				SUM(MAgWinlost) AS MAgWinLoss,
+				SUM(MAgComm) AS MAgComm,
+				SUM(NoOfTicket) AS NumberOfTickets
+		FROM #MAgWinLossDetails;
 
 		RETURN;
 	END
@@ -295,6 +309,20 @@ BEGIN
 		GROUP BY w.CustID, c.UserName
 	) wl
 	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+
+	SELECT	NULL AS CustId,
+			'Total' AS CustName,
+			SUM(TurnOver) AS Turnover,
+			SUM(TurnoverNoDraw) as NetTurnover,
+			SUM(GrossComm) AS GrossComm,
+			SUM(MemberWinLost) AS MemberWinLoss,
+			SUM(PlayerComm) AS MemberComm,
+			SUM(AgWinlost) AS AgWinLoss,
+			SUM(AgComm) AS AgComm,
+			SUM(MAgWinlost) AS MAgWinLoss,
+			SUM(MAgComm) AS MAgComm,
+			SUM(NoOfTicket) AS NumberOfTickets
+	FROM #MAgWinLossDetails;
 
 	DROP TABLE #MAgWinLossDetails;
 	DROP TABLE #SelectedProducts;

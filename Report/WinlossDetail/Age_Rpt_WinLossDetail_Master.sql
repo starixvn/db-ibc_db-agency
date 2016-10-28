@@ -248,24 +248,40 @@ BEGIN
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT w.CustID AS CustId, 
-			   c.UserName AS CustName, 
-			   SUM(TurnOver) as Turnover,
-			   SUM(TurnoverNoDraw) as NetTurnover,
-			   SUM(GrossComm) as GrossComm,
-			   SUM(MemberWinLost) as MemberWinLoss,
-			   SUM(PlayerComm) as MemberComm,
-			   SUM(AgWinlost) as AgWinLoss,
-			   SUM(AgComm) as AgComm,
-			   SUM(MAgWinlost) as MAgWinLoss,
-			   SUM(MAgComm) as MAgComm,
-			   SUM(SAgWinlost) as SAgWinLoss,
-			   SUM(SAgComm) as SAgComm,
-			   SUM(NoOfTicket) as NumberOfTickets
+		SELECT	w.CustID AS CustId, 
+				c.UserName AS CustName, 
+				SUM(TurnOver) as Turnover,
+				SUM(TurnoverNoDraw) as NetTurnover,
+				SUM(GrossComm) as GrossComm,
+				SUM(MemberWinLost) as MemberWinLoss,
+				SUM(PlayerComm) as MemberComm,
+				SUM(AgWinlost) as AgWinLoss,
+				SUM(AgComm) as AgComm,
+				SUM(MAgWinlost) as MAgWinLoss,
+				SUM(MAgComm) as MAgComm,
+				SUM(SAgWinlost) as SAgWinLoss,
+				SUM(SAgComm) as SAgComm,
+				SUM(NoOfTicket) as NumberOfTickets
 		FROM #SAgWinLossDetails w 
 			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
 		GROUP BY w.CustID, c.UserName
 		ORDER BY c.Username;
+
+		SELECT	NULL AS CustId,
+				'Total' AS CustName,
+				SUM(TurnOver) as Turnover,
+				SUM(TurnoverNoDraw) as NetTurnover,
+				SUM(GrossComm) as GrossComm,
+				SUM(MemberWinLost) as MemberWinLoss,
+				SUM(PlayerComm) as MemberComm,
+				SUM(AgWinlost) as AgWinLoss,
+				SUM(AgComm) as AgComm,
+				SUM(MAgWinlost) as MAgWinLoss,
+				SUM(MAgComm) as MAgComm,
+				SUM(SAgWinlost) as SAgWinLoss,
+				SUM(SAgComm) as SAgComm,
+				SUM(NoOfTicket) as NumberOfTickets
+		FROM #SAgWinLossDetails;
 
 		RETURN;
 	END
@@ -304,9 +320,27 @@ BEGIN
 	) wl
 	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
+	SELECT	NULL AS CustId,
+			'Total' AS CustName,
+			SUM(TurnOver) as Turnover,
+			SUM(TurnoverNoDraw) as NetTurnover,
+			SUM(GrossComm) as GrossComm,
+			SUM(MemberWinLost) as MemberWinLoss,
+			SUM(PlayerComm) as MemberComm,
+			SUM(AgWinlost) as AgWinLoss,
+			SUM(AgComm) as AgComm,
+			SUM(MAgWinlost) as MAgWinLoss,
+			SUM(MAgComm) as MAgComm,
+			SUM(SAgWinlost) as SAgWinLoss,
+			SUM(SAgComm) as SAgComm,
+			SUM(NoOfTicket) as NumberOfTickets
+	FROM #SAgWinLossDetails;
+
 	DROP TABLE #SAgWinLossDetails;
 	DROP TABLE #SelectedProducts;
 	DROP TABLE #TmpCondSumWL;
+
+	SET NOCOUNT OFF;
 END
 GO
 
