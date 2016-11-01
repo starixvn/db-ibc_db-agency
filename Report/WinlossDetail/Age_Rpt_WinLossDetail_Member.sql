@@ -26,6 +26,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
 	@ToDate			SMALLDATETIME,
 	@ProductIds		VARCHAR(MAX),
 	@BalanceUpDay	SMALLDATETIME,
+	@MoveBetsDay	SMALLDATETIME,
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRecords	INT = 0 OUTPUT
@@ -130,11 +131,13 @@ BEGIN
 	DECLARE @FDate	SMALLDATETIME,
 			@TDate	SMALLDATETIME,
 			@BUDate SMALLDATETIME,
+			@MBDate SMALLDATETIME,
 			@CID	INT;
 	    
 	SELECT	@FDate = @FromDate,
 			@TDate = @ToDate, 
 			@BUDate = @BalanceUpDay, 
+			@MBDate = @MoveBetsDay,
 			@CID = @custid;
 
 	DECLARE @SportBettypeMatrix TABLE(
@@ -182,7 +185,7 @@ BEGIN
 				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
-		WHERE winlostdate BETWEEN @FDate AND @TDate
+		WHERE winlostdate BETWEEN DATEADD(DD, 1, @MBDate) AND @TDate
 			AND b.statusID NOT IN (101, 102, 103)
 			AND Recommend = @CID
 			AND ruben = 1 
@@ -205,7 +208,7 @@ BEGIN
 				SUM(betcount) AS NoOfTicket
 		FROM dbo.sum_winloss b WITH (NOLOCK) 
 			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
-		WHERE winlostdate BETWEEN @BUDate AND @TDate			
+		WHERE winlostdate BETWEEN @BUDate AND @MBDate			
 			AND recommend = @CID
 			AND RoleID = 1
 		GROUP BY CustID;
