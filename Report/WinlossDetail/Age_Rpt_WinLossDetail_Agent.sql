@@ -126,6 +126,8 @@ BEGIN
 			@TDate	SMALLDATETIME,
 			@BUDate	SMALLDATETIME,
 			@MBDate SMALLDATETIME,
+			@FDateOnCurrent SMALLDATETIME,
+			@TDateOn14	SMALLDATETIME,
 			@CID	INT;
 	    
 	SELECT	@FDate = @FromDate,
@@ -162,6 +164,15 @@ BEGIN
 
 	IF @TDate >= @BUDate
 	BEGIN 
+		IF @FDate > @MBDate
+		BEGIN
+			SET @FDateOnCurrent = @FDate;
+		END
+		ELSE
+		BEGIN
+			SET @FDateOnCurrent = DATEADD(DD, 1, @MBDate);
+		END
+
 		INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
 		SELECT	Recommend,			
 				SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
@@ -181,7 +192,7 @@ BEGIN
 				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
-		WHERE winlostdate BETWEEN DATEADD(DD, 1, @MBDate) AND @TDate
+		WHERE winlostdate BETWEEN @FDateOnCurrent AND @TDate
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
 			AND mrecommend = @CID
@@ -190,6 +201,15 @@ BEGIN
 		IF @BUDate < @FDate
 		BEGIN
 			SELECT @BUDate = @FDate;
+		END
+		
+		IF @TDate > @MBDate
+		BEGIN
+			SET @TDateOn14 = @MBDate;
+		END
+		ELSE
+		BEGIN
+			SET @TDateOn14 = @TDate;
 		END
 	
 		INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
@@ -206,7 +226,7 @@ BEGIN
 				SUM(betcount) AS NoOfTicket
 		FROM dbo.SUM_winloss b WITH(NOLOCK)
 			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
-		WHERE winlostdate BETWEEN @BUDate AND @MBDate			
+		WHERE winlostdate BETWEEN @BUDate AND @TDateOn14			
 			AND MRecommend = @CID
 			AND RoleID = 2
 		GROUP BY CustID;
