@@ -14,6 +14,7 @@ AS
 	DB: DBAGE.bodb02
 	
 	Revisions:
+		- 20160815@Johnson: Integrate NG2 [Redmine: #61397]
 */
 
 BEGIN
@@ -21,6 +22,7 @@ BEGIN
 
 	DECLARE @WinLoss TABLE
 	(
+		sporttype		INT DEFAULT 0,
 		bettype			INT DEFAULT 0,
 		TurnOver		MONEY DEFAULT 0,
 		-- member --
@@ -48,21 +50,23 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-	DECLARE @SportBettype TABLE (ProductID INT, Bettype INT)
-	INSERT INTO @SportBettype (ProductID, Bettype)
-	SELECT ProductID, Bettype FROM dbo.f_SportBettypeMatrix_Sel (@ProductID, 0, 0, 2, '', '', @isTest)
+	DECLARE @SportBettype TABLE (ProductID INT, Bettype INT, Sporttype INT)
+	INSERT INTO @SportBettype (ProductID, Bettype, Sporttype)
+	SELECT DISTINCT t.ProductID, t.Bettype, s.Sporttype FROM dbo.f_SportBettypeMatrix_Sel (@ProductID, 0, 0, 2, '', '', @isTest) t
+	INNER JOIN SportBettypeMatrix s WITH(NOLOCK) on t.ProductID = s.ProductID and t.BetType = s.BetType
 
 	IF @Todate >= @BalanceUpDay 
 	BEGIN
 		IF @RoleID = 2
 		BEGIN
 			INSERT INTO @WinLoss
-			(	bettype, TurnOver,
+			(	sporttype, bettype, TurnOver,
 				MemberWinLoss, MemberRolling, MemberTotal,
 				AgentWinLoss, AgentRolling, AgentTotal,
 				Company
 			)
 			SELECT
+				s.sporttype,
 				b.bettype,
 				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
 				SUM(winlost - actual_stake) AS MemberWinLoss,
@@ -80,9 +84,10 @@ BEGIN
 				AND ruben = 1
 				AND statusID NOT IN (101, 102, 103)
 				AND recommend = @custid
-			GROUP BY b.bettype
+			GROUP BY s.sporttype,b.bettype
 			UNION ALL
 			SELECT
+				s.sporttype,
 				b.bettype,
 				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
 				SUM(winlost - actual_stake) AS MemberWinLoss,
@@ -100,17 +105,18 @@ BEGIN
 				AND ruben = 1
 				AND statusID NOT IN (101, 102, 103)
 				AND recommend = @custid
-			GROUP BY b.bettype
+			GROUP BY s.sporttype,b.bettype
 		END
 		ELSE IF @RoleID = 3
 		BEGIN
 			INSERT INTO @WinLoss
-			(	bettype, TurnOver,
+			(	sporttype, bettype, TurnOver,
 				AgentTotal,
 				MasterWinLoss, MasterRolling, MasterTotal,
 				Company
 			)			 
 			SELECT
+				s.sporttype,
 				b.bettype,
 				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
 				ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(comm), 0) AS AgentTotal,
@@ -126,9 +132,10 @@ BEGIN
 				AND statusID NOT IN (101, 102, 103)
 				AND ruben = 1
 				AND mrecommend = @CustID
-			GROUP BY b.bettype
+			GROUP BY s.sporttype, b.bettype
 			UNION
 			SELECT
+				s.sporttype,
 				b.bettype,
 				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
 				ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(comm), 0) AS AgentTotal,
@@ -144,7 +151,7 @@ BEGIN
 				AND statusID NOT IN (101, 102, 103)
 				AND ruben = 1
 				AND mrecommend = @CustID
-			GROUP BY b.bettype
+			GROUP BY s.sporttype, b.bettype
 		END
 		ELSE IF @RoleID = 4
 		BEGIN
@@ -153,12 +160,13 @@ BEGIN
 			SELECT custID FROM custInfo (NOLOCK) WHERE srecommend = @CustID AND roleID = 2
 
 			INSERT INTO @WinLoss
-			(	bettype, TurnOver,
+			(	sporttype, bettype, TurnOver,
 				MasterTotal,
 				SuperWinLoss, SuperRolling, SuperTotal,
 				Company
 			)
 			SELECT
+				s.sporttype,
 				b.bettype,
 				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
 				SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MasterTotal,
@@ -173,9 +181,10 @@ BEGIN
 				winlostdate BETWEEN @FromDate AND @ToDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)
 				AND SRecommend = @CustID
-			GROUP BY b.bettype
+			GROUP BY s.sporttype, b.bettype
 			UNION ALL
 			SELECT
+				s.sporttype,
 				b.bettype,
 				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
 				SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MasterTotal,
@@ -191,12 +200,13 @@ BEGIN
 				winlostdate BETWEEN @FromDate AND @ToDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)
 				--AND SRecommend = @CustID
-			GROUP BY b.bettype
+			GROUP BY s.sporttype, b.bettype
 		END
 	END
 
 
-	SELECT  A.bettype AS GameTypeID,
+	SELECT  A.sporttype,
+			A.bettype AS GameTypeID,
 			t.typenamee AS [GameTypeName],
 			t.typenamee AS [GameTypeName_En],
 			t.typenamec_uni AS [GameTypeName_Ct],
@@ -222,6 +232,7 @@ BEGIN
 	FROM bettype t
 		INNER JOIN (
 			SELECT
+				sporttype,
 				bettype,
 				SUM(TurnOver)		AS TurnOver,
 				-- member --
@@ -243,7 +254,7 @@ BEGIN
 				-- company --
 				SUM(company)		AS Company
 			FROM @WinLoss
-			GROUP BY bettype
+			GROUP BY sporttype, bettype
 		) AS A 
 	ON t.typeid = A.bettype
 END

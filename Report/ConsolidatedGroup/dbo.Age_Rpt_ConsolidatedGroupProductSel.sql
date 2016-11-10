@@ -11,7 +11,7 @@ AS
 	Revisions:
 		- 20160318@Percy: Support AllBet [Redmine: #50605]
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
-	
+		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]	
 	Param's Explanation:
 
 */
@@ -31,7 +31,7 @@ BEGIN
 	INSERT INTO @ProductList (ProductID, ProductName)
 	SELECT	ProductID, ProductName
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22) 
+	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22,23) 
 
 	UPDATE	@ProductList
 	SET		isShow = 1
@@ -98,7 +98,9 @@ BEGIN
 		(
 			SELECT p.bitmapOrder , c.ProductID
 			FROM
-				dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) c
+				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
+				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
+				)c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
 		) t

@@ -16,6 +16,7 @@
 	@showCF			BIT = 0,
 	@showAB			BIT = 0,
 	@showVB			BIT = 0,
+	@showNG2		BIT = 0,
 	@BalanceUpDate	DATETIME
 AS	
 /*
@@ -40,7 +41,8 @@ AS
 		- 20160204@Percy: Support new product AllBet [Redmine: #50605]
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
-
+		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
+		
 	Parameters Explanation:
 */
 SET NOCOUNT ON
@@ -292,6 +294,19 @@ SET NOCOUNT ON
 		--Sum_winloss
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(212, 0)
+	END
+	
+	IF @showNG2 = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	213 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 23
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(213, 0)
 	END
 
 	-----Get Special Super to hide data of them before specific date 
