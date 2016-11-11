@@ -83,10 +83,10 @@ BEGIN
 	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) VALUES
 	(1, 0, 0), --Sportsbook
 	(6, 251, 71), (6, 208, 0), (6, 209, 0), (6, 210, 0), --RNG Casino
-	(9, 253, 1000), --P2P
+	--(9, 253, 1000), --P2P
 	(2, 151, 0), --Racing
 	(3, 161, 0), --Number Game
-	(7, 252, 73), --Bingo
+	--(7, 252, 73), --Bingo
 	(4, 162, 0), --Live Casino
 	(5, 180, 0), --Virtual Sports
 	(8, 202, 0), --Keno
