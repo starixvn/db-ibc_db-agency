@@ -17,6 +17,7 @@ AS
 		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20160919@Helen: Page list navigation disappears when select small page size number of Keno product in Position Talking (%) - [Redmine:59432]
+		- 20161116@Winnie: Show MaxKeno 2, Hide Massac,Malta RedmineID: #66058
 	Param's Explanation:
 	• @MRecommend: Master Agent ID
 */
@@ -75,12 +76,14 @@ BEGIN
 		           MAX(CASE WHEN cg.bettype = 1504 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1504,
 		           MAX(CASE WHEN cg.bettype = 1505 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1505,
 		           --MAX(CASE WHEN cg.bettype = 1506 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1506,
-		           MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1507,
+		           --MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1507,
 		           MAX(CASE WHEN cg.bettype = 1508 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1508,
-		           MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1509,
+		           --MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1509,
 		           MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1511,
 		           MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1513,
-		           MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1514
+		           MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1514,
+		           MAX(CASE WHEN cg.bettype = 1515 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1515,
+		           MAX(CASE WHEN cg.bettype = 1516 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1516
 	          FROM custinfo ci with(nolock)
 					INNER JOIN CustSettingGame cg with(nolock) on ci.custid = cg.custid
 					INNER JOIN CustGameType ct with(nolock) on ci.custid = ct.CustID
