@@ -81,9 +81,8 @@ BEGIN
 		           --MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1509,
 		           MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1511,
 		           MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1513,
-		           MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1514,
-		           MAX(CASE WHEN cg.bettype = 1515 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1515,
-		           MAX(CASE WHEN cg.bettype = 1516 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1516
+		           MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1514
+
 	          FROM custinfo ci with(nolock)
 					INNER JOIN CustSettingGame cg with(nolock) on ci.custid = cg.custid
 					INNER JOIN CustGameType ct with(nolock) on ci.custid = ct.CustID

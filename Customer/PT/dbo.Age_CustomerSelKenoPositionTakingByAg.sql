@@ -17,7 +17,7 @@ AS
 		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20160919@Helen: Page list navigation disappears when select small page size number of Keno product in Position Talking (%) - [Redmine:59432]
-		- 20161116@Winnie: Show MaxKeno 2, Hide Massac,Malta RedmineID: #66058
+		- 20161116@Winnie: Hide Massac,Malta RedmineID: #66058
 	Param's Explanation: 
 	• @Recommend: Agent ID
 */
@@ -96,9 +96,8 @@ BEGIN
 			--MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1509,
 			MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1511,
 			MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1513,
-			MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1514,
-			MAX(CASE WHEN cg.bettype = 1515 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1515,
-		    MAX(CASE WHEN cg.bettype = 1516 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1516
+			MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1514
+
 		FROM custinfo ci with(nolock)
 			inner join CustSettingGame cg with(nolock) on ci.custid = cg.custid
 			inner join CustGameType ct with(nolock) on ci.custid = ct.CustID
