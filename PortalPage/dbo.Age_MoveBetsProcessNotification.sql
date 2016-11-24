@@ -8,11 +8,14 @@ AS
 	Date: 2016-10-03
 	DB: DBTXN.bodb02
 	Task: Display notification during move bet process
+
+	Revisions:
+		- 20161027@Percy: Return output end time for move bets/balance up process [RedmineID: #64636]
 */
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @CurrentDateTime DATETIME, @EndTime DATETIME, @FromDate DATETIME, @ToDate DATETIME
+	DECLARE @CurrentDateTime DATETIME, @EndTime DATETIME, @FromDate DATETIME, @ToDate DATETIME, @MBBUEndTime DATETIME
 		,@from			NVARCHAR(10) -- convert @fromdate
 		,@to			NVARCHAR(10) -- convert @todate
 		,@end			NVARCHAR(19) -- convert @endtime
@@ -25,7 +28,7 @@ BEGIN
 		,@Content_VI	NVARCHAR(2048) -- Viet Nam
 
 	SELECT  @CurrentDateTime = GETDATE()
-
+	
 	--check BU day
 	IF DATEPART(WEEKDAY, @CurrentDateTime) = 6
 	BEGIN
@@ -100,6 +103,7 @@ BEGIN
 		SELECT	@from = CONVERT(NVARCHAR(10), @FromDate, 101)
 				,@to = CONVERT(NVARCHAR(10), @ToDate, 101)
 				,@end = CONVERT(VARCHAR(8), DATEADD(HOUR, 12, @EndTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 12, @EndTime), 101) --convert time to GMT +8
+		SELECT @MBBUEndTime = CONVERT(DATETIME, @end)
 		
 		IF @FromDate = @ToDate -- 1 day
 		BEGIN
@@ -167,7 +171,8 @@ BEGIN
 			@Content_TH AS Content_TH,
 			@Content_JP AS Content_JP,
 			@Content_KO AS Content_KO,
-			@Content_VI AS Content_VI
+			@Content_VI AS Content_VI,
+			@MBBUEndTime AS MBBUEndTime
 END
 GO
 GRANT EXECUTE ON [dbo].[Age_MoveBetsProcessNotification] TO [bodbDownlineNet] AS [dbo]
