@@ -16,18 +16,13 @@ AS
 	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
 	- 20160318@Percy: Support AllBet [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20161003@Sophia: Remove redundant info of CS, BI, P2P [Redmine: #64636]
 */
 SET NOCOUNT ON
 
 DECLARE @roleid INT, 
 		@Outstanding MONEY,
-		@total_Outstanding MONEY,
-		@total_csTransfer MONEY,
-		@total_csOutstanding MONEY,
-		@total_BITransfer MONEY,
-		@total_BIOutstanding MONEY,
-		@total_P2PTransfer MONEY,
-		@total_P2POutstanding MONEY,		
+		@total_Outstanding MONEY,				
 		@total_memberActive INT,
 		@total_memberClosed INT,
 		@total_memberSuspended INT,
@@ -46,13 +41,7 @@ WHERE mrecommend = @custid AND statusid = 0
 
 SELECT 
 		@OutStanding          = ISNULL(SUM(mpositiontaking* ABS(actual_stake)),0) + @translog_outstanding,
-		@total_outstanding    = ISNULL(SUM(ABS(actual_stake)),0) +@translog_totalOutstanding,
-		@total_csTransfer     = ISNULL(SUM(CASE WHEN bettype = 23001 THEN actual_stake ELSE 0 END),0),
-		@total_csOutstanding  = ISNULL(SUM(CASE WHEN bettype = 23002 THEN actual_stake ELSE 0 END),0),
-		@total_BITransfer     = ISNULL(SUM(CASE WHEN bettype = 23201 THEN actual_stake ELSE 0 END),0),
-		@total_BIOutstanding  = ISNULL(SUM(CASE WHEN bettype = 23202 THEN actual_stake ELSE 0 END),0),
-		@total_P2PTransfer    = ISNULL(SUM(CASE WHEN bettype = 23101 THEN actual_stake ELSE 0 END),0),
-		@total_P2POutstanding = ISNULL(SUM(CASE WHEN bettype = 23102 THEN actual_stake ELSE 0 END),0)		
+		@total_outstanding    = ISNULL(SUM(ABS(actual_stake)),0) +@translog_totalOutstanding		
 FROM bettrans WITH(NOLOCK)
 WHERE mrecommend = @custid AND ruben =0
 	AND bettype NOT IN (801,802,803,804,805,806,1003)  -- Exlude Metric gaming, Cock Fighting from bettrans
@@ -96,13 +85,7 @@ WHERE mrecommend = @custid AND roleid = 1 AND creatdate >= @currentMonth
 
 
 SELECT @OutStanding as outStanding,
-		@total_Outstanding as total_outstanding,
-		@total_csTransfer as total_csTransfer,
-		@total_csOutstanding as total_csOutstanding,
-		@total_BITransfer as total_BITransfer,
-		@total_BIOutstanding as total_BIOutstanding,
-		@total_P2PTransfer as total_P2PTransfer,
-		@total_P2POutstanding as total_P2POutstanding,
+		@total_Outstanding as total_outstanding,		
 		@total_memberActive as total_memberActive,
 		@total_memberClosed as total_memberClosed,		
 		@total_memberSuspended as total_memberSuspended,
