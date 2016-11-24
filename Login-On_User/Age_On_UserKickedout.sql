@@ -15,7 +15,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	UPDATE dbo.ON_USER
+	UPDATE dbo.on_user_agent
 	SET iskickedout = 1
 	WHERE custid = @CustID AND subaccid = @SubAccID
 
