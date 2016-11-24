@@ -16,7 +16,7 @@ AS
 	Revisions: 
 		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
-		- 20161116@Winnie: Show MaxKeno 2, Hide Massac,Malta RedmineID: #66058
+		- 20161116@Winnie: Show MaxKeno 2, Hide Massac,Malta [RedmineID: #66058]
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
 */
