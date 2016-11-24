@@ -16,6 +16,7 @@ AS
 	Revisions: 
 		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
+		- 20161116@Winnie: Show MaxKeno 2, Hide Massac,Malta [RedmineID: #66058]
 	Param's Explanation:
 	• @SRecommend: Super Agent ID
 */
@@ -61,12 +62,13 @@ BEGIN
 		           MAX(CASE WHEN cg.bettype = 1504 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1504,
 		           MAX(CASE WHEN cg.bettype = 1505 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1505,
 		           --MAX(CASE WHEN cg.bettype = 1506 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1506,
-		           MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1507,
+		           --MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1507,
 		           MAX(CASE WHEN cg.bettype = 1508 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1508,
-		           MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1509,
+		           --MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1509,
 		           MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1511,
 		           MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1513,
 		           MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1514
+
 	          FROM custinfo ci with(nolock)
         inner join CustSettingGame cg with(nolock) on ci.custid = cg.custid
         inner join CustGameType ct with(nolock) on ci.custid = ct.CustID

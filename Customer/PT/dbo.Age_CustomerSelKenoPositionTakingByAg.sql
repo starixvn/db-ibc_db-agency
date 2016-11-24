@@ -17,6 +17,7 @@ AS
 		- 20141205@Johnson: Add new country Korea (bettype=1514)for Keno [Redmine: #26647]
 		- 20150610@Kos: Separate CustDB to DBCUST server (Move SP to DBCUST.CustDB)
 		- 20160919@Helen: Page list navigation disappears when select small page size number of Keno product in Position Talking (%) - [Redmine:59432]
+		- 20161116@Winnie: Hide Massac,Malta [RedmineID: #66058]
 	Param's Explanation: 
 	• @Recommend: Agent ID
 */
@@ -64,9 +65,9 @@ BEGIN
 			MAX(CASE WHEN cg.bettype = 1504 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1504,
 			MAX(CASE WHEN cg.bettype = 1505 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1505,
 			--MAX(CASE WHEN cg.bettype = 1506 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1506,
-			MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1507,
+			--MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1507,
 			MAX(CASE WHEN cg.bettype = 1508 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1508,
-			MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1509,
+			--MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1509,
 			MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1511,
 			MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1513,
 			MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.apositiontaking ELSE 0 END) AS apositiontaking_1514,
@@ -77,9 +78,9 @@ BEGIN
 			MAX(CASE WHEN cg.bettype = 1504 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1504,
 			MAX(CASE WHEN cg.bettype = 1505 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1505,
 			--MAX(CASE WHEN cg.bettype = 1506 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1506,
-			MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1507,
+			--MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1507,
 			MAX(CASE WHEN cg.bettype = 1508 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1508,
-			MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1509,
+			--MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1509,
 			MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1511,
 			MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1513,
 			MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.mpositiontaking ELSE 0 END) AS mpositiontaking_1514,
@@ -90,12 +91,13 @@ BEGIN
 			MAX(CASE WHEN cg.bettype = 1504 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1504,
 			MAX(CASE WHEN cg.bettype = 1505 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1505,
 			--MAX(CASE WHEN cg.bettype = 1506 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1506,
-			MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1507,
+			--MAX(CASE WHEN cg.bettype = 1507 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1507,
 			MAX(CASE WHEN cg.bettype = 1508 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1508,
-			MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1509,
+			--MAX(CASE WHEN cg.bettype = 1509 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1509,
 			MAX(CASE WHEN cg.bettype = 1511 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1511,
 			MAX(CASE WHEN cg.bettype = 1513 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1513,
 			MAX(CASE WHEN cg.bettype = 1514 AND cg.sporttype = 202 THEN cg.spositiontaking ELSE 0 END) AS spositiontaking_1514
+
 		FROM custinfo ci with(nolock)
 			inner join CustSettingGame cg with(nolock) on ci.custid = cg.custid
 			inner join CustGameType ct with(nolock) on ci.custid = ct.CustID
