@@ -10,6 +10,7 @@
 	@MinBetv11_Max money output, @MaxBetv11_Min money output, @MaxPerMatchv11_Min money = 0  output, @MaxPerMatchv11_Max money output,
 	@MinBetv99_Max money output, @MaxBetv99_Min money output, @MaxPerMatchv99_Min money = 0  output, @MaxPerMatchv99_Max money output,	
 	@MinBetv99MP_Max money output, @MaxBetv99MP_Min money output, @MaxPerMatchv99MP_Min money = 0  output, @MaxPerMatchv99MP_Max money output,
+	@MinBetv1MP_Max money output, @MaxBetv1MP_Min money output, @MaxPerMatchv1MP_Min money = 0  output, @MaxPerMatchv1MP_Max money output,
 	@MinBetv154_Max money  = 0  output, @MaxBetv154_Min money   = 0 output, @MaxPerMatchv154_Min money  = 0  output, @MaxPerMatchv154_Max money = 0 output,	
 	@MinBetv161_Max money output, @MaxBetv161_Min money output, @MaxPerMatchv161_Min money = 0  output, @MaxPerMatchv161_Max money = 0 output, @MaxPerBallv161_Min money = 0 output, @MaxPerBallv161_Max money = 0 output
 AS
@@ -24,6 +25,7 @@ Revisions:
 	- 20100919@Terry: Add Number Game and Mixed Sport
 	- 20101029@Johnson: Include max per ball for number game
 	- 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
+	- 20161109@Helen: Separate Bet Setting for Soccer - Parlay - [Redmine:66265]
 Param's Explanation:
 • @custid: custid that need to be viewed.   
 */
@@ -121,6 +123,15 @@ Begin
 	where ci.custid = @CustID	
 	
 	Select 
+		@MinBetv1MP_Max = Max(case when MinBet = 0 then NULL else MinBet end), 
+		@MaxBetv1MP_Min = Min(case when MaxBet = 0 then NULL else MaxBet end)
+	from 
+		custsetting as cs WITH (NOLOCK)
+		INNER JOIN custinfo as ci WITH (NOLOCK) on (cs.CustID = ci.Recommend or cs.CustID = ci.MRecommend or cs.CustID = ci.SRecommend)
+		and cs.bettype = 9 and cs.sporttype=1
+	where ci.custid = @CustID	
+	
+	Select 
 		@MinBetv154_Max = Max(case when MinBet = 0 then NULL else MinBet end), 
 		@MaxBetv154_Min = Min(case when MaxBet = 0 then NULL else MaxBet end)
 	from 
@@ -175,7 +186,11 @@ Begin
 		@MaxPerBallv161_Max = MIN(CASE WHEN cs.MaxPerBall161 = 0 THEN NULL ELSE cs.MaxPerBall161 END),
 		
 		@MaxPerMatchv99MP_Min = 0,	
-		@MaxPerMatchv99MP_Max = Min(case when cs.MaxPerMatch99MP = 0 then NULL else cs.MaxPerMatch99MP end)
+		@MaxPerMatchv99MP_Max = Min(case when cs.MaxPerMatch99MP = 0 then NULL else cs.MaxPerMatch99MP end),
+		
+		@MaxPerMatchv1MP_Min = 0,	
+		@MaxPerMatchv1MP_Max = Min(case when cs.MaxPerMatch1MP = 0 then NULL else cs.MaxPerMatch1MP end)
+		
 	from 
 		custinfo as cs WITH (NOLOCK) 
 		INNER JOIN custinfo as ci WITH (NOLOCK) on (cs.CustID = ci.Recommend or cs.CustID = ci.MRecommend or cs.CustID = ci.SRecommend)
@@ -267,6 +282,15 @@ Begin
 	where ci.custid = @CustID
 	
 	Select 
+		@MinBetv1MP_Max = Max(case when MinBet = 0 then NULL else MinBet end), 
+		@MaxBetv1MP_Min = Min(case when MaxBet = 0 then NULL else MaxBet end)
+	from 
+		custsetting as cs WITH (NOLOCK)
+		INNER JOIN custinfo as ci WITH (NOLOCK) on (cs.CustID = ci.MRecommend or cs.CustID = ci.SRecommend)
+		and cs.bettype = 9 and cs.sporttype=1
+	where ci.custid = @CustID
+	
+	Select 
 		@MinBetv154_Max = Max(case when MinBet = 0 then NULL else MinBet end), 
 		@MaxBetv154_Min = Min(case when MaxBet = 0 then NULL else MaxBet end)
 	from 
@@ -314,6 +338,9 @@ Begin
 		
 		@MaxPerMatchv99MP_Min = 0,	
 		@MaxPerMatchv99MP_Max = Min(case when cs.MaxPerMatch99MP = 0 then NULL else cs.MaxPerMatch99MP end),
+		
+		@MaxPerMatchv1MP_Min = 0,	
+		@MaxPerMatchv1MP_Max = Min(case when cs.MaxPerMatch1MP = 0 then NULL else cs.MaxPerMatch1MP end),
 		
 		@MaxPerMatchv154_Min = 0,	
 		@MaxPerMatchv154_Max = Min(case when cs.MaxPerMatch154 = 0 then NULL else cs.MaxPerMatch154 end), 
@@ -397,6 +424,13 @@ Begin
 	where cs.custid = @userid and cs.bettype =  9 and cs.sporttype=99
 				
 	Select 
+		@MinBetv1MP_Max = MinBet,
+		@MaxBetv1MP_Min = MaxBet
+	from 
+		custsetting as cs WITH (NOLOCK)
+	where cs.custid = @userid and cs.bettype =  9 and cs.sporttype=1
+	
+	Select 
 		@MinBetv154_Max = MinBet,
 		@MaxBetv154_Min = MaxBet
 	from 
@@ -438,6 +472,9 @@ Begin
 		
 		@MaxPerMatchv99MP_Min = 0,
 		@MaxPerMatchv99MP_Max = MaxPerMatch99MP,
+		
+		@MaxPerMatchv1MP_Min = 0,
+		@MaxPerMatchv1MP_Max = MaxPerMatch1MP,
 		
 		@MaxPerMatchv154_Min = 0,
 		@MaxPerMatchv154_Max = MaxPerMatch154,

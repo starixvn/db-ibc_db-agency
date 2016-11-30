@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]
 	@UpdateMinMaxBetv11 BIT = 1,	
 	@UpdateMinMaxBetv99 BIT = 1,
 	@UpdateMinMaxBetv99MP BIT = 1,
+	@UpdateMinMaxBetv1MP BIT = 1,
 	@UpdateMinMaxBetv154 BIT = 1,
 	@UpdateMinMaxBetv161 BIT = 1,
 	 
@@ -55,6 +56,10 @@ ALTER PROCEDURE [dbo].[Age_CustomerUpdMemBetSetting]
 	@MinBetv99MP MONEY,
 	@MaxBetv99MP MONEY,
 	@MaxPerMatchv99MP MONEY,
+	
+	@MinBetv1MP MONEY,
+	@MaxBetv1MP MONEY,
+	@MaxPerMatchv1MP MONEY,
 	
 	@MinBetv154 MONEY = 0,
 	@MaxBetv154 MONEY = 0,
@@ -102,6 +107,7 @@ Revisions:
     - 20130311@Dan: Change linked server DB053 to DBAGE, DB03 to DBONUSER; Write more log on DBTXN server in case of DBLOG server failure
     - 20131011@Elodie: Add HR Fixed Odds [Redmine:#6505]
     - 20150611@Kathy: Migrate custDB to new server DBCust (Move Acc_CustomerSelCheckEnable, Age_CustomerSelMinMaxLimit to DBCUST.CustDB) [Redmine:#36216]
+    - 20161109@Helen: Separate Bet Setting for Soccer - Parlay - [Redmine:66265]
     
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -141,6 +147,9 @@ Declare @MinMinBet money, @MaxMaxBet money,	@MaxMaxPerMatch money,
 	
 	@MinMinBetv99 money, @MaxMaxBetv99 money, @MaxMaxPerMatchv99 money,
 	@MinMinBetv99MP money, @MaxMaxBetv99MP money, @MaxMaxPerMatchv99MP money,
+	
+	@MinMinBetv1MP money, @MaxMaxBetv1MP money, @MaxMaxPerMatchv1MP money,
+	
 	@MinMinBetv154 money, @MaxMaxBetv154 money, @MaxMaxPerMatchv154 money,
 	
 	@MinMinBetv161 money, @MaxMaxBetv161 money, @MaxMaxPerMatchv161 money, @MaxMaxPerBallv161 money
@@ -173,6 +182,9 @@ WHERE custid = @CustID
 		@old_MinBetv11 MONEY, @old_MaxBetv11 MONEY, @old_MaxPerMatchv11 MONEY,	
 		@old_MinBetv99 MONEY, @old_MaxBetv99 MONEY, @old_MaxPerMatchv99 MONEY,
 		@old_MinBetv99MP MONEY, @old_MaxBetv99MP MONEY, @old_MaxPerMatchv99MP MONEY,
+		
+		@old_MinBetv1MP MONEY, @old_MaxBetv1MP MONEY, @old_MaxPerMatchv1MP MONEY,
+		
 		@old_MinBetv154 MONEY, @old_MaxBetv154 MONEY, @old_MaxPerMatchv154 MONEY,
 		@old_MinBetv161 MONEY, @old_MaxBetv161 MONEY, @old_MaxPerMatchv161 MONEY, @old_MaxPerBallv161 MONEY
 		
@@ -186,6 +198,7 @@ WHERE custid = @CustID
 		@MinBetv11 = @old_MinBetv11 output, @MaxBetv11 =@old_MaxBetv11 output, @MaxPerMatchv11 =@old_MaxPerMatchv11 output,
 		@MinBetv99 = @old_MinBetv99 output, @MaxBetv99 =@old_MaxBetv99 output, @MaxPerMatchv99 =@old_MaxPerMatchv99 output,
 		@MinBetv99MP = @old_MinBetv99MP output, @MaxBetv99MP =@old_MaxBetv99MP output, @MaxPerMatchv99MP =@old_MaxPerMatchv99MP output,
+		@MinBetv1MP = @old_MinBetv1MP output, @MaxBetv1MP =@old_MaxBetv1MP output, @MaxPerMatchv1MP =@old_MaxPerMatchv1MP output,
 		@MinBetv154 = @old_MinBetv154 output, @MaxBetv154 = @old_MaxBetv154 output, @MaxPerMatchv154 =@old_MaxPerMatchv154 output,    
 		@MinBetv161 = @old_MinBetv161 output, @MaxBetv161 =@old_MaxBetv161 output, @MaxPerMatchv161 =@old_MaxPerMatchv161 output, @MaxPerBallv161 =@old_MaxPerBallv161 output
 
@@ -210,6 +223,27 @@ ELSE
 BEGIN
 	SELECT @MinBet = @Old_MinBet, @MaxBet = @Old_MaxBet, @MaxPerMatch = @Old_MaxPerMatch
 END
+
+if @UpdateMinMaxBetv1MP = 1 
+BEGIN
+	if 
+		@MinBetv1MP<0
+		or @MaxBetv1MP < 0
+		or @MaxPerMatchv1MP <0		
+	BEGIN
+		select @ErrCode = 2
+		Select @ErrMsg = 	case @Language 
+							when 'E' then 'Wrong Min bet/ Max bet/ Max per match (for Soccer Parlay).'
+							ELSE [dbo].[f_Get_MsgNamebyMsgID](10003,@Language) + ' (' + [dbo].[f_Get_SportNameBySporttype](1,@Language) + ')'
+					end
+		return
+	END
+END
+ELSE
+BEGIN
+	SELECT @MinBetv1MP = @old_MinBetv1MP, @MaxBetv1MP = @old_MaxBetv1MP, @MaxPerMatchv1MP = @old_MaxPerMatchv1MP
+END
+
 
 if @UpdateMinMaxBetv2 = 1 
 BEGIN
@@ -432,6 +466,9 @@ END
 		@MinBetv11_Max = @MinMinBetv11 output, @MaxBetv11_Min = @MaxMaxBetv11 output, @MaxPerMatchv11_Max = @MaxMaxPerMatchv11 output,
 		@MinBetv99_Max = @MinMinBetv99 output, @MaxBetv99_Min = @MaxMaxBetv99 output, @MaxPerMatchv99_Max = @MaxMaxPerMatchv99 output,		
 		@MinBetv99MP_Max = @MinMinBetv99MP output, @MaxBetv99MP_Min = @MaxMaxBetv99MP output, @MaxPerMatchv99MP_Max = @MaxMaxPerMatchv99MP output,
+		
+		@MinBetv1MP_Max = @MinMinBetv1MP output, @MaxBetv1MP_Min = @MaxMaxBetv1MP output, @MaxPerMatchv1MP_Max = @MaxMaxPerMatchv1MP output,
+		
 		@MinBetv154_Max = @MinMinBetv154 output, @MaxBetv154_Min = @MaxMaxBetv154 output, @MaxPerMatchv154_Max = @MaxMaxPerMatchv154 output,
 		@MinBetv161_Max = @MinMinBetv161 output, @MaxBetv161_Min = @MaxMaxBetv161 output, @MaxPerMatchv161_Max = @MaxMaxPerMatchv161 output, @MaxPerBallv161_Max = @MaxMaxPerBallv161 output
 	
@@ -484,6 +521,61 @@ BEGIN
 							ELSE [dbo].[f_Get_MsgNamebyMsgID](10008,@Language)
 						END						
 						+'(' + CONVERT(VARCHAR(20), @MaxMaxPerMatch) + ').', @ErrCode = 110
+				
+		return
+	END
+
+END
+
+
+	
+IF @UpdateMinMaxBetv1MP = 1
+BEGIN
+	if (@MinBetv1MP<>0 and @MaxBetv1MP <> 0 and  @MinBetv1MP>@MaxBetv1MP) or (@MaxBetv1MP<> 0 and @MaxPerMatchv1MP <> 0 and @MaxBetv1MP>@MaxPerMatchv1MP) 
+	BEGIN
+		SELECT @ErrMsg =	@UserName + ': '+
+						case @Language 
+							when 'E' then 'Min bet must be less than max bet and max bet must be less than max bet per match'
+							ELSE [dbo].[f_Get_MsgNamebyMsgID](10005,@Language)
+						end						
+						+ char(13) + char(10) + convert(varchar(20), @MinBetv1MP) + '-' + convert(varchar(20), @MaxBetv1MP) + '-' + convert(varchar(20), @MaxPerMatchv1MP), @ErrCode = 108
+			
+		return
+		
+	END
+	
+	IF (@MinMinBetv1MP>0 AND @MinBetv1MP>0 AND @MinBetv1MP<@MinMinBetv1MP)
+	BEGIN
+		SELECT @ErrMsg =	@UserName + ': ' +
+						CASE @Language 
+							WHEN 'E' THEN 'Min bet must be equal to or greater than Agent min bet'
+							ELSE [dbo].[f_Get_MsgNamebyMsgID](10006,@Language)
+						END						
+						+' (' + CONVERT(VARCHAR(20), @MinMinBetv1MP) + ').', @ErrCode = 109
+				
+		return
+	END
+	
+	IF (@MaxMaxBetv1MP>0 AND @MaxBetv1MP>0 AND @MaxBetv1MP>@MaxMaxBetv1MP)
+	BEGIN
+		SELECT @ErrMsg =	@UserName + ': '+
+						CASE @Language 
+							WHEN 'E' THEN 'Max bet must be equal to or less than Agent max bet'
+							ELSE [dbo].[f_Get_MsgNamebyMsgID](10007,@Language)
+						END						
+						+'(' + CONVERT(VARCHAR(20), @MaxMaxBetv1MP) + ').', @ErrCode = 110
+				
+		return
+	END
+	
+	IF (@MaxMaxPerMatchv1MP>0 AND @MaxPerMatchv1MP>0 AND @MaxPerMatchv1MP>@MaxMaxPerMatchv1MP)
+	BEGIN
+		SELECT @ErrMsg =	@UserName + ': '+
+						CASE @Language 
+							WHEN 'E' THEN 'Max Per Match must be equal to or less than Agent Max Per Match'
+							ELSE [dbo].[f_Get_MsgNamebyMsgID](10008,@Language)
+						END						
+						+'(' + CONVERT(VARCHAR(20), @MaxMaxPerMatchv1MP) + ').', @ErrCode = 110
 				
 		return
 	END
@@ -1048,7 +1140,12 @@ END
 ----------
 UPDATE custsetting WITH (ROWLOCK, UPDLOCK)
 SET
-	MinBet = CASE WHEN (@UpdateMinMaxBet = 1 AND sporttype=1) THEN @MinBet
+	MinBet = CASE 
+				WHEN sporttype=1 THEN (CASE WHEN @UpdateMinMaxBetv1MP = 1 AND bettype = 9 THEN @MinBetv1MP
+											WHEN @UpdateMinMaxBet = 1 THEN @MinBet ELSE MinBet END)
+											 
+				--WHEN (@UpdateMinMaxBet = 1 AND sporttype=1) THEN @MinBet
+	
 				WHEN (@UpdateMinMaxBetv2 = 1 AND sporttype=2) THEN @MinBetv2
 				WHEN (@UpdateMinMaxBetv3 = 1 AND sporttype=3) THEN @MinBetv3
 				WHEN (@UpdateMinMaxBetv5 = 1 AND sporttype=5) THEN @MinBetv5
@@ -1058,10 +1155,18 @@ SET
 --				WHEN (@UpdateMinMaxBetv99 = 1 AND sporttype=99) THEN @MinBetv99
 --				WHEN (@UpdateMinMaxBetv99MP = 1 AND sporttype=99) THEN @MinBetv99MP
 				WHEN (@UpdateMinMaxBetv154 = 1 AND sporttype=154) THEN @MinBetv154			
+				
 				WHEN sporttype=99 THEN (CASE WHEN @UpdateMinMaxBetv99MP = 1 AND bettype = 9 THEN @MinBetv99MP
 											 WHEN @UpdateMinMaxBetv99 = 1 AND bettype <> 9 THEN @MinBetv99 ELSE MinBet END)
+			
 			ELSE minbet END,
-	MaxBet = CASE WHEN (@UpdateMinMaxBet = 1 AND sporttype=1) THEN @MaxBet
+	MaxBet = CASE 
+				
+				WHEN sporttype=1 THEN (CASE WHEN @UpdateMinMaxBetv1MP = 1 AND bettype = 9 THEN @MaxBetv1MP
+											 WHEN @UpdateMinMaxBet = 1 THEN @MaxBet ELSE MaxBet END)
+				
+				
+				WHEN (@UpdateMinMaxBet = 1 AND sporttype=1) THEN @MaxBet
 				WHEN (@UpdateMinMaxBetv2 = 1 AND sporttype=2) THEN @MaxBetv2
 				WHEN (@UpdateMinMaxBetv3 = 1 AND sporttype=3) THEN @MaxBetv3
 				WHEN (@UpdateMinMaxBetv5 = 1 AND sporttype=5) THEN @MaxBetv5
@@ -1105,6 +1210,9 @@ set
 	MaxPerMatch11=case when @UpdateMinMaxBetv11=1 then @MaxPerMatchv11 else MaxPerMatch11 end,	
 	MaxPerMatch99=case when @UpdateMinMaxBetv99=1 then @MaxPerMatchv99 else MaxPerMatch99 end,
 	MaxPerMatch99MP=case when @UpdateMinMaxBetv99MP=1 then @MaxPerMatchv99MP else MaxPerMatch99MP end,
+	
+	MaxPerMatch1MP=case when @UpdateMinMaxBetv1MP=1 then @MaxPerMatchv1MP else MaxPerMatch1MP end,
+	
 	MaxPerMatch154=case when @UpdateMinMaxBetv154=1 then @MaxPerMatchv154 else MaxPerMatch154 end,	
 	MaxPerMatch161=case when @UpdateMinMaxBetv161=1 then @MaxPerMatchv161 else MaxPerMatch161 end,
 	MaxPerBall161 = CASE WHEN @UpdateMinMaxBetv161=1 THEN @MaxPerBallv161 ELSE MaxPerBall161 END
@@ -1137,6 +1245,9 @@ BEGIN
 		OR @MinBetv11 != @old_MinBetv11 OR @MaxBetv11 != @old_MaxBetv11 OR @MaxPerMatchv11 != @old_MaxPerMatchv11
 		OR @MinBetv99 != @old_MinBetv99 OR @MaxBetv99 != @old_MaxBetv99 OR @MaxPerMatchv99 != @old_MaxPerMatchv99
 		OR @MinBetv99MP != @old_MinBetv99MP OR @MaxBetv99MP != @old_MaxBetv99MP OR @MaxPerMatchv99MP != @old_MaxPerMatchv99MP
+		
+		OR @MinBetv1MP != @old_MinBetv1MP OR @MaxBetv1MP != @old_MaxBetv1MP OR @MaxPerMatchv1MP != @old_MaxPerMatchv1MP
+		
 		OR @MinBetv154 != @old_MinBetv154 OR @MaxBetv154 != @old_MaxBetv154 OR @MaxPerMatchv154 != @old_MaxPerMatchv154
 		OR @MinBetv161 != @old_MinBetv161 OR @MaxBetv161 != @old_MaxBetv161 OR @MaxPerMatchv161 != @old_MaxPerMatchv161 OR @MaxPerBallv161 != @old_MaxPerBallv161)
 	BEGIN
@@ -1175,6 +1286,11 @@ Select @LogSPData ='<Age_CustomerUpdMemBetSetting custid="'+ coalesce(cast(@cust
 'MinBv99MP="'+ coalesce(cast(@minbetv99mp as varchar(50)),space(1)) + '" ' +
 'MaxBv99MP="'+ coalesce(cast(@maxbetv99mp as varchar(50)),space(1)) + '" ' +
 'MPMv99MP="'+ coalesce(cast(@maxpermatchv99mp as varchar(50)),space(1)) + '" ' +
+
+'MinBv1MP="'+ coalesce(cast(@minbetv1mp as varchar(50)),space(1)) + '" ' +
+'MaxBv1MP="'+ coalesce(cast(@maxbetv1mp as varchar(50)),space(1)) + '" ' +
+'MPMv1MP="'+ coalesce(cast(@maxpermatchv1mp as varchar(50)),space(1)) + '" ' +
+
 'MinBv154="'+ coalesce(cast(@minbetv154 as varchar(50)),space(1)) + '" ' +
 'MaxBv154="'+ coalesce(cast(@maxbetv154 as varchar(50)),space(1)) + '" ' +
 'MPMv154="'+ coalesce(cast(@maxpermatchv154 as varchar(50)),space(1)) + '" ' +
@@ -1191,6 +1307,9 @@ Select @LogSPData ='<Age_CustomerUpdMemBetSetting custid="'+ coalesce(cast(@cust
 'UMMBv11="'+ coalesce(cast(@UpdateMinMaxBetv11 as varchar(50)),space(1)) + '" ' +
 'UMMBv99="'+ coalesce(cast(@UpdateMinMaxBetv99 as varchar(50)),space(1)) + '" ' +
 'UMMBv99MP="'+ coalesce(cast(@UpdateMinMaxBetv99MP as varchar(50)),space(1)) + '" ' +
+
+'UMMBv1MP="'+ coalesce(cast(@UpdateMinMaxBetv1MP as varchar(50)),space(1)) + '" ' +
+
 'UMMBv154="'+ coalesce(cast(@UpdateMinMaxBetv154 as varchar(50)),space(1)) + '" ' +
 'UMMBv161="'+ coalesce(cast(@UpdateMinMaxBetv161 as varchar(50)),space(1)) + '" ' +
 'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1)) + '" ' +
@@ -1229,6 +1348,11 @@ Select @TrackingValue2 ='<Age_CustomerUpdMemBetSetting custid="'+ coalesce(cast(
 'MinBv99MP="'+ coalesce(cast(@Old_minbetv99mp as varchar(50)),space(1)) + '" ' +
 'MaxBv99MP="'+ coalesce(cast(@Old_maxbetv99mp as varchar(50)),space(1)) + '" ' +
 'MPMv99MP="'+ coalesce(cast(@Old_maxpermatchv99mp as varchar(50)),space(1)) + '" ' +
+
+'MinBv1MP="'+ coalesce(cast(@Old_minbetv1mp as varchar(50)),space(1)) + '" ' +
+'MaxBv1MP="'+ coalesce(cast(@Old_maxbetv1mp as varchar(50)),space(1)) + '" ' +
+'MPMv1MP="'+ coalesce(cast(@Old_maxpermatchv1mp as varchar(50)),space(1)) + '" ' +
+
 'MinBv154="'+ coalesce(cast(@Old_minbetv154 as varchar(50)),space(1)) + '" ' +
 'MaxBv154="'+ coalesce(cast(@Old_maxbetv154 as varchar(50)),space(1)) + '" ' +
 'MPMv154="'+ coalesce(cast(@Old_maxpermatchv154 as varchar(50)),space(1)) + '" ' +
@@ -1245,6 +1369,9 @@ Select @TrackingValue2 ='<Age_CustomerUpdMemBetSetting custid="'+ coalesce(cast(
 'UMMBv11="'+ coalesce(cast(@UpdateMinMaxBetv11 as varchar(50)),space(1)) + '" ' +
 'UMMBv99="'+ coalesce(cast(@UpdateMinMaxBetv99 as varchar(50)),space(1)) + '" ' +
 'UMMBv99MP="'+ coalesce(cast(@UpdateMinMaxBetv99MP as varchar(50)),space(1)) + '" ' +
+
+'UMMBv1MP="'+ coalesce(cast(@UpdateMinMaxBetv1MP as varchar(50)),space(1)) + '" ' +
+
 'UMMBv154="'+ coalesce(cast(@UpdateMinMaxBetv154 as varchar(50)),space(1)) + '" ' +
 'UMMBv161="'+ coalesce(cast(@UpdateMinMaxBetv161 as varchar(50)),space(1)) + '" ' +
 'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1)) + '" ' +
@@ -1295,6 +1422,11 @@ BEGIN CATCH
 	'MinBv99MP="'+ coalesce(cast(@minbetv99mp as varchar(50)),space(1)) + '" ' +
 	'MaxBv99MP="'+ coalesce(cast(@maxbetv99mp as varchar(50)),space(1)) + '" ' +
 	'MPMv99MP="'+ coalesce(cast(@maxpermatchv99mp as varchar(50)),space(1)) + '" ' +
+	
+	'MinBv1MP="'+ coalesce(cast(@minbetv1mp as varchar(50)),space(1)) + '" ' +
+	'MaxBv1MP="'+ coalesce(cast(@maxbetv1mp as varchar(50)),space(1)) + '" ' +
+	'MPMv1MP="'+ coalesce(cast(@maxpermatchv1mp as varchar(50)),space(1)) + '" ' +
+	
 	'MinBv154="'+ coalesce(cast(@minbetv154 as varchar(50)),space(1)) + '" ' +
 	'MaxBv154="'+ coalesce(cast(@maxbetv154 as varchar(50)),space(1)) + '" ' +
 	'MPMv154="'+ coalesce(cast(@maxpermatchv154 as varchar(50)),space(1)) + '" ' +	
@@ -1311,6 +1443,9 @@ BEGIN CATCH
 	'UMMBv11="'+ coalesce(cast(@UpdateMinMaxBetv11 as varchar(50)),space(1)) + '" ' +
 	'UMMBv99="'+ coalesce(cast(@UpdateMinMaxBetv99 as varchar(50)),space(1)) + '" ' +
 	'UMMBv99MP="'+ coalesce(cast(@UpdateMinMaxBetv99MP as varchar(50)),space(1)) + '" ' +
+	
+	'UMMBv1MP="'+ coalesce(cast(@UpdateMinMaxBetv1MP as varchar(50)),space(1)) + '" ' +
+	
 	'UMMBv154="'+ coalesce(cast(@UpdateMinMaxBetv154 as varchar(50)),space(1)) + '" ' +
 	'UMMBv161="'+ coalesce(cast(@UpdateMinMaxBetv161 as varchar(50)),space(1)) + '" ' +
 	'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1)) + '" ' +
@@ -1349,6 +1484,11 @@ BEGIN CATCH
 	'MinBv99MP="'+ coalesce(cast(@Old_minbetv99mp as varchar(50)),space(1)) + '" ' +
 	'MaxBv99MP="'+ coalesce(cast(@Old_maxbetv99mp as varchar(50)),space(1)) + '" ' +
 	'MPMv99MP="'+ coalesce(cast(@Old_maxpermatchv99mp as varchar(50)),space(1)) + '" ' +
+	
+	'MinBv1MP="'+ coalesce(cast(@Old_minbetv1mp as varchar(50)),space(1)) + '" ' +
+	'MaxBv1MP="'+ coalesce(cast(@Old_maxbetv1mp as varchar(50)),space(1)) + '" ' +
+	'MPMv1MP="'+ coalesce(cast(@Old_maxpermatchv1mp as varchar(50)),space(1)) + '" ' +
+	
 	'MinBv154="'+ coalesce(cast(@Old_minbetv154 as varchar(50)),space(1)) + '" ' +
 	'MaxBv154="'+ coalesce(cast(@Old_maxbetv154 as varchar(50)),space(1)) + '" ' +
 	'MPMv154="'+ coalesce(cast(@Old_maxpermatchv154 as varchar(50)),space(1)) + '" ' +
@@ -1365,6 +1505,9 @@ BEGIN CATCH
 	'UMMBv11="'+ coalesce(cast(@UpdateMinMaxBetv11 as varchar(50)),space(1)) + '" ' +
 	'UMMBv99="'+ coalesce(cast(@UpdateMinMaxBetv99 as varchar(50)),space(1)) + '" ' +
 	'UMMBv99MP="'+ coalesce(cast(@UpdateMinMaxBetv99MP as varchar(50)),space(1)) + '" ' +
+	
+	'UMMBv1MP="'+ coalesce(cast(@UpdateMinMaxBetv1MP as varchar(50)),space(1)) + '" ' +
+	
 	'UMMBv154="'+ coalesce(cast(@UpdateMinMaxBetv154 as varchar(50)),space(1)) + '" ' +
 	'UMMBv161="'+ coalesce(cast(@UpdateMinMaxBetv161 as varchar(50)),space(1)) + '" ' +
 	'SubAccName="'+ coalesce(cast(dbo.f_GetSubUsername(@SubAccID) as varchar(30)),space(1)) + '" ' +

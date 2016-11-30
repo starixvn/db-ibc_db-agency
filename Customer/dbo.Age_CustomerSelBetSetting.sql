@@ -12,6 +12,8 @@ Revisions:
     - 20090122@[Reviewer]: [Description of revision]    
 	- 20101029@Johnson: Inlcude max per ball for number game
 	- 20131021@Kathy: Add HR Fixed Odds (154) [Redmine:#6505]
+	- 20161109@Helen: Separate Bet Setting for Soccer - Parlay - [Redmine:66265]
+	
 Param's Explanation:
 • @custid: custid that need to be viewed.   
 */
@@ -29,7 +31,8 @@ Declare @MinBet_Max money, @MaxBet_Min money, @MaxPerMatch_Min money, @MaxPerMat
 		@MinBetv154_Max money, @MaxBetv154_Min money, @MaxPerMatchv154_Min money, @MaxPerMatchv154_Max money,
 		@MinBetv161_Max money, @MaxBetv161_Min money, @MaxPerMatchv161_Min money, @MaxPerMatchv161_Max money, 
 		@MaxPerBallv161_Min MONEY, @MaxPerBallv161_Max MONEY,
-		@MinBetv99MP_Max money, @MaxBetv99MP_Min money, @MaxPerMatchv99MP_Min money, @MaxPerMatchv99MP_Max money
+		@MinBetv99MP_Max money, @MaxBetv99MP_Min money, @MaxPerMatchv99MP_Min money, @MaxPerMatchv99MP_Max money,
+		@MinBetv1MP_Max money, @MaxBetv1MP_Min money, @MaxPerMatchv1MP_Min money, @MaxPerMatchv1MP_Max money
 
 --SELECT LIMIT
 EXEC Age_CustomerSelMinMaxLimit @custid, @userid, 
@@ -42,6 +45,7 @@ EXEC Age_CustomerSelMinMaxLimit @custid, @userid,
 		@MinBetv11_Max = @MinBetv11_Max output, @MaxBetv11_Min = @MaxBetv11_Min output, @MaxPerMatchv11_Min = @MaxPerMatchv11_Min output, @MaxPerMatchv11_Max = @MaxPerMatchv11_Max output,
 		@MinBetv99_Max = @MinBetv99_Max output, @MaxBetv99_Min = @MaxBetv99_Min output, @MaxPerMatchv99_Min = @MaxPerMatchv99_Min output, @MaxPerMatchv99_Max = @MaxPerMatchv99_Max output,		
 		@MinBetv99MP_Max = @MinBetv99MP_Max output, @MaxBetv99MP_Min = @MaxBetv99MP_Min output, @MaxPerMatchv99MP_Min = @MaxPerMatchv99MP_Min output, @MaxPerMatchv99MP_Max = @MaxPerMatchv99MP_Max output,
+		@MinBetv1MP_Max = @MinBetv1MP_Max output, @MaxBetv1MP_Min = @MaxBetv1MP_Min output, @MaxPerMatchv1MP_Min = @MaxPerMatchv1MP_Min output, @MaxPerMatchv1MP_Max = @MaxPerMatchv1MP_Max output,
 		@MinBetv154_Max = @MinBetv154_Max output, @MaxBetv154_Min = @MaxBetv154_Min output, @MaxPerMatchv154_Min = @MaxPerMatchv154_Min output, @MaxPerMatchv154_Max = @MaxPerMatchv154_Max output,
 		@MinBetv161_Max = @MinBetv161_Max output, @MaxBetv161_Min = @MaxBetv161_Min output, @MaxPerMatchv161_Min = @MaxPerMatchv161_Min output, @MaxPerMatchv161_Max = @MaxPerMatchv161_Max output, @MaxPerBallv161_Min = @MaxPerBallv161_Min output, @MaxPerBallv161_Max = @MaxPerBallv161_Max output
 		 
@@ -57,6 +61,7 @@ SELECT
 	isnull(ci.maxpermatch11, 0) as maxpermatchv11,
 	isnull(ci.maxpermatch99, 0) as maxpermatchv99,
 	isnull(ci.maxpermatch99MP, 0) as maxpermatchv99MP,
+	isnull(ci.maxpermatch1MP, 0) as maxpermatchv1MP,
 	isnull(ci.maxpermatch154, 0) as maxpermatchv154,
 	isnull(ci.maxpermatch161, 0) as maxpermatchv161,
 	isnull(ci.maxperball161,0) as maxperballv161,
@@ -87,6 +92,9 @@ SELECT
 	
 	isnull(max(case when cs.bettype = 9 and cs.sporttype=99 then cs.minbet else 0 end), 0) as MinBetv99MP,
 	isnull(max(case when cs.bettype = 9 and cs.sporttype=99 then cs.maxbet else 0 end), 0) as MaxBetv99MP,
+
+	isnull(max(case when cs.bettype = 9 and cs.sporttype=1 then cs.minbet else 0 end), 0) as MinBetv1MP,
+	isnull(max(case when cs.bettype = 9 and cs.sporttype=1 then cs.maxbet else 0 end), 0) as MaxBetv1MP,
 
 	isnull(max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.minbet else 0 end), 0) as MinBetv154,
 	isnull(max(case when cs.bettype = 20 and cs.sporttype = 154 then cs.maxbet else 0 end), 0) as MaxBetv154,
@@ -140,6 +148,11 @@ SELECT
 	IsNull(@MaxPerMatchv99MP_Min, 0) as MaxPerMatchv99MP_Min,	
 	IsNull(@MaxPerMatchv99MP_Max, 0) as MaxPerMatchv99MP_Max,
 	
+	IsNull(@MinBetv1MP_Max, 0) as MinBetv1MP_Max,	
+	IsNull(@MaxBetv1MP_Min, 0) as MaxBetv1MP_Min,	
+	IsNull(@MaxPerMatchv1MP_Min, 0) as MaxPerMatchv1MP_Min,	
+	IsNull(@MaxPerMatchv1MP_Max, 0) as MaxPerMatchv1MP_Max,
+	
 	Isnull(@MinBetv154_Max, 0) as MinBetv154_Max,
 	Isnull(@MaxBetv154_Min, 0) as MaxBetv154_Min,
 	isnull(@MaxPerMatchv154_Min, 0) as MaxPerMatchv154_Min,
@@ -168,6 +181,7 @@ group by
 	ci.maxpermatch11,
 	ci.maxpermatch99,
 	ci.maxpermatch99MP,
+	ci.maxpermatch1MP,
 	ci.maxpermatch154,
 	ci.maxpermatch161,
 	ci.maxperball161
