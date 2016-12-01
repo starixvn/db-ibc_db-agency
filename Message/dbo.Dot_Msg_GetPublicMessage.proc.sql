@@ -28,6 +28,7 @@ BEGIN
         Scott@20110322 : if len(siteid) is 4 transfer to 7
 		20120109@Scott(DB07): add condition for new flag column [isDeleted] to filter deleted data.
 		20130702@Scott(DB07): Fix data duplication.
+		20161130@Paul: sort by TopLevel column [RedmineID #66535]
     Param's Explanation:
     */
     -- vivi add
@@ -44,6 +45,7 @@ BEGIN
 							m.MsgType, m.IsSticky, m.IsTest, m.MatchId,
 							m.Creator, m.LastUpdator, m.CreatorName, m.LastUpdateName, m.IsBatch, 
 							mt.BettransID, 0 AS TargetId, '' as UserName,
+							m.TopLevel,
 							DENSE_RANK() OVER(ORDER BY m.PostTime desc) as rownum
 			FROM dbo.Msg m with (nolock , index = IX_PostTime)
 			INNER JOIN dbo.MsgTarget mt with (nolock , index =IX_MessageId ) ON m.MessageId = mt.MessageId
@@ -56,7 +58,7 @@ BEGIN
 				AND m.MessageId >=497229 --343146
 		) new_table
 		WHERE new_table.rownum <= 50
-			order by posttime desc
+			order by TopLevel, posttime desc
 		
 	END
 	ELSE
@@ -68,6 +70,17 @@ BEGIN
 		)
 		IF @targetid2 <> '0'
 			INSERT @SiteIdList(val)	SELECT dbo.FixSiteID(val) FROM dbo.strSplit(@targetid2,',')
+		
+		--Cut off date to show message for new target id
+		--Plus 1 day
+		DECLARE @CutOffDate DATETIME = '20161201'
+
+		IF @CutOffDate > GETDATE()
+		BEGIN
+			UPDATE @SiteIdList
+			SET val = LEFT(val, 2) + '00'
+			WHERE val IN ('3110', '3210', '3310')
+		END
 
 		SELECT *
 		FROM (
@@ -79,6 +92,7 @@ BEGIN
 							m.MsgType, m.IsSticky, m.IsTest, m.MatchId,
 							m.Creator, m.LastUpdator, m.CreatorName, m.LastUpdateName, m.IsBatch, 
 							mt.BettransID, 0 AS TargetId, '' as UserName, --mt.TargetId, mt.TargetName as UserName,
+							m.TopLevel,
 							DENSE_RANK() OVER(ORDER BY m.PostTime desc) as rownum
 			FROM dbo.Msg m with (nolock , index = IX_PostTime)
 			INNER JOIN dbo.MsgTarget mt with (nolock , index =IX_MessageId )  ON m.MessageId = mt.MessageId
@@ -112,7 +126,7 @@ BEGIN
 				WHEN (@record <> 0 AND new_table.rownum <= @record) THEN 1
 				WHEN (@record = 0) THEN 1
 			ELSE 0 END = 1
-			order by posttime desc
+			order by TopLevel, posttime desc
 		
 	END
 END
