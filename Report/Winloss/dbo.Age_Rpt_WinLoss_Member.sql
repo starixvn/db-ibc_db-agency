@@ -1,7 +1,7 @@
 USE [bodb02]
 GO
 
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLoss_Member]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Member]
 	@CustID 		INT, --recommend
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,
@@ -223,6 +223,16 @@ BEGIN
 		INNER JOIN dbo.custInfo c WITH(NOLOCK) ON w.CustID = c.CustID 
 	GROUP BY w.CustID, c.UserName
 	ORDER BY c.Username;
+
+	SELECT	NULL AS CustId,
+			'Total' AS CustName,
+			SUM(TurnOver) AS Turnover,
+			SUM(GrossComm) AS GrossComm,
+			SUM(MemberWinLost) AS MemberWinLoss,
+			SUM(playercomm) AS MemberComm,
+			SUM(AgWinLost) AS AgWinLoss,
+			SUM(AgComm) AS AgComm
+	FROM #AgWinLoss;
 
 	SET NOCOUNT OFF;
 END
