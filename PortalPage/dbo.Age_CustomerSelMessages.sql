@@ -1,4 +1,10 @@
-﻿
+﻿USE [bodb_Message]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 ALTER PROCEDURE [dbo].[Age_CustomerSelMessages]
 	@targetID int = 0,
 	@targetID2 varchar(100) = '0',
@@ -35,17 +41,6 @@ BEGIN
 	FROM dbo.strSplit(@targetid2, ',')
 	UNION ALL
 	SELECT @TargetID
-	
-	--Cut off date to show message for new target id
-	--Plus 1 day
-	DECLARE @CutOffDate DATETIME = '20161201'
-
-	IF @CutOffDate > GETDATE()
-	BEGIN
-		UPDATE @targetTable
-		SET TargetID = CAST(LEFT(CAST(TargetID AS VARCHAR(10)), 2) + '00' AS INT)
-		WHERE TargetID IN (3110, 3210, 3310)
-	END
 	
 	SELECT DISTINCT TOP (@totalMessage) m.MessageId, m.Content_en, m.Content_cs, m.Content_ch,
 			m.Content_jp, m.Content_th, m.Content_it, m.Content_ko,	m.Content_es, m.Content_vn,

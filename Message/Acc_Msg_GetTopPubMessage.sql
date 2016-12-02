@@ -27,7 +27,6 @@ AS
 
     Revisions:
 		- 20120112@Lukas: exclude messages with isDeleted = 1
-		- 20161130@Paul: Add cut off date [RedmineID #66535]
     Param's Explanation:
  */
 		
@@ -40,15 +39,6 @@ BEGIN
 	SET @site6=''
 	SET @site7=''
 	SET @site8=''
-	
-	--Cut off date to show message for new target id
-	--Plus 1 day
-	DECLARE @CutOffDate DATETIME = '20161201'
-
-	IF @CutOffDate > GETDATE() AND @site2 IN ('3110', '3210', '3310')
-	BEGIN
-		SET @site2 = LEFT(@site2, 2) + '00'
-	END
 
 	-- select min(messageid) from msg (nolock) where posttime > '2013/7/15' --363887
 	-- exec Acc_Msg_GetTopPubMessage @messageType=3,@site1='3000',@site2='',@site3='',@site4=default,@site5=default,@LatestMsgID=0,@isTest=0

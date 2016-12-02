@@ -37,17 +37,6 @@ BEGIN
 	)
 	IF @targetid2 <> '0'
 		INSERT @SiteIdList(val)	SELECT dbo.FixSiteID(val) FROM dbo.strSplit(@targetid2,',')
-	
-	--Cut off date to show message for new target id
-	--Plus 1 day
-	DECLARE @CutOffDate DATETIME = '20161201'
-
-	IF @CutOffDate > GETDATE()
-	BEGIN
-		UPDATE @SiteIdList
-		SET val = LEFT(val, 2) + '00'
-		WHERE val IN ('3110', '3210', '3310')
-	END
 
 	SELECT *
 	FROM (
