@@ -94,7 +94,9 @@ BEGIN
 	(15, 204, 0), --Colossus Bets
 	--(19, 206, 1003), --Cockfighting
 	(21, 211, 0), --Allbet
-	(22, 212, 0); --Macau Games
+	(22, 212, 0), --Macau Games
+	(23, 213, 0), --NG2
+	(24, 219, 0); --Fishing World
 
 	DELETE tmp
 	FROM #TmpCondSumWL tmp
