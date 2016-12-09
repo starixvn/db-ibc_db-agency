@@ -4,7 +4,7 @@ ALTER PROCEDURE [dbo].[Age_On_UserKickedout]
 AS
 /*
 	Created: Elodie
-	Task : kick out user
+	Task : kick out user [RedmineID: #67081]
 	DB: DBONUSER/ON_USER
 	Original:
 
@@ -15,7 +15,7 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	UPDATE dbo.on_user_agent
+	UPDATE dbo.on_user_agent WITH (ROWLOCK, UPDLOCK)
 	SET iskickedout = 1
 	WHERE custid = @CustID AND subaccid = @SubAccID
 
@@ -23,5 +23,7 @@ END
 
 GO
 GRANT EXECUTE ON [dbo].[Age_On_UserKickedout] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_On_UserKickedout] TO [bodbDownlineNetView]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_On_UserKickedout] TO [vnteam]
