@@ -226,16 +226,6 @@ BEGIN
 	GROUP BY w.CustID, c.UserName
 	ORDER BY c.Username;
 
-	SELECT	NULL AS CustId,
-			'Total' AS CustName,
-			SUM(TurnOver) AS Turnover,
-			SUM(GrossComm) AS GrossComm,
-			SUM(MemberWinLost) AS MemberWinLoss,
-			SUM(playercomm) AS MemberComm,
-			SUM(AgWinLost) AS AgWinLoss,
-			SUM(AgComm) AS AgComm
-	FROM #AgWinLoss;
-
 	SET NOCOUNT OFF;
 END
 GO
