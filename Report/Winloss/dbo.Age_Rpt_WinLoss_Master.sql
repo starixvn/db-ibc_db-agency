@@ -34,39 +34,30 @@ BEGIN
 		Comm		MONEY
 	);
   
-	CREATE TABLE #SelectedProducts(
-		ProductID TINYINT
-	);
-
 	CREATE TABLE #TmpCondSumWL(
 		ProductID	TINYINT,
 		SportType	INT,
 		BetType		INT
 	);	
 
-	INSERT INTO #SelectedProducts(ProductID)
-	SELECT CAST(Val AS TINYINT)
-	FROM dbo.Age_f_SplitString(@ProductIds, ',');
-
-	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) VALUES
-	(1, 0, 0), --Sportsbook
-	(6, 251, 71), (6, 208, 0), (6, 209, 0), (6, 210, 0), --RNG Casino
-	(2, 151, 0), --Racing
-	(3, 161, 0), --Number Game
-	(4, 162, 0), --Live Casino
-	(5, 180, 0), --Virtual Sports
-	(8, 202, 0), --Keno
-	(12, 255, 0), --Gold Deluxe
-	(15, 204, 0), --Colossus Bets
-	(21, 211, 0), --Allbet
-	(22, 212, 0), --Macau Games
-	(23, 213, 0), --NG2
-	(24, 219, 0); --Fishing World
-
-	DELETE tmp
-	FROM #TmpCondSumWL tmp
-		LEFT JOIN #SelectedProducts sp ON tmp.ProductID = sp.ProductID
-	WHERE sp.ProductID IS NULL;
+	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) 
+	SELECT ProductID, SportType, BetType
+	FROM (
+		VALUES	(1, 0, 0), --Sportsbook
+				(6, 251, 71), (6, 208, 0), (6, 209, 0), (6, 210, 0), --RNG Casino
+				(2, 151, 0), --Racing
+				(3, 161, 0), --Number Game
+				(4, 162, 0), --Live Casino
+				(5, 180, 0), --Virtual Sports
+				(8, 202, 0), --Keno
+				(12, 255, 0), --Gold Deluxe
+				(15, 204, 0), --Colossus Bets
+				(21, 211, 0), --Allbet
+				(22, 212, 0), --Macau Games
+				(23, 213, 0), --NG2
+				(24, 219, 0) --Fishing World
+		) d(ProductID, SportType, BetType)
+	WHERE ',' + @ProductIds + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%';
 
 	DECLARE @isTest BIT = 0;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -96,29 +87,16 @@ BEGIN
 
 	DECLARE @SportBettypeMatrix TABLE(
 		ProductID	tinyint,
-		BetType	smallint,
-		EventType	tinyint,
-		SubProduct	varchar(500),
-		RefTable	tinyint,
-		CasinoType	tinyint
+		BetType	smallint
 	);
 
 	INSERT INTO @SportBettypeMatrix(
 		ProductID,
-		BetType,
-		EventType,
-		SubProduct,
-		RefTable,
-		CasinoType
+		BetType
 	)
-	SELECT	s.ProductID,
-			BetType,
-			EventType,
-			SubProduct,
-			RefTable,
-			CasinoType
-	FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) s
-		INNER JOIN #SelectedProducts p on p.ProductID = s.ProductID;
+	SELECT	ProductID,
+			BetType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest);
 
 	IF @ToDate >= @BalanceUpDay
 	BEGIN
