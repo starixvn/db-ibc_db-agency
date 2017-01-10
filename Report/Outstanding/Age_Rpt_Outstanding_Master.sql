@@ -1,7 +1,7 @@
 ﻿USE [bodb02]
 GO
 
-CREATE PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
+ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
 	@CustID int 
 AS
 
@@ -36,9 +36,9 @@ BEGIN
 	WITH rt 
 	AS (
 		SELECT	mrecommend,  
-				SUM(CASE when bettype <=19000 then ABS(actual_stake) END) AS Outstanding,  
-				SUM(case when bettype <=19000 then actual_stake * spositiontaking end) AS PositionTaking
-		FROM bettrans b with (nolock) 
+				SUM(CASE WHEN bettype <=19000 THEN ABS(actual_stake) END) AS Outstanding,  
+				SUM(case WHEN bettype <=19000 THEN actual_stake * spositiontaking END) AS PositionTaking
+		FROM bettrans b WITH (NOLOCK) 
 		WHERE ruben = 0
 			AND NOT EXISTS (
 				SELECT 1 
@@ -52,7 +52,7 @@ BEGIN
 		SELECT	mrecommend,  
 				SUM(ABS(actual_stake)) AS Outstanding,  
 				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM translog t with (nolock)
+		FROM translog t WITH (NOLOCK)
 			INNER JOIN @mrecommend m ON t.mrecommend = m.CustId
 		WHERE statusid = 0
 		GROUP BY mrecommend
@@ -61,7 +61,7 @@ BEGIN
 		SELECT	mrecommend,  
 				SUM(ABS(actual_stake)) AS Outstanding,  
 				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM bettransRNG with (nolock) 
+		FROM bettransRNG WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND srecommend =  @CustID
 		GROUP BY mrecommend
@@ -70,16 +70,16 @@ BEGIN
 		SELECT	mrecommend,  
 				SUM(ABS(actual_stake)) AS Outstanding,  
 				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM bettransLC with (nolock) 
+		FROM bettransLC WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND srecommend =  @CustID
 		GROUP BY mrecommend
 	)
-	SELECT	username AS CustName,
-			b.mrecommend as CustId, 
-			isnull(Outstanding, 0) AS MemberOutstanding,
-			isnull(positiontaking,0) AS SuperOutstanding
-	FROM custinfo AS c with (nolock)
+	SELECT	b.mrecommend as CustId, 
+			username AS CustName,
+			ISNULL(Outstanding, 0) AS MemberOutstanding,
+			ISNULL(positiontaking,0) AS SuperOutstanding
+	FROM custinfo AS c WITH (NOLOCK)
 		INNER JOIN (
 			SELECT	mrecommend,
 					SUM(ISNULL(Outstanding,0)) AS Outstanding,

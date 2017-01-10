@@ -1,7 +1,7 @@
 ﻿USE [bodb02]
 GO
 
-CREATE PROCEDURE [dbo].[Age_Rpt_Outstanding_Agent]
+ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Agent]
 	@CustID int
 AS
 
@@ -29,9 +29,10 @@ BEGIN
 	WITH rt 
 	AS (
 		SELECT	recommend,  
-			SUM(CASE when bettype <=19000 then ABS(actual_stake) END) AS Outstanding,  
-			SUM(case when bettype <=19000 then actual_stake * mpositiontaking end) AS PositionTaking
-		FROM bettrans b with (nolock) 
+			SUM(CASE WHEN bettype <=19000 THEN ABS(actual_stake) END) AS MemberOutstanding,  
+			SUM(CASE WHEN bettype <=19000 THEN actual_stake * mpositiontaking END) AS MasterOutstanding,  
+			SUM(CASE WHEN bettype <=19000 THEN actual_stake * spositiontaking END) AS SuperOutstanding
+		FROM bettrans b WITH (NOLOCK) 
 		WHERE ruben = 0
 			AND NOT EXISTS (
 				SELECT 1 
@@ -43,42 +44,47 @@ BEGIN
 
 		UNION ALL
 		SELECT	recommend,  
-			SUM(ABS(actual_stake)) AS Outstanding,  
-			SUM(actual_stake * mpositiontaking) AS PositionTaking
-		FROM translog with (nolock) 
+			SUM(ABS(actual_stake)) AS MemberOutstanding,  
+			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,  
+			SUM(actual_stake * spositiontaking) AS SuperOutstanding
+		FROM translog WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND mrecommend =  @CustID
 		GROUP BY recommend
 
 		UNION ALL -- bettransRNG
 		SELECT	recommend,  
-			SUM(ABS(actual_stake)) AS Outstanding,  
-			SUM(actual_stake * mpositiontaking) AS PositionTaking
-		FROM bettransRNG with (nolock) 
+			SUM(ABS(actual_stake)) AS MemberOutstanding,  
+			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,  
+			SUM(actual_stake * spositiontaking) AS SuperOutstanding
+		FROM bettransRNG WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND mrecommend = @CustID
 		GROUP BY recommend
 
 		UNION ALL -- bettransLC
 		SELECT	recommend,  
-			SUM(ABS(actual_stake)) AS Outstanding,  
-			SUM(actual_stake * mpositiontaking) AS PositionTaking
-		FROM bettransLC with (nolock) 
+			SUM(ABS(actual_stake)) AS MemberOutstanding,  
+			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,  
+			SUM(actual_stake * spositiontaking) AS SuperOutstanding
+		FROM bettransLC WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND mrecommend = @CustID
 		GROUP BY recommend
 	)
-	SELECT	username AS CustName,
-			b.recommend AS CustId, 
-			isnull(Outstanding, 0) AS MemberOutstanding,
-			isnull(positiontaking,0) AS MasterOutstanding
-	FROM custinfo AS c with (nolock)
+	SELECT	b.recommend AS CustId, 
+			username AS CustName,
+			ISNULL(MemberOutstanding, 0) AS MemberOutstanding,
+			ISNULL(MasterOutstanding,0) AS MasterOutstanding,
+			ISNULL(SuperOutstanding,0) AS SuperOutstanding
+	FROM custinfo AS c WITH (NOLOCK)
 	INNER JOIN (
 					SELECT 	recommend,
-						SUM(ISNULL(Outstanding,0)) AS Outstanding,
-						SUM(ISNULL(positiontaking,0)) AS PositionTaking
+						SUM(ISNULL(MemberOutstanding,0)) AS MemberOutstanding,
+						SUM(ISNULL(MasterOutstanding,0)) AS MasterOutstanding,
+						SUM(ISNULL(SuperOutstanding,0)) AS SuperOutstanding
 					FROM rt
-					group BY recommend
+					GROUP BY recommend
 				) b ON c.custid = b.recommend
 	ORDER BY username;
 
