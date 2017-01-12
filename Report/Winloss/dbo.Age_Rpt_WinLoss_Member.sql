@@ -37,29 +37,14 @@ BEGIN
 		ProductID	TINYINT,
 		SportType	INT,
 		BetType		INT
-	);	
+	);
+
+	DECLARE @isTest BIT = 0;
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
 	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) 
 	SELECT ProductID, SportType, BetType
-	FROM (
-		VALUES	(1, 0, 0), --Sportsbook
-				(6, 251, 71), (6, 208, 0), (6, 209, 0), (6, 210, 0), --RNG Casino
-				(2, 151, 0), --Racing
-				(3, 161, 0), --Number Game
-				(4, 162, 0), --Live Casino
-				(5, 180, 0), --Virtual Sports
-				(8, 202, 0), --Keno
-				(12, 255, 0), --Gold Deluxe
-				(15, 204, 0), --Colossus Bets
-				(21, 211, 0), --Allbet
-				(22, 212, 0), --Macau Games
-				(23, 213, 0), --NG2
-				(24, 219, 0) --Fishing World
-		) d(ProductID, SportType, BetType)
-	WHERE ',' + @ProductIds + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%';
-
-	DECLARE @isTest BIT = 0;
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
+	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
 
 	------Get @Srecommend
 	DECLARE @Srecommend int, @mrecommend int;

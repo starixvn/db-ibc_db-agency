@@ -40,7 +40,8 @@ DB: DBAGE/bodb02
 Original SP: Age_Rpt_WinLossDetail_Ag
 			Change SP name suffix to match with web function
 Revisions:
-	- 20161024@Paul: Smartphone Friendly UI for Microsite Report - [Redmine: #61531]
+	- 20161024@Paul: Smartphone Friendly UI for Microsite Report [Redmine: #61531]
+	- 20170110@Paul: Use new functions to get sum_winloss condition and SportBettypeMatrix [RedmineID: #69515]
 	
 */
 
@@ -66,46 +67,19 @@ BEGIN
 		NoOfTicket		INT
 	);
 
-	CREATE TABLE #SelectedProducts(
-		ProductID TINYINT
-	);
-
 	CREATE TABLE #TmpCondSumWL(
 		ProductID	TINYINT,
 		SportType	INT,
 		BetType		INT
 	);
 
-	INSERT INTO #SelectedProducts(ProductID)
-	SELECT CAST(Val AS TINYINT)
-	FROM dbo.Age_f_SplitString(@ProductIds, ',');
-
-	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) VALUES
-	(1, 0, 0), --Sportsbook
-	(6, 251, 71), (6, 208, 0), (6, 209, 0), (6, 210, 0), --RNG Casino
-	--(9, 253, 1000), --P2P
-	(2, 151, 0), --Racing
-	(3, 161, 0), --Number Game
-	--(7, 252, 73), --Bingo
-	(4, 162, 0), --Live Casino
-	(5, 180, 0), --Virtual Sports
-	(8, 202, 0), --Keno
-	(12, 255, 0), --Gold Deluxe
-	(15, 204, 0), --Colossus Bets
-	--(19, 206, 1003), --Cockfighting
-	(21, 211, 0), --Allbet
-	(22, 212, 0), --Macau Games
-	(23, 213, 0), --NG2
-	(24, 219, 0); --Fishing World
-
-	DELETE tmp
-	FROM #TmpCondSumWL tmp
-		LEFT JOIN #SelectedProducts sp ON tmp.ProductID = sp.ProductID
-	WHERE sp.ProductID IS NULL;
-
 	DECLARE @isTest BIT = 0;
 
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
+
+	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) 
+	SELECT ProductID, SportType, BetType
+	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
 
 	------Get @Srecommend
 	DECLARE @Srecommend int, @mrecommend int;
@@ -140,29 +114,16 @@ BEGIN
 
 	DECLARE @SportBettypeMatrix TABLE(
 		ProductID	tinyint,
-		BetType	smallint,
-		EventType	tinyint,
-		SubProduct	varchar(500),
-		RefTable	tinyint,
-		CasinoType	tinyint
+		BetType	smallint
 	);
 
 	INSERT INTO @SportBettypeMatrix(
 		ProductID,
-		BetType,
-		EventType,
-		SubProduct,
-		RefTable,
-		CasinoType
+		BetType
 	)
-	SELECT	s.ProductID,
-			BetType,
-			EventType,
-			SubProduct,
-			RefTable,
-			CasinoType
-	FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) s
-		INNER JOIN #SelectedProducts p on p.ProductID = s.ProductID;
+	SELECT	ProductID,
+			BetType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest);
 
 	IF @ToDate >= @BalanceUpDay
 	BEGIN 
@@ -336,7 +297,6 @@ BEGIN
 	FROM #AgWinLossDetails;
 
 	DROP TABLE #AgWinLossDetails;
-	DROP TABLE #SelectedProducts;
 	DROP TABLE #TmpCondSumWL;
 
 	SET NOCOUNT OFF;
