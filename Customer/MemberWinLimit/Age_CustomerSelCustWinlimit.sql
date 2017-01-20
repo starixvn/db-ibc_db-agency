@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20160216@Billy:	Implement Max Win Loss Limit for DCS Product - [Redmine: #52268]
 		- 20160318@Billy:	Fix MaxLossLimit for RnG Casino - [Redmine: #54335]
+		- 20170116@Helen:  Alpha - Member Win Limit report - Current Win Loss amount and Balance show zero while member actually has tickets on RNG - [Redmine:70397]
 
 	Param's Explanation:
 		- @CustID: SAgentID
@@ -49,6 +50,7 @@ BEGIN
 			AND c.mrecommend = @mrecommend
 			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
 			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+			AND c.Enabled = 1
 		GROUP BY c.custid
 	END
 	ELSE IF @RoleId = 3
@@ -61,6 +63,7 @@ BEGIN
 			AND c.srecommend = @srecommend 
 			AND c.recommend = @recommend
 			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+			AND c.Enabled = 1
 		GROUP BY c.custid
 	END
 	ELSE IF @RoleId = 2
@@ -72,6 +75,7 @@ BEGIN
 			AND roleid = 1
 			AND c.srecommend = @srecommend
 			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+			AND c.Enabled = 1
 		GROUP BY c.custid
 	END
 	

@@ -18,6 +18,8 @@ AS
 		- 20160118@Patrick:	inlcude ticket from bettransRnG table
 		- 20160219@Billy:	Add filter by username - apply for AllBet - [Redmine: #52268]
 		- 20160318@Billy:	Include tickets from [bettransLC] table - [Redmine: #54306]
+		- 20170116@Helen:  Alpha - Member Win Limit report - Current Win Loss amount and Balance show zero while member actually has tickets on RNG - [Redmine:70397]
+
 	
 	Param's Explanation:
 		- @CustID: SAgentID
@@ -43,165 +45,124 @@ BEGIN
 	WHERE CustId = @CustId
 
 	SELECT @yesterday = CAST(DATEADD(dd, -1, GETDATE()) AS DATE)
-	 
+	
+	CREATE TABLE #Cust_tmp (CustID INT PRIMARY KEY,rownumber INT)
+	
+	CREATE TABLE #Cust_Downline (CustID INT PRIMARY KEY,enabled BIT, closed BIT,reject BIT, username NVARCHAR(50))
+	
 	IF @RoleId = 4
 	BEGIN
-		INSERT INTO #MemberBalance(CustId, Balance)
-		SELECT c.custid, ISNULL(SUM(CASE WHEN b.bettype BETWEEN 2101 AND 2399 AND winlostdate >= @yesterday THEN 0
-										ELSE winlost - actual_stake + playercomm END), 0) AS Balance
+		INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+		SELECT c.custid,c.enabled, c.closed, ISNULL(c.reject, 0), c.username
 		FROM dbo.CustInfo c WITH(NOLOCK)
-			LEFT JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
 		WHERE c.srecommend = @CustId
 			AND roleid = 1
 			AND c.mrecommend = @mrecommend
 			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
-			AND b.statusID NOT IN (0,1,101,102)
 			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-		GROUP BY c.custid
-
-		--get data from bettransRnG table within 2 days: today & yesterday
-		UNION ALL
-		SELECT c.custid, ISNULL(SUM(winlost - actual_stake + playercomm), 0) AS Balance
-		FROM dbo.CustInfo c WITH(NOLOCK)
-			LEFT JOIN bodb02.dbo.bettransRNG b WITH(NOLOCK) ON c.CustId = b.CustId
-		WHERE c.srecommend = @CustId
-			AND roleid = 1
-			AND c.mrecommend = @mrecommend
-			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
-			AND b.statusID NOT IN (0,1,101,102)
-			AND winlostdate >= @yesterday
-			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-		GROUP BY c.custid
-		
-		-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
-		UNION ALL
-		SELECT	ci.custid, ISNULL(SUM(blc.winlost - blc.actual_stake + blc.playercomm), 0) AS Balance
-		FROM		dbo.custInfo AS ci WITH (NOLOCK)
-		LEFT JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)
-				ON	blc.custid = ci.custid
-		WHERE	ci.srecommend = @CustId
-			AND	ci.roleid = 1
-			AND	ci.mrecommend = @mrecommend
-			AND	(@recommend = 0 OR (@recommend <> 0 AND ci.recommend = @recommend))
-			AND	blc.statusID NOT IN (0, 1, 101, 102)
-			AND	blc.winlostdate >= @yesterday
-			AND	ci.username LIKE '%' + ISNULL(@username, ci.username) + '%'
-		GROUP BY ci.custid
+			AND c.Enabled = 1
+			
 	END
 	ELSE IF @RoleId = 3
 	BEGIN
-		INSERT INTO #MemberBalance(CustId, Balance)
-		SELECT c.custid, ISNULL(SUM(CASE WHEN b.bettype BETWEEN 2101 AND 2399 AND winlostdate >= @yesterday THEN 0
-										ELSE winlost - actual_stake + playercomm END), 0) AS Balance
+		INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+		SELECT c.custid,c.enabled, c.closed, ISNULL(c.reject, 0), c.username
 		FROM dbo.CustInfo c WITH(NOLOCK)
-			LEFT JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
 		WHERE c.mrecommend = @CustId
 			AND roleid = 1
 			AND c.srecommend = @srecommend 
 			AND c.recommend = @recommend
-			AND b.statusID NOT IN (0,1,101,102)
 			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-		GROUP BY c.custid
-
-		--get data from bettransRnG table within 2 days: today & yesterday
-		UNION ALL
-		SELECT c.custid, ISNULL(SUM(winlost - actual_stake + playercomm), 0) AS Balance
-		FROM dbo.CustInfo c WITH(NOLOCK)
-			LEFT JOIN bodb02.dbo.bettransRNG b WITH(NOLOCK) ON c.CustId = b.CustId
-		WHERE c.mrecommend = @CustId
-			AND roleid = 1
-			AND c.srecommend = @srecommend 
-			AND c.recommend = @recommend
-			AND b.statusID NOT IN (0,1,101,102)
-			AND winlostdate >= @yesterday
-			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-		GROUP BY c.custid
+			AND c.Enabled = 1
 		
-		-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
-		UNION ALL
-		SELECT	ci.custid, ISNULL(SUM(blc.winlost - blc.actual_stake + blc.playercomm), 0) AS Balance
-		FROM		dbo.custInfo AS ci WITH (NOLOCK)
-		LEFT JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)
-				ON	blc.custid = ci.custid
-		WHERE	ci.mrecommend = @CustId
-			AND	ci.roleid = 1
-			AND	ci.srecommend = @srecommend
-			AND	ci.recommend = @recommend
-			AND	blc.statusID NOT IN (0, 1, 101, 102)
-			AND	blc.winlostdate >= @yesterday
-			AND	ci.username LIKE '%' + ISNULL(@username, ci.username) + '%'
-		GROUP BY ci.custid
 	END
 	ELSE IF @RoleId = 2
 	BEGIN
-		INSERT INTO #MemberBalance(CustId, Balance)
-		SELECT c.custid, ISNULL(SUM(CASE WHEN b.bettype BETWEEN 2101 AND 2399 AND winlostdate >= @yesterday THEN 0
-										ELSE winlost - actual_stake + playercomm END), 0) AS Balance
+		INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+		SELECT c.custid,c.enabled, c.closed, ISNULL(c.reject, 0), c.username
 		FROM dbo.CustInfo c WITH(NOLOCK)
-			LEFT JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
 		WHERE c.recommend = @CustId
 			AND roleid = 1
 			AND c.srecommend = @srecommend
-			AND b.statusID NOT IN (0,1,101,102)
 			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-		GROUP BY c.custid
-
-		--get data from bettransRnG table within 2 days: today & yesterday
-		UNION ALL
-		SELECT c.custid, ISNULL(SUM(winlost - actual_stake + playercomm), 0) AS Balance
-		FROM dbo.CustInfo c WITH(NOLOCK)
-			LEFT JOIN bodb02.dbo.bettransRNG b WITH(NOLOCK) ON c.CustId = b.CustId
-		WHERE c.recommend = @CustId
-			AND roleid = 1
-			AND c.srecommend = @srecommend
-			AND b.statusID NOT IN (0,1,101,102)
-			AND winlostdate >= @yesterday
-			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-		GROUP BY c.custid
-		
-		-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
-		UNION ALL
-		SELECT	ci.custid, ISNULL(SUM(blc.winlost - blc.actual_stake + blc.playercomm), 0) AS Balance
-		FROM		dbo.custInfo AS ci WITH (NOLOCK)
-		LEFT JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)
-				ON	blc.custid = ci.custid
-		WHERE	ci.recommend = @CustId
-			AND	ci.roleid = 1
-			AND	ci.srecommend = @srecommend
-			AND	blc.statusID NOT IN (0, 1, 101, 102)
-			AND	blc.winlostdate >= @yesterday
-			AND	ci.username LIKE '%' + ISNULL(@username, ci.username) + '%'
-		GROUP BY ci.custid
+			AND c.Enabled = 1
 	END
+	
+	
+	 DECLARE @isTest BIT = 0
+	 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	 
+	 CREATE TABLE #SportBettype (ProductID INT, Bettype INT,EventType INT, SubProduct VARCHAR(500), RefTable TINYINT, CasinoType TINYINT)
+	 INSERT INTO #SportBettype ( ProductID, Bettype, EventType, SubProduct, RefTable, CasinoType)
+	 SELECT ProductID,
+			Bettype,
+			EventType,
+			SubProduct,
+			RefTable,
+			CasinoType
+	FROM bodb02.dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
+	WHERE RefTable IN (1,2) -- IN bettransRNG & BettransLC
+    
+	INSERT INTO #Cust_tmp (CustId,rownumber)
+	SELECT CustID, rownumber
+	FROM (
+		SELECT CUSTID, ROW_NUMBER() OVER (ORDER BY a.enabled DESC, a.closed, a.reject, a.username) AS RowNumber
+		FROM #Cust_Downline a
+		) AS T
+	WHERE T.RowNumber BETWEEN @RowStart AND @RowEnd	
+	
+	
+	INSERT INTO #MemberBalance(CustId, Balance)
+	SELECT c.custid, ISNULL(SUM(CASE WHEN s.Bettype IS NOT NULL AND winlostdate >= @yesterday THEN 0
+							ELSE winlost - actual_stake + playercomm END), 0) AS Balance
+	FROM #Cust_tmp c WITH(NOLOCK)
+		INNER LOOP JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
+		LEFT JOIN #SportBettype s ON s.bettype = b.Bettype
+	
+	WHERE b.statusID NOT IN (0,1,101,102)	
+	GROUP BY c.custid
+
+	--get data from bettransRnG table within 2 days: today & yesterday
+	UNION ALL
+	SELECT c.custid, SUM(winlost - actual_stake + playercomm) AS Balance
+	FROM #Cust_tmp c WITH(NOLOCK)
+		INNER JOIN bodb02.dbo.bettransRNG b WITH(NOLOCK) ON c.CustId = b.CustId 
+	WHERE  b.statusID NOT IN (0,1,101,102)	AND winlostdate >= @yesterday	
+	GROUP BY c.custid
+	
+	-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
+	UNION ALL
+	SELECT	ci.custid, SUM(blc.winlost - blc.actual_stake + blc.playercomm) AS Balance
+	FROM	#Cust_tmp AS ci WITH (NOLOCK)
+		INNER JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)	ON	blc.custid = ci.custid 	
+	WHERE	blc.statusID NOT IN (0, 1, 101, 102) AND	blc.winlostdate >= @yesterday
+	GROUP BY ci.custid
+	
+	OPTION (MAXDOP 8)
 	
 	--Calc total rows
 	SELECT @TotalRows = COUNT(1)
-	FROM #MemberBalance
+	FROM #Cust_Downline
 
 	CREATE TABLE #TempData(RowNumber INT, CustId INT, Balance MONEY)
 	INSERT INTO #TempData(RowNumber, CustId, Balance)
-	SELECT RowNumber, CustId, Balance
-	FROM (
-		SELECT ROW_NUMBER() OVER (ORDER BY c.enabled DESC, c.closed, ISNULL(c.reject, 0), c.username) AS RowNumber
-			, b.CustId
-			, SUM(b.Balance) AS Balance
-		FROM #MemberBalance b
-			INNER JOIN dbo.custInfo c WITH(NOLOCK) ON b.CustId = c.CustId
-		GROUP BY b.CustId, c.enabled, c.closed, ISNULL(c.reject, 0), c.username
-	)tmp
-	WHERE tmp.RowNumber BETWEEN @RowStart AND @RowEnd
-
+	SELECT 	a.rownumber,a.CustId
+			, ISNULL(SUM(b.Balance),0) AS Balance
+		FROM #Cust_tmp a
+			LEFT JOIN #MemberBalance b ON b.CustId = a.CustId
+	GROUP BY a.CustId,a.rownumber
+	
 	SELECT bc.RowNumber, bc.Balance, bc.CustId, CreditBalance, DebitBalance
 	FROM (
 		SELECT d.RowNumber, d.CustId, d.Balance
-			, SUM(ISNULL(bc.Balance, 0)) AS CreditBalance
+			, ISNULL(SUM(bc.Balance),0)  AS CreditBalance
 		FROM #TempData d
-			LEFT JOIN bodb02.dbo.BalanceCreditGame bc WITH(NOLOCK) ON d.CustId = bc.custid AND bc.bettype = @BetType
+			LEFT JOIN bodb02.dbo.BalanceCreditGame bc WITH(NOLOCK) ON d.CustId = bc.custid AND bc.bettype = @BetType 
 		GROUP BY d.RowNumber, d.CustId, d.Balance
 	)bc
 	INNER JOIN (
 		SELECT d.RowNumber, d.CustId, d.Balance
-			, SUM(ISNULL(bd.Balance, 0)) AS DebitBalance
+			, ISNULL(SUM(bd.Balance),0)  AS DebitBalance
 		FROM #TempData d
 			LEFT JOIN bodb02.dbo.BalanceDebitGame bd WITH(NOLOCK) ON d.CustId = bd.custid AND bd.bettype = @BetType
 		GROUP BY d.RowNumber, d.CustId, d.Balance
@@ -210,8 +171,11 @@ BEGIN
 
 	DROP TABLE #MemberBalance
 	DROP TABLE #TempData
+	DROP TABLE #Cust_tmp
+	DROP TABLE #SportBettype
+	DROP TABLE #Cust_Downline
+	
 END
-
 
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelWinlimitInfo] TO [bodbDownlineNet]
