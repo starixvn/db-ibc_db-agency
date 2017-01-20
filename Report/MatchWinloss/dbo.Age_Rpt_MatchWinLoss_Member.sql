@@ -25,7 +25,7 @@ AS
 	DB: DBAGE.bodb02
 	Original: Age_Rpt_MatchWinLoss_Ag
 	Revisions:
-		- 20161219@Paul: Create new [RedmineID: #68723]
+		- 20161219@Paul: Create new [RedmineID: #70554]
 
 */
 
