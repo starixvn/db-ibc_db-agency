@@ -55,6 +55,7 @@ Revisions:
 	- 20160712@Percy: PHAIO Phase 2a - Add new bettypes [RedmineID: #53152]
 	- 20160831@Percy: PHAIO Phase 2b - Add new bettypes [RedmineID: #62861]
 	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
+	- 20170123@Percy: Support Fast Market [RedmineID: #56590]
 */
 
 SET NOCOUNT ON
@@ -173,7 +174,8 @@ SELECT pvt.recommend, c.username,
 	ISNULL([415],0) + ISNULL([416],0) + ISNULL([427],0) + ISNULL([431],0) + ISNULL([433],0) + ISNULL([436],0) + ISNULL([437],0) +
 	ISNULL([438],0) + ISNULL([439],0) + ISNULL([440],0) + ISNULL([441],0) + ISNULL([442],0) + ISNULL([443],0) + ISNULL([444],0) +
 	ISNULL([417],0) + ISNULL([418],0) + ISNULL([419],0) + ISNULL([420],0) + ISNULL([421],0) + ISNULL([422],0) + ISNULL([423],0) +
-	ISNULL([424],0) + ISNULL([425],0) + ISNULL([426],0) + ISNULL([429],0) + ISNULL([445],0) + ISNULL([446],0) + ISNULL([447],0) as totalcomm_3,
+	ISNULL([424],0) + ISNULL([425],0) + ISNULL([426],0) + ISNULL([429],0) + ISNULL([445],0) + ISNULL([446],0) + ISNULL([447],0) + 
+	ISNULL([221],0) + ISNULL([222],0) + ISNULL([223],0) + ISNULL([224],0) + ISNULL([225],0) as totalcomm_3,
 	
 	---Casino_comm
 	isnull([71],0) + 
@@ -238,7 +240,8 @@ PIVOT
 					[415], [416], [427], [428], [430], [431], [432], [433], [434], [435], [436], [437], [438], [439], [440], [441], [442], [443], [444],
 					[17], [18],
 					[2502],
-					[417], [418], [419], [420], [421], [422], [423], [424], [425], [426], [429], [445], [446], [447]
+					[417], [418], [419], [420], [421], [422], [423], [424], [425], [426], [429], [445], [446], [447],
+					[221], [222], [223], [224], [225]
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.recommend 
