@@ -28,6 +28,7 @@ Revisions:
 	- 20160421@Elodie: Modidy code to get info for deposit account - [Redmine: #56438]
 	- 20160413@Winnie: VoidBridge - [Redmine: #55531]
 	- 20160801@Elodie: NG2 Product - [Redmine: #60809]
+	- 20161031@Winnie: FishingWorld - [Redmine: #65474]
 
 Param's Explanation:
 • @custid: custid that need to be viewed.   
@@ -76,12 +77,14 @@ Param's Explanation:
 		,	@bitmapOrder_AllBet			INT
 		,	@bitmapOrder_VoidBridge		INT
 		,	@bitmapOrder_NG2			INT
+		,	@bitmapOrder_FishingWorld	INT
     
     SET @bitmapOrder_MuayThai = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 44 AND Bettype = 3)
     SET @bitmapOrder_CockFighting = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 206 AND Bettype = 1003)
     SET @bitmapOrder_Cricket = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 50 AND Bettype = 501)
 	SET @bitmapOrder_VoidBridge = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 212 AND Bettype = 4001)
 	SET @bitmapOrder_NG2 = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 213 AND Bettype = 2501)
+	SET @bitmapOrder_FishingWorld = (SELECT bitmapOrder FROM ProductStatusProfile WITH (NOLOCK) WHERE Sporttype = 219 AND Bettype = 1011)
 
 	SELECT	@bitmapOrder_AllBet =	(
 										SELECT	psp.bitmapOrder
@@ -96,6 +99,7 @@ Param's Explanation:
 		,	@IsHidden_AllBet		INT = 1	
 		,	@IsHidden_VoidBridge	INT = 1	
 		,	@IsHidden_NG2			INT = 1
+		,	@IsHidden_FishingWorld	INT = 1	
     
     DECLARE	@SportBook2				INT = 16
 		,	@CockFighting			INT = 19
@@ -103,6 +107,7 @@ Param's Explanation:
 		,	@AllBet					INT = 21
 		,	@VoidBridge				INT = 22
 		,	@NG2					INT = 23
+		,	@FishingWorld			INT = 24
     
 	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@SportBook2,4))
 	BEGIN
@@ -129,6 +134,10 @@ Param's Explanation:
 	 IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@NG2,11))
 	BEGIN
 		SET @IsHidden_NG2 = 0
+	END
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@FishingWorld,4))
+	BEGIN
+		SET @IsHidden_FishingWorld = 0
 	END
 
 	DECLARE @recommend INT, @IsIMBC BIT = 0
@@ -230,7 +239,25 @@ Param's Explanation:
 			CAST(CASE WHEN @IsHidden_NG2 = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_NG2),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideNG2,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_NG2), 0) AS SyncedNG2,
 			ISNULL(dbo.f_GetProductStatus(cpsUpline.bitmapHasSynced, @bitmapOrder_NG2), 0) AS SyncedNG2Upline,
-
+			--FishingWorld
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_FishingWorld),1) AS DisableFishingWorld,
+			CAST(CASE WHEN @IsHidden_FishingWorld = 0 AND ISNULL(dbo.f_GetProductStatus(cps.bitmapIsHidden, @bitmapOrder_FishingWorld),1) = 0 THEN 0 ELSE 1 END AS BIT) AS HideFishingWorld,
+			ISNULL(dbo.f_GetProductStatus(cps.bitmapHasSynced, @bitmapOrder_FishingWorld), 0) AS SyncedFishingWorld,
+			ISNULL(dbo.f_GetProductStatus(cpsUpline.bitmapHasSynced, @bitmapOrder_FishingWorld), 0) AS SyncedFishingWorldUpline,
+			CASE	WHEN Customer.roleid = 1 THEN 1
+					WHEN EXISTS	(	SELECT	1
+									FROM		dbo.CustProductStatus AS cpsDownline WITH (NOLOCK)
+									INNER JOIN	dbo.custInfo AS ciDownline WITH (NOLOCK)
+											ON	ciDownline.custid = cpsDownline.CustID
+									WHERE	Customer.custid =	CASE	WHEN Customer.roleid = 2 THEN ciDownline.recommend
+																		WHEN Customer.roleid = 3 THEN ciDownline.mrecommend
+																		WHEN Customer.roleid = 4 THEN ciDownline.srecommend
+																		ELSE -1
+																END
+										AND	dbo.f_GetProductStatus(cpsDownline.bitmapHasSynced, @bitmapOrder_FishingWorld) = 0)
+						THEN 0
+					ELSE 1
+			END AS SyncedFishingWorldDownline,
 			-- Cricket
 			@IsIMBC AS IsIMBC,
 			ISNULL(dbo.f_GetProductStatus(cps.bitmapIsDisabled, @bitmapOrder_Cricket),1) AS DisableCricket,
