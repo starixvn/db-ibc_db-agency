@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelStatisticsInfo_Ag]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_CustomerSelStatisticsInfo_Ag]
 	 @custid INT
 AS
 /*
@@ -17,8 +20,17 @@ AS
 	- 20160318@Percy: Support AllBet [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20161003@Sophia: Remove redundant info of CS, BI, P2P [Redmine: #64636]
+	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 */
 SET NOCOUNT ON
+
+-- SportBettypeMatrix
+DECLARE @isTest BIT
+SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
+INSERT INTO #SportBettype (ProductID, bettype, RefTable)
+SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
 
 DECLARE @roleid INT, 
 		@Outstanding MONEY,
@@ -49,23 +61,26 @@ SELECT
 		@total_outstanding    = ISNULL(SUM(ABS(actual_stake)),0) + @translog_totalOutstanding		
 FROM bettrans WITH(NOLOCK)
 WHERE recommend = @custid AND ruben = 0 
+		AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0)
+		/*
 		AND bettype NOT IN (801,802,803,804,805,806,1003) -- Exclude Metric gaming, Cockfighting from bettrans
 		AND bettype NOT BETWEEN 2101 AND 2499 -- Exclude new bettype RNG Casino + Allbet
 		AND bettype NOT BETWEEN 4001 AND 7999 -- Voidbridge
+		*/
 
 SELECT  
 		@OutStanding       = @OutStanding       + ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
 		@total_outstanding = @total_outstanding + ISNULL(SUM(ABS(actual_stake)),0)
 FROM bettransRNG WITH(NOLOCK)
 WHERE recommend = @custid AND statusID IN (0, 1)
-	AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+	--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 
 SELECT  
 		@OutStanding       = @OutStanding       + ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
 		@total_outstanding = @total_outstanding + ISNULL(SUM(ABS(actual_stake)),0)
 FROM bettransLC WITH(NOLOCK)
 WHERE recommend = @custid AND statusID IN (0, 1)
-	AND gameID BETWEEN 2401 AND 2499
+	--AND gameID BETWEEN 2401 AND 2499
 			 
 SELECT @Total_memberActive = ISNULL(SUM(CASE WHEN Closed = 0 AND ISNULL(reject,0) = 0 THEN 1 ELSE 0 END), 0),
 	@Total_memberClosed = ISNULL(SUM(CASE WHEN Closed = 1 THEN 1 ELSE 0 END), 0),
@@ -83,6 +98,7 @@ SELECT @OutStanding AS outStanding,
 		@total_memberClosed AS total_memberClosed,
 		@total_memberSuspended AS total_memberSuspended,
 		@number_newMembers AS number_newMembers
+DROP TABLE #SportBettype
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelStatisticsInfo_Ag] TO [bodbDownlineNet] AS [dbo]
 GO

@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,  
 	@ToDate			SMALLDATETIME,   
@@ -17,6 +20,7 @@
 	@showAB			BIT = 0,
 	@showVB			BIT = 0,
 	@showNG2		BIT = 0,
+	@showFW			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -47,6 +51,7 @@ AS
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
 	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
+	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
 		+ @CustID MasterID	
@@ -321,6 +326,18 @@ BEGIN
 		VALUES(213, 0)
 	END
 
+	IF @showFW = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	219 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 24
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(219, 0)
+	END
 	
 	------Get @Srecommend
 	DECLARE @Srecommend int 

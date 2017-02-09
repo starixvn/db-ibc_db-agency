@@ -1,4 +1,7 @@
-﻿ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
+﻿USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
 	@isInternalAgent BIT = 0
@@ -44,6 +47,7 @@ Revisions:
 	- 20160128@Percy: Support new sport Cricket [Redmine: #50027]
 	- 20160204@Percy: Support new product AllBet [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -62,12 +66,6 @@ BEGIN
 	DECLARE @yesterday DATE
 
 	DECLARE @netPosition MONEY = 0 -- for member
-	
-	DECLARE @bettypemetric AS TABLE ( bettype INT)
-	INSERT INTO @bettypemetric (bettype)
-	SELECT typeid AS bettype
-	FROM dbo.bettype WITH (NOLOCK)
-	WHERE typeID IN (801,802,803,804,805,806,1003) -- Exlude Metric gaming, Cock Fighting from bettrans
 
     /*DECLARE @ABSDate DATETIME
     SET @ABSDate = '2011-09-01'	*/
@@ -389,23 +387,32 @@ BEGIN
     WHERE
 	    c.custid = @custid
     -------------------------------------------------------------------------
+	-- SportBettypeMatrix
+	DECLARE @isTest BIT
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+	CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
+	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
+	SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
+
     --Balance Info
     IF @roleid = 1
     BEGIN
 	    --  Balance calculated with the correct date @Phuong20080925	
 	    SELECT @todayCustCash = ISNULL(SUM(winlost-actual_stake + playercomm),0)
 	    FROM bettrans WITH (NOLOCK)
-	    WHERE custid = @custid AND ruben = 1 AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
+	    WHERE custid = @custid AND ruben = 1 AND bettype <= 19000 --AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
+			AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN (0,3))
 		    AND CONVERT(DATE, winlostdate) = @today
 
 		SELECT @todayCustCash = @todayCustCash + ISNULL(SUM(winlost-actual_stake + playercomm),0)
 		FROM bettransRNG WITH (NOLOCK)
-		WHERE custid = @custid AND statusID NOT IN (0, 1) AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+		WHERE custid = @custid AND statusID NOT IN (0, 1) --AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			AND CONVERT(DATE, winlostdate) = @today
 
 		SELECT @todayCustCash = @todayCustCash + ISNULL(SUM(winlost-actual_stake + playercomm),0)
 		FROM bettransLC WITH (NOLOCK)
-		WHERE custid = @custid AND statusID NOT IN (0, 1) AND gameID BETWEEN 2401 AND 2499
+		WHERE custid = @custid AND statusID NOT IN (0, 1) --AND gameID BETWEEN 2401 AND 2499
 			AND CONVERT(DATE, winlostdate) = @today
     	
 	    ;with Balance
@@ -423,11 +430,11 @@ BEGIN
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE custid = @custid
 				AND (
-						(bettype NOT IN (SELECT bettype FROM @bettypemetric) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
+						(bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0) AND ruben =0)
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN (0,3)))
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 		    UNION ALL
@@ -456,7 +463,7 @@ BEGIN
 			    MAX(transdate) lastTxn
 			FROM bettransRNG WITH(NOLOCK)
 			WHERE custid = @custid
-				AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+				--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 				AND (
 						(statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 						OR statusID IN (0, 1)
@@ -474,7 +481,7 @@ BEGIN
 			    MAX(transdate) lastTxn
 			FROM bettransLC WITH(NOLOCK)
 			WHERE custid = @custid
-				AND gameID BETWEEN 2401 AND 2499
+				--AND gameID BETWEEN 2401 AND 2499
 				AND (
 						(statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 						OR statusID IN (0, 1)
@@ -506,19 +513,20 @@ BEGIN
 	    SELECT 	@todayAgentCash = ISNULL(SUM(awinlost+comm-playercomm),0),
 			    @todayCustCash  = ISNULL(SUM(winlost-actual_stake+playercomm),0)
 	    FROM bettrans WITH (NOLOCK)
-	    WHERE  recommend = @custid AND ruben = 1 AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
+	    WHERE  recommend = @custid AND ruben = 1 AND bettype <= 19000 --AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
+			AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0)
 		    AND CONVERT(DATE, winlostdate) = @today
 
 		SELECT 	@todayAgentCash = @todayAgentCash + ISNULL(SUM(awinlost+comm-playercomm),0),
 			    @todayCustCash  = @todayCustCash  + ISNULL(SUM(winlost-actual_stake+playercomm),0)
 	    FROM bettransRNG WITH (NOLOCK)
-	    WHERE recommend = @custid AND statusID NOT IN (0, 1) AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+	    WHERE recommend = @custid AND statusID NOT IN (0, 1) --AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 			AND CONVERT(DATE, winlostdate) = @today
 
 		SELECT 	@todayAgentCash = @todayAgentCash + ISNULL(SUM(awinlost+comm-playercomm),0),
 			    @todayCustCash  = @todayCustCash  + ISNULL(SUM(winlost-actual_stake+playercomm),0)
 	    FROM bettransLC WITH (NOLOCK)
-	    WHERE recommend = @custid AND statusID NOT IN (0, 1) AND gameID BETWEEN 2401 AND 2499
+	    WHERE recommend = @custid AND statusID NOT IN (0, 1) --AND gameID BETWEEN 2401 AND 2499
 			AND CONVERT(DATE, winlostdate) = @today
     		
 	    ;with Balance
@@ -538,11 +546,11 @@ BEGIN
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE recommend = @custid
 					AND (
-							(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
+							(bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0) AND ruben =0)
 							OR ruben <> 0
 						)
 					AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN (0,3)))
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 		    UNION ALL
@@ -562,7 +570,7 @@ BEGIN
 				AND recommend = @custid
 			UNION ALL
 			SELECT
-				SUM(CASE WHEN custid=recommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE awinlost+comm-playercomm END) agentCash,
+				SUM(CASE WHEN custid=recommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
 			    SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * apositiontaking ELSE 0 END) agentPositionTaking,
 			    SUM(CASE WHEN custid<>recommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END) customerCash,
 			    SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END) customerOutstanding,
@@ -575,14 +583,14 @@ BEGIN
 			    MAX(transdate) lastTxn
 		    FROM bettransRNG WITH(NOLOCK)
 		    WHERE recommend = @custid
-				AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+				--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 				AND (
 						(statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 						OR statusID IN (0, 1)
 					)
 			UNION ALL
 			SELECT
-				SUM(CASE WHEN custid=recommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE awinlost+comm-playercomm END) agentCash,
+				SUM(CASE WHEN custid=recommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) agentCash,
 			    SUM(CASE WHEN statusID IN (0, 1) THEN actual_stake * apositiontaking ELSE 0 END) agentPositionTaking,
 			    SUM(CASE WHEN custid<>recommend AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END) customerCash,
 			    SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END) customerOutstanding,
@@ -595,7 +603,7 @@ BEGIN
 			    MAX(transdate) lastTxn
 		    FROM bettransLC WITH(NOLOCK)
 		    WHERE recommend = @custid
-				AND gameID BETWEEN 2401 AND 2499
+				--AND gameID BETWEEN 2401 AND 2499
 				AND (
 						(statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 						OR statusID IN (0, 1)
@@ -630,21 +638,22 @@ BEGIN
 			    @todayAgentCash  = ISNULL(SUM(awinlost+comm-playercomm),0),
 			    @todayCustCash   = ISNULL(SUM(winlost-actual_stake + playercomm),0)
 	    FROM bettrans WITH (NOLOCK)
-	    WHERE mrecommend = @custid AND ruben = 1 AND bettype <= 19000 AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
-		    AND CONVERT(DATE, winlostdate) = @today
+	    WHERE mrecommend = @custid AND ruben = 1 AND bettype <= 19000 --AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999
+		    AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0)
+			AND CONVERT(DATE, winlostdate) = @today
 
 		SELECT	@todayMasterCash = @todayMasterCash + ISNULL(SUM(mwinlost+acomm-comm),0),
 			    @todayAgentCash  = @todayAgentCash  + ISNULL(SUM(awinlost+comm-playercomm),0),
 			    @todayCustCash   = @todayCustCash   + ISNULL(SUM(winlost-actual_stake + playercomm),0)
 	    FROM bettransRNG WITH (NOLOCK)
-	    WHERE mrecommend = @custid AND statusID NOT IN (0, 1) AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+	    WHERE mrecommend = @custid AND statusID NOT IN (0, 1) --AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 		    AND CONVERT(DATE, winlostdate) = @today
 
 		SELECT	@todayMasterCash = @todayMasterCash + ISNULL(SUM(mwinlost+acomm-comm),0),
 			    @todayAgentCash  = @todayAgentCash  + ISNULL(SUM(awinlost+comm-playercomm),0),
 			    @todayCustCash   = @todayCustCash   + ISNULL(SUM(winlost-actual_stake + playercomm),0)
 	    FROM bettransLC WITH (NOLOCK)
-	    WHERE mrecommend = @custid AND statusID NOT IN (0, 1) AND gameID BETWEEN 2401 AND 2499
+	    WHERE mrecommend = @custid AND statusID NOT IN (0, 1) --AND gameID BETWEEN 2401 AND 2499
 		    AND CONVERT(DATE, winlostdate) = @today
     	
 	    ;with Balance
@@ -664,11 +673,11 @@ BEGIN
 		    FROM bettrans WITH(NOLOCK) 
 		    WHERE mrecommend = @custid	
 				AND (
-						(bettrans.bettype NOT IN (SELECT bettype FROM @bettypemetric) AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999 AND ruben =0)
+						(bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0) AND ruben =0)
 						OR ruben <> 0
 					)
 				AND (
-						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT BETWEEN 2101 AND 2499 AND bettype NOT BETWEEN 4001 AND 7999)
+						(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN (0,3)))
 						OR CONVERT(DATE, winlostdate) < @yesterday
 					)
 		    UNION ALL
@@ -703,7 +712,7 @@ BEGIN
 				    MAX(transdate) lastTxn
 		    FROM bettransRNG WITH(NOLOCK)
 		    WHERE mrecommend = @custid
-				AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
+				--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 				AND (
 						(statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 						OR statusID IN (0, 1)
@@ -724,7 +733,7 @@ BEGIN
 				    MAX(transdate) lastTxn
 		    FROM bettransLC WITH(NOLOCK)
 		    WHERE mrecommend = @custid
-				AND gameID BETWEEN 2401 AND 2499
+				--AND gameID BETWEEN 2401 AND 2499
 				AND (
 						(statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 						OR statusID IN (0, 1)
@@ -749,6 +758,7 @@ BEGIN
 	    FROM Balance 
     	
     END
+	DROP TABLE #SportBettype
     -- For Sportbook2
 	EXEC Acc_CustSetting_StatusSettingSelect @CustID = @custid,@roleid = @roleid		    
 END
