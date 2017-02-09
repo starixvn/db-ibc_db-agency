@@ -1,0 +1,201 @@
+USE [bodb02]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByBettype_Master]    Script Date: 2/9/2017 9:47:53 AM ******/
+DROP PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Master]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByBettype_Master]    Script Date: 2/9/2017 9:47:53 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Master]
+	@CustID			INT,
+	@FromDate		SMALLDATETIME,
+	@ToDate			SMALLDATETIME,	
+	@BalanceUpDay	SMALLDATETIME
+AS
+
+/*
+	Created: 
+	Task: 
+	DB: DBAGE.bodb02
+	Original: Age_Rpt_WinLossByBettype_SAg
+	Revisions:
+		- 20161224@Paul: Create new [RedmineID: #70450]
+
+*/
+
+BEGIN
+	SET NOCOUNT ON;
+
+	CREATE TABLE #SAgWinLoss
+	(
+		bettype			INT, 
+		liveindicator	INT, 
+		GrossComm		MONEY,
+		Turnover		MONEY, 
+		MAgTotal		MONEY, 
+		SAgWinloss		MONEY, 
+		SAgComm			MONEY, 
+		NumberOfTickets INT
+	);
+
+	DECLARE @ABSDate DATETIME;
+	SET @ABSDate = '2011-09-01';
+
+	DECLARE @isTest BIT = 0;
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
+
+	CREATE TABLE #SportBettype (ProductID INT, Bettype SMALLINT, GroupTypeId INT);
+
+	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId)
+	SELECT ProductID, Bettype, Bettype
+	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest);
+
+	UPDATE s
+	SET GroupTypeId = f.GroupTypeId
+	FROM #SportBettype s
+		INNER JOIN dbo.f_GroupBettype() f ON s.Bettype = f.Bettype;
+
+	UPDATE #SportBettype 
+	SET GroupTypeId = 71 
+	WHERE ProductID = 6; -- Casino Game
+
+	UPDATE #SportBettype 
+	SET GroupTypeId = 4001 
+	WHERE ProductID = 22; -- Voidbrigde
+
+	UPDATE #SportBettype 
+	SET GroupTypeId = 2502 
+	WHERE ProductID = 23; -- NG2
+
+	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
+
+	DECLARE @recommend TABLE (recommend INT);
+
+	INSERT INTO @recommend (recommend)
+	SELECT custID FROM custInfo (NOLOCK) WHERE srecommend = @CustID AND roleID = 2;
+
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @BUDate SMALLDATETIME, @MoveBetDay SMALLDATETIME;
+	SELECT  @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay;
+
+	DECLARE @MoveBetTable AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetDay SMALLDATETIME);
+	INSERT INTO @MoveBetTable (BalanceUpDay, MoveBetDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay;
+
+	SELECT TOP 1 @MoveBetDay = MoveBetDay
+	FROM @MoveBetTable;
+
+	IF @TDate >= @BUDate 
+	BEGIN
+		IF @TDate > @MoveBetDay
+		BEGIN
+			INSERT INTO #SAgWinLoss(bettype, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+			SELECT  s.GroupTypeId,
+					CASE s.ProductID
+						WHEN 3 THEN b.liveindicator
+						ELSE 0
+					END AS liveindicator,
+					SUM(CASE WHEN b.bettype = 1000 THEN oddsspread
+							ELSE ISNULL(scomm / (1 - tpositiontaking), 0)
+						END) AS GrossComm,
+					SUM(CASE WHEN winlostdate >= @ABSDate THEN 
+								CASE WHEN b.bettype IN (33, 43) AND liveawayscore = 0 THEN ABS(stake) / 2
+									ELSE ABS(stake) END
+							ELSE 
+								CASE WHEN b.bettype IN (33, 43) AND liveawayscore = 0 THEN stake / 2
+									ELSE stake END
+						END) AS Turnover,
+					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
+					SUM(swinlost) AS SAgWinloss,
+					ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SAgComm,
+					COUNT(transid) AS NumberOfTickets
+			FROM dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype)
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND statusID NOT IN (0, 1, 101, 102, 103)	
+				AND ruben = 1			
+				AND EXISTS(
+					SELECT 1
+					FROM @recommend r
+					WHERE b.recommend = r.recommend
+				)
+			GROUP BY s.GroupTypeId,
+					CASE s.ProductID
+						WHEN 3 THEN b.liveindicator
+						ELSE 0 END;
+		END
+
+		IF @FDate <= @MoveBetDay
+		BEGIN
+			INSERT INTO #SAgWinLoss(bettype, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+			SELECT  s.GroupTypeId,
+					CASE s.ProductID
+						WHEN 3 THEN b.liveindicator
+						ELSE 0
+					END AS liveindicator,
+					SUM(CASE WHEN b.bettype = 1000 THEN oddsspread
+							ELSE ISNULL(scomm / (1 - tpositiontaking), 0)
+						END) AS GrossComm,
+					SUM(CASE WHEN winlostdate >= @ABSDate THEN 
+								CASE WHEN b.bettype IN (33, 43) AND liveawayscore = 0 THEN ABS(stake) / 2
+									ELSE ABS(stake) END
+							ELSE 
+								CASE WHEN b.bettype IN (33, 43) AND liveawayscore = 0 THEN stake / 2
+									ELSE stake END
+						END) AS Turnover,
+					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
+					SUM(swinlost) AS SAgWinloss,
+					ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SAgComm,
+					COUNT(transid) AS NumberOfTickets
+			FROM dbo.bettrans14 b WITH(NOLOCK)
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype)
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND statusID NOT IN (0, 1, 101, 102, 103)	
+				AND ruben = 1			
+				AND EXISTS(
+					SELECT 1
+					FROM @recommend r
+					WHERE b.recommend = r.recommend
+				)
+			GROUP BY s.GroupTypeId,
+					CASE s.ProductID
+						WHEN 3 THEN b.liveindicator
+						ELSE 0 END;
+		END
+	END
+
+	SELECT	t.bettype,
+			s.ProductID,
+			liveindicator,
+			SUM(GrossComm) AS GrossComm,
+			SUM(TurnOver) AS Turnover,	
+			SUM(MAgTotal) AS MAgTotal,
+			SUM(SAgWinloss) AS SAgWinloss,
+			SUM(SAgComm) AS SAgComm,
+			SUM(NumberOfTickets) AS NumberOfTickets
+	FROM #SAgWinLoss t
+		JOIN #SportBettype s ON t.bettype = s.GroupTypeId
+	GROUP BY t.bettype, s.ProductID, liveindicator
+	ORDER BY t.bettype, s.ProductID, liveindicator;
+
+	SET NOCOUNT OFF;
+END
+
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Master] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Master] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Master] TO [vnteam] AS [dbo]
+GO
+
+
