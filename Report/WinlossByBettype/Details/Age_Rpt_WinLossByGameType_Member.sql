@@ -17,7 +17,8 @@ CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByGameType_Member]
 	@CustID 		INT,
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,	
-	@BalanceUpDay	SMALLDATETIME	
+	@BalanceUpDay	SMALLDATETIME,
+	@MoveBetsDay		SMALLDATETIME
 AS
 
 /*
@@ -63,42 +64,69 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductID, @isTest) t
 		INNER JOIN SportBettypeMatrix s WITH(NOLOCK) ON t.ProductID = s.ProductID AND t.BetType = s.BetType;
 
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
+
+	SELECT  @FDate = @FromDate, @TDate = @ToDate;
+
 	IF @Todate >= @BalanceUpDay 
 	BEGIN
-		INSERT INTO @WinLoss
-		(	sporttype, bettype, Turnover,
-			MemberWinLoss, MemberComm,
-			AgentWinLoss, AgentComm
-		)
-		SELECT	s.sporttype,
-				b.bettype,
-				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
-				SUM(winlost - actual_stake) AS MemberWinLoss,
-				SUM(playercomm) AS MemberRolling,
-				SUM(awinlost) AS AgentWinLoss,		   
-				SUM(comm - playercomm) AS AgentRolling
-		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-		WHERE winlostdate BETWEEN @FromDate AND @ToDate
-			AND ruben = 1
-			AND statusID NOT IN (101, 102, 103)
-			AND recommend = @custid
-		GROUP BY s.sporttype,b.bettype
-		UNION ALL
-		SELECT  s.sporttype,
-				b.bettype,
-				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
-				SUM(winlost - actual_stake) AS MemberWinLoss,
-				SUM(playercomm) AS MemberRolling,
-				SUM(awinlost) AS AgentWinLoss,		   
-				SUM(comm - playercomm) AS AgentRolling
-		FROM dbo.bettrans14 b WITH(NOLOCK)
-			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-		WHERE winlostdate BETWEEN @FromDate AND @ToDate
-			AND ruben = 1
-			AND statusID NOT IN (101, 102, 103)
-			AND recommend = @custid
-		GROUP BY s.sporttype,b.bettype;
+		IF @ToDate > @MoveBetsDay
+		BEGIN
+			IF @FromDate <= @MoveBetsDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+			END
+
+			INSERT INTO @WinLoss
+			(	sporttype, bettype, Turnover,
+				MemberWinLoss, MemberComm,
+				AgentWinLoss, AgentComm
+			)
+			SELECT	s.sporttype,
+					b.bettype,
+					SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
+					SUM(winlost - actual_stake) AS MemberWinLoss,
+					SUM(playercomm) AS MemberRolling,
+					SUM(awinlost) AS AgentWinLoss,		   
+					SUM(comm - playercomm) AS AgentRolling
+			FROM dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND ruben = 1
+				AND statusID NOT IN (101, 102, 103)
+				AND recommend = @custid
+			GROUP BY s.sporttype,b.bettype;
+		END
+		
+		SET @FDate = @FromDate;
+		
+		IF @FromDate <= @MoveBetsDay
+		BEGIN
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
+			INSERT INTO @WinLoss
+			(	sporttype, bettype, Turnover,
+				MemberWinLoss, MemberComm,
+				AgentWinLoss, AgentComm
+			)
+			SELECT  s.sporttype,
+					b.bettype,
+					SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS TurnOver,
+					SUM(winlost - actual_stake) AS MemberWinLoss,
+					SUM(playercomm) AS MemberRolling,
+					SUM(awinlost) AS AgentWinLoss,		   
+					SUM(comm - playercomm) AS AgentRolling
+			FROM dbo.bettrans14 b WITH(NOLOCK)
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND ruben = 1
+				AND statusID NOT IN (101, 102, 103)
+				AND recommend = @custid
+			GROUP BY s.sporttype,b.bettype;
+		END
 	END
 
 	SELECT  A.sporttype,

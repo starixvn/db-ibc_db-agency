@@ -17,7 +17,8 @@ CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByGameType_Master]
 	@CustID 		INT,
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,	
-	@BalanceUpDay	SMALLDATETIME	
+	@BalanceUpDay	SMALLDATETIME,
+	@MoveBetsDay		SMALLDATETIME
 AS
 
 /*
@@ -61,6 +62,10 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductID, @isTest) t
 		INNER JOIN SportBettypeMatrix s WITH(NOLOCK) ON t.ProductID = s.ProductID AND t.BetType = s.BetType;
 
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
+
+	SELECT  @FDate = @FromDate, @TDate = @ToDate;
+
 	IF @Todate >= @BalanceUpDay 
 	BEGIN
 		DECLARE @recommend TABLE (recommend INT);
@@ -69,36 +74,59 @@ BEGIN
 		SELECT custID FROM custInfo (NOLOCK)
 		WHERE srecommend = @CustID AND roleID = 2;
 
-		INSERT INTO @WinLoss
-		(	sporttype, bettype, Turnover,
-			MasterTotal,
-			SuperWinLoss, SuperComm
-		)
-		SELECT  s.sporttype,
-				b.bettype,
-				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS Turnover,
-				SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MasterTotal,
-				SUM(swinlost) AS SuperWinLoss,
-				ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SuperComm
-		FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
-			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-		WHERE winlostdate BETWEEN @FromDate AND @ToDate
-			AND statusID NOT IN (0, 1, 101, 102, 103)
-			AND SRecommend = @CustID
-		GROUP BY s.sporttype, b.bettype
-		UNION ALL
-		SELECT  s.sporttype,
-				b.bettype,
-				SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS Turnover,
-				SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MasterTotal,
-				SUM(swinlost) AS SuperWinLoss,
-				ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SuperComm
-		FROM dbo.bettrans14 b WITH(NOLOCK)
-			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-			INNER JOIN @recommend r ON b.recommend = r.recommend
-		WHERE winlostdate BETWEEN @FromDate AND @ToDate
-			AND statusID NOT IN (0, 1, 101, 102, 103)
-		GROUP BY s.sporttype, b.bettype;
+		IF @ToDate > @MoveBetsDay
+		BEGIN
+			IF @FromDate <= @MoveBetsDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+			END
+
+			INSERT INTO @WinLoss
+			(	sporttype, bettype, Turnover,
+				MasterTotal,
+				SuperWinLoss, SuperComm
+			)
+			SELECT  s.sporttype,
+					b.bettype,
+					SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS Turnover,
+					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MasterTotal,
+					SUM(swinlost) AS SuperWinLoss,
+					ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SuperComm
+			FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND statusID NOT IN (0, 1, 101, 102, 103)
+				AND SRecommend = @CustID
+			GROUP BY s.sporttype, b.bettype;
+		END
+		
+		SET @FDate = @FromDate;
+		
+		IF @FromDate <= @MoveBetsDay
+		BEGIN
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
+			INSERT INTO @WinLoss
+			(	sporttype, bettype, Turnover,
+				MasterTotal,
+				SuperWinLoss, SuperComm
+			)
+			SELECT  s.sporttype,
+					b.bettype,
+					SUM(CASE WHEN winlostdate >= @ABSDate THEN ABS(stake) ELSE stake END) AS Turnover,
+					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MasterTotal,
+					SUM(swinlost) AS SuperWinLoss,
+					ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SuperComm
+			FROM dbo.bettrans14 b WITH(NOLOCK)
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
+				INNER JOIN @recommend r ON b.recommend = r.recommend
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND statusID NOT IN (0, 1, 101, 102, 103)
+			GROUP BY s.sporttype, b.bettype;
+		END
 	END
 
 

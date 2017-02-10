@@ -17,7 +17,8 @@ CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Member]
 	@CustID 		INT,
 	@FromDate 		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,	
-	@BalanceUpDay	SMALLDATETIME	
+	@BalanceUpDay	SMALLDATETIME, 
+	@MoveBetsDay		SMALLDATETIME
 AS
 
 /*
@@ -34,6 +35,7 @@ BEGIN
 	SET NOCOUNT ON;
 
 	CREATE TABLE #AgWinLoss(
+		ProductID		TINYINT,
 		bettype			INT, 
 		liveindicator	INT,
 		GrossComm		MONEY,
@@ -78,23 +80,22 @@ BEGIN
 
 	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
 
-	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @BUDate SMALLDATETIME, @MoveBetDay SMALLDATETIME;
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
 
-	SELECT  @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay;
+	SELECT  @FDate = @FromDate, @TDate = @ToDate;
 
-	DECLARE @MoveBetTable AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetDay SMALLDATETIME);
-	INSERT INTO @MoveBetTable (BalanceUpDay, MoveBetDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay;
-
-	SELECT TOP 1 @MoveBetDay = MoveBetDay
-	FROM @MoveBetTable;
-
-	IF @TDate >= @BUDate
-	BEGIN 
-		IF @TDate > @MoveBetDay
+	IF @ToDate >= @BalanceUpDay 
+	BEGIN
+		IF @ToDate > @MoveBetsDay
 		BEGIN
-			INSERT INTO #AgWinLoss(bettype, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
-			SELECT	s.GroupTypeId,
+			IF @FromDate <= @MoveBetsDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+			END
+
+			INSERT INTO #AgWinLoss(ProductID, bettype, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+			SELECT	s.ProductID,
+					s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 
@@ -116,17 +117,25 @@ BEGIN
 				AND ruben = 1
 				AND statusID NOT IN (101, 102, 103)
 				AND recommend = @custid
-			GROUP BY s.GroupTypeId,
+			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
 					END;
 		END
 
-		IF @FDate <= @MoveBetDay
+		SET @FDate = @FromDate;
+		
+		IF @FromDate <= @MoveBetsDay
 		BEGIN
-			INSERT INTO #AgWinLoss(bettype, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
-			SELECT  s.GroupTypeId,
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
+			INSERT INTO #AgWinLoss(ProductID, bettype, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+			SELECT  s.ProductID,
+					s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 
@@ -148,7 +157,7 @@ BEGIN
 				AND ruben = 1
 				AND statusID NOT IN (101, 102, 103)
 				AND recommend = @custid
-			GROUP BY s.GroupTypeId,
+			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
@@ -157,7 +166,7 @@ BEGIN
 	END
 
 	SELECT	t.bettype,
-			s.ProductID,
+			t.ProductID,
 			liveindicator,
 			SUM(GrossComm) AS GrossComm,
 			SUM(TurnOver) AS Turnover,
@@ -167,9 +176,8 @@ BEGIN
 			SUM(AgComm) AS AgComm,
 			SUM(NumberOfTickets) AS NumberOfTickets
 	FROM #AgWinLoss t
-		JOIN #SportBettype s ON t.bettype = s.GroupTypeId
-	GROUP BY t.bettype, s.ProductID, liveindicator
-	ORDER BY t.bettype, s.ProductID, liveindicator;
+	GROUP BY t.bettype, t.ProductID, liveindicator
+	ORDER BY t.bettype, t.ProductID, liveindicator;
 
 	SET NOCOUNT OFF;
 END
