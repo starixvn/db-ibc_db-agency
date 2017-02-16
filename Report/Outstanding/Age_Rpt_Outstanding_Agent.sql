@@ -2,7 +2,8 @@
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Agent]
-	@CustID int
+	@CustID		INT, --mrecommend
+	@ProductIds	VARCHAR(MAX)
 AS
 
 /*
@@ -24,7 +25,8 @@ BEGIN
 
 	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
 	SELECT ProductID, bettype, RefTable
-	FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest);
+	FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
+	WHERE ',' + @ProductIds + ',' LIKE '%,' + CAST(ProductID AS VARCHAR(3)) + ',%';
  
 	WITH rt 
 	AS (
@@ -34,10 +36,10 @@ BEGIN
 			SUM(CASE WHEN bettype <=19000 THEN actual_stake * spositiontaking END) AS SuperOutstanding
 		FROM bettrans b WITH (NOLOCK) 
 		WHERE ruben = 0
-			AND NOT EXISTS (
+			AND EXISTS (
 				SELECT 1 
 				FROM #SportBettype s 
-				WHERE s.RefTable <> 0 AND s.bettype = b.bettype
+				WHERE s.RefTable = 0 AND s.bettype = b.bettype
 				)
 			AND mrecommend =  @CustID
 		GROUP BY recommend
@@ -47,9 +49,14 @@ BEGIN
 			SUM(ABS(actual_stake)) AS MemberOutstanding,  
 			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,  
 			SUM(actual_stake * spositiontaking) AS SuperOutstanding
-		FROM translog WITH (NOLOCK) 
+		FROM translog t WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND mrecommend =  @CustID
+			AND EXISTS (
+				SELECT 1 
+				FROM #SportBettype s 
+				WHERE s.RefTable = 3 AND s.bettype = t.gameID
+			)
 		GROUP BY recommend
 
 		UNION ALL -- bettransRNG
@@ -57,9 +64,14 @@ BEGIN
 			SUM(ABS(actual_stake)) AS MemberOutstanding,  
 			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,  
 			SUM(actual_stake * spositiontaking) AS SuperOutstanding
-		FROM bettransRNG WITH (NOLOCK) 
+		FROM bettransRNG b WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND mrecommend = @CustID
+			AND EXISTS (
+				SELECT 1 
+				FROM #SportBettype s 
+				WHERE s.RefTable = 1 AND s.bettype = b.gameID
+			)
 		GROUP BY recommend
 
 		UNION ALL -- bettransLC
@@ -67,9 +79,14 @@ BEGIN
 			SUM(ABS(actual_stake)) AS MemberOutstanding,  
 			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,  
 			SUM(actual_stake * spositiontaking) AS SuperOutstanding
-		FROM bettransLC WITH (NOLOCK) 
+		FROM bettransLC b WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND mrecommend = @CustID
+			AND EXISTS (
+				SELECT 1 
+				FROM #SportBettype s 
+				WHERE s.RefTable = 2 AND s.bettype = b.gameID
+			)
 		GROUP BY recommend
 	)
 	SELECT	b.recommend AS CustId, 

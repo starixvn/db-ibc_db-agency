@@ -2,7 +2,8 @@
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
-	@CustID int 
+	@CustID		INT, --srecommend
+	@ProductIds	VARCHAR(MAX)
 AS
 
 /*
@@ -24,7 +25,8 @@ BEGIN
 
 	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
 	SELECT ProductID, bettype, RefTable
-	FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest);
+	FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
+	WHERE ',' + @ProductIds + ',' LIKE '%,' + CAST(ProductID AS VARCHAR(3)) + ',%';
 
 	DECLARE @mrecommend TABLE (CustId INT PRIMARY KEY);
 
@@ -40,10 +42,10 @@ BEGIN
 				SUM(case WHEN bettype <=19000 THEN actual_stake * spositiontaking END) AS PositionTaking
 		FROM bettrans b WITH (NOLOCK) 
 		WHERE ruben = 0
-			AND NOT EXISTS (
+			AND EXISTS (
 				SELECT 1 
 				FROM #SportBettype s 
-				WHERE s.RefTable <> 0 AND s.bettype = b.bettype
+				WHERE s.RefTable = 0 AND s.bettype = b.bettype
 				)
 			AND srecommend =  @CustID
 		GROUP BY mrecommend
@@ -55,24 +57,39 @@ BEGIN
 		FROM translog t WITH (NOLOCK)
 			INNER JOIN @mrecommend m ON t.mrecommend = m.CustId
 		WHERE statusid = 0
+			AND EXISTS (
+				SELECT 1 
+				FROM #SportBettype s 
+				WHERE s.RefTable = 3 AND s.bettype = t.gameID
+			)
 		GROUP BY mrecommend
 
 		UNION ALL -- bettransRNG
 		SELECT	mrecommend,  
 				SUM(ABS(actual_stake)) AS Outstanding,  
 				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM bettransRNG WITH (NOLOCK) 
+		FROM bettransRNG b WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND srecommend =  @CustID
+			AND EXISTS (
+				SELECT 1 
+				FROM #SportBettype s 
+				WHERE s.RefTable = 1 AND s.bettype = b.gameID
+			)
 		GROUP BY mrecommend
 
 		UNION ALL -- bettransLC
 		SELECT	mrecommend,  
 				SUM(ABS(actual_stake)) AS Outstanding,  
 				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM bettransLC WITH (NOLOCK) 
+		FROM bettransLC b WITH (NOLOCK) 
 		WHERE statusid = 0
 			AND srecommend =  @CustID
+			AND EXISTS (
+				SELECT 1 
+				FROM #SportBettype s 
+				WHERE s.RefTable = 2 AND s.bettype = b.gameID
+			)
 		GROUP BY mrecommend
 	)
 	SELECT	b.mrecommend as CustId, 
