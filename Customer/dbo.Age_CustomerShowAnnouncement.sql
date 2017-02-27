@@ -12,7 +12,7 @@ AS
 
 	Revisions:
 		- 20170220@Elodie: Offer FW for line 5005322,1036451,993226,2042873,1156957,506057,796555,2453866 on 21 Feb 2017
-		- 20170221@Elodie: Exclude cross site super don't offer FW for batch 2
+		- 20170221@Elodie: Exclude cross site super don't offer FW for batch 2 - [RedmineID:#71810]
 
 	Param's Explanation:
 		• @CustID: ID's customer 
