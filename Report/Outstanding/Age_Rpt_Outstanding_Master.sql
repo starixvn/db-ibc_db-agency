@@ -25,8 +25,7 @@ BEGIN
 
 	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
 	SELECT ProductID, bettype, RefTable
-	FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
-	WHERE ',' + @ProductIds + ',' LIKE '%,' + CAST(ProductID AS VARCHAR(3)) + ',%';
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
 
 	DECLARE @mrecommend TABLE (CustId INT PRIMARY KEY);
 
