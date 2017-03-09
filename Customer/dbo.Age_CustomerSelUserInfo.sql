@@ -29,9 +29,10 @@ Revisions:
 	- 20160413@Winnie: VoidBridge - [Redmine: #55531]
 	- 20160801@Elodie: NG2 Product - [Redmine: #60809]
 	- 20161031@Winnie: FishingWorld - [Redmine: #65474]
+	- 20160801@Elodie: Implementing NewProductStatus Plugin - [Redmine #70722]	
 
 Param's Explanation:
-• @custid: custid that need to be viewed.   
+â€¢ @custid: custid that need to be viewed.   
 */
 
 	SET NOCOUNT ON
@@ -135,7 +136,7 @@ Param's Explanation:
 	BEGIN
 		SET @IsHidden_NG2 = 0
 	END
-	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@FishingWorld,4))
+	IF EXISTS( SELECT 1 FROM dbo.f_CustSetting_SportBetTypeSettingSelect(@FishingWorld,13))
 	BEGIN
 		SET @IsHidden_FishingWorld = 0
 	END
