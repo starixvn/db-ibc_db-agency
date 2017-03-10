@@ -16,7 +16,7 @@ AS
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]	
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
-		- 20170309@Sophia: Fishing World change Setting type from 4 to 11 [Redmine: #70722 ]
+		- 20170309@Sophia: Fishing World change Setting type from 4 to 13 [Redmine: #70722 ]
 	Param's Explanation:
 
 */
