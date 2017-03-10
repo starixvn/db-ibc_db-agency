@@ -16,6 +16,7 @@ AS
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]	
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+		- 20170309@Sophia: Fishing World change Setting type from 4 to 11 [Redmine: #70722 ]
 	Param's Explanation:
 
 */
@@ -104,6 +105,7 @@ BEGIN
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
 				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
+				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13) --FW
 				)c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
