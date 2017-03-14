@@ -173,7 +173,7 @@ BEGIN
 				 WHEN @ReportType = 2 THEN RIGHT(CONVERT(VARCHAR(10), WinlossDate, 103), 7)  
 				 WHEN @ReportType = 3 THEN CONVERT(VARCHAR(10), ProductId)
 				 ELSE '0' 
-			END AS breakdown,
+			END AS RollupKey,
 			SUM(Turnover) AS Turnover,
 			SUM(MemberWinloss) AS MemberWinloss,
 			SUM(MemberComm) AS MemberComm,
