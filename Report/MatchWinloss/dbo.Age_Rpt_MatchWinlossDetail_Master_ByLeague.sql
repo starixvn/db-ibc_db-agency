@@ -410,9 +410,9 @@ BEGIN
 					SUM(swinlost) AS SAgWinLoss,
 					SUM(scomm - acomm) AS  SAgComm,						
 					r.EventID AS Race,
-					r.EventTime matchcode,
+					'' AS matchcode,
 					CONVERT (BIT, 0) AS IsNeutral,
-					'' AS showtime
+					r.EventTime AS showtime
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
