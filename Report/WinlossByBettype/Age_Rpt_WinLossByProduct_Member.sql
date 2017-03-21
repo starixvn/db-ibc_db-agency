@@ -1,11 +1,11 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByBettype_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
-DROP PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Member]
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
+DROP PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByBettype_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
 SET ANSI_NULLS ON
 GO
 
@@ -13,12 +13,13 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Member]
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
 	@CustID 		INT,
 	@FromDate 		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,	
 	@BalanceUpDay	SMALLDATETIME, 
-	@MoveBetsDay		SMALLDATETIME
+	@MoveBetsDay	SMALLDATETIME,
+	@ProductIds		VARCHAR(MAX)
 AS
 
 /*
@@ -59,7 +60,7 @@ BEGIN
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId)
 	SELECT ProductID, Bettype, Bettype
-	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest);
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest);
 
 	UPDATE s
 	SET GroupTypeId = f.GroupTypeId
@@ -184,13 +185,13 @@ END
 
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Member] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [bodbDownlineNet] AS [dbo]
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Member] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [bodbDownlineNetView] AS [dbo]
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Member] TO [vnteam] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [vnteam] AS [dbo]
 GO
 
 

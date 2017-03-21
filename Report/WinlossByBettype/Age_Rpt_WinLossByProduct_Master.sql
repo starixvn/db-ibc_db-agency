@@ -1,11 +1,11 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByBettype_Master]    Script Date: 2/9/2017 9:47:53 AM ******/
-DROP PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Master]
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Master]    Script Date: 2/9/2017 9:47:53 AM ******/
+DROP PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Master]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByBettype_Master]    Script Date: 2/9/2017 9:47:53 AM ******/
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Master]    Script Date: 2/9/2017 9:47:53 AM ******/
 SET ANSI_NULLS ON
 GO
 
@@ -13,12 +13,13 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Master]
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Master]
 	@CustID			INT,
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,	
 	@BalanceUpDay	SMALLDATETIME,
-	@MoveBetsDay		SMALLDATETIME
+	@MoveBetsDay	SMALLDATETIME,
+	@ProductIds		VARCHAR(MAX)
 AS
 
 /*
@@ -57,7 +58,7 @@ BEGIN
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId)
 	SELECT ProductID, Bettype, Bettype
-	FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest);
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest);
 
 	UPDATE s
 	SET GroupTypeId = f.GroupTypeId
@@ -120,8 +121,7 @@ BEGIN
 			FROM dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype)
 			WHERE winlostdate BETWEEN @FDate AND @TDate
-				AND statusID NOT IN (0, 1, 101, 102, 103)	
-				AND ruben = 1			
+				AND statusID NOT IN (0, 1, 101, 102, 103)
 				AND EXISTS(
 					SELECT 1
 					FROM @recommend r
@@ -198,13 +198,13 @@ END
 
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Master] TO [bodbDownlineNet] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Master] TO [bodbDownlineNet] AS [dbo]
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Master] TO [bodbDownlineNetView] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Master] TO [bodbDownlineNetView] AS [dbo]
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Master] TO [vnteam] AS [dbo]
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Master] TO [vnteam] AS [dbo]
 GO
 
 
