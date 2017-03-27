@@ -1,5 +1,4 @@
-USE [bodb02]
-GO
+/*<info serverAlias="DBACC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Age_PlayForFun_MemberRequest_Detail]
 	@CustId INT,
@@ -10,7 +9,13 @@ AS
 	Creator: Percy
 	Date: 2017-03-20
 	DB: DBACC.bodb02
-	Task: Select member request
+	Task: Select member request - Detail
+
+	Revisions:
+
+	Param's Explanation:
+		@CustId: recommend
+		@ProductId: productId
 */
 
 BEGIN
@@ -60,8 +65,14 @@ BEGIN
 			SUM(CASE WHEN ruben = 1 THEN b.winlost - b.actual_stake + b.playercomm ELSE 0 END) AS Balance
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @CustId
-			AND EXISTS (
-				SELECT 1 FROM #SportBettype s WHERE s.RefTable = 0 AND s.bettype = b.bettype
+			AND
+			(
+				b.ruben = 1
+				OR
+				(
+					b.ruben = 0
+					AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.RefTable <> 0 AND s.bettype = b.bettype)
+				)
 			)
 			AND
 			(
@@ -69,7 +80,7 @@ BEGIN
 				OR
 				(
 					winlostdate >= @yesterday
-					AND EXISTS (SELECT 1 FROM #SportBettype s WHERE s.RefTable IN (1, 2) AND s.bettype = b.bettype)
+					AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.RefTable IN (1, 2) AND s.bettype = b.bettype)
 				)
 			)
 		GROUP BY b.custid
@@ -141,10 +152,4 @@ BEGIN
 	DROP TABLE #SportBettype
 	DROP TABLE #netPosition
 END
-GO
-GRANT EXECUTE ON [dbo].[Age_PlayForFun_MemberRequest_Detail] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_PlayForFun_MemberRequest_Detail] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_PlayForFun_MemberRequest_Detail] TO [vnteam] AS [dbo]
 GO

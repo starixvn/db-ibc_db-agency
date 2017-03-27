@@ -1,5 +1,4 @@
-USE [bodb02]
-GO
+/*<info serverAlias="DBACC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Age_PlayForFun_MemberRequest]
 	@CustId INT
@@ -10,6 +9,11 @@ AS
 	Date: 2017-03-20
 	DB: DBACC.bodb02
 	Task: Select member request
+
+	Revisions:
+
+	Param's Explanation:
+		@CustId: SMA
 */
 
 BEGIN
@@ -40,10 +44,4 @@ BEGIN
 		)
 	GROUP BY sb.ProductId, sb.ProductName
 END
-GO
-GRANT EXECUTE ON [dbo].[Age_PlayForFun_MemberRequest] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_PlayForFun_MemberRequest] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_PlayForFun_MemberRequest] TO [vnteam] AS [dbo]
 GO
