@@ -5,8 +5,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinloss_GetLeagueByProduct]
 	@custid			INT,
 	@ProductIds		VARCHAR(MAX),
 	@IsShowAll		BIT = 1, 
-	@fromdate		DATETIME,
-	@todate			DATETIME,
+	@fromdate		SMALLDATETIME,
+	@todate			SMALLDATETIME,
 	@movebetsday	DATETIME,
 	@Language		VARCHAR(3) = 'E'
 AS
@@ -34,8 +34,8 @@ BEGIN
 			@showNG = CASE WHEN PATINDEX('%,3,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
 			@showVS = CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END;
 
-	DECLARE @isTest BIT
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	DECLARE @isTest BIT;
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
 	CREATE TABLE #SportBettype (
 		ProductID INT,
@@ -43,9 +43,12 @@ BEGIN
 		EventType INT
 	);
 	
+	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
+
 	INSERT INTO #SportBettype (ProductID, Bettype, EventType)
 	SELECT ProductID, Bettype, EventType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest)
+	WHERE EventType IN (1, 2, 3);
 
 	SELECT @IsShowAll = CASE @IsShowAll WHEN 1 THEN NULL ELSE 0 END;
 
@@ -59,79 +62,62 @@ BEGIN
 
 	CREATE TABLE #tmpmatchid(matchid INT);
 
+	DECLARE @fdate SMALLDATETIME,
+			@tdate SMALLDATETIME;
+
+	SELECT	@fdate = @fromdate,
+			@tdate = @todate;
+
 	IF @roleid = 4
 	BEGIN
+		DECLARE @recommend TABLE (CustId INT PRIMARY KEY);
+
+		INSERT INTO @recommend (CustId)
+		SELECT CustId 
+		FROM dbo.custInfo (NOLOCK) 
+		WHERE roleid = 2 AND srecommend = @CustID;
+
 		IF @Todate > @MoveBetsDay
 		BEGIN
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 1 )
+			IF @fromdate <= @movebetsday
 			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.srecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 1 );
+				SET @fdate = DATEADD(DD, 1, @movebetsday);
 			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 2 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.srecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 2 );
-			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 3 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT oddsid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.srecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 3 );
-			END						
-									
+
+			INSERT INTO #tmpmatchid(matchid)
+			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
+								WHEN tbl.EventType = 2 THEN matchid
+								WHEN tbl.EventType = 3 THEN oddsid
+							END
+			FROM dbo.bettrans b WITH(NOLOCK)
+				INNER JOIN @recommend m ON b.recommend = m.CustId
+				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND winlostdate BETWEEN @fdate AND @tdate;									
 		END
+
+		SELECT	@fdate = @fromdate,
+				@tdate = @todate;
 
 		IF @fromdate <= @MoveBetsDay
 		BEGIN
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 1 )
+			IF @todate > @movebetsday
 			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.srecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 1 );
+				SET @tdate = @movebetsday;
 			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 2 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.srecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 2 );
-			END
-		
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 3 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT oddsid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.srecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 3 );
-			END		
+
+			INSERT INTO #tmpmatchid(matchid)
+			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
+								WHEN tbl.EventType = 2 THEN matchid
+								WHEN tbl.EventType = 3 THEN oddsid
+							END
+			FROM dbo.bettrans14 b WITH(NOLOCK)
+				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.srecommend = @custid 
+				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND winlostdate BETWEEN @fdate AND @tdate;
 		END
 	END
 
@@ -139,76 +125,45 @@ BEGIN
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 1 )
+			IF @fromdate <= @movebetsday
 			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.mrecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 1 );
+				SET @fdate = DATEADD(DD, 1, @movebetsday);
 			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 2 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.mrecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 2 );
-			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 3 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT oddsid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.mrecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 3 );
-			END						
-									
+
+			INSERT INTO #tmpmatchid(matchid)
+			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
+								WHEN tbl.EventType = 2 THEN matchid
+								WHEN tbl.EventType = 3 THEN oddsid
+							END
+			FROM dbo.bettrans b WITH(NOLOCK)
+				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.mrecommend = @custid 
+				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND winlostdate BETWEEN @fdate AND @tdate;									
 		END
+
+		SELECT	@fdate = @fromdate,
+				@tdate = @todate;
 
 		IF @fromdate <= @MoveBetsDay
 		BEGIN
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 1 )
+			IF @todate > @movebetsday
 			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.mrecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 1 );
+				SET @tdate = @movebetsday;
 			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 2 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.mrecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 2 );
-			END
-		
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 3 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT oddsid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.mrecommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 3 );
-			END
-					
+
+			INSERT INTO #tmpmatchid(matchid)
+			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
+								WHEN tbl.EventType = 2 THEN matchid
+								WHEN tbl.EventType = 3 THEN oddsid
+							END
+			FROM dbo.bettrans14 b WITH(NOLOCK)
+				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.mrecommend = @custid 
+				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND winlostdate BETWEEN @fdate AND @tdate;
 		END
 	END
 
@@ -216,76 +171,45 @@ BEGIN
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 1 )
+			IF @fromdate <= @movebetsday
 			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.recommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 1 );
+				SET @fdate = DATEADD(DD, 1, @movebetsday);
 			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 2 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.recommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 2 );
-			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 3 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT oddsid 
-				FROM dbo.bettrans b WITH(NOLOCK)
-				WHERE b.recommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 3 );
-			END
-									
+
+			INSERT INTO #tmpmatchid(matchid)
+			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
+								WHEN tbl.EventType = 2 THEN matchid
+								WHEN tbl.EventType = 3 THEN oddsid
+							END
+			FROM dbo.bettrans b WITH(NOLOCK)
+				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.recommend = @custid 
+				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND winlostdate BETWEEN @fdate AND @tdate;		
 		END
+
+		SELECT	@fdate = @fromdate,
+				@tdate = @todate;
 
 		IF @fromdate <= @MoveBetsDay
 		BEGIN
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 1 )
+			IF @todate > @movebetsday
 			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.recommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 1 );
+				SET @tdate = @movebetsday;
 			END
-			
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 2 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT matchid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.recommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 2 );
-			END
-		
-			IF EXISTS( SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.EventType = 3 )
-			BEGIN
-				INSERT INTO #tmpmatchid(matchid)
-				SELECT DISTINCT oddsid 
-				FROM dbo.bettrans14 b WITH(NOLOCK)
-				WHERE b.recommend = @custid 
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND EXISTS (SELECT TOP 1 1 FROM #SportBettype tbl WHERE tbl.bettype = b.bettype AND tbl.EventType = 3 );
-			END
-					
+
+			INSERT INTO #tmpmatchid(matchid)
+			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
+								WHEN tbl.EventType = 2 THEN matchid
+								WHEN tbl.EventType = 3 THEN oddsid
+							END
+			FROM dbo.bettrans14 b WITH(NOLOCK)
+				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.recommend = @custid 
+				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND winlostdate BETWEEN @fdate AND @tdate;					
 		END
 	END
 
