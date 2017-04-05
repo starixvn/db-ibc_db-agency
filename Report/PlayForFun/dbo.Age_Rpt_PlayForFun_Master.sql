@@ -41,7 +41,7 @@ BEGIN
 			OR (
 				@StatusId <> 2
 				AND (
-					(@ProductId = 6 AND EXISTS(SELECT 1 FROM dbo.custInfo c WITH(NOLOCK) WHERE c.custid = b.custid AND c.DisableCasino = @StatusId))
+					(@ProductId = 6 AND EXISTS(SELECT 1 FROM dbo.custInfo c WITH(NOLOCK) WHERE c.custid = b.custid AND CASE WHEN c.DisableCasino = 0 AND c.SyncCasino = 1 THEN 0 ELSE 1 END = @StatusId))
 					OR (
 						@ProductId <> 6
 						AND EXISTS(

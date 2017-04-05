@@ -26,7 +26,7 @@ BEGIN
 
 	UPDATE	@ProductList
 	SET		ProductName = 'Casino',
-			IsDisable = (SELECT DisableCasino FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @CustId)
+			IsDisable = (SELECT CASE WHEN DisableCasino = 0 AND SyncCasino = 1 THEN 0 ELSE 1 END FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @CustId)
 	WHERE	ProductID IN (6) -- RNG Casino
 
 	SELECT ProductId, ProductName, IsDisable

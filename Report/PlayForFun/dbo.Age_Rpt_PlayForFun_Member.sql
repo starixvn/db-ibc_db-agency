@@ -40,11 +40,14 @@ BEGIN
 
 	IF @ProductId = 6 -- RNG Casino
 	BEGIN
-		SELECT t.CustId, c.username, c.DisableCasino AS StatusId , t.TurnOver, t.WinLoss, t.BetCount
+		SELECT t.CustId, c.username, CASE WHEN c.DisableCasino = 0 AND c.SyncCasino = 1 THEN CONVERT(BIT, 0) ELSE CONVERT(BIT, 1) END AS StatusId , t.TurnOver, t.WinLoss, t.BetCount
 		FROM #tmpData t
 			INNER JOIN dbo.custInfo c WITH(NOLOCK) ON t.CustId = c.custid
 		WHERE
-			(@StatusId = 2 OR c.DisableCasino = @StatusId)
+			(
+				@StatusId = 2
+				OR @StatusId = CASE WHEN c.DisableCasino = 0 AND c.SyncCasino = 1 THEN 0 ELSE 1 END
+			)
 		ORDER BY t.TurnOver DESC
 	END
 	ELSE -- DCS Product

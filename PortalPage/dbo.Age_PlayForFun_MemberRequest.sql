@@ -40,7 +40,7 @@ BEGIN
 					OR (@RoleId = 3 AND c.mrecommend = @CustId)
 					OR (@RoleId = 2 AND c.recommend = @CustId)
 				)
-				AND c.DisableCasino = 1 -- RNG Casino
+				AND (c.DisableCasino = 1 OR c.SyncCasino = 0) -- RNG Casino
 		)
 	GROUP BY sb.ProductId, sb.ProductName
 END

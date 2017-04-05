@@ -44,7 +44,7 @@ BEGIN
 		FROM dbo.custInfo c WITH(NOLOCK)
 		WHERE c.recommend = @CustId
 			AND c.roleid = 1
-			AND c.DisableCasino = 1
+			AND (c.DisableCasino = 1 OR c.SyncCasino = 0)
 			AND EXISTS (SELECT 1 FROM dbo.CustRequestGame crg WITH(NOLOCK) WHERE crg.CustID = c.custid AND crg.isActive = 1 AND crg.Sporttype = 208)
 	END
 
@@ -100,7 +100,7 @@ BEGIN
 		UNION ALL
 		SELECT b.custid,
 			SUM(CASE WHEN b.statusID IN (0, 1) THEN ABS(b.actual_stake) ELSE 0 END) AS OutStanding,
-			SUM(CASE WHEN b.statusID NOT IN (0, 1) THEN ABS(b.winlost - b.actual_stake + b.playercomm) ELSE 0 END) AS Balance
+			SUM(CASE WHEN b.statusID NOT IN (0, 1) THEN b.winlost - b.actual_stake + b.playercomm ELSE 0 END) AS Balance
 		FROM dbo.bettransRnG b WITH(NOLOCK)
 		WHERE b.recommend = @CustId
 			AND EXISTS (
@@ -120,7 +120,7 @@ BEGIN
 		UNION ALL
 		SELECT b.custid,
 			SUM(CASE WHEN b.statusID IN (0, 1) THEN ABS(b.actual_stake) ELSE 0 END) AS OutStanding,
-			SUM(CASE WHEN b.statusID NOT IN (0, 1) THEN ABS(b.winlost - b.actual_stake + b.playercomm) ELSE 0 END) AS Balance
+			SUM(CASE WHEN b.statusID NOT IN (0, 1) THEN b.winlost - b.actual_stake + b.playercomm ELSE 0 END) AS Balance
 		FROM dbo.bettransLC b WITH(NOLOCK)
 		WHERE b.recommend = @CustId
 			AND EXISTS (
