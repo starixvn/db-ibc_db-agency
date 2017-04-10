@@ -1,5 +1,4 @@
-﻿USE [bodb02]
-GO
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_MAg]
 	@CustID			INT, 
@@ -56,6 +55,7 @@ Revisions:
 	- 20160831@Percy: PHAIO Phase 2b - Add new bettypes [RedmineID: #62861]
 	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
 	- 20170123@Percy: Support Fast Market [RedmineID: #56590]
+	- 20170410@Percy: Support BAIO [RedmineID: #74558]
 */
 
 SET NOCOUNT ON
@@ -154,11 +154,13 @@ SELECT pvt.recommend, c.username,
 	ISNULL([801], 0) + ISNULL([802], 0) + ISNULL([803], 0) + ISNULL([804], 0) + ISNULL([805], 0) + ISNULL([806], 0) + ISNULL([807], 0) + ISNULL([808], 0) +
 	ISNULL([401],0) + ISNULL([402],0) + ISNULL([403],0) + ISNULL([404],0) + ISNULL([411],0) +
 	ISNULL([428],0) + ISNULL([432],0) + ISNULL([434],0) + ISNULL([435],0) +
-	ISNULL([17], 0) + ISNULL([18], 0) as totalcomm_1,
+	ISNULL([17], 0) + ISNULL([18], 0) +
+	ISNULL([609], 0) + ISNULL([610], 0) + ISNULL([611], 0) + ISNULL([615], 0) + ISNULL([616], 0) as totalcomm_1,
 	
 	isnull([5],0) + isnull([15],0) + ISNULL([167], 0) + ISNULL([176], 0) + ISNULL([177], 0) + isnull([20],0) + isnull([21],0) + isnull([154],0) +
 	isnull([1301],0) + isnull([1311],0) + isnull([1324],0) + ISNULL([501],0) +
-	ISNULL([430], 0) as [totalcomm_2],
+	ISNULL([430], 0) +
+	ISNULL([603], 0) + ISNULL([604], 0) + ISNULL([605], 0) + ISNULL([606], 0) + ISNULL([607], 0) + ISNULL([612], 0) + ISNULL([613], 0) + ISNULL([617], 0) as [totalcomm_2],
 		
 	isnull([30],0) + isnull([4],0) + isnull([6],0) + isnull([126],0) + isnull([9],0) + isnull([10],0) + isnull([14],0) + isnull([127],0) + isnull([16],0) + isnull([29],0) +
 	isnull([133],0) + isnull([134],0) + isnull([135],0) + isnull([145],0) + isnull([146],0) + isnull([147],0) + isnull([24],0) +  isnull([26],0) +
@@ -175,7 +177,8 @@ SELECT pvt.recommend, c.username,
 	ISNULL([438],0) + ISNULL([439],0) + ISNULL([440],0) + ISNULL([441],0) + ISNULL([442],0) + ISNULL([443],0) + ISNULL([444],0) +
 	ISNULL([417],0) + ISNULL([418],0) + ISNULL([419],0) + ISNULL([420],0) + ISNULL([421],0) + ISNULL([422],0) + ISNULL([423],0) +
 	ISNULL([424],0) + ISNULL([425],0) + ISNULL([426],0) + ISNULL([429],0) + ISNULL([445],0) + ISNULL([446],0) + ISNULL([447],0) + 
-	ISNULL([221],0) + ISNULL([222],0) + ISNULL([223],0) + ISNULL([224],0) + ISNULL([225],0) as totalcomm_3,
+	ISNULL([221],0) + ISNULL([222],0) + ISNULL([223],0) + ISNULL([224],0) + ISNULL([225],0) +
+	ISNULL([601], 0) + ISNULL([602], 0) + ISNULL([608], 0) + ISNULL([614], 0) as totalcomm_3,
 	
 	---Casino_comm
 	isnull([71],0) + 
@@ -241,7 +244,8 @@ PIVOT
 					[17], [18],
 					[2502],
 					[417], [418], [419], [420], [421], [422], [423], [424], [425], [426], [429], [445], [446], [447],
-					[221], [222], [223], [224], [225]
+					[221], [222], [223], [224], [225],
+					[601], [602], [603], [604], [605], [606], [607], [608], [609], [610], [611], [612], [613], [614], [615], [616], [617]
 					)  
 ) AS pvt
 INNER JOIN customer c with(nolock) on c.custid = pvt.recommend 
@@ -249,11 +253,4 @@ ORDER BY c.username
 
 DROP TABLE #tmp
 DROP TABLE #SportBettype
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [vnteam] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_MAg] TO [vnteam] AS [dbo]
 GO
