@@ -49,8 +49,8 @@ BEGIN
 
 	FROM bettrans b with(nolock)	
 	WHERE b.mrecommend = @custid AND b.winlostdate >= @tmpFromDate
-		AND b.bettype < 19999 AND b.statusid NOT IN (101,102,103)
-	GROUP BY b.custid
+		AND b.bettype < 19999 AND b.statusid NOT IN (101,102,103) AND b.ruben = 1
+	GROUP BY b.custid, b.username -- dont remove username due to performance
 
 	IF @moveBetsDay >= @currentMonth
 	BEGIN

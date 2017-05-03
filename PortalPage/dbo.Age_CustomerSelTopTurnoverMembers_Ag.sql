@@ -49,7 +49,7 @@ BEGIN
 										,0)
 	FROM bettrans b WITH(nolock)	
 	WHERE b.recommend = @custid AND b.winlostdate >= @tmpFromDate
-		AND b.bettype < 19999 AND b.statusid NOT IN (101,102,103) AND b.ruben  = 1
+		AND b.bettype < 19999 AND b.statusid NOT IN (101,102,103) AND b.ruben = 1
 	GROUP BY b.custid
 
 	IF @moveBetsDay >= @currentMonth

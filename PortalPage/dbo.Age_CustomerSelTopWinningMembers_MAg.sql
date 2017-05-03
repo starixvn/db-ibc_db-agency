@@ -42,7 +42,7 @@ BEGIN
 		AND b.ruben = 1
 		AND b.bettype < 19999
 		AND b.statusid NOT IN (101,102,103)
-	GROUP BY b.custid
+	GROUP BY b.custid, b.username -- dont remove username due to performance
 
 	IF @moveBetsDay >= @currentMonth
 	BEGIN
