@@ -11,6 +11,7 @@ AS
 
 	Revisions:
 		- 20161027@Percy: Return output end time for move bets/balance up process [RedmineID: #64636]
+		- 20170428@Percy: remove hardcode balance up process day [RedmineID: #75993]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -28,74 +29,52 @@ BEGIN
 		,@Content_VI	NVARCHAR(2048) -- Viet Nam
 
 	SELECT  @CurrentDateTime = GETDATE()
-	
-	--check BU day
-	IF DATEPART(WEEKDAY, @CurrentDateTime) = 6
+
+	DECLARE @MoveBetSchedule TABLE(ScheduleId TINYINT, MoveBetDay SMALLDATETIME)
+
+	DECLARE @Config_EndTime VARCHAR(50), @IsArchivingBet VARCHAR(1), @IsMovingBet VARCHAR(1), @TotalDays INT
+
+	SELECT @IsArchivingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet' -- BU flags
+	SELECT @IsArchivingBet = ISNULL(@IsArchivingBet, '0')
+
+	SELECT @IsMovingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet' -- MB flags
+	SELECT @IsMovingBet = ISNULL(@IsMovingBet, '0')
+
+	--set default value
+	IF @IsArchivingBet = '1'
 	BEGIN
-		DECLARE @Config_BUEndTime VARCHAR(50), @IsArchivingBet VARCHAR(1)
+		SELECT @Config_EndTime = CONVERT(VARCHAR(10), @CurrentDateTime, 121) + ' 20:35:00.000' -- 16:35 (estimate time start) + 240 mins (estimate time done)
 
-		SELECT @IsArchivingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isArchivingBet'
-		SELECT @IsArchivingBet = ISNULL(@IsArchivingBet, '0')
+		SELECT @EndTime = DATEADD(MINUTE, 15, @CurrentDateTime) -- default end time = currentime + 15 mins
 
-		--set default value
-		SELECT @Config_BUEndTime = CONVERT(VARCHAR(10), @CurrentDateTime, 121) + ' 20:35:00.000' -- 16:35:00 + 240 mins = 20:35:00
-
-		--get BU's end time from config
-		SELECT @Config_BUEndTime = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'schDataProcessingEndTime'
-
-		--BU is still running now
-		IF CONVERT(DATETIME, @Config_BUEndTime) > @CurrentDateTime
-		BEGIN
-			SELECT @EndTime = CONVERT(DATETIME, @Config_BUEndTime)
-		END
-		ELSE IF @IsArchivingBet = '1'
-		BEGIN
-			SELECT @EndTime = DATEADD(MINUTE, 15, @CurrentDateTime)
-		END
-
-		IF @EndTime IS NOT NULL
-		BEGIN
-			SELECT @FromDate = MIN(winlostdate), @ToDate = MAX(winlostdate) FROM dbo.Task_ArchiveDate WITH(NOLOCK)
-		END
+		SELECT @FromDate = MIN(winlostdate), @ToDate = MAX(winlostdate) FROM dbo.Task_ArchiveDate WITH(NOLOCK)
 	END
-	ELSE --incase moving bet
+	ELSE IF @IsMovingBet = '1'
 	BEGIN
-		DECLARE @Config_MBEndTime VARCHAR(50), @IsMovingBet VARCHAR(1), @TotalDays INT
-
-		SELECT @IsMovingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet'
-		SELECT @IsMovingBet = ISNULL(@IsMovingBet, '0')
-
-		DECLARE @MoveBetSchedule TABLE(ScheduleId TINYINT, MoveBetDay SMALLDATETIME)
 		INSERT INTO @MoveBetSchedule(ScheduleId, MoveBetDay)
 		EXEC dbo.Task_MoveBetsDayByScheduleSel
 
 		SELECT @TotalDays = COUNT(1) FROM @MoveBetSchedule
 
 		SET @TotalDays = ISNULL(@TotalDays, 0)
+		
 		IF @TotalDays <> 0 -- have move bet on that day
 		BEGIN
-			--set default value
-			SELECT @Config_MBEndTime = CONVERT(VARCHAR(10), @CurrentDateTime, 121) + ' 18:30:00.000'
-			SELECT @Config_MBEndTime = DATEADD(MINUTE, (60 * @TotalDays), @Config_MBEndTime)
+			SELECT @Config_EndTime = CONVERT(VARCHAR(10), @CurrentDateTime, 121) + ' 18:30:00.000' -- 18:30 (estimate time start)
+			SELECT @Config_EndTime = DATEADD(MINUTE, (60 * @TotalDays), @Config_EndTime) -- 60 mins (estimate time done per 1 day)
 
-			--get MB's end time from config
-			SELECT @Config_MBEndTime = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'schDataProcessingEndTime'
+			SELECT @EndTime = DATEADD(MINUTE, 15, @CurrentDateTime) -- default end time = currentime + 15 mins
 
-			--MB is still running now
-			IF CONVERT(DATETIME, @Config_MBEndTime) > @CurrentDateTime
-			BEGIN
-				SELECT @EndTime = CONVERT(DATETIME, @Config_MBEndTime)
-			END
-			ELSE IF @IsMovingBet = '1'
-			BEGIN
-				SELECT @EndTime = DATEADD(MINUTE, 15, @CurrentDateTime)
-			END
-
-			IF @EndTime IS NOT NULL
-			BEGIN
-				SELECT @FromDate = MIN(MoveBetDay), @ToDate = MAX(MoveBetDay) FROM @MoveBetSchedule
-			END
+			SELECT @FromDate = MIN(MoveBetDay), @ToDate = MAX(MoveBetDay) FROM @MoveBetSchedule
 		END
+	END
+	
+	-- get end time from config
+	SELECT @Config_EndTime = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'schDataProcessingEndTime'
+
+	IF CONVERT(DATETIME, @Config_EndTime) > @CurrentDateTime
+	BEGIN
+		SELECT @EndTime = CONVERT(DATETIME, @Config_EndTime)
 	END
 
 	IF @EndTime IS NOT NULL
