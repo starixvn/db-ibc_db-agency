@@ -67,18 +67,6 @@ BEGIN
 	FROM #SportBettype s
 		INNER JOIN dbo.f_GroupBettype() f ON s.Bettype = f.Bettype;
 
-	UPDATE #SportBettype 
-	SET GroupTypeId = 71 
-	WHERE ProductID = 6; -- Casino Game
-
-	UPDATE #SportBettype 
-	SET GroupTypeId = 4001 
-	WHERE ProductID = 22; -- Voidbrigde
-
-	UPDATE #SportBettype 
-	SET GroupTypeId = 2502 
-	WHERE ProductID = 23; -- NG2
-
 	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
 
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;

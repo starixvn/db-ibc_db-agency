@@ -54,7 +54,7 @@ BEGIN
 	DECLARE @isTest BIT = 0;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
-	CREATE TABLE #SportBettype (ProductID INT, Bettype SMALLINT, GroupTypeId INT);
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT);
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId)
 	SELECT ProductID, Bettype, Bettype
@@ -64,18 +64,6 @@ BEGIN
 	SET GroupTypeId = f.GroupTypeId
 	FROM #SportBettype s
 		INNER JOIN dbo.f_GroupBettype() f ON s.Bettype = f.Bettype;
-
-	UPDATE #SportBettype 
-	SET GroupTypeId = 71 
-	WHERE ProductID = 6; -- Casino Game
-
-	UPDATE #SportBettype 
-	SET GroupTypeId = 4001 
-	WHERE ProductID = 22; -- Voidbrigde
-
-	UPDATE #SportBettype 
-	SET GroupTypeId = 2502 
-	WHERE ProductID = 23; -- NG2
 
 	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
 
