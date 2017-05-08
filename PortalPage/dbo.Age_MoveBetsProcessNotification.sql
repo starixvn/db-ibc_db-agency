@@ -40,20 +40,19 @@ BEGIN
 	SELECT @IsMovingBet = VValue FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = 'isMovingBet' -- MB flags
 	SELECT @IsMovingBet = ISNULL(@IsMovingBet, '0')
 
+	INSERT INTO @MoveBetSchedule(ScheduleId, MoveBetDay)
+	EXEC dbo.Task_MoveBetsDayByScheduleSel
+
 	--set default value
 	IF @IsArchivingBet = '1'
 	BEGIN
 		SELECT @Config_EndTime = CONVERT(VARCHAR(10), @CurrentDateTime, 121) + ' 20:35:00.000' -- 16:35 (estimate time start) + 240 mins (estimate time done)
 
 		SELECT @EndTime = DATEADD(MINUTE, 15, @CurrentDateTime) -- default end time = currentime + 15 mins
-
-		SELECT @FromDate = MIN(winlostdate), @ToDate = MAX(winlostdate) FROM dbo.Task_ArchiveDate WITH(NOLOCK)
+		
 	END
 	ELSE IF @IsMovingBet = '1'
 	BEGIN
-		INSERT INTO @MoveBetSchedule(ScheduleId, MoveBetDay)
-		EXEC dbo.Task_MoveBetsDayByScheduleSel
-
 		SELECT @TotalDays = COUNT(1) FROM @MoveBetSchedule
 
 		SET @TotalDays = ISNULL(@TotalDays, 0)
@@ -64,9 +63,13 @@ BEGIN
 			SELECT @Config_EndTime = DATEADD(MINUTE, (60 * @TotalDays), @Config_EndTime) -- 60 mins (estimate time done per 1 day)
 
 			SELECT @EndTime = DATEADD(MINUTE, 15, @CurrentDateTime) -- default end time = currentime + 15 mins
-
-			SELECT @FromDate = MIN(MoveBetDay), @ToDate = MAX(MoveBetDay) FROM @MoveBetSchedule
 		END
+	END
+	
+	SELECT @FromDate = MIN(MoveBetDay), @ToDate = MAX(MoveBetDay) FROM @MoveBetSchedule
+	IF @FromDate IS NULL
+	BEGIN
+		SELECT @FromDate = MIN(winlostdate), @ToDate = MAX(winlostdate) FROM dbo.Task_ArchiveDate WITH(NOLOCK)
 	END
 	
 	-- get end time from config
