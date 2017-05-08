@@ -8,7 +8,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo].[Age_Rpt_GetProductList]
+ALTER PROCEDURE [dbo].[Age_Rpt_GetProductList]
 AS
 /*  
  Created: 20161129@Paul  
@@ -18,6 +18,7 @@ AS
   
  Revisions:  
   - 20161129@Paul: Smartphone Friendly UI for Microsite Report - [Redmine: #61531]
+  - 20170508@Paul: Return EndOfSupportDate - [Redmine: #70450]
     
  Param's Explanation:  
    
@@ -26,7 +27,8 @@ BEGIN
 	SET NOCOUNT ON;
 
 	SELECT	CAST(ProductID AS INT) AS ProductID,
-			ProductName
+			ProductName,
+			EndOfSupportDate
 	FROM dbo.Products WITH(NOLOCK)
 	WHERE GroupType = 0;
 
