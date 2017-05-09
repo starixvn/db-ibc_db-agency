@@ -1,6 +1,4 @@
-﻿USE [bodb02]
-GO
-
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelAllInfo]
 	@username VARCHAR(50),
 	@uplineid INT = -1,
@@ -48,6 +46,7 @@ Revisions:
 	- 20160204@Percy: Support new product AllBet [Redmine: #50605]
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+	- 20170421@Helen: Enable Downline FishingWorld checkbox is ticked & disabled control although Member is disabled [RedmineID: #74421]
 
 Param's Explanation:
 • @username: username of customer that need to be viewed.   
@@ -245,8 +244,8 @@ BEGIN
 	     WHERE custID = @srecommend
 
 		 SELECT TOP 1 @HasDownline = 1 FROM dbo.custInfo c WITH (NOLOCK) WHERE mrecommend = @custid AND roleid = 2
-		 SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableGoldDeluxe = 1
-		 SELECT TOP 1 @DisableDownlinesColossusBet = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND roleid = 2 AND DisableColossusBet = 1
+		 SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableGoldDeluxe = 1
+		 SELECT TOP 1 @DisableDownlinesColossusBet = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE mrecommend = @custid AND DisableColossusBet = 1
 		
 	    --Master Itself
 	    SELECT @Credit_AllOtherMaster = ISNULL(SUM(credit), 0) FROM DBCUST.CustDB.dbo.custinfo AS ci (NOLOCK) WHERE srecommend = @Srecommend AND RoleID = 3 AND custid <> @CustId
@@ -276,8 +275,8 @@ BEGIN
     END
 	ELSE IF @roleID = 4 --for super
 	BEGIN
-		SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableGoldDeluxe = 1
-		SELECT TOP 1 @DisableDownlinesColossusBet = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND roleid = 3 AND DisableColossusBet = 1
+		SELECT TOP 1 @DisableDownlinesGoldDeluxe = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableGoldDeluxe = 1
+		SELECT TOP 1 @DisableDownlinesColossusBet = 1 FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @custid AND DisableColossusBet = 1
 		
 	END
 
