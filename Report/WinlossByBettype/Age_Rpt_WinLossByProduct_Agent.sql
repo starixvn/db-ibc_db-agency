@@ -39,6 +39,7 @@ BEGIN
 	(
 		ProductID		TINYINT,
 		bettype			INT, 
+		SportType		SMALLINT,
 		liveindicator	INT,
 		GrossComm		MONEY,
 		TurnOver		MONEY, 
@@ -54,11 +55,13 @@ BEGIN
 	DECLARE @isTest BIT = 0;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT);
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT);
 
-	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId)
-	SELECT ProductID, Bettype, Bettype
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest);
+	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType)
+	SELECT f.ProductID, f.Bettype, f.Bettype, s.SportType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
+		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
+			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID = 23;
 
 	UPDATE s
 	SET GroupTypeId = f.GroupTypeId
@@ -85,9 +88,10 @@ BEGIN
 				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 			END
 
-			INSERT INTO #MAgWinLoss (ProductID, bettype, liveindicator, GrossComm, TurnOver, AgTotal, MAgWinloss, MAgComm, NumberOfTickets)
+			INSERT INTO #MAgWinLoss (ProductID, bettype, SportType, liveindicator, GrossComm, TurnOver, AgTotal, MAgWinloss, MAgComm, NumberOfTickets)
 			SELECT	s.ProductID,
 					s.GroupTypeId,
+					s.SportType,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
@@ -122,7 +126,7 @@ BEGIN
 					FROM @recommend r
 					WHERE b.recommend = r.recommend
 				)
-			GROUP BY s.ProductID, s.GroupTypeId,
+			GROUP BY s.ProductID, s.GroupTypeId, s.SportType,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 END;
@@ -137,9 +141,10 @@ BEGIN
 				SET @TDate = @MoveBetsDay;
 			END
 
-			INSERT INTO #MAgWinLoss (ProductID, bettype, liveindicator, GrossComm, TurnOver, AgTotal, MAgWinloss, MAgComm, NumberOfTickets)
+			INSERT INTO #MAgWinLoss (ProductID, bettype, SportType, liveindicator, GrossComm, TurnOver, AgTotal, MAgWinloss, MAgComm, NumberOfTickets)
 			SELECT	s.ProductID,
 					s.GroupTypeId,
+					s.SportType,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
@@ -167,7 +172,7 @@ BEGIN
 				AND mrecommend = @CustID
 				AND statusID NOT IN (101, 102, 103)
 				AND ruben = 1
-			GROUP BY s.ProductID, s.GroupTypeId,
+			GROUP BY s.ProductID, s.GroupTypeId, s.SportType,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 END;
@@ -176,16 +181,17 @@ BEGIN
 	
 	SELECT	t.bettype,
 			t.ProductID,
+			t.SportType,
 			liveindicator,
-			SUM(GrossComm) as GrossComm,
-			SUM(TurnOver) as TurnOver,	
-			SUM(AgTotal) as AgTotal,
-			SUM(MAgWinloss) as MAgWinloss,
-			SUM(MAgComm) as MAgComm,
-			SUM(NumberOfTickets) as NumberOfTickets
+			SUM(GrossComm) AS GrossComm,
+			SUM(TurnOver) AS TurnOver,	
+			SUM(AgTotal) AS AgTotal,
+			SUM(MAgWinloss) AS MAgWinloss,
+			SUM(MAgComm) AS MAgComm,
+			SUM(NumberOfTickets) AS NumberOfTickets
 	FROM #MAgWinLoss t
-	GROUP BY t.bettype, t.ProductID, liveindicator
-	ORDER BY t.bettype, t.ProductID, liveindicator;
+	GROUP BY t.bettype, t.ProductID, t.SportType, liveindicator
+	ORDER BY t.bettype, t.ProductID, t.SportType, liveindicator;
 
 	SET NOCOUNT OFF;
 END
