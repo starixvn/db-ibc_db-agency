@@ -38,6 +38,7 @@ Revisions:
 		2. Remove @ABSDate
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -53,8 +54,8 @@ INSERT INTO #SportBettype (bettype, RefTable)
 SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 
 DECLARE /* @ABSDate DATETIME,*/
-		@today DATE,
-		@yesterday DATE
+		@today SMALLDATETIME,
+		@yesterday SMALLDATETIME
 
 -- SET @ABSDate = '2011-09-01'
 SELECT @today = CONVERT(DATE, GETDATE())
@@ -220,13 +221,25 @@ BEGIN
 			#tmp_customer
 END
 
+CREATE TABLE #ClosedReason (custid INT, ClosedReason TINYINT)
+DECLARE @SQL NVARCHAR(MAX)
+
+SELECT  @SQL = 'SELECT CustID, ClosedReason
+				FROM OPENQUERY(DBCUST, ''SELECT m.CustID, m.ClosedReason
+										FROM CustDB.dbo.CustLoginInfo m WITH(NOLOCK)
+											INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON m.CustID = c.custid
+										WHERE c.roleid = 3 AND c.srecommend = ' + CONVERT(VARCHAR(30), @custid) + ''')'
+INSERT INTO #ClosedReason (custid, ClosedReason)
+EXEC (@SQL)
+
 SELECT * FROM 
 (
 	SELECT ROW_NUMBER() OVER (ORDER BY c.enabled desc, c.closed, c.suspended, c.username) AS RowNumber,
 		c.username,c.enabled,
 		isnull(c.iplogin, '')as iplogin, 
 		c.custid, 
-		c.closed, 		
+		c.closed,
+		ISNULL(cr.ClosedReason, 0) AS ClosedReason,
 		c.suspended,
 		c.firstname, 
 		c.lastname, 
@@ -240,6 +253,7 @@ SELECT * FROM
 	FROM #tmp_customer c 
 		LEFT JOIN #balance AS balance ON c.custid = balance.custid 
 		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid 
+		LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
 )a
 WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 
@@ -247,13 +261,11 @@ drop table #balance
 drop table #today_balance
 drop table #tmp_customer
 DROP TABLE #SportBettype
+DROP TABLE #ClosedReason
 GO
-
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [bodbDownlineNet] AS [dbo]
 GO
-
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [bodbDownlineNetView] AS [dbo]
 GO
-
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [vnteam] AS [dbo]
 GO
