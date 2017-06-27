@@ -62,7 +62,7 @@ BEGIN
 	SELECT  @winlostdate = CONVERT(DATE, GETDATE())
 	SELECT  @yesterday = DATEADD(DAY, -1, @winlostdate)
 	
-	DECLARE @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @RoleId TINYINT
+	DECLARE @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @RoleId TINYINT, @Credit MONEY, @FutureCreditBalance MONEY
 
 	DECLARE @FromUsername NVARCHAR(50), @ToUsername NVARCHAR(50), @SubAccName VARCHAR(30),
 			@Currency INT, @CurrencyName NVARCHAR(100), @actualrate FLOAT,
@@ -97,6 +97,11 @@ BEGIN
 			@ErrCode = 101,
 			@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE [dbo].[f_Get_MsgNamebyMsgID](40014, @Language) END
 		RETURN
+	END
+
+	IF @RoleId = 1
+	BEGIN
+		SELECT @Credit = credit FROM DBCUST.CustDB.dbo.custinfo WITH(NOLOCK) WHERE custid = @ToCustID
 	END
 
 	SELECT
@@ -410,9 +415,9 @@ BEGIN
 		END
 
 		SELECT @LogUsername = CASE @RoleId
-								WHEN 1 THEN 'from Customer to Agent'
-								WHEN 2 THEN 'from Agent to Master'
-								WHEN 3 THEN 'Master Super to Super'
+								WHEN 1 THEN 'from Customer ' + @ToUsername + ' to Agent' + @FromUsername
+								WHEN 2 THEN 'from Agent ' + @ToUsername + ' to Master' + @FromUsername
+								WHEN 3 THEN 'from Master ' + @ToUsername + ' to Super' + @FromUsername
 								END
 		SELECT @LogData = 'Transfer ' + @LogUsername + ' with amount ' + CONVERT(VARCHAR(20), @Amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
 			
@@ -479,11 +484,19 @@ BEGIN
 		END
 		
 		SELECT @LogUsername = CASE @RoleId
-								WHEN 1 THEN 'from Agent to Customer'
-								WHEN 2 THEN 'from Master to Agent'
-								WHEN 3 THEN 'from Super to Master'
+								WHEN 1 THEN 'from Agent ' + @FromUsername + ' to Customer' + @ToUsername
+								WHEN 2 THEN 'from Master ' + @FromUsername + ' to Agent' + @ToUsername
+								WHEN 3 THEN 'from Super ' + @FromUsername + ' to Master' + @ToUsername
 								END
 		SELECT @LogData = 'Transfer ' + @LogUsername + ' with amount ' + CONVERT(VARCHAR(20), @Amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
+
+		IF @RoleId = 1 AND @CashBalance > 0
+		BEGIN
+			SELECT @FutureCreditBalance = ISNULL(@Credit, 0) + ISNULL(@CashBalance, 0) - ISNULL(@Outstanding, 0) - ISNULL(@Amount, 0)
+			
+			IF @FutureCreditBalance < 0
+				SELECT @LogData = @LogData + '. The agent decided to transfer after the warning so the bet credit of this member turned to negative value (' + CONVERT(VARCHAR(100), @FutureCreditBalance, 2) + ') caused by having outstanding balance value ('+ CONVERT(VARCHAR(100), -@Outstanding, 2) +')  '
+		END
 	END
 		
 	SELECT @ErrMsg = ''
