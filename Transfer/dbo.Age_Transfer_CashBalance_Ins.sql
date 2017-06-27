@@ -166,7 +166,7 @@ BEGIN
 		SELECT
 			SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
 			SUM(CASE WHEN ruben = 1 AND custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN ruben = 0 AND custid = @custid THEN ABS(actual_stake*apositiontaking) ELSE 0 END)
+			SUM(CASE WHEN ruben = 0 AND custid = @custid THEN ABS(actual_stake) ELSE 0 END)
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE recommend = @recommend
 			AND
