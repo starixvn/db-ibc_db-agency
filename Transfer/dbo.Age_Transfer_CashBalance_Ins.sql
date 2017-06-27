@@ -274,7 +274,7 @@ BEGIN
 		SELECT
 			SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END ELSE 0 END),
 			SUM(CASE WHEN ruben = 1 AND mrecommend = @mrecommend THEN CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),
-			SUM(CASE WHEN ruben = 0 AND mrecommend = @mrecommend THEN ABS(actual_stake*spositiontaking) ELSE 0 END)
+			SUM(CASE WHEN ruben = 0 AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE srecommend = @srecommend
 			AND
@@ -389,7 +389,7 @@ BEGIN
 			scomm, swinlost, ip, statusID)
 		VALUES 
 			(0, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, @Amount,
-			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
+			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
 			0, 0, @ip, 131)
 
 				
@@ -448,7 +448,7 @@ BEGIN
 			scomm, swinlost, ip, statusID)
 		VALUES 
 			(0, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, ABS(@Amount), 0,
-			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
+			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
 			0, 0, @ip, 131)
 				
 		IF @@ERROR <> 0
