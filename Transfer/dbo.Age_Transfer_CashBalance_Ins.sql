@@ -48,16 +48,6 @@ BEGIN
 		RETURN
 	END
 
-	-- Check Transfer Condition
-	EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
-		@CustID = @FromCustID,
-		@Language = @Language,
-		@ErrMsg = @ErrMsg OUTPUT,
-		@ErrCode = @ErrCode OUTPUT
-
-	IF @ErrCode > 0
-		RETURN
-
 	DECLARE @winlostdate SMALLDATETIME, @yesterday SMALLDATETIME
 	SELECT  @winlostdate = CONVERT(DATE, GETDATE())
 	SELECT  @yesterday = DATEADD(DAY, -1, @winlostdate)
@@ -85,6 +75,19 @@ BEGIN
 			@ErrCode = 101,
 			@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE [dbo].[f_Get_MsgNamebyMsgID](40014, @Language) END
 		RETURN
+	END
+
+	IF @RoleId <> 3
+	BEGIN
+		-- Check Transfer Condition
+		EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
+			@CustID = @FromCustID,
+			@Language = @Language,
+			@ErrMsg = @ErrMsg OUTPUT,
+			@ErrCode = @ErrCode OUTPUT
+
+		IF @ErrCode > 0
+			RETURN
 	END
 
 	SELECT @FromUsername = username
