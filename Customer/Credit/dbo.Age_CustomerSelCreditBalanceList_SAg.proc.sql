@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_SAg]
@@ -262,10 +263,4 @@ drop table #today_balance
 drop table #tmp_customer
 DROP TABLE #SportBettype
 DROP TABLE #ClosedReason
-GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_SAg] TO [vnteam] AS [dbo]
 GO
