@@ -181,6 +181,10 @@ BEGIN
 	FROM #Result
 	ORDER BY winlossdate;
 	
+	DROP TABLE #AgencyWinloss
+	DROP TABLE #TmpCondSumWL
+	DROP TABLE #SportBettype
+	
 	SET NOCOUNT OFF;
 END
 GO
