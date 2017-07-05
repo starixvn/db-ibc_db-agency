@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -18,6 +19,7 @@ AS
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		- 20170309@Sophia: Fishing World change Setting type from 4 to 13 [Redmine: #70722]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports - using DCS [RedmineID: #78339]
+		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 	Param's Explanation:
 
 */
@@ -37,7 +39,7 @@ BEGIN
 	INSERT INTO @ProductList (ProductID, ProductName)
 	SELECT	ProductID, ProductName
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22,23,24) 
+	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22,23,24,28) 
 
 	UPDATE	@ProductList
 	SET		isShow = 1
@@ -108,7 +110,7 @@ BEGIN
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
 				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
-				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13) --FW, BetradarVS
+				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13) --FW, BetradarVS, Keno Lottery
 				)c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
@@ -141,9 +143,3 @@ BEGIN
 
 END
 GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroupProductSel] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroupProductSel] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_ConsolidatedGroupProductSel] TO [vnteam]

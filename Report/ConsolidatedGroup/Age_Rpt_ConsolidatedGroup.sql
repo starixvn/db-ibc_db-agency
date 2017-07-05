@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
@@ -22,6 +23,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@showVB			BIT = 0,
 	@showNG2		BIT = 0,
 	@showFW			BIT = 0,
+	@showLO			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -46,6 +48,7 @@ AS
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]			
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
 						2: Report by Daily
@@ -53,9 +56,6 @@ AS
 					
 		. @Currency: If @Currency <> 0 then filter this @currency
 					 If @Currency = 0 then show all currency	
-	
-	Example: EXEC Age_Rpt_ConsolidatedGroup_xpre @CustID=104769,@Currency=0,@FromDate='Jun  1 2013 12:00:00:000AM',@ToDate='Jun 12 2013 12:00:00:000AM',@showSB=1,@ShowRB=1,@ShowCasino=1,@ShowBI=default,@ShowNG=1,@showP2P=1,@showLiveCasino=1,@showVS=1,@ReportType=1,@BalanceUpDate='Jun  1 2013 12:00:00:000AM'
-
 */  
 SET NOCOUNT ON
 	
@@ -330,6 +330,19 @@ BEGIN
 	--Sum_winloss
 	INSERT INTO @TmpCondSumWL(sporttype, bettype)
 	VALUES(219, 0)
+END
+
+IF @showLO = 1
+BEGIN
+	-- bettrans
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	220 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 28
+
+	--Sum_winloss
+	INSERT INTO @TmpCondSumWL(sporttype, bettype)
+	VALUES(220, 0)
 END
 		
 IF @tdate >= @BalanceUpDate
@@ -688,13 +701,4 @@ GROUP BY
 			 ELSE '0' 
 		END 
 		,custID, username, currency, roleid
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_ConsolidatedGroup] TO [vnteam] AS [dbo]
 GO
