@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -299,11 +300,3 @@ BEGIN
 	SET NOCOUNT OFF;
 END
 GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Agent] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Agent] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-
