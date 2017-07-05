@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalance_SAg]
@@ -196,13 +197,4 @@ FROM
 			AND statusID NOT IN (0, 1)
 	 )today_balanceLC
 DROP TABLE #SportBettype
-GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_SAg] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalance_SAg] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelBalance_SAg] TO [vnteam] AS [dbo]
 GO

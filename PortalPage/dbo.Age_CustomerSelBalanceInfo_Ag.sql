@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_Ag]
@@ -171,13 +172,4 @@ SELECT	@username AS username,
 		@memberCredit AS memberCredit
 
 DROP TABLE #SportBettype
-GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalanceInfo_Ag] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelBalanceInfo_Ag] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelBalanceInfo_Ag] TO [vnteam] AS [dbo]
 GO

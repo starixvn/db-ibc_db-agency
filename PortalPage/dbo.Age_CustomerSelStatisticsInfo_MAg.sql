@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_CustomerSelStatisticsInfo_MAg]
@@ -109,10 +110,4 @@ SELECT @OutStanding as outStanding,
 		@total_agentSuspended as total_agentSuspended,
 		@number_newMembers as number_newMembers
 DROP TABLE #SportBettype
-GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelStatisticsInfo_MAg] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_CustomerSelStatisticsInfo_MAg] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelStatisticsInfo_MAg] TO [vnteam] AS [dbo]
 GO
