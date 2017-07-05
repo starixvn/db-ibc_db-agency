@@ -302,16 +302,4 @@ BEGIN
 
 	SET NOCOUNT OFF;
 END
-
 GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [vnteam] AS [dbo]
-GO
-
-
