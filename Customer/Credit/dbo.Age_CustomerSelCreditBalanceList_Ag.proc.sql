@@ -39,6 +39,7 @@ Revisions:
 		2. Remove @ABSDate
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 
 Param's Explanation:
 
@@ -55,8 +56,8 @@ INSERT INTO #SportBettype (bettype, RefTable)
 SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
 
 DECLARE /* @ABSDate DATETIME,*/
-		@today DATE,
-		@yesterday DATE
+		@today SMALLDATETIME,
+		@yesterday SMALLDATETIME
 
 -- SET @ABSDate = '2011-09-01'
 SELECT @today = CONVERT(DATE, GETDATE())
@@ -247,6 +248,17 @@ INNER JOIN #tmp_customer TC
 	ON NP.custid = TC.custid
 GROUP BY TC.custid
 
+CREATE TABLE #ClosedReason (custid INT, ClosedReason TINYINT)
+DECLARE @SQL NVARCHAR(MAX)
+
+SELECT  @SQL = 'SELECT CustID, ClosedReason
+				FROM OPENQUERY(DBCUST, ''SELECT m.CustID, m.ClosedReason
+										FROM CustDB.dbo.CustLoginInfo_Member m WITH(NOLOCK)
+											INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON m.CustID = c.custid
+										WHERE c.roleid = 1 AND c.recommend = ' + CONVERT(VARCHAR(30), @custid) + ''')'
+INSERT INTO #ClosedReason (custid, ClosedReason)
+EXEC (@SQL)
+
 IF @TotalPages = 0
 BEGIN
 	SELECT @TotalPages = count(1)
@@ -270,6 +282,7 @@ FROM (
 		,isnull(c.iplogin, '') AS iplogin
 		,c.custid
 		,c.closed closed
+		,ISNULL(cr.ClosedReason, 0) AS ClosedReason
 		,c.suspended
 		,c.firstname
 		,c.lastname
@@ -284,6 +297,7 @@ FROM (
 		LEFT JOIN #balance AS balance ON c.custid = balance.custid
 		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
 		LEFT JOIN #net_position AS net_position ON c.custid = net_position.custid
+		LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
 		--Members'Bet is settled today @Phuong20080930
 	) a
 WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
@@ -293,15 +307,11 @@ DROP TABLE #today_balance
 DROP TABLE #tmp_customer
 DROP TABLE #net_position
 DROP TABLE #SportBettype
-
+DROP TABLE #ClosedReason
 GO
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [bodbDownlineNet] AS [dbo]
 GO
-
 GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT ALTER ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [vnteam] AS [dbo]
 GO
 GRANT VIEW DEFINITION ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [vnteam] AS [dbo]
 GO
