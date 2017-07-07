@@ -23,7 +23,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@showVB			BIT = 0,
 	@showNG2		BIT = 0,
 	@showFW			BIT = 0,
-	@showLO			BIT = 0,
+	@showLT			BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -332,7 +332,7 @@ BEGIN
 	VALUES(219, 0)
 END
 
-IF @showLO = 1
+IF @showLT = 1
 BEGIN
 	-- bettrans
 	INSERT INTO @TmpCond(Sporttype, Bettype) 
