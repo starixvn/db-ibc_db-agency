@@ -47,6 +47,7 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
+
 	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)

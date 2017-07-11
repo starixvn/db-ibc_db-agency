@@ -36,7 +36,7 @@ RETURN
 				(22, 212, 0), --Macau Games
 				(23, 213, 0), --NG2
 				(24, 219, 0), --Fishing World
-				(27, 190, 0) --Betradar Virtual Sports
+				(27, 190, 0), --Betradar Virtual Sports
 				(28, 220, 0) -- Keno
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
