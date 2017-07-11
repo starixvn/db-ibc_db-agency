@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinloss_GetLeagueByProduct]
@@ -322,8 +323,3 @@ BEGIN
 	SET NOCOUNT OFF;
 END
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinloss_GetLeagueByProduct] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinloss_GetLeagueByProduct] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinloss_GetLeagueByProduct] TO vnteam

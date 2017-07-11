@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet,bodbLicenseeNet,bodbRMSNet,dwrs" viewers="vnteam" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="" viewers="vnteam" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -40,3 +40,4 @@ RETURN
 				(28, 220, 0) -- Keno
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
+GO
