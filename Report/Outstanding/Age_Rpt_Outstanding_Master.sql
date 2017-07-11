@@ -13,6 +13,7 @@ AS
 	Original: Age_Rpt_Outstanding_SAg
 	Revisions:
 		- 20161219@Paul: Create new [RedmineID: #68723]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 */
 
 BEGIN
@@ -21,10 +22,12 @@ BEGIN
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, bettype SMALLINT, RefTable TINYINT);
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
-	SELECT ProductID, bettype, RefTable
+	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT);
+
+	INSERT INTO #SportBettype (bettype, RefTable)
+	SELECT bettype, RefTable
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
 
 	DECLARE @mrecommend TABLE (CustId INT PRIMARY KEY);

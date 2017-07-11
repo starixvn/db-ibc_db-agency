@@ -15,6 +15,7 @@ AS
 	Original: Age_Chart_WinlossAnalysis_SAg
 	Revisions:
 		- 20170503@Paul: Create new [RedmineID: #75425]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170728@Paul: Return 0 if that month has no data [RedmineID: #80779]
 */
 
@@ -44,13 +45,14 @@ BEGIN
 	SET @NumOfMonths = DATEDIFF(M, @FromDate, @ToDate) + 1;
 
 	DECLARE @isTest BIT = 0;
-
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT);
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	INSERT INTO #SportBettype (ProductID, Bettype)
-	SELECT ProductID, Bettype 
+	CREATE TABLE #SportBettype (Bettype SMALLINT);
+
+	INSERT INTO #SportBettype (Bettype)
+	SELECT Bettype 
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);	
 
 	INSERT INTO #TmpCondSumWL(sporttype, bettype)

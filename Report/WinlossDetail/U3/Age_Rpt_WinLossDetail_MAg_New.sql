@@ -88,6 +88,7 @@ Revisions:
 	- 20160808@Johnson: Integrate NG2 [Redmine: #61397]
 	- 20160809@Percy: Modify Net Turnover for Allbet [RedmineID: #61873]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 */
 
 
@@ -195,7 +196,7 @@ IF @showVS = 1
 BEGIN
 	--Sum_winloss  
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-	VALUES(180, 0) 
+	VALUES(180, 0), (190,0)
 END
 
 IF @showKeno = 1
@@ -300,7 +301,12 @@ BEGIN
 		       -(ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost - actual_stake), 0)),--Company
 		       COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) --No Of Ticket
 	    FROM dbo.bettrans b WITH(NOLOCK)
-				INNER JOIN dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) s ON b.bettype = s.Bettype
+			INNER JOIN (
+				SELECT
+					CASE WHEN ProductID = 27 THEN 5 ELSE ProductID END AS ProductID,
+					bettype
+				FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @IsTest) 
+			) s ON b.bettype = s.Bettype
 		WHERE 
 				1 = 1
 				AND (  s.ProductID = CASE WHEN @showSB			= 1 THEN 1 ELSE 0 END

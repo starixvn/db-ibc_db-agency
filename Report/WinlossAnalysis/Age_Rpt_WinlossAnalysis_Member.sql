@@ -19,6 +19,7 @@ AS
 				Change SP name suffix to match with web function
     Revisions:
         - 20170306@Paul: Create new [Redmine: #71891]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 
 */
 
@@ -44,15 +45,19 @@ BEGIN
 	DECLARE @isTest BIT = 0;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
 	INSERT INTO #SportBettype (ProductID, Bettype)
-	SELECT ProductID, Bettype
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
+	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest) s
+		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;
 
 	INSERT INTO #TmpCondSumWL(ProductID, sporttype, bettype)
-	SELECT	ProductID,
+	SELECT	ISNULL(p.GroupProductId, s.ProductID),
 			SportType,
 			BetType
-	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);	
+	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) s
+		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;	
 	
 	------Get @Srecommend
 	DECLARE @Srecommend int,

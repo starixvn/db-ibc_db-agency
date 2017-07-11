@@ -17,6 +17,7 @@ AS
 	Original: Age_Rpt_MatchWinlossDetail_SAg_ByLeague
 	Revisions:
 		- 20170224@Paul: Create new [RedmineID: #70554]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 
 */
 
@@ -73,9 +74,12 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
 	INSERT INTO #SportBettype (ProductID, Bettype, EventType)
-	SELECT ProductID, Bettype, EventType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
+	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype, EventType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest) s
+		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;
 
 ---- End get sport bettype ----
 

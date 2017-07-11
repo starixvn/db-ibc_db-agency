@@ -45,6 +45,7 @@ AS
 		- 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE, link-server DBSUM [Redmine: #58288]
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]			
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
 						2: Report by Daily
@@ -217,9 +218,14 @@ BEGIN
 	FROM	@SportBettype  
 	WHERE	ProductId = 5
 
+	INSERT INTO @TmpCond(Sporttype, Bettype) 
+	SELECT	190 AS sporttype, Bettype 
+	FROM	@SportBettype  
+	WHERE	ProductId = 27
+
 	--Sum_winloss  
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
-	VALUES(180,0)
+	VALUES(180,0), (190,0)
 END
 
 IF @ShowKeno = 1
@@ -632,6 +638,10 @@ END
 UPDATE @AgencyWinloss
 SET sporttype = 251
 WHERE sporttype IN (208, 209, 210)
+
+UPDATE @AgencyWinloss
+SET sporttype = 180
+WHERE sporttype = 190
 
 SELECT	CASE WHEN @ReportType = 1 THEN custID  
 			 WHEN @ReportType = 2 THEN CONVERT(VARCHAR(8),winlostdate,112)  

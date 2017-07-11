@@ -16,6 +16,7 @@ AS
 	Original: Age_Rpt_MatchWinlossDetail_SAg_All
 	Revisions:
 		- 20170224@Paul: Create new [RedmineID: #70554]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 
 */
 
@@ -71,9 +72,12 @@ BEGIN
 	DECLARE @isTest BIT = 0;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
 	INSERT INTO #SportBettype (ProductID, Bettype, EventType)
-	SELECT ProductID, Bettype, EventType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
+	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype, EventType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest) s
+		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;
 
 	---- End get sport bettype ----
 
@@ -273,7 +277,39 @@ BEGIN
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3				
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype;		
+				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype;	
+				
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
+				SELECT  3 AS BetGroup,
+						0 AS matchid,
+						0 AS homeid,
+						0 AS awayid,
+						b.bettype,
+						0 AS liveindicator,
+						0 AS leagueid,
+						ISNULL(SUM(ABS(stake)), 0) AS turnover,
+						ISNULL(SUM(scomm/(1 - tpositiontaking)), 0) AS GrossComm,
+						ISNULL(SUM(winlost - actual_stake), 0) AS MemberWinLoss,
+						ISNULL(SUM(playercomm), 0) AS MemberComm,
+						ISNULL(SUM(awinlost), 0) AS AgWinLoss,
+						ISNULL(SUM(comm - playercomm), 0) AS  AgComm,
+						ISNULL(SUM(mwinlost), 0) AS MAgWinLoss,
+						ISNULL(SUM(acomm - comm), 0) AS  MAgComm,
+						ISNULL(SUM(swinlost), 0) AS SAgWinLoss,
+						ISNULL(SUM(scomm - acomm), 0) AS  SAgComm,
+						'' AS race,
+						'' AS matchcode,
+						CONVERT(BIT,0) AS IsNeutral,
+						'' AS showtime
+				FROM bettrans b WITH (NOLOCK)
+				WHERE b.srecommend = @custid
+					AND b.bettype IN (2799)
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
+					AND b.ruben = 1
+					AND b.statusID NOT IN (101, 102, 103) 
+				GROUP BY b.bettype	
+				HAVING ISNULL(COUNT(transid), 0) > 0;	
 			END	
 
 		END
@@ -481,6 +517,38 @@ BEGIN
 					AND s.ProductID = 5
 					AND s.EventType = 3					
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype;
+
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
+				SELECT  3 AS BetGroup,
+						0 AS matchid,
+						0 AS homeid,
+						0 AS awayid,
+						b.bettype,
+						0 AS liveindicator,
+						0 AS leagueid,
+						ISNULL(SUM(ABS(stake)), 0) AS turnover,
+						ISNULL(SUM(scomm/(1 - tpositiontaking)), 0) AS GrossComm,
+						ISNULL(SUM(winlost - actual_stake), 0) AS MemberWinLoss,
+						ISNULL(SUM(playercomm), 0) AS MemberComm,
+						ISNULL(SUM(awinlost), 0) AS AgWinLoss,
+						ISNULL(SUM(comm - playercomm), 0) AS  AgComm,
+						ISNULL(SUM(mwinlost), 0) AS MAgWinLoss,
+						ISNULL(SUM(acomm - comm), 0) AS  MAgComm,
+						ISNULL(SUM(swinlost), 0) AS SAgWinLoss,
+						ISNULL(SUM(scomm - acomm), 0) AS  SAgComm,
+						'' AS race,
+						'' AS matchcode,
+						CONVERT(BIT,0) AS IsNeutral,
+						'' AS showtime
+				FROM bettrans14 b WITH (NOLOCK)
+				WHERE b.srecommend = @custid
+					AND b.bettype IN (2799)
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
+					AND b.ruben = 1
+					AND b.statusID NOT IN (101, 102, 103) 
+				GROUP BY b.bettype	
+				HAVING ISNULL(COUNT(transid), 0) > 0;
 			END		
 		
 		END

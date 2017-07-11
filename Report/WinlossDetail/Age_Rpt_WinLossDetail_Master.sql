@@ -1,19 +1,7 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Master]    Script Date: 10/26/2016 10:34:04 AM ******/
-IF OBJECT_ID('[dbo].[Age_Rpt_WinLossDetail_Master]') IS NOT NULL
-	DROP PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Master]    Script Date: 10/26/2016 10:34:04 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
@@ -36,6 +24,7 @@ Original SP: Age_Rpt_WinLossDetail_SAg
 Revisions:
 	- 20161024@Paul: Smartphone Friendly UI for Microsite Report [Redmine: #61531]
 	- 20170110@Paul: Use new functions to get sum_winloss condition and SportBettypeMatrix [RedmineID: #69515]
+	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 	
 */
 
@@ -67,17 +56,17 @@ BEGIN
 	);
 
 	CREATE TABLE #TmpCondSumWL(
-		ProductID	TINYINT,
 		SportType	INT,
 		BetType		INT
 	);
 
 	DECLARE @isTest BIT;
-
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
-	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) 
-	SELECT ProductID, SportType, BetType
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
+	INSERT INTO #TmpCondSumWL(SportType, BetType) 
+	SELECT SportType, BetType
 	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
 
 	-----Get Special Super to hide data of them before specific date 
@@ -113,9 +102,10 @@ BEGIN
 		ProductID,
 		BetType
 	)
-	SELECT	ProductID,
+	SELECT	ISNULL(p.GroupProductId, f.ProductID),
 			BetType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest);
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId;
 
 	IF @ToDate >= @BalanceUpDay
 	BEGIN 

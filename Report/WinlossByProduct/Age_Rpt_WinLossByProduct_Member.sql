@@ -1,19 +1,7 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
-DROP PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
 	@CustID 		INT,
 	@FromDate 		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,	
@@ -29,6 +17,7 @@ AS
 	Original: Age_Rpt_WinLossByBettype_Ag
 	Revisions:
 		- 20161224@Paul: Create new [RedmineID: #70450]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 
 */
 
@@ -50,20 +39,21 @@ BEGIN
 	);
 
 	DECLARE @ABSDate DATETIME;
-
 	SET @ABSDate = '2011-09-01';
 
 	DECLARE @isTest BIT = 0;
-
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
+
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
 	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT);
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType)
-	SELECT f.ProductID, f.Bettype, f.Bettype, s.SportType
+	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
-			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID = 23;
+			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID = 23
+		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId;
 
 	UPDATE s
 	SET GroupTypeId = f.GroupTypeId
