@@ -25,8 +25,8 @@ BEGIN
 	SET @SQLString = ' 
 		SELECT DISTINCT CONVERT(TINYINT, ISNULL(p.GroupProductId, s.ProductID)) AS ProductID, RefTable
 		FROM dbo.SportBettypeMatrix s WITH(NOLOCK)
-			LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductID
-		WHERE RefTable IN (' + @RefTable + ')';
+			LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductID AND p.ProductId <> p.GroupProductId
+		WHERE s.RefTable IN (' + @RefTable + ') AND p.ProductId IS NULL';
 
 	EXEC (@SQLString);
 
