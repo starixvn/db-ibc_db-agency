@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02" executers="" viewers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -11,7 +11,7 @@ AS
 /*
 	Created by Percy
 	Date: 2017-06-22
-	DB: DBAGE.bodb02, DBACC.bodb02
+	DB: DBAGE.bodb02, DBEXT.bodb02
 	Task: Get parent product
 	
 	Revisions:
