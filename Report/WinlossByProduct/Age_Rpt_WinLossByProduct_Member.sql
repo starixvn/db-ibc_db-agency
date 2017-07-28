@@ -52,7 +52,7 @@ BEGIN
 	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
-			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID = 23
+			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23,5,27)
 		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId;
 
 	UPDATE s
