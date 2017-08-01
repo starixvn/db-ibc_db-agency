@@ -1,6 +1,4 @@
-﻿USE [bodb02]
-GO
-
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_Agent]
 	@CustID			INT,	
 	@FromDate		SMALLDATETIME,
@@ -17,6 +15,7 @@ AS
 	Original: Age_Chart_WinlossAnalysis_MAg
 	Revisions:
 		- 20170503@Paul: Create new [RedmineID: #75425]
+		- 20170728@Paul: Return 0 if that month has no data [RedmineID: #80779]
 */
 
 BEGIN
@@ -31,11 +30,23 @@ BEGIN
 
 	CREATE TABLE #TmpCondSumWL (sporttype INT, bettype INT);
 
-	DECLARE @Srecommend int;
+	CREATE TABLE #Result
+	(
+		winlossdate VARCHAR(7),																											
+		turnover	MONEY,																				
+		winloss		MONEY
+	);
+
+	DECLARE @Srecommend int,
+			@NumOfMonths TINYINT,
+			@i TINYINT = 0,
+			@TempDate SMALLDATETIME;
 
 	SELECT @Srecommend =  Srecommend
 	FROM custInfo WITH(NOLOCK)
 	WHERE custID = @CustID;
+  
+	SET @NumOfMonths = DATEDIFF(M, @FromDate, @ToDate) + 1;
 	
 	DECLARE @isTest BIT = 0;
 
@@ -50,7 +61,17 @@ BEGIN
 	INSERT INTO #TmpCondSumWL(sporttype, bettype)
 	SELECT	SportType,
 			BetType
-	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);	
+	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
+
+	WHILE @i < @NumOfMonths
+	BEGIN
+		SET @TempDate = DATEADD(M, @i, @FromDate);
+
+		INSERT INTO #Result(winlossdate, winloss, turnover)
+		VALUES(CONVERT(VARCHAR(7), @TempDate, 120), 0, 0);
+
+		SET @i = @i + 1;
+	END
 
 	-----Get Special Super to hide data of them before specific date 
 	DECLARE @IsHide BIT = 0;
@@ -146,22 +167,24 @@ BEGIN
 			AND roleid = 3;
 	END
 	
-	SELECT	CONVERT(VARCHAR(7), winlossdate, 120) AS winlossdate,
-			SUM(turnover) AS turnover,
-			SUM(winloss) AS winloss			
-	FROM #AgencyWinloss
-	GROUP BY CONVERT(VARCHAR(7), winlossdate, 120)
-	ORDER BY CONVERT(VARCHAR(7), winlossdate, 120) ASC;
+	UPDATE r
+	SET r.winloss = d.winloss,
+		r.turnover = d.turnover
+	FROM #Result r
+		JOIN (
+			SELECT	CONVERT(VARCHAR(7), winlossdate, 120) AS winlossdate,
+					SUM(turnover) AS turnover,
+					SUM(winloss) AS winloss			
+			FROM #AgencyWinloss
+			GROUP BY CONVERT(VARCHAR(7), winlossdate, 120)
+		) d ON r.winlossdate = d.winlossdate;
+
+	SELECT	winlossdate,
+			turnover,
+			winloss
+	FROM #Result
+	ORDER BY winlossdate;
 
 	SET NOCOUNT OFF;
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_Agent] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Chart_WinlossAnalysis_Agent] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_Chart_WinlossAnalysis_Agent] TO [vnteam] AS [dbo]
 GO
