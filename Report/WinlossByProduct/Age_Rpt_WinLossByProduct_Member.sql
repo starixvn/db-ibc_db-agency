@@ -47,10 +47,10 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT);
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
-	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType)
-	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType
+	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)
+	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType, f.EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
 			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23,5,27)
@@ -100,8 +100,8 @@ BEGIN
 					SUM(comm - playercomm) AS AgComm,
 					COUNT(transid) AS NumberOfTickets
 			FROM Bettrans b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON(b.bettype = s.Bettype)
-				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
+				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5 AND s.EventType = 1
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND b.ruben = 1
 				AND statusID NOT IN (101, 102, 103)
@@ -116,6 +116,33 @@ BEGIN
 						ELSE 0
 					END;
 
+			-- VS Outright
+			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
+			BEGIN
+				INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+				SELECT
+					5 AS ProductID,
+					s.GroupTypeId,
+					r.sporttype,
+					0 AS liveindicator,
+					SUM(ISNULL(comm/(1 - apositiontaking), 0)) AS GrossComm,
+					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
+					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) AS MemberWinLoss,
+					SUM(ISNULL(awinlost, 0)) AS AgWinloss,
+					SUM(ISNULL(playercomm, 0)) AS MemberComm,
+					SUM(ISNULL(comm, 0) - ISNULL(playercomm, 0)) AS AgComm,
+					COUNT(transid) AS NumberOfTickets
+				FROM dbo.bettrans b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.bettype = s.Bettype AND s.ProductID = 5 AND s.EventType = 3
+					INNER JOIN dbo.VSOutright o WITH(NOLOCK) ON b.oddsid = o.Orid
+					INNER JOIN dbo.VSRaceInfo r WITH(NOLOCK) ON o.EventID = r.EventID
+				WHERE winlostdate BETWEEN @FDate AND @TDate
+					AND statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND recommend = @custid
+				GROUP BY s.GroupTypeId, r.sporttype
+			END
+			
 			-- Mix parlay of BRVS
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5)
 			BEGIN
@@ -181,7 +208,7 @@ BEGIN
 					SUM(comm - playercomm) AS AgComm,
 					COUNT(transid) AS NumberOfTickets
 			FROM Bettrans14 b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON(b.bettype = s.Bettype)
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND b.ruben = 1
@@ -197,6 +224,33 @@ BEGIN
 						ELSE 0
 					END;
 
+			-- VS Outright
+			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
+			BEGIN
+				INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+				SELECT
+					5 AS ProductID,
+					s.GroupTypeId,
+					r.sporttype,
+					0 AS liveindicator,
+					SUM(ISNULL(comm/(1 - apositiontaking), 0)) AS GrossComm,
+					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
+					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) AS MemberWinLoss,
+					SUM(ISNULL(awinlost, 0)) AS AgWinloss,
+					SUM(ISNULL(playercomm, 0)) AS MemberComm,
+					SUM(ISNULL(comm, 0) - ISNULL(playercomm, 0)) AS AgComm,
+					COUNT(transid) AS NumberOfTickets
+				FROM dbo.bettrans14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.bettype = s.Bettype AND s.ProductID = 5 AND s.EventType = 3
+					INNER JOIN dbo.VSOutright14 o WITH(NOLOCK) ON b.oddsid = o.Orid
+					INNER JOIN dbo.VSRaceInfo r WITH(NOLOCK) ON o.EventID = r.EventID
+				WHERE winlostdate BETWEEN @FDate AND @TDate
+					AND statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND recommend = @custid
+				GROUP BY s.GroupTypeId, r.sporttype
+			END
+			
 			-- Mix parlay of BRVS
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5)
 			BEGIN
