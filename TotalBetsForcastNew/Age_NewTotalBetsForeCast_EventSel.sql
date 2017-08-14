@@ -1,18 +1,27 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Age_NewTotalBetsForeCast_EventSel] (
 	@leagueid		INT = 0
 	, @IsLive		BIT = 0
-	, @sporttype TINYINT = 1
-) AS
+	, @sporttype	SMALLINT = 1
+)
+AS
+
 /*	
-Created: 20151216@Bobby
-Task: Alpha site - New total bets AND forecast events filtering
-DB: DBAGE/BODB02
-Revision:
-	- 20151216@Bobby: Initial
+	Created: 20151216@Bobby
+	Task: Alpha site - New total bets AND forecast events filtering
+	DB: DBAGE/BODB02
 	
-Parameter's Explanation:
+	Revision:
+		- 20151216@Bobby: Initial
+		- 20170816@Percy: Change data type of Sporttype [RedmineID: #73545]
+	
+	Parameter's Explanation:
 			
 */
+
 BEGIN
 	SET NOCOUNT ON
 
@@ -42,10 +51,4 @@ BEGIN
 	ORDER BY ISNULL(m.kickofftime,1) DESC, m.eventdate DESC
 
 END
-GO
-GRANT EXECUTE ON [dbo].[Age_NewTotalBetsForeCast_EventSel] TO [bodbDownlineNet]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_NewTotalBetsForeCast_EventSel] TO [vnteam]
-GO
-GRANT EXECUTE ON [dbo].[Age_NewTotalBetsForeCast_EventSel]TO [bodbDownlineNetView]
 GO
