@@ -18,6 +18,7 @@ AS
 				Change SP name suffix to match with web function
     Revisions:
         - 20161111@Paul: Microsite for Report - [Redmine: #66991]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 */
     
 BEGIN
@@ -34,7 +35,6 @@ BEGIN
 	);
 
 	CREATE TABLE #TmpCondSumWL(
-		ProductID	TINYINT,
 		SportType	INT,
 		BetType		INT
 	);
@@ -42,8 +42,10 @@ BEGIN
 	DECLARE @isTest BIT = 0;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
-	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) 
-	SELECT ProductID, SportType, BetType
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
+	INSERT INTO #TmpCondSumWL(SportType, BetType) 
+	SELECT SportType, BetType
 	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
 
 	------Get @Srecommend
@@ -78,16 +80,13 @@ BEGIN
 			@CID = @custid;
 
 	DECLARE @SportBettypeMatrix TABLE(
-		ProductID	tinyint,
 		BetType	smallint
 	);
 
 	INSERT INTO @SportBettypeMatrix(
-		ProductID,
 		BetType
 	)
-	SELECT	ProductID,
-			BetType
+	SELECT BetType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest);
 
 	IF @ToDate >= @BalanceUpDay

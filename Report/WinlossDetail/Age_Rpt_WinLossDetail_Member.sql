@@ -1,25 +1,6 @@
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Member]    Script Date: 10/24/2016 2:26:04 PM ******/
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Age_Rpt_WinLossDetail_Member]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossDetail_Member]    Script Date: 10/24/2016 2:26:04 PM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Age_Rpt_WinLossDetail_Member]') AND type in (N'P', N'PC'))
-BEGIN
-EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member] AS' 
-END
-GO
-
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
@@ -42,6 +23,7 @@ Original SP: Age_Rpt_WinLossDetail_Ag
 Revisions:
 	- 20161024@Paul: Smartphone Friendly UI for Microsite Report [Redmine: #61531]
 	- 20170110@Paul: Use new functions to get sum_winloss condition and SportBettypeMatrix [RedmineID: #69515]
+	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 	
 */
 
@@ -68,17 +50,17 @@ BEGIN
 	);
 
 	CREATE TABLE #TmpCondSumWL(
-		ProductID	TINYINT,
 		SportType	INT,
 		BetType		INT
 	);
 
 	DECLARE @isTest BIT = 0;
-
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
-	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType) 
-	SELECT ProductID, SportType, BetType
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
+	INSERT INTO #TmpCondSumWL(SportType, BetType) 
+	SELECT SportType, BetType
 	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
 
 	------Get @Srecommend
@@ -121,9 +103,10 @@ BEGIN
 		ProductID,
 		BetType
 	)
-	SELECT	ProductID,
+	SELECT	ISNULL(p.GroupProductId, f.ProductID),
 			BetType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest);
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId;
 
 	IF @ToDate >= @BalanceUpDay
 	BEGIN 

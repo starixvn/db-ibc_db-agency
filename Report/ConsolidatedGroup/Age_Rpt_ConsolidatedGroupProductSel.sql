@@ -16,7 +16,8 @@ AS
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]	
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
-		- 20170309@Sophia: Fishing World change Setting type from 4 to 13 [Redmine: #70722 ]
+		- 20170309@Sophia: Fishing World change Setting type from 4 to 13 [Redmine: #70722]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports - using DCS [RedmineID: #78339]
 	Param's Explanation:
 
 */
@@ -42,6 +43,7 @@ BEGIN
 	SET		isShow = 1
 	WHERE	ProductID IN (1,6,2,3,4) ---SB, Casino, Racing, Number Game, Live Casino: always show
 
+	/*
 	-----1. Virtual Sports
 	IF EXISTS (	SELECT	1
 				FROM	dbo.CustInfo C WITH (NOLOCK)
@@ -53,6 +55,7 @@ BEGIN
 		SET		isShow = 1
 		WHERE	ProductID = 5
 	END 
+	*/
 
 	-----2. Keno
 	IF EXISTS (	SELECT	1
@@ -105,7 +108,7 @@ BEGIN
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
 				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
-				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13) --FW
+				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13) --FW, BetradarVS
 				)c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType

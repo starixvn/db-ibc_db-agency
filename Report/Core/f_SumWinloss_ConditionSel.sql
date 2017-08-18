@@ -1,21 +1,7 @@
 USE [bodb02]
 GO
 
-/****** Object:  UserDefinedFunction [dbo].[f_SumWinloss_ConditionSel]    Script Date: 1/10/2017 10:04:37 AM ******/
-DROP FUNCTION [dbo].[f_SumWinloss_ConditionSel]
-GO
-
-/****** Object:  UserDefinedFunction [dbo].[f_SumWinloss_ConditionSel]    Script Date: 1/10/2017 10:04:37 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-/****** Object:  User Defined Function dbo.f_SumWinloss_ConditionSel    Script Date: 5/12/2016 11:24:09 AM ******/
-
-CREATE FUNCTION [dbo].[f_SumWinloss_ConditionSel]
+ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 (
 	@ProductID	VARCHAR(500) = ''
 ) 
@@ -23,9 +9,10 @@ CREATE FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 	Creator: Paul	
 	Date: 20170110
 	Task: Get sum_winloss condition
-	DB: DBAGE.bodb02
+	DB: DBAGE.bodb02a
 		
 	Revisions:
+		- 20170622@Percy: Add Betradar Virtual Sports [RedmineID: #78339]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -46,40 +33,8 @@ RETURN
 				(21, 211, 0), --Allbet
 				(22, 212, 0), --Macau Games
 				(23, 213, 0), --NG2
-				(24, 219, 0) --Fishing World
+				(24, 219, 0), --Fishing World
+				(27, 190, 0) --Betradar Virtual Sports
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
-
 GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [bodbAdminNet] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[f_SumWinloss_ConditionSel] TO [bodbAdminNet] AS [dbo]
-GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [bodbExtAccNet] AS [dbo]
-GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [bodbLicenseeNet] AS [dbo]
-GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [bodbRMSNet] AS [dbo]
-GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [dwrs] AS [dbo]
-GO
-
-GRANT SELECT ON [dbo].[f_SumWinloss_ConditionSel] TO [vnteam] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[f_SumWinloss_ConditionSel] TO [vnteam] AS [dbo]
-GO
-
-

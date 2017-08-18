@@ -1,19 +1,8 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
-DROP PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_WinLossByProduct_Member]    Script Date: 2/9/2017 9:48:10 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
 	@CustID 		INT,
 	@FromDate 		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,	
@@ -29,6 +18,7 @@ AS
 	Original: Age_Rpt_WinLossByBettype_Ag
 	Revisions:
 		- 20161224@Paul: Create new [RedmineID: #70450]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 
 */
 
@@ -50,20 +40,22 @@ BEGIN
 	);
 
 	DECLARE @ABSDate DATETIME;
-
 	SET @ABSDate = '2011-09-01';
 
 	DECLARE @isTest BIT = 0;
-
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT);
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType)
-	SELECT f.ProductID, f.Bettype, f.Bettype, s.SportType
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
+
+	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)
+	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType, f.EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
-			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID = 23;
+			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23,5,27)
+		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+	WHERE f.bettype <> 2799; -- Mix parlay of BRVS
 
 	UPDATE s
 	SET GroupTypeId = f.GroupTypeId
@@ -88,15 +80,18 @@ BEGIN
 			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
 			SELECT	s.ProductID,
 					s.GroupTypeId,
-					s.SportType,
+					CASE s.ProductID
+						WHEN 5 THEN m.sporttype
+						WHEN 23 THEN s.SportType
+					END AS SportType,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 
 					END AS liveindicator,
 					SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE comm/(1 - apositiontaking) END) AS GrossComm,
 					SUM(CASE WHEN winlostdate >= @ABSDate THEN 
-								CASE WHEN b.bettype in (33, 43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-							ELSE CASE WHEN b.bettype in (33, 43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
+								CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
+							ELSE CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN stake/2 ELSE stake END
 					END
 					) AS Turnover,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
@@ -105,16 +100,80 @@ BEGIN
 					SUM(comm - playercomm) AS AgComm,
 					COUNT(transid) AS NumberOfTickets
 			FROM Bettrans b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON(b.bettype = s.Bettype)
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
+				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5 AND s.EventType = 1
 			WHERE winlostdate BETWEEN @FDate AND @TDate
-				AND ruben = 1
+				AND b.ruben = 1
 				AND statusID NOT IN (101, 102, 103)
 				AND recommend = @custid
-			GROUP BY s.ProductID, s.GroupTypeId, s.SportType,
+			GROUP BY s.ProductID, s.GroupTypeId,
+					CASE s.ProductID
+						WHEN 5 THEN m.sporttype
+						WHEN 23 THEN s.SportType
+					END,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
 					END;
+
+			-- VS Outright
+			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
+			BEGIN
+				INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+				SELECT
+					5 AS ProductID,
+					s.GroupTypeId,
+					r.sporttype,
+					0 AS liveindicator,
+					SUM(ISNULL(comm/(1 - apositiontaking), 0)) AS GrossComm,
+					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
+					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) AS MemberWinLoss,
+					SUM(ISNULL(awinlost, 0)) AS AgWinloss,
+					SUM(ISNULL(playercomm, 0)) AS MemberComm,
+					SUM(ISNULL(comm, 0) - ISNULL(playercomm, 0)) AS AgComm,
+					COUNT(transid) AS NumberOfTickets
+				FROM dbo.bettrans b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.bettype = s.Bettype AND s.ProductID = 5 AND s.EventType = 3
+					INNER JOIN dbo.VSOutright o WITH(NOLOCK) ON b.oddsid = o.Orid
+					INNER JOIN dbo.VSRaceInfo r WITH(NOLOCK) ON o.EventID = r.EventID
+				WHERE winlostdate BETWEEN @FDate AND @TDate
+					AND statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND recommend = @custid
+				GROUP BY s.GroupTypeId, r.sporttype
+			END
+			
+			-- Mix parlay of BRVS
+			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5)
+			BEGIN
+				INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+				SELECT
+					5 AS ProductId,
+					2799 AS bettype,
+					s.sporttype,
+					0 AS liveindicator,
+					SUM(ISNULL(comm/(1 - apositiontaking), 0)) AS GrossComm,
+					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
+					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) AS MemberWinLoss,
+					SUM(ISNULL(awinlost, 0)) AS AgWinloss,
+					SUM(ISNULL(playercomm, 0)) AS MemberComm,
+					SUM(ISNULL(comm, 0) - ISNULL(playercomm, 0)) AS AgComm,
+					COUNT(transid) AS NumberOfTickets
+				FROM dbo.bettrans b WITH (NOLOCK)
+				CROSS APPLY (
+					SELECT TOP 1 m.sporttype
+					FROM dbo.bettransm bm WITH (NOLOCK)
+						INNER JOIN dbo.match m WITH (NOLOCK) ON bm.matchid = m.matchid
+						INNER JOIN #SportBettype s ON bm.bettype = s.Bettype AND s.ProductID = 5
+					WHERE bm.refno = b.refno
+				) AS s
+				WHERE b.matchid = 2799 AND b.bettype = 2799
+					AND winlostdate BETWEEN @FDate AND @TDate
+					AND statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND recommend = @custid
+				GROUP BY s.sporttype
+			END
 		END
 
 		SET @FDate = @FromDate;
@@ -129,15 +188,18 @@ BEGIN
 			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
 			SELECT  s.ProductID,
 					s.GroupTypeId,
-					s.SportType,
+					CASE s.ProductID
+						WHEN 5 THEN m.sporttype
+						WHEN 23 THEN s.SportType
+					END AS SportType,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 
 					END AS liveindicator,
 					SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE comm/(1 - apositiontaking) END) AS GrossComm,
 					SUM(CASE WHEN winlostdate >= @ABSDate THEN 
-								CASE WHEN b.bettype in (33, 43) AND liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-							ELSE CASE WHEN b.bettype in (33, 43) AND liveawayscore = 0 THEN stake/2 ELSE stake END
+								CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
+							ELSE CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN stake/2 ELSE stake END
 					END
 					) AS Turnover,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
@@ -146,16 +208,80 @@ BEGIN
 					SUM(comm - playercomm) AS AgComm,
 					COUNT(transid) AS NumberOfTickets
 			FROM Bettrans14 b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON(b.bettype = s.Bettype)
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
+				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			WHERE winlostdate BETWEEN @FDate AND @TDate
-				AND ruben = 1
+				AND b.ruben = 1
 				AND statusID NOT IN (101, 102, 103)
 				AND recommend = @custid
-			GROUP BY s.ProductID, s.GroupTypeId, s.SportType,
+			GROUP BY s.ProductID, s.GroupTypeId,
+					CASE s.ProductID
+						WHEN 5 THEN m.sporttype
+						WHEN 23 THEN s.SportType
+					END,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
 					END;
+
+			-- VS Outright
+			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
+			BEGIN
+				INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+				SELECT
+					5 AS ProductID,
+					s.GroupTypeId,
+					r.sporttype,
+					0 AS liveindicator,
+					SUM(ISNULL(comm/(1 - apositiontaking), 0)) AS GrossComm,
+					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
+					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) AS MemberWinLoss,
+					SUM(ISNULL(awinlost, 0)) AS AgWinloss,
+					SUM(ISNULL(playercomm, 0)) AS MemberComm,
+					SUM(ISNULL(comm, 0) - ISNULL(playercomm, 0)) AS AgComm,
+					COUNT(transid) AS NumberOfTickets
+				FROM dbo.bettrans14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.bettype = s.Bettype AND s.ProductID = 5 AND s.EventType = 3
+					INNER JOIN dbo.VSOutright14 o WITH(NOLOCK) ON b.oddsid = o.Orid
+					INNER JOIN dbo.VSRaceInfo r WITH(NOLOCK) ON o.EventID = r.EventID
+				WHERE winlostdate BETWEEN @FDate AND @TDate
+					AND statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND recommend = @custid
+				GROUP BY s.GroupTypeId, r.sporttype
+			END
+			
+			-- Mix parlay of BRVS
+			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5)
+			BEGIN
+				INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+				SELECT
+					5 AS ProductId,
+					2799 AS bettype,
+					s.sporttype,
+					0 AS liveindicator,
+					SUM(ISNULL(comm/(1 - apositiontaking), 0)) AS GrossComm,
+					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
+					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0)) AS MemberWinLoss,
+					SUM(ISNULL(awinlost, 0)) AS AgWinloss,
+					SUM(ISNULL(playercomm, 0)) AS MemberComm,
+					SUM(ISNULL(comm, 0) - ISNULL(playercomm, 0)) AS AgComm,
+					COUNT(transid) AS NumberOfTickets
+				FROM dbo.bettrans14 b WITH (NOLOCK)
+				CROSS APPLY (
+					SELECT TOP 1 m.sporttype
+					FROM dbo.bettransm14 bm WITH (NOLOCK)
+						INNER JOIN dbo.match14 m WITH (NOLOCK) ON bm.matchid = m.matchid
+						INNER JOIN #SportBettype s ON bm.bettype = s.Bettype AND s.ProductID = 5
+					WHERE bm.refno = b.refno
+				) AS s
+				WHERE b.matchid = 2799 AND b.bettype = 2799
+					AND winlostdate BETWEEN @FDate AND @TDate
+					AND statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND recommend = @custid
+				GROUP BY s.sporttype
+			END
 		END
 	END
 

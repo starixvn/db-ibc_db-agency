@@ -1,7 +1,7 @@
 USE bodb02
 GO
 
-CREATE PROCEDURE [dbo].[Age_Rpt_MatchWinLossDetail_Agent] 
+ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinLossDetail_Agent] 
 	@CustID			INT, --mrecommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
@@ -17,6 +17,7 @@ AS
 	Original: Age_Rpt_MatchWinLossDetail_MAg
 	Revisions:
 		- 20170224@Paul: Create new [RedmineID: #70554]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 
 */
 
@@ -65,9 +66,12 @@ BEGIN
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
 	INSERT INTO #SportBettype (ProductID, Bettype, EventType)
-	SELECT ProductID, Bettype, EventType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
+	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype, EventType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest) s
+		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;
 
 	IF @league = ''
 	BEGIN
@@ -216,6 +220,36 @@ BEGIN
 					AND s.EventType = 3
 				GROUP BY 
 					r.LeagueID, r.EventTime, r.eventID, b.bettype
+
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				SELECT  3 as BetGroup,
+						0 as matchid,
+						0 as homeid,
+						0 as awayid,
+						b.bettype,
+						0 as liveindicator,
+						0 as leagueid,
+						SUM(ABS(stake)) as turnover,
+						SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+						SUM(winlost - actual_stake) as MemberWinLoss,
+						SUM(playercomm) as MemberComm,
+						SUM(awinlost) as AgWinLoss,
+						SUM(comm) AS  AgComm,
+						SUM(mwinlost) as MAgWinLoss,
+						SUM(acomm - comm) AS  MAgComm,
+						'' as race,
+						'' as matchcode,
+						CONVERT(BIT,0) as IsNeutral,
+						'' as showtime
+					FROM bettrans b WITH (NOLOCK)
+					WHERE b.mrecommend = @custid
+						AND b.bettype IN (2799)
+						AND b.winlostdate >= @fromdate
+						AND b.winlostdate <= @todate
+						AND b.ruben = 1
+						AND b.statusID NOT IN (101, 102, 103) 
+					GROUP BY b.bettype	
+					HAVING ISNULL(COUNT(transid),0) > 0
 			END
 		
 			-- Outright
@@ -395,6 +429,36 @@ BEGIN
 					AND s.ProductID = 5
 					AND s.EventType = 3
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype
+
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				SELECT  3 as BetGroup,
+						0 as matchid,
+						0 as homeid,
+						0 as awayid,
+						b.bettype,
+						0 as liveindicator,
+						0 as leagueid,
+						SUM(ABS(stake)) as turnover,
+						SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+						SUM(winlost - actual_stake) as MemberWinLoss,
+						SUM(playercomm) as MemberComm,
+						SUM(awinlost) as AgWinLoss,
+						SUM(comm) AS  AgComm,
+						SUM(mwinlost) as MAgWinLoss,
+						SUM(acomm - comm) AS  MAgComm,
+						'' as race,
+						'' as matchcode,
+						CONVERT(BIT,0) as IsNeutral,
+						'' as showtime
+					FROM bettrans14 b WITH (NOLOCK)
+					WHERE b.mrecommend = @custid
+						AND b.bettype IN (2799)
+						AND b.winlostdate >= @fromdate
+						AND b.winlostdate <= @todate
+						AND b.ruben = 1
+						AND b.statusID NOT IN (101, 102, 103) 
+					GROUP BY b.bettype	
+					HAVING ISNULL(COUNT(transid),0) > 0
 			END
 		
 			-- outright (14)

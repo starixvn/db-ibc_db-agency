@@ -18,6 +18,7 @@ AS
 	Original: Age_Rpt_MatchWinloss_SelLeagueBySport
 	Revisions:
 		- 20170224@Paul: Create new [RedmineID: #70554]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 
 */
 
@@ -37,16 +38,17 @@ BEGIN
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
+	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+
 	CREATE TABLE #SportBettype (
-		ProductID INT,
 		Bettype INT,
 		EventType INT
 	);
 	
 	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
 
-	INSERT INTO #SportBettype (ProductID, Bettype, EventType)
-	SELECT ProductID, Bettype, EventType
+	INSERT INTO #SportBettype (Bettype, EventType)
+	SELECT Bettype, EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest)
 	WHERE EventType IN (1, 2, 3);
 
@@ -225,7 +227,7 @@ BEGIN
 			AND m.eventstatus = 'completed'
 			AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
 						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
-						 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT in (181, 182, 184,183,185) THEN 1
+						 WHEN @showVS = 1 AND l.sporttype IN (180, 186, 190, 191) THEN 1
 						 ELSE 0 END
 			AND l.isTest = isnull(@IsShowAll, l.isTest);
 						
@@ -268,7 +270,7 @@ BEGIN
 			AND m.eventstatus = 'completed'
 			AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
 						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
-						 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT IN (181, 182, 184,183,185) THEN 1 
+						 WHEN @showVS = 1 AND l.sporttype IN (180, 186, 190, 191) THEN 1 
 						 ELSE 0 END
 			AND l.isTest = isnull(@IsShowAll, l.isTest);
 						
