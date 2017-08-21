@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="" viewers="vnteam" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" selecters="" viewers="vnteam" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -10,7 +10,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 	Creator: Paul	
 	Date: 20170110
 	Task: Get sum_winloss condition
-	DB: DBAGE.bodb02a
+	DB: DBAGE.bodb02
 		
 	Revisions:
 		- 20170622@Percy: Add Betradar Virtual Sports [RedmineID: #78339]
