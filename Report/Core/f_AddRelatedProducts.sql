@@ -11,7 +11,7 @@ AS
 /*
 	Created by Percy
 	Date: 2017-06-23
-	DB: DBAGE.bodb02
+	DB: DBAGE.bodb02, DBACC.bodb02
 	Task: Add related products
 
 	Revisions:
