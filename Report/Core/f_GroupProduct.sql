@@ -11,7 +11,7 @@ AS
 /*
 	Created by Percy
 	Date: 2017-06-22
-	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02
+	DB: DBAGE.bodb02, DBACC.bodb02
 	Task: Get parent product
 	
 	Revisions:
