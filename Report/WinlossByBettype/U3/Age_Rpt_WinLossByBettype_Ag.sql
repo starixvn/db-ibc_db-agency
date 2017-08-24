@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Ag]
@@ -93,11 +94,8 @@ BEGIN
 		 WHERE 1 = 1
 		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
-			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
-		   --and bettype < 19001
-		   --AND bettype BETWEEN 81 AND 120
 		   AND  s.ProductID = 3
 		GROUP BY b.bettype, liveindicator
 		
@@ -157,11 +155,8 @@ BEGIN
 		 WHERE 1 = 1
 		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
-			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
-		   --and b.bettype < 19001
-		   --AND b.bettype NOT BETWEEN 81 AND 120
 		   AND s.ProductID NOT IN (3, 6, 22, 23)
 		 GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
@@ -188,11 +183,8 @@ BEGIN
 		 WHERE 1 = 1
 		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
-			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
-		   --and bettype < 19001
-		   --AND bettype BETWEEN 81 AND 120
 		   AND s.ProductID = 3
 		 GROUP BY b.bettype, liveindicator
          UNION ALL
@@ -251,11 +243,8 @@ BEGIN
 		 WHERE 1 = 1
 		   and winlostdate between @FDate and @TDate
 		   and ruben = 1
-			--status not in ('VOID', 'REJECT', 'Refund')  and
 		   and statusID not in (101, 102, 103)
 		   and recommend = @custid
-		   --and b.bettype < 19001
-		   --AND b.bettype NOT BETWEEN 81 AND 120
 		   AND s.ProductID NOT IN (3, 6, 22, 23)
 		 GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
@@ -278,8 +267,3 @@ SELECT bettype,
  ORDER BY bettype, liveindicator
 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Ag] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Ag] TO [bodbDownlineNetView]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Ag] TO [vnteam]

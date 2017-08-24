@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_SAg]
@@ -95,14 +96,8 @@ BEGIN
 		INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
 		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE 1 = 1
-		AND winlostdate BETWEEN @FDate
-			AND @TDate
-				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
+		AND winlostdate BETWEEN @FDate AND @TDate
 		AND statusID NOT IN (0, 1, 101, 102, 103)
-		--ruben=1 and 
-		--AND SRecommend = @CustID
-		--AND bettype < 19001
-		--AND bettype BETWEEN 81 AND 120
 		AND s.ProductID = 3
 	GROUP BY b.bettype, liveindicator
 	
@@ -127,7 +122,6 @@ BEGIN
 		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE winlostdate BETWEEN @FDate AND @TDate
 		AND statusID NOT IN (0, 1, 101, 102, 103)
-		--AND SRecommend = @CustID
 		AND s.ProductID IN (6, 22, 23)
 	GROUP BY
 		CASE s.ProductID
@@ -167,14 +161,8 @@ BEGIN
 		INNER JOIN @SportBettype s ON (b.bettype = s.Bettype)
 		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE 1 = 1
-		AND winlostdate BETWEEN @FDate
-			AND @TDate
-				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
+		AND winlostdate BETWEEN @FDate AND @TDate
 		AND statusID NOT IN (0, 1, 101, 102, 103)
-		--ruben=1 and 
-		--AND SRecommend = @CustID
-		--AND b.bettype < 19001
-		--AND b.bettype NOT BETWEEN 81 AND 120
 		AND s.ProductID NOT IN (3, 6, 22, 23)
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
@@ -205,12 +193,8 @@ BEGIN
 		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FDate AND @TDate
-				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
-		--AND SRecommend = @CustID
-		--AND bettype < 19001
-		--AND bettype BETWEEN 81 AND 120
 		AND s.ProductID = 3
 	GROUP BY b.bettype, liveindicator
 	
@@ -277,12 +261,8 @@ BEGIN
 		INNER JOIN @recommend r ON b.recommend = r.recommend
 	WHERE 1 = 1
 		AND winlostdate BETWEEN @FDate AND @TDate
-				--status not in ('running','waiting','VOID', 'REJECT', 'Refund')  and
 		AND statusID NOT IN (101, 102, 103)
 		AND ruben = 1
-		--AND SRecommend = @CustID
-		--AND b.bettype < 19001
-		--AND b.bettype NOT BETWEEN 81 AND 120
 		AND s.ProductID NOT IN (3, 6, 22, 23)
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 END
@@ -301,12 +281,4 @@ SELECT bettype,
   FROM @SAgWinLoss 
  Group by bettype, liveindicator
  ORDER BY bettype, liveindicator
-
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_SAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_SAg] TO [bodbDownlineNetView]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_SAg] TO [vnteam]
 GO

@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="1"></info>*/
 USE bodb02
 GO
 
@@ -12,15 +13,19 @@ ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague]
 	,@showNG			BIT	= 0
 	,@showLiveCasino	BIT = 0
 	,@showVS			BIT = 0
+	,@showLK3		BIT = 0
 AS
+
 /*
-Created: 20160505@Sophia
-Task : Create SP Match Winloss Detail filter by League [Redmine: #55746]
-DB: DBAGE.bodb02
-Original: Rpt_MatchWinlostDetail_SAg
-Revisions:
-    
+	Created: 20160505@Sophia
+	Task: Create SP Match Winloss Detail filter by League [Redmine: #55746]
+	DB: DBAGE.bodb02
+	Original: Rpt_MatchWinlostDetail_SAg
+	
+	Revisions:
+		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 */
+
 BEGIN 
 	SET NOCOUNT ON
 
@@ -99,8 +104,12 @@ BEGIN
 	IF @showVS	= 1
 		BEGIN	
 			SET @ProductPrefix=@ProductPrefix+',VS'
-		END	
-
+		END
+	
+	IF @showLK3 = 1
+		BEGIN	
+			SET @ProductPrefix=@ProductPrefix+',LK3'
+		END
 
 	----- Get sport bettype-------
 	----- Check SP Version
@@ -112,9 +121,11 @@ BEGIN
 	SELECT ProductID, Bettype, EventType 
 	FROM  dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', @ProductPrefix, @IsTest) 
 
----- End get sport bettype ----
+	---- End get sport bettype ----
 
 	CREATE TABLE #tmpLeague (leagueid INT)
+
+	CREATE TABLE #RecommendList (recommend INT)
 
 	IF @League <> ''
 	BEGIN 
@@ -122,12 +133,10 @@ BEGIN
 		SELECT CONVERT(INT,val)
 		FROM strSplit(@league,',')
 	END 
-
 	
-		-- Get all leagues by sport's selected
-		IF @tdate > @MoveBetsDay
-																																																																																																																																																																																																																			BEGIN
-		
+	-- Get all leagues by sport's selected
+	IF @tdate > @MoveBetsDay
+	BEGIN
 		IF @showNG	= 1
 		BEGIN 
 			INSERT INTO #SAgMatchWLDetails 
@@ -176,9 +185,9 @@ BEGIN
 				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
 		END 
 			
-	 --- Not number Game not group by liveindicator	
-		IF ( @ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1)
-		BEGIN 			
+		--- Not number Game not group by liveindicator	
+		IF (@ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1 OR @showLK3 = 1)
+		BEGIN
 			INSERT INTO #SAgMatchWLDetails 
 			SELECT
 				0 AS BetGroup
@@ -222,19 +231,15 @@ BEGIN
 				AND b.Bettype < 19001
 				AND b.bettype NOT IN (9, 29, 10)
 				AND b.statusID NOT IN (101, 102, 103)
-				AND s.ProductID IN (1, 4, 5)	--- SB - Live Casino - VS
+				AND s.ProductID IN (1, 4, 5, 26)	--- SB - Live Casino - VS - Lucky 3
 				AND s.EventType <> 3 --- exclude VS HR	
 				AND EXISTS (SELECT l.leagueid FROM #tmpLeague l WHERE l.leagueid = m.leagueid)
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
-		END 	
-			
-			
-					
+		END
+
 		-- Mix Parlay --- no need to show (business)
-		--IF @showSB = 1 AND @league = ''
-	 
 		
 		-- Outright
 		IF (@showSB = 1 OR @showRB = 1)
@@ -336,14 +341,10 @@ BEGIN
 			GROUP BY 
 				r.LeagueID, r.EventTime, r.eventID, b.bettype			
 		END	
-
 	END
 
-		IF @fdate <= @MoveBetsDay
-																																																																																																																																																																																																																									BEGIN	
-		
-		CREATE TABLE #RecommendList (recommend INT)
-		
+	IF @fdate <= @MoveBetsDay
+	BEGIN
 		INSERT INTO #RecommendList (recommend)
 		SELECT CustId 
 		FROM dbo.CustInfo WITH (NOLOCK) 
@@ -395,10 +396,10 @@ BEGIN
 				AND EXISTS (SELECT l.leagueid FROM #tmpLeague l WHERE l.leagueid = m.leagueid)		
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
-			END 
+		END 
 		
 		--- Not number Game not group by liveindicator
-		IF ( @ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1)
+		IF (@ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1 OR @showLK3 = 1)
 		BEGIN 
 			INSERT INTO #SAgMatchWLDetails		
 			SELECT
@@ -443,7 +444,7 @@ BEGIN
 				AND b.bettype < 19001 
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
-				AND s.ProductID IN(1, 4, 5)
+				AND s.ProductID IN (1, 4, 5, 26)
 				AND s.EventType <> 3
 				AND EXISTS (SELECT l.leagueid FROM #tmpLeague l WHERE l.leagueid = m.leagueid)					
 			GROUP BY 
@@ -452,9 +453,6 @@ BEGIN
 		END 
 
 		-- Mix parlay(14)  --- no need to show (business)
-		----IF @showSB = 1 AND @league = ''
-		 
-
 		
 		---Outright, RB
 		IF (@showSB = 1 OR @showRB = 1)
@@ -556,12 +554,8 @@ BEGIN
 			GROUP BY 
 				r.LeagueID, r.EventTime, r.eventID, b.bettype
 		END		
-		
 	END
 
-
-
- 
 	SELECT 
 		BetGroup, 
 		matchid, 
@@ -592,13 +586,11 @@ BEGIN
 		showtime
 	FROM #SAgMatchWLDetails
 	GROUP BY BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode, isNeutral, showtime
-	ORDER BY betgroup, matchid, leagueid, race, bettype, liveindicator, matchcode--ORDER BY betgroup, matchid, matchcode, bettype
+	ORDER BY betgroup, matchid, leagueid, race, bettype, liveindicator, matchcode
+
+	DROP TABLE #RecommendList
+	DROP TABLE #SAgMatchWLDetails
+	DROP TABLE #SportBettype
+	DROP TABLE #tmpLeague
 END
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] TO [vnteam]

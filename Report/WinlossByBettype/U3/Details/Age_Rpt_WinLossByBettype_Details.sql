@@ -1,3 +1,7 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE bodb02
+GO
+
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_Details]
 	@ProductID		TINYINT,
 	@CustID 		INT,
@@ -199,7 +203,6 @@ BEGIN
 			WHERE
 				winlostdate BETWEEN @FromDate AND @ToDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)
-				--AND SRecommend = @CustID
 			GROUP BY s.sporttype, b.bettype
 		END
 	END
@@ -258,14 +261,4 @@ BEGIN
 		) AS A 
 	ON t.typeid = A.bettype
 END
-
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Details] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Details] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByBettype_Details] TO [vnteam] AS [dbo]
 GO

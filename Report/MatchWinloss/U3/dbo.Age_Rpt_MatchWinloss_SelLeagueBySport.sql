@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinloss_SelLeagueBySport]
@@ -9,6 +10,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinloss_SelLeagueBySport]
 	@showP2P BIT = 0,
 	@showLiveCasino BIT = 0,
 	@showVS BIT = 0,
+	@showLK3 BIT = 0,
 	@IsShowAll BIT = 1, 
 	@fromdate	DATETIME,
 	@todate		DATETIME,
@@ -20,7 +22,8 @@ AS
 	Task: Match Winloss Detail
 	DB: DBAGE.BODB02
 	Date: 2011-02-17
-	Revision's:
+	
+	Revisions:
 		- 20110308@Lukas: change param @showHR -> @showRB, add more sporttype 152 & 153
 		- 20120202@Sophia: Add Live Casino
 		- 20120803@Sophia: Add Sporttype = 180 for Virtual Sports
@@ -31,6 +34,8 @@ AS
 		- 20140404@Dom: Add Virtual Speedway (183), Virtual Cycling Racing (185)
 		- 20150425@Tom: Select League By Custid
 		- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #53152]
+		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
+	
 	Parameter's Explanation
 		- @custid : Agent's ID	
 		- @IsShowAll: indicate whether to show test leagues or not
@@ -78,7 +83,12 @@ IF @showLiveCasino	= 1
 IF @showVS	= 1
 	BEGIN	
 		SET @ProductPrefix=@ProductPrefix+',VS'
-	END	
+	END
+
+IF @showLK3 = 1
+	BEGIN	
+		SET @ProductPrefix=@ProductPrefix+',LK3'
+	END
 	
 INSERT INTO #SportBettype (ProductID, Bettype, EventType)
 SELECT ProductID, Bettype, EventType FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', @ProductPrefix, @isTest)
@@ -305,6 +315,7 @@ BEGIN
 					 WHEN @showP2P = 1 AND l.sporttype = 253 THEN 1 
 					 WHEN @showLiveCasino = 1 AND l.sporttype = 162 THEN 1
 					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT in (181, 182, 184,183,185) THEN 1
+					 WHEN @showLK3 = 1 AND l.sporttype = 160 THEN 1
 					 ELSE 0 END
 		AND l.isTest = isnull(@IsShowAll, l.isTest)
 						
@@ -349,7 +360,8 @@ BEGIN
 					 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
 					 WHEN @showP2P = 1 AND l.sporttype = 253 THEN 1 
 					 WHEN @showLiveCasino = 1 AND l.sporttype = 162 THEN 1
-					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT IN (181, 182, 184,183,185) THEN 1 
+					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT IN (181, 182, 184,183,185) THEN 1
+					 WHEN @showLK3 = 1 AND l.sporttype = 160 THEN 1
 					 ELSE 0 END
 		AND l.isTest = isnull(@IsShowAll, l.isTest)
 						
@@ -399,8 +411,3 @@ DROP TABLE #tmpLeagues
 DROP TABLE #SportBettype
 	
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_SelLeagueBySport] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_SelLeagueBySport] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinLoss_SelLeagueBySport] TO vnteam
