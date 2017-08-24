@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -11,8 +12,6 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRecords	INT = 0 OUTPUT
-
-
 AS
 
 /*
@@ -31,8 +30,8 @@ Revisions:
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @RowStart INT,
-			@RowEnd INT;  
+	DECLARE @RowStart	INT,
+			@RowEnd		INT;  
 
 	SELECT	@PageIndex = @PageIndex - 1,
 			@RowStart = @PageSize * @PageIndex + 1,
@@ -311,11 +310,4 @@ BEGIN
 	SET NOCOUNT OFF;
 END
 GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Master] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Master] TO [bodbDownlineNetView] AS [dbo]
-GO
-
 

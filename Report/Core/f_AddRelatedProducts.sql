@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -31,12 +32,4 @@ BEGIN
 	
 	RETURN @ProductIdList
 END
-GO
-GRANT EXECUTE ON [dbo].[f_AddRelatedProducts] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[f_AddRelatedProducts] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[f_AddRelatedProducts] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[f_AddRelatedProducts] TO [vnteam] AS [dbo]
 GO

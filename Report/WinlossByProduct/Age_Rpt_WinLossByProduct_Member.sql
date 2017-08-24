@@ -47,6 +47,7 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
+
 	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)
@@ -302,16 +303,4 @@ BEGIN
 
 	SET NOCOUNT OFF;
 END
-
 GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossByProduct_Member] TO [vnteam] AS [dbo]
-GO
-
-

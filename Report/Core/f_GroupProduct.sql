@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -22,12 +23,4 @@ RETURN
 	SELECT 27 AS ProductId, 5 AS GroupProductId
 	UNION ALL
 	SELECT 5, 5
-GO
-GRANT SELECT ON [dbo].[f_GroupProduct] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT SELECT ON [dbo].[f_GroupProduct] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT SELECT ON [dbo].[f_GroupProduct] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[f_GroupProduct] TO [vnteam] AS [dbo]
 GO

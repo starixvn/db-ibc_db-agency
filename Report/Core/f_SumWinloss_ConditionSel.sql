@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" selecters="" viewers="vnteam" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -9,10 +10,11 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 	Creator: Paul	
 	Date: 20170110
 	Task: Get sum_winloss condition
-	DB: DBAGE.bodb02a
+	DB: DBAGE.bodb02
 		
 	Revisions:
 		- 20170622@Percy: Add Betradar Virtual Sports [RedmineID: #78339]
+		- 20170705@Percy: Add Keno Lottery [RedmineID: #78064]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -34,7 +36,8 @@ RETURN
 				(22, 212, 0), --Macau Games
 				(23, 213, 0), --NG2
 				(24, 219, 0), --Fishing World
-				(27, 190, 0) --Betradar Virtual Sports
+				(27, 190, 0), --Betradar Virtual Sports
+				(28, 220, 0) -- Keno
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO

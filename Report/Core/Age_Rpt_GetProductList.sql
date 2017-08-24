@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -20,21 +21,16 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	SELECT	CAST(ISNULL(gp.GroupProductId, p.ProductID) AS INT) AS ProductID,
-			ProductName,
-			EndOfSupportDate
-	FROM dbo.Products p WITH(NOLOCK)
-		LEFT JOIN dbo.f_GroupProduct() gp ON p.ProductID = gp.ProductId
-	WHERE GroupType = 0;
+	SELECT
+		CAST(ISNULL(gp.GroupProductId, p.ProductID) AS INT) AS ProductID
+	   ,p.ProductName
+	   ,p.EndOfSupportDate
+	FROM dbo.Products p WITH (NOLOCK)
+		LEFT JOIN dbo.f_GroupProduct() gp ON p.ProductID = gp.ProductId AND gp.ProductId <> gp.GroupProductId
+	WHERE p.GroupType = 0 AND gp.ProductId IS NULL;
 
 	SET NOCOUNT OFF;
 END
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_GetProductList] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_GetProductList] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_GetProductList] TO [vnteam] AS [dbo]
 GO
 
 

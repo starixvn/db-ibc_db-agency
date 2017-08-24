@@ -1,4 +1,5 @@
-USE bodb02
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinLossDetail_Agent] 
@@ -823,19 +824,3 @@ BEGIN
 	SET NOCOUNT OFF;
 END
 GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinLossDetail_Agent] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_Agent] TO [bodbDownlineNetView]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_Agent] TO [bodbDownlineNet]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLossDetail_Agent] TO [bodbAdminNet]
-GO 

@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbExtAccNet,bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
@@ -22,6 +23,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	,@showVB		 BIT = 0
 	,@showNG2		 BIT = 0
 	,@showFW		 BIT = 0
+	,@showLT		 BIT = 0
 	,@BalanceUpDay   SMALLDATETIME
 	,@PageSize       INT = 0
 	,@PageIndex      INT = 0
@@ -89,6 +91,7 @@ Revisions:
 	- 20160809@Percy: Modify Net Turnover for Allbet [RedmineID: #61873]
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+	- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 */
 
 
@@ -248,6 +251,12 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(219, 0) 
 END
+IF @showLT = 1
+BEGIN 
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
+	VALUES(220, 0) 
+END
 
 DECLARE @isTest BIT
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
@@ -325,6 +334,7 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showVB			= 1 THEN 22 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showNG2			= 1 THEN 23 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showFW          = 1 THEN 24 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showLT          = 1 THEN 28 ELSE 0 END
 				)
 			AND winlostdate BETWEEN @FDate AND @TDate
 			--status not in ('running','waiting','VOID', 'REJECT', 'Refund') and
@@ -464,12 +474,3 @@ SELECT wl.*
 DROP TABLE #MAgWinLossDetails
 
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbAdminNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [bodbExtAccNet] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_MAg_New] TO [vnteam] AS [dbo]

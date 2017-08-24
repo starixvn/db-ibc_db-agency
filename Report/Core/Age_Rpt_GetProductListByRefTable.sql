@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -24,16 +25,11 @@ BEGIN
 	SET @SQLString = ' 
 		SELECT DISTINCT CONVERT(TINYINT, ISNULL(p.GroupProductId, s.ProductID)) AS ProductID, RefTable
 		FROM dbo.SportBettypeMatrix s WITH(NOLOCK)
-			LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductID
-		WHERE RefTable IN (' + @RefTable + ')';
+			LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductID AND p.ProductId <> p.GroupProductId
+		WHERE s.RefTable IN (' + @RefTable + ') AND p.ProductId IS NULL';
 
 	EXEC (@SQLString);
 
 	SET NOCOUNT OFF;
 END
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_GetProductListByRefTable] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_GetProductListByRefTable] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_GetProductListByRefTable] TO vnteam

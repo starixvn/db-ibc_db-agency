@@ -1,4 +1,7 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_Agent]
 	@CustID			INT,	
 	@FromDate		SMALLDATETIME,
@@ -187,6 +190,10 @@ BEGIN
 	FROM #Result
 	ORDER BY winlossdate;
 
+	DROP TABLE #AgencyWinloss
+	DROP TABLE #TmpCondSumWL
+	DROP TABLE #SportBettype
+	
 	SET NOCOUNT OFF;
 END
 GO
