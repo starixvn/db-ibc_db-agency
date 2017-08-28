@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_Master]
@@ -105,11 +106,4 @@ BEGIN
 	
 	SET NOCOUNT OFF;
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_Master] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_CommByBettype_Master] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CommByBettype_Master] TO [vnteam] AS [dbo]
 GO
