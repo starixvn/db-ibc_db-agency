@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -49,6 +49,7 @@ AS
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
+		- 20170905@Percy: Expand bettype range of OneRnG Casino [RedmineID: #78424]
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
 						2: Report by Daily
@@ -139,7 +140,7 @@ BEGIN
 	INSERT INTO @TmpCond(Sporttype, Bettype)
 	SELECT	210 AS sporttype, Bettype 
 	FROM	@SportBettype  
-	WHERE	ProductId = 6 AND Bettype BETWEEN 2301 AND 2399
+	WHERE	ProductId = 6 AND (Bettype BETWEEN 2301 AND 2399 OR Bettype BETWEEN 2901 AND 2999)
 	
 	INSERT INTO @TmpCond(Sporttype, Bettype)
 	SELECT	251 AS sporttype, 71 AS Bettype
