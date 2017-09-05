@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -10,6 +11,9 @@ AS
 	Date: 2017-04-25
 	DB: DBAGE.bodb02
 	Task: Relationship between bettype and commission group
+
+	Revisions:
+		- 20170801@Percy: Add new bettype range of RnG Casino [RedmineID: #78424]
 	
 	- Columns:
 		- CommGroup:
@@ -91,6 +95,7 @@ FROM (
 		OR typeid BETWEEN 2401 AND 2499
 		OR typeid BETWEEN 4001 AND 7999
 		OR typeid BETWEEN 2501 AND 2699
+		OR typeid BETWEEN 2901 AND 2999
 
 	UNION ALL
 	SELECT bettype, 5 AS CommGroup -- MO_comm
@@ -103,10 +108,5 @@ FROM (
 	UNION ALL
 	SELECT 500 AS bettype, 6 AS CommGroup -- Charge_comm
 ) AS A
-GO
-GRANT SELECT ON [dbo].[f_Bettype_CommGroup] TO [bodbDownlineNet]
-GO
-GRANT SELECT ON [dbo].[f_Bettype_CommGroup] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[f_Bettype_CommGroup] TO [vnteam] AS [dbo]
+
 GO
