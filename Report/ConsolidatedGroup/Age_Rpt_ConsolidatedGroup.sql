@@ -657,32 +657,55 @@ BEGIN
 		DROP TABLE #TmpSum_WinLoss_Old
 	END
 
-	SELECT	CASE WHEN @ReportType = 1 THEN CONVERT(VARCHAR(10),custID)  
-				 WHEN @ReportType = 2 THEN CONVERT(VARCHAR(10),winlostdate,111)  
-				 WHEN @ReportType = 3 THEN CONVERT(VARCHAR(3),ProductID)
-				 ELSE '0' 
-			END AS breakdown
-			,custID 
-			,username
-			,currency
-			,roleid
-			,SUM(turnover) AS turnover
-			,SUM(winlost) AS member_winlost
-			,SUM(playercomm) AS member_comm
-			,SUM(winlost + playercomm) AS member_total
-			,SUM(ownerturnover) AS owner_turnover	
-			,SUM(ownerwinlost) AS owner_winlost
-			,SUM(ownercomm - precomm) AS owner_comm
-			,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
-			,-SUM(company) AS company
-			,SUM(betcount) AS betcount 
-	FROM @AgencyWinloss A
-	GROUP BY 
-			CASE WHEN @ReportType = 1 THEN CONVERT(VARCHAR(10),custID)
-				 WHEN @ReportType = 2 THEN CONVERT(VARCHAR(10),winlostdate,111)  
-				 WHEN @ReportType = 3 THEN CONVERT(VARCHAR(3),ProductID)
-				 ELSE '0' 
-			END 
-			,custID, username, currency, roleid
+	IF @ReportType = 1
+	BEGIN
+		SELECT	CONVERT(VARCHAR(10),custID) AS breakdown
+				,custID 
+				,username
+				,currency
+				,roleid
+				,SUM(turnover) AS turnover
+				,SUM(winlost) AS member_winlost
+				,SUM(playercomm) AS member_comm
+				,SUM(winlost + playercomm) AS member_total
+				,SUM(ownerturnover) AS owner_turnover	
+				,SUM(ownerwinlost) AS owner_winlost
+				,SUM(ownercomm - precomm) AS owner_comm
+				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
+				,-SUM(company) AS company
+				,SUM(betcount) AS betcount 
+		FROM @AgencyWinloss A
+		GROUP BY custID, username, currency, roleid
+		ORDER BY username
+	END
+	ELSE
+	BEGIN
+		SELECT	CASE WHEN @ReportType = 2 THEN CONVERT(VARCHAR(10),winlostdate,111)  
+					 WHEN @ReportType = 3 THEN CONVERT(VARCHAR(3),ProductID)
+					 ELSE '0' 
+				END AS breakdown
+				,custID 
+				,username
+				,currency
+				,roleid
+				,SUM(turnover) AS turnover
+				,SUM(winlost) AS member_winlost
+				,SUM(playercomm) AS member_comm
+				,SUM(winlost + playercomm) AS member_total
+				,SUM(ownerturnover) AS owner_turnover	
+				,SUM(ownerwinlost) AS owner_winlost
+				,SUM(ownercomm - precomm) AS owner_comm
+				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
+				,-SUM(company) AS company
+				,SUM(betcount) AS betcount 
+		FROM @AgencyWinloss A
+		GROUP BY 
+				CASE WHEN @ReportType = 2 THEN CONVERT(VARCHAR(10),winlostdate,111)  
+					 WHEN @ReportType = 3 THEN CONVERT(VARCHAR(3),ProductID)
+					 ELSE '0' 
+				END 
+				,custID, username, currency, roleid
+		ORDER BY breakdown, username
+	END
 END
 GO
