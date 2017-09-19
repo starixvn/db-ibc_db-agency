@@ -19,20 +19,17 @@ AS
 	Revisions:
 		- 20170224@Paul: Create new [RedmineID: #70554]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
-
+		- 20170828@Percy: Support Lucky 3 [RedmineID: #76770]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
+	-- for Parlay
 	DECLARE @showSB	BIT,
-			@showRB	BIT,
-			@showNG	BIT,
 			@showVS	BIT;
 
 	SELECT	@showSB = CASE WHEN PATINDEX('%,1,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showRB = CASE WHEN PATINDEX('%,2,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showNG = CASE WHEN PATINDEX('%,3,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
 			@showVS = CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END;
 
 	CREATE TABLE #MAgMatchWLDetails (
@@ -144,7 +141,7 @@ BEGIN
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
-				AND s.ProductID IN(1, 4, 5)
+				AND s.ProductID <> 3
 				AND s.EventType <> 3	
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
@@ -355,7 +352,7 @@ BEGIN
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
-				AND s.ProductID IN(1, 4, 5)
+				AND s.ProductID <> 3
 				AND s.EventType <> 3	
 			GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
@@ -576,7 +573,7 @@ BEGIN
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
-				AND s.ProductID IN(1, 4, 5)
+				AND s.ProductID <> 3
 				AND s.EventType <> 3
 			GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
@@ -720,7 +717,7 @@ BEGIN
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund' 
-				AND s.ProductID IN(1, 4, 5) 
+				AND s.ProductID <> 3
 				AND s.EventType <> 3
 			GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END 

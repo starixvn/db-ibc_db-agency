@@ -14,6 +14,7 @@ AS
 
 	Revisions:
 		- 20170801@Percy: Add new bettype range of RnG Casino [RedmineID: #78424]
+		- 20170828@Percy: Add Lucky 3 [RedmineID: #76770]
 	
 	- Columns:
 		- CommGroup:
@@ -96,6 +97,7 @@ FROM (
 		OR typeid BETWEEN 4001 AND 7999
 		OR typeid BETWEEN 2501 AND 2699
 		OR typeid BETWEEN 2901 AND 2999
+		OR typeid BETWEEN 1600 AND 1610
 
 	UNION ALL
 	SELECT bettype, 5 AS CommGroup -- MO_comm
