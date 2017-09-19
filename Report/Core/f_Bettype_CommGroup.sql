@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20170801@Percy: Add new bettype range of RnG Casino [RedmineID: #78424]
 		- 20170828@Percy: Add Lucky 3 [RedmineID: #76770]
+		- 20170919@Percy: PHAIO Phase 3, add 4 new bettypes 461 - 464 [RedmineID: #83356]
 	
 	- Columns:
 		- CommGroup:
@@ -30,7 +31,7 @@ AS
 RETURN
 
 SELECT bettype, CommGroup,
-	CASE WHEN bettype IN (124,125,1308,1312,1316,157,178,183,411,428,432,434,435,1311,430) THEN 0 ELSE 1 END isShow
+	CASE WHEN bettype IN (124,125,1308,1312,1316,157,178,183,411,428,432,434,435,1311,430,461,462,463,464) THEN 0 ELSE 1 END isShow
 FROM (
 	SELECT bettype, 1 AS CommGroup
 	FROM (
@@ -45,7 +46,8 @@ FROM (
 			(401),(402),(403),(404),(411),
 			(428),(432),(434),(435),
 			(17),(18),
-			(609),(610),(611),(615),(616)
+			(609),(610),(611),(615),(616),
+			(461),(462),(463),(464)
 		)
 	A (bettype)
 
