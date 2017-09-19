@@ -20,6 +20,8 @@ AS
 		- 20170309@Sophia: Fishing World change Setting type from 4 to 13 [Redmine: #70722]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports - using DCS [RedmineID: #78339]
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
+		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
+		
 	Param's Explanation:
 
 */
@@ -28,7 +30,7 @@ BEGIN
 	SET NOCOUNT ON 
 	
 	DECLARE @TmpCustID TABLE(CustID INT)
-	DECLARE @ProductList TABLE (ProductID TINYINT, ProductName VARCHAR(50), isShow BIT DEFAULT (0))
+	DECLARE @ProductList TABLE (ProductID TINYINT, ProductName VARCHAR(50), EndOfSupportDate date, isShow BIT DEFAULT (0))
 
 	INSERT INTO @TmpCustID
 	SELECT	B.CustID
@@ -36,10 +38,10 @@ BEGIN
 	INNER JOIN dbo.custAccount B WITH (NOLOCK)ON A.GroupID = B.GroupID
 	WHERE	A.CustID = @CustID AND A.IsGroupHeadLine = 1 and A.IsRptConsol = 1
 
-	INSERT INTO @ProductList (ProductID, ProductName)
-	SELECT	ProductID, ProductName
+	INSERT INTO @ProductList (ProductID, ProductName, EndOfSupportDate)
+	SELECT	ProductID, ProductName, EndOfSupportDate
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE	ProductID IN (1,6,2,3,7,4,5,8,12,15,19,21,22,23,24,28) 
+	WHERE GroupType = 0		
 
 	UPDATE	@ProductList
 	SET		isShow = 1
