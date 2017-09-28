@@ -20,7 +20,7 @@ AS
 	Revisions:
 		- 20170224@Paul: Create new [RedmineID: #70554]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
-
+		- 20170828@Percy: Support Lucky 3 [RedmineID: #76770]
 */
 
 BEGIN
@@ -29,12 +29,14 @@ BEGIN
 	DECLARE @showSB	BIT,
 			@showRB	BIT,
 			@showNG	BIT,
-			@showVS	BIT;
+			@showVS	BIT,
+			@showLK3 BIT;
 
 	SELECT	@showSB = CASE WHEN PATINDEX('%,1,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
 			@showRB = CASE WHEN PATINDEX('%,2,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
 			@showNG = CASE WHEN PATINDEX('%,3,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showVS = CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END;
+			@showVS = CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
+			@showLK3 = CASE WHEN PATINDEX('%,26,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END;
 
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -227,8 +229,9 @@ BEGIN
 			AND m.eventdate <= @todate
 			AND m.eventstatus = 'completed'
 			AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
+						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1
 						 WHEN @showVS = 1 AND l.sporttype IN (180, 186, 190, 191) THEN 1
+						 WHEN @showLK3 = 1 AND l.sporttype = 160 THEN 1
 						 ELSE 0 END
 			AND l.isTest = isnull(@IsShowAll, l.isTest);
 						
@@ -270,8 +273,9 @@ BEGIN
 			AND m.eventdate <= @todate
 			AND m.eventstatus = 'completed'
 			AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
-						 WHEN @showVS = 1 AND l.sporttype IN (180, 186, 190, 191) THEN 1 
+						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1
+						 WHEN @showVS = 1 AND l.sporttype IN (180, 186, 190, 191) THEN 1
+						 WHEN @showLK3 = 1 AND l.sporttype = 160 THEN 1
 						 ELSE 0 END
 			AND l.isTest = isnull(@IsShowAll, l.isTest);
 						
