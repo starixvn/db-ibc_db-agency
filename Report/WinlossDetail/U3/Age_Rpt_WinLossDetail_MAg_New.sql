@@ -1,5 +1,5 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbExtAccNet,bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
@@ -24,73 +24,76 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New]
 	,@showNG2		 BIT = 0
 	,@showFW		 BIT = 0
 	,@showLT		 BIT = 0
+	,@showLK3	 BIT = 0
 	,@BalanceUpDay   SMALLDATETIME
 	,@PageSize       INT = 0
 	,@PageIndex      INT = 0
 	,@TotalRows      INT = 0 OUTPUT
 AS
 /*
-Created: 
-Task : Agent Winloss Detail
-DB: DBAGE/bodb02
-Original SP:Rpt_AgentWinlostDetail
-Revisions:
-    - 20080629@Viet: Combine data with Archive DB (Viet)
-    - 20090225@Tuan: For Casino (Tuan)
-    - 20090331@Hiep: exclude GrossComm for Casino
-	- 20090423@Phuc: Modify agenttotal = (awinlost + comm - playercomm)
-	- 20090523@AnhPham: filtering data by HR, FI
-    - 20090611@Phuc: exclude turnover in case place refund(for HR each way).
-	- 20091019@Phuc: write log and move table Sum_WinLoss_Old to database bodb_Summary.
-	- 20091117@Henry: optimize when joining with table sum_winloss and sum_winloss_old
-	- 20091126@Jamie: Change the gross commission by level (super/master/agent)
-			+ super  = scomm/(1 - tpos)
-			+ master = acomm/(1 - apos - mpos)
-			+ agent  = comm /(1 - apos)
-		Applied on Dec 1, 2009 
-	- 20091211@Jamie: Show Casino grosscomm instead of 0 
-	- 20100118@Jamie: Remove @mrecommend and @srecommend 'coz of moving accounts 
-	- 20100610@Henry: Change to use StatusID instead of Status in WHERE statement
-	- 20100726@Don: paging
-	- 20100902@Kiwi: Turn back to use bettype directly from bettrans rather than @TmpCond table
-	- 20100904@Jacob: Add two parameters: @showBI, @showNG, calculate winloss base on bingo and number game
-	- 20110308@Lukas: change @showHR -> @showRB
-	- 20110801@Sophia: change the range of number game's bettype from 81 to 120
-	- 20110822@Sophia: Count Negative stake as positive turnover
-	- 20110907@Tom: Change range of bet type : 0->30, 
-				apply new bet type 1st correct score on Sport Books		
-	- 20110927@Tom: 1. Edit Winloss P2P Games Sport : 251->253 , Bettype: 72->1000	
-					2. Remove parameter @ABSDate
-	- 20111024@Lukas: add one case for checking Casino PT 
-	- 20111130@Sophia: Change the range of Sport book bettype>=121 and bettype<=999
-	- 20120112@Sophia: Add LiveCasino: Sporttype: 162, bettype: 1101 ->1199
-	- 20120608@Elodie: Change the gross commission for P2P
-	- 20120807@Sophia:  .Add new parametter @showVS for Virtual Sports (sporttype = 180 for representing)
-							.Remove Financial product
-	- 20121024@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
-	- 20130121@Dan: add linked server DBSUM for bodb_Summary
-	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
-	- 20140509@Logan:	1.Add counting for number of tickets
-	                    2.Code aligning
-	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
-	- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
-	- 20150613@Francis: Change to use temporary table instead of table variable to improve performance
-	- 20150615@Sophia: Apply Gold Deluxe [Redmine: #35278]
-	- 20150831@Winnie: Include CB [Redmine: #42409]
-	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
-	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
-	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
-	- 20160204@Percy: Support new product AllBet [Redmine: #50605]
-	- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
-	- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
-	- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
-	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
-	- 20160607@Percy: Enhance Performance - using custInfo table instead of Customer table [Redmine: #58288]
-	- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
-	- 20160808@Johnson: Integrate NG2 [Redmine: #61397]
-	- 20160809@Percy: Modify Net Turnover for Allbet [RedmineID: #61873]
-	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+	Created: 
+	Task: Agent Winloss Detail
+	DB: DBAGE/bodb02
+	Original SP:Rpt_AgentWinlostDetail
+
+	Revisions:
+		- 20080629@Viet: Combine data with Archive DB (Viet)
+		- 20090225@Tuan: For Casino (Tuan)
+		- 20090331@Hiep: exclude GrossComm for Casino
+		- 20090423@Phuc: Modify agenttotal = (awinlost + comm - playercomm)
+		- 20090523@AnhPham: filtering data by HR, FI
+		- 20090611@Phuc: exclude turnover in case place refund(for HR each way).
+		- 20091019@Phuc: write log and move table Sum_WinLoss_Old to database bodb_Summary.
+		- 20091117@Henry: optimize when joining with table sum_winloss and sum_winloss_old
+		- 20091126@Jamie: Change the gross commission by level (super/master/agent)
+				+ super  = scomm/(1 - tpos)
+				+ master = acomm/(1 - apos - mpos)
+				+ agent  = comm /(1 - apos)
+			Applied on Dec 1, 2009 
+		- 20091211@Jamie: Show Casino grosscomm instead of 0 
+		- 20100118@Jamie: Remove @mrecommend and @srecommend 'coz of moving accounts 
+		- 20100610@Henry: Change to use StatusID instead of Status in WHERE statement
+		- 20100726@Don: paging
+		- 20100902@Kiwi: Turn back to use bettype directly from bettrans rather than @TmpCond table
+		- 20100904@Jacob: Add two parameters: @showBI, @showNG, calculate winloss base on bingo and number game
+		- 20110308@Lukas: change @showHR -> @showRB
+		- 20110801@Sophia: change the range of number game's bettype from 81 to 120
+		- 20110822@Sophia: Count Negative stake as positive turnover
+		- 20110907@Tom: Change range of bet type : 0->30, 
+					apply new bet type 1st correct score on Sport Books		
+		- 20110927@Tom: 1. Edit Winloss P2P Games Sport : 251->253 , Bettype: 72->1000	
+						2. Remove parameter @ABSDate
+		- 20111024@Lukas: add one case for checking Casino PT 
+		- 20111130@Sophia: Change the range of Sport book bettype>=121 and bettype<=999
+		- 20120112@Sophia: Add LiveCasino: Sporttype: 162, bettype: 1101 ->1199
+		- 20120608@Elodie: Change the gross commission for P2P
+		- 20120807@Sophia:  .Add new parametter @showVS for Virtual Sports (sporttype = 180 for representing)
+								.Remove Financial product
+		- 20121024@Johnson: Add new range bettypes for tennis (from 1301 to 1334)
+		- 20130121@Dan: add linked server DBSUM for bodb_Summary
+		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599)[Redmine:#12691]
+		- 20140509@Logan:	1.Add counting for number of tickets
+							2.Code aligning
+		- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399) [Redmine: #22640]
+		- 20150306@Cody: Apply sport bettype matrix [Redmine: #30169]
+		- 20150613@Francis: Change to use temporary table instead of table variable to improve performance
+		- 20150615@Sophia: Apply Gold Deluxe [Redmine: #35278]
+		- 20150831@Winnie: Include CB [Redmine: #42409]
+		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+		- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
+		- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
+		- 20160204@Percy: Support new product AllBet [Redmine: #50605]
+		- 20160225@Sophia: Add new column TurnoverNoDraw [Redmine: #51427]
+		- 20160308@Francis: Change to use inline function instead of table variable to enhance performance
+		- 20160325@Francis: Use local variables to avoid parameter sniffing and sp recompilation
+		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+		- 20160607@Percy: Enhance Performance - using custInfo table instead of Customer table [Redmine: #58288]
+		- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
+		- 20160808@Johnson: Integrate NG2 [Redmine: #61397]
+		- 20160809@Percy: Modify Net Turnover for Allbet [RedmineID: #61873]
+		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 	- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 */
 
@@ -103,26 +106,6 @@ DECLARE @RowStart	INT
 SELECT @PageIndex = @PageIndex - 1
        ,@RowStart = @PageSize * @PageIndex + 1
        ,@RowEnd = @RowStart + @PageSize - 1
-
-
---DECLARE @MAgWinLossDetails TABLE
---(
---    CustID			INT
---    ,TurnOver		MONEY
---    ,GrossComm		MONEY
---    ,MemberWinLost	MONEY
---	,PlayerComm		MONEY
---	,MemberTotal	MONEY
---	,AgWinLost		MONEY
---	,AgComm			MONEY
---	,AgTotal		MONEY
---	,MAgWinLost		MONEY
---	,MAgComm		MONEY
---	,MAgTotal		MONEY
---	,Company		MONEY
---	,NoOfTicket		INT
---)
-
 
 CREATE TABLE #MAgWinLossDetails
 (
@@ -257,6 +240,12 @@ BEGIN
 	INSERT INTO @TmpCondSumWL(Sporttype, Bettype)  
 	VALUES(220, 0) 
 END
+IF @showLK3 = 1
+BEGIN
+	--Sum_winloss  
+	INSERT INTO @TmpCondSumWL (Sporttype, Bettype)
+	VALUES (160, 0)
+END
 
 DECLARE @isTest BIT
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
@@ -335,9 +324,9 @@ BEGIN
 					OR s.ProductID = CASE WHEN @showNG2			= 1 THEN 23 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showFW          = 1 THEN 24 ELSE 0 END
 					OR s.ProductID = CASE WHEN @showLT          = 1 THEN 28 ELSE 0 END
+					OR s.ProductID = CASE WHEN @showLK3      = 1 THEN 26 ELSE 0 END
 				)
 			AND winlostdate BETWEEN @FDate AND @TDate
-			--status not in ('running','waiting','VOID', 'REJECT', 'Refund') and
 			AND statusID NOT IN (101, 102, 103)
 			AND ruben = 1
 			AND mrecommend = @CID

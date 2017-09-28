@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="1"></info>*/
 USE bodb02
 GO
 
@@ -11,113 +12,121 @@ ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_SAg_All]
 	,@showNG			BIT	= 0
 	,@showLiveCasino	BIT = 0
 	,@showVS			BIT = 0
+	,@showLK3		BIT = 0
 AS
+
 /*
-Created: 20160505@Sophia
-Task : Create SP Match Winloss Detail all League [Redmine: #55746]
-DB: DBAGE.bodb02
-Original: Rpt_MatchWinlostDetail_SAg
-Revisions:
+	Created: 20160505@Sophia
+	Task: Create SP Match Winloss Detail all League [Redmine: #55746]
+	DB: DBAGE.bodb02
+	Original: Rpt_MatchWinlostDetail_SAg
+	
+	Revisions:
+		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
     
 */
 
-SET NOCOUNT ON
-
----- To avoid parametter sniffing
-DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
-SELECT @FDate = @fromdate, @TDate= @todate
-
-IF OBJECT_ID('tempdb..#SAgMatchWLDetails') IS NOT NULL
 BEGIN
-	DROP TABLE #SAgMatchWLDetails
-END
+	SET NOCOUNT ON
 
-CREATE TABLE #SAgMatchWLDetails(
-				BetGroup		INT
-				,matchid		INT
-				,homeid			INT
-				,awayid			INT
-				,bettype		SMALLINT
-				,liveindicator	INT
-				,leagueid		INT
-				,turnover		MONEY
-				,GrossComm		MONEY
-				,MemberWinLost	MONEY
-				,MemberComm		MONEY
-				,MemberTotal	MONEY
-				,AgentWinLost	MONEY
-				,AgentComm		MONEY
-				,AgentTotal		MONEY
-				,MasterWinLost	MONEY
-				,MasterComm		MONEY
-				,MasterTotal	MONEY
-				,SAgWinLost		MONEY
-				,SAgComm		MONEY
-				,SAgTotal		MONEY
-				,CompanyComm	MONEY
-				,CompanyTotal	MONEY
-				,race			NVARCHAR(20)
-				,matchcode		NVARCHAR(50)
-				,isNeutral		BIT
-				,showtime		NVARCHAR(50)
-			)
+	---- To avoid parametter sniffing
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
+	SELECT @FDate = @fromdate, @TDate= @todate
 
-IF OBJECT_ID('tempdb..#SportBettype') IS NOT NULL
-BEGIN
-	DROP TABLE #SportBettype
-END
-
-CREATE TABLE #SportBettype(
-			ProductID INT
-			,Bettype INT
-			,EventType INT
-		)		
-
-DECLARE @ProductPrefix VARCHAR(100)='-'
-
-IF @ShowSB	= 1
+	IF OBJECT_ID('tempdb..#SAgMatchWLDetails') IS NOT NULL
 	BEGIN
-		SET @ProductPrefix=@ProductPrefix+',SB'
+		DROP TABLE #SAgMatchWLDetails
 	END
 
-IF @showRB	= 1
-	BEGIN	
-		SET @ProductPrefix=@ProductPrefix+',RB'
+	CREATE TABLE #SAgMatchWLDetails(
+					BetGroup		INT
+					,matchid		INT
+					,homeid			INT
+					,awayid			INT
+					,bettype		SMALLINT
+					,liveindicator	INT
+					,leagueid		INT
+					,turnover		MONEY
+					,GrossComm		MONEY
+					,MemberWinLost	MONEY
+					,MemberComm		MONEY
+					,MemberTotal	MONEY
+					,AgentWinLost	MONEY
+					,AgentComm		MONEY
+					,AgentTotal		MONEY
+					,MasterWinLost	MONEY
+					,MasterComm		MONEY
+					,MasterTotal	MONEY
+					,SAgWinLost		MONEY
+					,SAgComm		MONEY
+					,SAgTotal		MONEY
+					,CompanyComm	MONEY
+					,CompanyTotal	MONEY
+					,race			NVARCHAR(20)
+					,matchcode		NVARCHAR(50)
+					,isNeutral		BIT
+					,showtime		NVARCHAR(50)
+				)
+
+	IF OBJECT_ID('tempdb..#SportBettype') IS NOT NULL
+	BEGIN
+		DROP TABLE #SportBettype
 	END
 
-IF @showNG	= 1
-	BEGIN	
-		SET @ProductPrefix=@ProductPrefix+',NG'
-	END
+	CREATE TABLE #SportBettype(
+				ProductID INT
+				,Bettype INT
+				,EventType INT
+			)		
+
+	DECLARE @ProductPrefix VARCHAR(100)='-'
+
+	IF @ShowSB	= 1
+		BEGIN
+			SET @ProductPrefix=@ProductPrefix+',SB'
+		END
+
+	IF @showRB	= 1
+		BEGIN	
+			SET @ProductPrefix=@ProductPrefix+',RB'
+		END
+
+	IF @showNG	= 1
+		BEGIN	
+			SET @ProductPrefix=@ProductPrefix+',NG'
+		END
 	
-IF @showLiveCasino	= 1
-	BEGIN	
-		SET @ProductPrefix=@ProductPrefix+',LC'		
-	END
+	IF @showLiveCasino	= 1
+		BEGIN	
+			SET @ProductPrefix=@ProductPrefix+',LC'		
+		END
 	
-IF @showVS	= 1
-	BEGIN	
-		SET @ProductPrefix=@ProductPrefix+',VS'
-	END	
+	IF @showVS	= 1
+		BEGIN	
+			SET @ProductPrefix=@ProductPrefix+',VS'
+		END
 
+	IF @showLK3 = 1
+		BEGIN	
+			SET @ProductPrefix=@ProductPrefix+',LK3'
+		END	
 
------ Get sport bettype-------
------ Check SP Version
-DECLARE @isTest BIT = 0
-SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
-
+	----- Get sport bettype-------
+	----- Check SP Version
+	DECLARE @isTest BIT = 0
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 	
-INSERT INTO #SportBettype (ProductID, Bettype, EventType)
-SELECT ProductID, Bettype, EventType 
-FROM  dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', @ProductPrefix, @IsTest) 
+	INSERT INTO #SportBettype (ProductID, Bettype, EventType)
+	SELECT ProductID, Bettype, EventType 
+	FROM  dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', @ProductPrefix, @IsTest) 
 
----- End get sport bettype ----
+	---- End get sport bettype ----
 
-BEGIN
+	CREATE TABLE #RecommendList (recommend INT)
+
 	-- Get all leagues by sport's selected
 	IF @tdate > @MoveBetsDay
 	BEGIN
-		
 		IF @showNG	= 1
 		BEGIN 
 			INSERT INTO #SAgMatchWLDetails 
@@ -165,9 +174,9 @@ BEGIN
 				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
 		END 
 			
-	 --- Not number Game not group by liveindicator	
-		IF ( @ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1)
-		BEGIN 			
+		--- Not number Game not group by liveindicator	
+		IF (@ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1 OR @showLK3 = 1)
+		BEGIN
 			INSERT INTO #SAgMatchWLDetails 
 			SELECT
 				0 AS BetGroup
@@ -211,14 +220,12 @@ BEGIN
 				AND b.Bettype < 19001
 				AND b.bettype NOT IN (9, 29, 10)
 				AND b.statusID NOT IN (101, 102, 103)
-				AND s.ProductID IN (1, 4, 5)	--- SB - Live Casino - VS
+				AND s.ProductID IN (1, 4, 5, 26)	--- SB - Live Casino - VS - Lucky 3
 				AND s.EventType <> 3 --- exclude VS HR					
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 		END 	
-			
-			
 					
 		-- Mix Parlay
 		IF @showSB = 1
@@ -368,9 +375,6 @@ BEGIN
 
 	IF @fdate <= @MoveBetsDay
 	BEGIN	
-		
-		CREATE TABLE #RecommendList (recommend INT)
-		
 		INSERT INTO #RecommendList (recommend)
 		SELECT CustId 
 		FROM dbo.CustInfo WITH (NOLOCK) 
@@ -424,8 +428,8 @@ BEGIN
 			END 
 		
 		--- Not number Game not group by liveindicator
-		IF ( @ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1)
-		BEGIN 
+		IF (@ShowSB = 1 OR @showLiveCasino = 1 OR @showVS = 1 OR @showLK3 = 1)
+		BEGIN
 			INSERT INTO #SAgMatchWLDetails		
 			SELECT
 				0 as BetGroup,
@@ -469,7 +473,7 @@ BEGIN
 				AND b.bettype < 19001 
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
-				AND s.ProductID IN(1, 4, 5)
+				AND s.ProductID IN(1, 4, 5, 26)
 				AND s.EventType <> 3				
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,showtime,
@@ -620,54 +624,42 @@ BEGIN
 			GROUP BY 
 				r.LeagueID, r.EventTime, r.eventID, b.bettype
 		END		
-		
 	END
+ 
+	SELECT 
+		BetGroup, 
+		matchid, 
+		homeid, 
+		awayid, 
+		bettype, 
+		liveindicator,
+		leagueid,
+		SUM(turnover) as turnover,
+		SUM(GrossComm) as GrossComm, 
+		SUM(MemberWinLost) as MemberWinLost, 
+		SUM(MemberComm) as MemberComm, 
+		SUM(MemberTotal) as MemberTotal, 
+		SUM(AgentWinLost) as AgentWinLost,
+		SUM(AgentComm) as AgentComm, 
+		SUM(AgentTotal) as AgentTotal, 
+		SUM(MasterWinLost) as MasterWinLost, 
+		SUM(MasterComm) as MasterComm, 
+		SUM(MasterTotal) as MasterTotal,
+		SUM(SAgWinLost) as SAgWinLost, 
+		SUM(SAgComm) as SAgComm, 
+		SUM(SAgTotal) as SAgTotal, 
+		SUM(CompanyComm) as CompanyComm, 
+		SUM(CompanyTotal) as CompanyTotal, 
+		race,
+		matchcode,	
+		isNeutral,
+		showtime
+	FROM #SAgMatchWLDetails
+	GROUP BY BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode, isNeutral, showtime
+	ORDER BY betgroup, matchid, leagueid, race, bettype, liveindicator, matchcode
+
+	DROP TABLE #RecommendList
+	DROP TABLE #SAgMatchWLDetails
+	DROP TABLE #SportBettype
 END
-
-
-
- 
-SELECT 
-	BetGroup, 
-	matchid, 
-	homeid, 
-	awayid, 
-	bettype, 
-	liveindicator,
-	leagueid,
-	SUM(turnover) as turnover,
-	SUM(GrossComm) as GrossComm, 
-	SUM(MemberWinLost) as MemberWinLost, 
-	SUM(MemberComm) as MemberComm, 
-	SUM(MemberTotal) as MemberTotal, 
-	SUM(AgentWinLost) as AgentWinLost,
-	SUM(AgentComm) as AgentComm, 
-	SUM(AgentTotal) as AgentTotal, 
-	SUM(MasterWinLost) as MasterWinLost, 
-	SUM(MasterComm) as MasterComm, 
-	SUM(MasterTotal) as MasterTotal,
-	SUM(SAgWinLost) as SAgWinLost, 
-	SUM(SAgComm) as SAgComm, 
-	SUM(SAgTotal) as SAgTotal, 
-	SUM(CompanyComm) as CompanyComm, 
-	SUM(CompanyTotal) as CompanyTotal, 
-	race,
-	matchcode,	
-	isNeutral,
-	showtime
-FROM #SAgMatchWLDetails
-GROUP BY BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode, isNeutral, showtime
-ORDER BY betgroup, matchid, leagueid, race, bettype, liveindicator, matchcode--ORDER BY betgroup, matchid, matchcode, bettype
-
-
 GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_All] TO [bodbAdminNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_All] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_All] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinlossDetail_SAg_All] TO [vnteam]
-
-
- 

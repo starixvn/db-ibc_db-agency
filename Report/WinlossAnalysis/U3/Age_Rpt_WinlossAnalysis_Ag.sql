@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE bodb02
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_Ag]
@@ -21,6 +22,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_Ag]
 	@showVB			BIT = 0,
 	@showNG2		BIT = 0,
 	@showFW			BIT = 0,
+	@showLK3		BIT = 0,
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDate	SMALLDATETIME	
 AS  
@@ -30,28 +32,30 @@ AS
     DB: DBAGE/bodb02
    
     Revisions:  
-    - 20110801@Sophia: change the range of number game's bettype from 81 to 120
-    - 20110805@Sophia: Calculate betcount for Combination MixParlay only for BetID = 0 (main ticket)
-    - 20110819@Sophia: Count Negative stake as positive turnover
-	- 20110927@Tom: 1. Add Report for P2P Games Sport : 251->253 , Bettype: 72->1000	
-					2. Remove parameter @ABSDate ('2011-09-01')
-    - 20111130@Sophia: Change the range of Sport book bettype>=121 and bettype<=999
-    - 20120112@Sophia: Add LiveCasino: Sporttype: 162, bettype: 1101 ->1199
-    - 20120801@Sophia: Add Virtual Sports (sporttype = 180 for representing), bettype : 1201 -> 1299
-    - 20121010@Johnson: Add new range bettype for tennis (from 1301 to 1334)
-    - 20130121@Dan: add linked server DBSUM for bodb_Summary
-	- 20140303@Kathy: Apply Keno product (from 1501 -> 1599) [Redmine:#12691]
-	- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
-	- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
-	- 20150831@Winnie: Include CB [Redmine: #42409]
-	- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
-	- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
-	- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
-	- 20160204@Percy: Support new product AllBet [Redmine: #50605]
-	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
-	- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
-	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]	
-	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+		- 20110801@Sophia: change the range of number game's bettype from 81 to 120
+		- 20110805@Sophia: Calculate betcount for Combination MixParlay only for BetID = 0 (main ticket)
+		- 20110819@Sophia: Count Negative stake as positive turnover
+		- 20110927@Tom: 1. Add Report for P2P Games Sport : 251->253 , Bettype: 72->1000	
+						2. Remove parameter @ABSDate ('2011-09-01')
+		- 20111130@Sophia: Change the range of Sport book bettype>=121 and bettype<=999
+		- 20120112@Sophia: Add LiveCasino: Sporttype: 162, bettype: 1101 ->1199
+		- 20120801@Sophia: Add Virtual Sports (sporttype = 180 for representing), bettype : 1201 -> 1299
+		- 20121010@Johnson: Add new range bettype for tennis (from 1301 to 1334)
+		- 20130121@Dan: add linked server DBSUM for bodb_Summary
+		- 20140303@Kathy: Apply Keno product (from 1501 -> 1599) [Redmine:#12691]
+		- 20140925@Sophia: Expand the range of Sporting Solution (1301 -> 1399)[Redmine: #22640]
+		- 20150513@Sophia: Apply Gold Deluxe [Redmine: #35278] and support matrix Sporttype - Bettype
+		- 20150831@Winnie: Include CB [Redmine: #42409]
+		- 20151209@Percy: Add new bettype: Cock Fighting Sabong [Redmine: #48601]
+		- 20151223@Percy: Support new bettype for RNG Casino [Redmine: #48283]
+		- 20160201@Percy: Exclude bettype 500 when calculate betcount [Redmine: #50027]
+		- 20160204@Percy: Support new product AllBet [Redmine: #50605]
+		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
+		- 20160713@Sophia: Hide data before specific date of some specific accounts [Redmind: #60767]
+		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]	
+		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
+	
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
 		+ @CustID agentID	
@@ -85,11 +89,6 @@ BEGIN
 	IF @ShowSB = 1  
 	BEGIN  
 		--bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype) 
-		--SELECT 0 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-		--WHERE (typeid>0 and typeid<31) OR (typeid>=121 and typeid<=999)
-		--	OR (typeid>=1301 and typeid<=1399)
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	0 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -103,8 +102,6 @@ BEGIN
 	IF @ShowCasino = 1  
 	BEGIN  
 		--bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  VALUES(251,71)
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	208 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -130,13 +127,6 @@ BEGIN
 	IF @ShowRB = 1  
 	BEGIN  	
 		--bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 151, 31
-		--UNION ALL
-		--SELECT 151, 32
-		--UNION ALL
-		--SELECT 151, 33
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	151 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -150,9 +140,6 @@ BEGIN
 	IF @ShowNG = 1  
 	BEGIN  	
 		-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype) 
-		--SELECT 161, typeid FROM bettype WITH(NOLOCK) WHERE typeid BETWEEN 81 AND 120
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	161 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -166,9 +153,6 @@ BEGIN
 	IF @ShowBI = 1  
 	BEGIN  	
 		-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 252, 73
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	252 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -182,9 +166,6 @@ BEGIN
 	IF @ShowP2P = 1
 	BEGIN
 		-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 253, 1000
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	253 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -198,10 +179,6 @@ BEGIN
 	IF @ShowLiveCasino = 1
 	BEGIN
 	-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 162 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-		--WHERE typeid between 1101 and 1199
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	162 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -215,10 +192,6 @@ BEGIN
 	IF @ShowVS = 1
 	BEGIN
 	-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 180 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-		--WHERE typeid between 1201 and 1299
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	180 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -232,10 +205,6 @@ BEGIN
 	IF @ShowKeno = 1
 	BEGIN
 	-- bettrans
-		--INSERT INTO @TmpCond(Sporttype, Bettype)  
-		--SELECT 202 AS sporttype, typeid FROM bettype WITH(NOLOCK)
-		--WHERE typeid between 1501 and 1599
-
 		INSERT INTO @TmpCond(Sporttype, Bettype) 
 		SELECT	202 AS sporttype, Bettype 
 		FROM	@SportBettype  
@@ -335,6 +304,19 @@ BEGIN
 		--Sum_winloss
 		INSERT INTO @TmpCondSumWL(sporttype, bettype)
 		VALUES(219, 0)
+	END
+
+	IF @showLK3 = 1
+	BEGIN
+		-- bettrans
+		INSERT INTO @TmpCond(Sporttype, Bettype) 
+		SELECT	160 AS sporttype, Bettype 
+		FROM	@SportBettype  
+		WHERE	ProductId = 26
+
+		--Sum_winloss
+		INSERT INTO @TmpCondSumWL(sporttype, bettype)
+		VALUES(160, 0)
 	END
 	
 	------Get @Srecommend
@@ -451,13 +433,4 @@ BEGIN
 				ELSE '0'
 			END 
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_Ag] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinlossAnalysis_Ag] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinlossAnalysis_Ag] TO [vnteam] AS [dbo]
 GO
