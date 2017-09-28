@@ -20,6 +20,7 @@ AS
 		- 20170224@Paul: Create new [RedmineID: #70554]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170828@Percy: Support Lucky 3 [RedmineID: #76770]
+		- 20171003@Percy: Add ruben = 1 to avoid recover tickets [RedmineID: #83356]
 */
 
 BEGIN
@@ -102,6 +103,7 @@ BEGIN
 			WHERE b.mrecommend = @custid
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND m.eventdate >= @fromdate
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
@@ -137,6 +139,7 @@ BEGIN
 			WHERE b.mrecommend = @custid
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND m.eventdate >= @fromdate
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
@@ -210,6 +213,7 @@ BEGIN
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
 					AND o.eventdate >= @fromdate
 					AND o.eventdate <= @todate
 					AND o.eventstatus = 'completed'
@@ -312,6 +316,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype				
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND b.bettype NOT IN (9,29,10)
 				AND m.eventdate >= @fromdate
 				AND m.eventdate <= @todate
@@ -347,6 +352,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND b.bettype NOT IN (9,29,10)
 				AND m.eventdate >= @fromdate
 				AND m.eventdate <= @todate
@@ -420,6 +426,7 @@ BEGIN
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
 					AND o.eventdate >= @fromdate
 					AND o.eventdate <= @todate
 					AND o.eventstatus = 'completed'
@@ -533,6 +540,7 @@ BEGIN
 			WHERE b.mrecommend = @custid
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND m.eventdate >= @fromdate
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
@@ -569,6 +577,7 @@ BEGIN
 				AND b.bettype < 19001 
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND m.eventdate >= @fromdate
 				AND m.eventdate <= @todate
 				AND m.eventstatus = 'completed'
@@ -606,6 +615,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND o.eventdate >= @fromdate
 				AND o.eventdate <= @todate
 				AND o.eventstatus = 'completed'
@@ -676,6 +686,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND b.bettype NOT IN (9,29,10)
 				AND m.eventdate >= @fromdate
 				AND m.eventdate <= @todate 
@@ -711,6 +722,7 @@ BEGIN
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND b.bettype < 19001 
 				AND b.bettype NOT IN (9,29,10)
 				AND m.eventdate >= @fromdate
@@ -750,6 +762,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND o.eventdate >= @fromdate
 				AND o.eventdate <= @todate
 				AND o.eventstatus = 'completed'

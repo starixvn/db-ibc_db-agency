@@ -20,6 +20,7 @@ AS
 		- 20170224@Paul: Create new [RedmineID: #70554]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170828@Percy: Support Lucky 3 [RedmineID: #76770]
+		- 20171003@Percy: Add ruben = 1 to avoid recover tickets [RedmineID: #83356]
 */
 
 BEGIN 
@@ -125,6 +126,7 @@ BEGIN
 			AND m.eventstatus = 'completed' 
 			AND ISNULL(m.betstatus,'') <> 'refund'					
 			AND b.statusID NOT IN (101, 102, 103)
+			AND b.ruben = 1
 			AND s.ProductID = 3	
 			AND EXISTS (SELECT l.leagueid FROM #tmpLeague l WHERE l.leagueid = m.leagueid)								
 		GROUP BY m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator;
@@ -164,6 +166,7 @@ BEGIN
 			AND b.Bettype < 19001
 			AND b.bettype NOT IN (9, 29, 10)
 			AND b.statusID NOT IN (101, 102, 103)
+			AND b.ruben = 1
 			AND s.ProductID <> 3
 			AND s.EventType <> 3 --- exclude VS HR	
 			AND EXISTS (SELECT l.leagueid FROM #tmpLeague l WHERE l.leagueid = m.leagueid)
@@ -238,6 +241,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 			WHERE b.srecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND o.eventdate >= @fromdate
 				AND o.eventdate <= @todate
 				AND o.eventstatus = 'completed'
@@ -289,6 +293,7 @@ BEGIN
 			AND m.eventstatus = 'completed'
 			AND ISNULL(m.betstatus,'') <> 'refund'
 			AND b.statusID NOT IN (101, 102, 103)
+			AND b.ruben = 1
 			AND s.ProductID = 3
 			AND EXISTS (SELECT l.leagueid FROM #tmpLeague l WHERE l.leagueid = m.leagueid)		
 		GROUP BY m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator;
@@ -328,6 +333,7 @@ BEGIN
 			AND b.bettype < 19001 
 			AND b.bettype NOT IN (9,29,10)
 			AND b.statusID NOT IN (101, 102, 103)
+			AND b.ruben = 1
 			AND s.ProductID <> 3
 			AND s.EventType <> 3
 			AND EXISTS (SELECT l.leagueid FROM #tmpLeague l WHERE l.leagueid = m.leagueid)					
@@ -402,6 +408,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				INNER JOIN #RecommendList Re ON Re.recommend = b.recommend
 			WHERE b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
 				AND o.eventdate >= @fdate
 				AND o.eventdate <= @tdate
 				AND o.eventstatus = 'completed' 

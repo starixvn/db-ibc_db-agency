@@ -1,1 +1,7 @@
-Report/MatchWinloss/U3/dbo.Age_Rpt_MatchWinLoss_Ag.StoredProcedure.sql
+Report/CommbyBettype/Age_Rpt_CommByBettype_Member.sql
+Report/CommbyBettype/Age_Rpt_CommByBettype_Agent.sql
+Report/CommbyBettype/Age_Rpt_CommByBettype_Master.sql
+Report/MatchWinloss/Age_Rpt_MatchWinLossDetail_Master.sql
+Report/WinlossByProduct/Age_Rpt_WinLossByProduct_Member.sql
+Report/WinlossByProduct/Age_Rpt_WinLossByProduct_Agent.sql
+Report/WinlossByProduct/Age_Rpt_WinLossByProduct_Master.sql
