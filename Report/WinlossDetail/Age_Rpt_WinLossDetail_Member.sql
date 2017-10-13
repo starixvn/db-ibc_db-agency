@@ -1,8 +1,8 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
+﻿SET QUOTED_IDENTIFIER ON
 GO
-
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
+SET ANSI_NULLS ON
+GO
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
@@ -21,10 +21,10 @@ DB: DBAGE/bodb02
 Original SP: Age_Rpt_WinLossDetail_Ag
 			Change SP name suffix to match with web function
 Revisions:
-	- 20161024@Paul: Smartphone Friendly UI for Microsite Report [Redmine: #61531]
+	- 20161024@Paul: Smartphone Friendly UI for Microsite Report [RedmineID: #61531]
 	- 20170110@Paul: Use new functions to get sum_winloss condition and SportBettypeMatrix [RedmineID: #69515]
 	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
-	
+	- 20170914@Percy: Enhance performance on sum_winloss_old [RedmineID: #83171]
 */
 
 BEGIN
@@ -184,7 +184,17 @@ BEGIN
 		BEGIN
 			SELECT @FDate = '2016-06-01';	
 		END
-		
+
+		-- using cte to remove predicate when seek on sum_winloss_old
+		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype) AS
+		(
+			SELECT @FDate AS winlostdate, SportType, BetType
+			FROM #TmpCondSumWL
+			UNION ALL
+			SELECT DATEADD(DAY, 1, winlostdate), SportType, BetType
+			FROM CTE_Winlostdate
+			WHERE winlostdate < @TDate
+		)
 		INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
 		SELECT CustID,			
 				SUM(ABS(TurnOver)) AS TurnOver,
@@ -196,14 +206,16 @@ BEGIN
 				SUM(comm - playercomm) AS AgComm, 
 				SUM(betcount) AS NoOfTicket
 		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
-		WHERE winlostdate BETWEEN @FDate AND @TDate	
-			AND srecommend = @Srecommend
+			CROSS APPLY CTE_Winlostdate w
+		WHERE b.winlostdate = w.winlostdate
+			AND srecommend = @srecommend
 			AND mrecommend = @mrecommend
-			AND recommend = @custid		   
+			AND recommend = @custid
 			AND RoleID = 1
-		GROUP BY CustID;
-
+			AND b.sporttype = w.sporttype
+			AND b.bettype = w.bettype
+		GROUP BY CustID
+		OPTION (MAXRECURSION 0);
 	END
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
@@ -285,3 +297,14 @@ BEGIN
 	SET NOCOUNT OFF;
 END
 GO
+SET QUOTED_IDENTIFIER OFF 
+GO
+ SET ANSI_NULLS OFF 
+GO
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Member] TO [bodbDownlineNet]
+GO
+GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Member] TO [bodbDownlineNetView]
+GO
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_Member] TO [vnteam]
+GO
+
