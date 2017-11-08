@@ -43,7 +43,7 @@ BEGIN
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
 	IF @IsShowAll IS NULL
-		SELECT @IsShowAll = 1;
+		SELECT @IsShowAll = 0;
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
@@ -160,6 +160,8 @@ BEGIN
 		-- Super
 		IF @roleid = 4
 		BEGIN
+			DECLARE @n INT = 2147483647
+			
 			DECLARE @tblMrecommend TABLE (mrecommend INT PRIMARY KEY)
 
 			INSERT INTO @tblMrecommend (mrecommend)
@@ -170,10 +172,14 @@ BEGIN
 			INSERT INTO #tmpmatchid (matchid, EventType)
 			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2) THEN matchid ELSE oddsid END, tbl.EventType
 			FROM dbo.bettrans14 b WITH (NOLOCK)
-				INNER JOIN @tblMrecommend m ON b.mrecommend = m.mrecommend
+				INNER JOIN (
+					SELECT TOP (@n) mrecommend
+					FROM @tblMrecommend
+				) AS m ON b.mrecommend = m.mrecommend
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.statusID NOT IN (101, 102, 103)
-				AND winlostdate BETWEEN @fdate AND @tdate;
+				AND winlostdate BETWEEN @fdate AND @tdate
+			OPTION (OPTIMIZE FOR (@n = 1));
 		END
 		-- Master
 		ELSE IF @RoleID = 3
@@ -241,6 +247,7 @@ BEGIN
 	DROP TABLE #SportBettype;
 
 	SELECT
+		DISTINCT
 		l.leagueid,
 		l.sporttype,
 		CASE @Language 

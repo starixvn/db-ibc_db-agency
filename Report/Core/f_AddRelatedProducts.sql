@@ -12,12 +12,12 @@ AS
 /*
 	Created by Percy
 	Date: 2017-06-23
-	DB: DBAGE.bodb02, DBACC.bodb02
+	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02
 	Task: Add related products
 
 	Revisions:
 		- 20170623@Percy: Create new [RedmineID: #78339]
-		- 20171101@Percy: Enhance Performance on bettrans14 [RedmineID: #86200]
+		- 20171101@Percy: Enhance Performance [RedmineID: #86200]
 */
 
 BEGIN
