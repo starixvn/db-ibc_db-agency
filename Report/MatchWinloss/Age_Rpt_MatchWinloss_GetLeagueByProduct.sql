@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -21,6 +21,7 @@ AS
 		- 20170224@Paul: Create new [RedmineID: #70554]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170828@Percy: Support Lucky 3 [RedmineID: #76770]
+		- 20171101@Percy: Enhance Performance on bettrans14 [RedmineID: #86200]
 */
 
 BEGIN
@@ -41,6 +42,9 @@ BEGIN
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
+	IF @IsShowAll IS NULL
+		SELECT @IsShowAll = 0;
+
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
 	CREATE TABLE #SportBettype (
@@ -55,274 +59,211 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest)
 	WHERE EventType IN (1, 2, 3);
 
-	SELECT @IsShowAll = CASE @IsShowAll WHEN 1 THEN NULL ELSE 0 END;
-
 	DECLARE @RoleID INT;
 
-	SELECT TOP 1 @RoleID = RoleID 
-	FROM dbo.CustInfo (NOLOCK) 
-	WHERE custid = @custid;
+	SELECT @RoleID = RoleID FROM dbo.CustInfo WITH (NOLOCK) WHERE custid = @custid;
 
 	CREATE TABLE #tmpLeagues(leagueid INT);
+	CREATE TABLE #tmpmatchid(matchid INT, EventType INT UNIQUE(matchid, EventType));
 
-	CREATE TABLE #tmpmatchid(matchid INT);
+	DECLARE @fdate SMALLDATETIME, @tdate SMALLDATETIME;
 
-	DECLARE @fdate SMALLDATETIME,
-			@tdate SMALLDATETIME;
-
-	SELECT	@fdate = @fromdate,
-			@tdate = @todate;
-
-	IF @roleid = 4
+	/* range bettrans */
+	IF @ToDate > @MoveBetsDay
 	BEGIN
-		DECLARE @recommend TABLE (CustId INT PRIMARY KEY);
+		SELECT @tdate = @ToDate, @fdate = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 
-		INSERT INTO @recommend (CustId)
-		SELECT CustId 
-		FROM dbo.custInfo (NOLOCK) 
-		WHERE roleid = 2 AND srecommend = @CustID;
-
-		IF @Todate > @MoveBetsDay
+		-- Super
+		IF @roleid = 4
 		BEGIN
-			IF @fromdate <= @movebetsday
-			BEGIN
-				SET @fdate = DATEADD(DD, 1, @movebetsday);
-			END
+			DECLARE @tblRecommend TABLE (recommend INT PRIMARY KEY);
 
-			INSERT INTO #tmpmatchid(matchid)
-			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
-								WHEN tbl.EventType = 2 THEN matchid
-								WHEN tbl.EventType = 3 THEN oddsid
-							END
-			FROM dbo.bettrans b WITH(NOLOCK)
-				INNER JOIN @recommend m ON b.recommend = m.CustId
-				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			INSERT INTO @tblRecommend (recommend)
+			SELECT CustId
+			FROM dbo.custInfo WITH (NOLOCK)
+			WHERE roleid = 2 AND srecommend = @CustID;
+
+			INSERT INTO #tmpmatchid (matchid, EventType)
+			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2) THEN matchid ELSE oddsid END, tbl.EventType
+			FROM dbo.bettrans b WITH (NOLOCK)
+				INNER JOIN @tblRecommend r ON b.recommend = r.recommend
+				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND winlostdate BETWEEN @fdate AND @tdate;									
-		END
-
-		SELECT	@fdate = @fromdate,
-				@tdate = @todate;
-
-		IF @fromdate <= @MoveBetsDay
-		BEGIN
-			IF @todate > @movebetsday
-			BEGIN
-				SET @tdate = @movebetsday;
-			END
-
-			INSERT INTO #tmpmatchid(matchid)
-			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
-								WHEN tbl.EventType = 2 THEN matchid
-								WHEN tbl.EventType = 3 THEN oddsid
-							END
-			FROM dbo.bettrans14 b WITH(NOLOCK)
-				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
-			WHERE b.srecommend = @custid 
-				AND b.statusID NOT IN (101, 102, 103)
-				AND b.ruben = 1
 				AND winlostdate BETWEEN @fdate AND @tdate;
 		END
-	END
-
-	IF @roleid = 3
-	BEGIN
-		IF @Todate > @MoveBetsDay
+		-- Master
+		ELSE IF @RoleID = 3
 		BEGIN
-			IF @fromdate <= @movebetsday
-			BEGIN
-				SET @fdate = DATEADD(DD, 1, @movebetsday);
-			END
-
-			INSERT INTO #tmpmatchid(matchid)
-			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
-								WHEN tbl.EventType = 2 THEN matchid
-								WHEN tbl.EventType = 3 THEN oddsid
-							END
-			FROM dbo.bettrans b WITH(NOLOCK)
-				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
-			WHERE b.mrecommend = @custid 
-				AND b.statusID NOT IN (101, 102, 103)
-				AND b.ruben = 1
-				AND winlostdate BETWEEN @fdate AND @tdate;									
-		END
-
-		SELECT	@fdate = @fromdate,
-				@tdate = @todate;
-
-		IF @fromdate <= @MoveBetsDay
-		BEGIN
-			IF @todate > @movebetsday
-			BEGIN
-				SET @tdate = @movebetsday;
-			END
-
-			INSERT INTO #tmpmatchid(matchid)
-			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
-								WHEN tbl.EventType = 2 THEN matchid
-								WHEN tbl.EventType = 3 THEN oddsid
-							END
-			FROM dbo.bettrans14 b WITH(NOLOCK)
-				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			INSERT INTO #tmpmatchid (matchid, EventType)
+			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2) THEN matchid ELSE oddsid END, tbl.EventType
+			FROM dbo.bettrans b WITH (NOLOCK)
+				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.mrecommend = @custid 
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
 				AND winlostdate BETWEEN @fdate AND @tdate;
 		END
-	END
-
-	IF @roleid = 2
-	BEGIN
-		IF @Todate > @MoveBetsDay
+		-- Agent
+		ELSE IF @RoleID = 2
 		BEGIN
-			IF @fromdate <= @movebetsday
-			BEGIN
-				SET @fdate = DATEADD(DD, 1, @movebetsday);
-			END
-
-			INSERT INTO #tmpmatchid(matchid)
-			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
-								WHEN tbl.EventType = 2 THEN matchid
-								WHEN tbl.EventType = 3 THEN oddsid
-							END
-			FROM dbo.bettrans b WITH(NOLOCK)
-				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			INSERT INTO #tmpmatchid (matchid, EventType)
+			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2) THEN matchid ELSE oddsid END, tbl.EventType
+			FROM dbo.bettrans b WITH (NOLOCK)
+				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.recommend = @custid 
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND winlostdate BETWEEN @fdate AND @tdate;		
+				AND winlostdate BETWEEN @fdate AND @tdate;
 		END
 
-		SELECT	@fdate = @fromdate,
-				@tdate = @todate;
-
-		IF @fromdate <= @MoveBetsDay
-		BEGIN
-			IF @todate > @movebetsday
-			BEGIN
-				SET @tdate = @movebetsday;
-			END
-
-			INSERT INTO #tmpmatchid(matchid)
-			SELECT DISTINCT CASE WHEN tbl.EventType = 1 THEN matchid 
-								WHEN tbl.EventType = 2 THEN matchid
-								WHEN tbl.EventType = 3 THEN oddsid
-							END
-			FROM dbo.bettrans14 b WITH(NOLOCK)
-				JOIN #SportBettype tbl ON tbl.bettype = b.bettype
-			WHERE b.recommend = @custid 
-				AND b.statusID NOT IN (101, 102, 103)
-				AND b.ruben = 1
-				AND winlostdate BETWEEN @fdate AND @tdate;					
-		END
-	END
-
-	IF @Todate > @MoveBetsDay
-	BEGIN
-		INSERT INTO #tmpLeagues(leagueid)
-		SELECT DISTINCT m.leagueid
-		FROM match m WITH(NOLOCK) 
-			INNER JOIN league l WITH(NOLOCK) ON m.leagueid = l.leagueid
+		-- get leagueid
+		INSERT INTO #tmpLeagues (leagueid)
+		SELECT DISTINCT l.leagueid
+		FROM dbo.match m WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.matchid
-		WHERE m.eventdate >= @fromdate 
-			AND m.eventdate <= @todate
+		WHERE m.eventdate BETWEEN @fdate AND @tdate
 			AND m.eventstatus = 'completed'
-			AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1
-						 WHEN @showVS = 1 AND l.sporttype IN (180, 186, 190, 191) THEN 1
-						 WHEN @showLK3 = 1 AND l.sporttype = 160 THEN 1
-						 ELSE 0 END
-			AND l.isTest = isnull(@IsShowAll, l.isTest);
-						
-		INSERT INTO #tmpLeagues(leagueid)
-		SELECT DISTINCT r.leagueid
-		FROM VSRaceInfo r WITH(NOLOCK) 
-			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid
-			INNER JOIN VSOutright o WITH(NOLOCK) ON r.EventID = o.EventID
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
-		WHERE o.EventDate >= @fromdate 
-			AND o.EventDate <= @todate
-			AND o.eventstatus = 'completed'
-			AND @showVS = 1 AND r.sporttype in (181, 182, 184,183,185)
-			AND l.isTest = isnull(@IsShowAll, l.isTest);
+			AND tmp.EventType = 1
+			AND l.isTest <= @IsShowAll;
 								
-		INSERT INTO #tmpLeagues(leagueid) 
+		INSERT INTO #tmpLeagues (leagueid) 
 		SELECT DISTINCT m.leagueid
-		FROM outright m WITH(NOLOCK) 
-			INNER JOIN league l WITH(NOLOCK) ON m.leagueid = l.leagueid 
+		FROM dbo.outright m WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.orid
-		WHERE m.eventdate >= @fromdate
-			AND m.eventdate <= @todate
+		WHERE m.eventdate BETWEEN @fdate AND @tdate
 			AND m.oddsstatus = 'completed'
-			AND 1= CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-						WHEN @showRB = 1 AND l.sporttype BETWEEN 151 AND 153 THEN 1 
-						ELSE 0 END
-			AND l.isTest = isnull(@IsShowAll, l.isTest);
-						
-	END				 
+			AND tmp.EventType = 2
+			AND l.isTest <= @IsShowAll;
 
-	IF @fromdate <= @MoveBetsDay
-	BEGIN
-		INSERT INTO #tmpLeagues(leagueid)
-		SELECT DISTINCT m.leagueid
-		FROM match14 m WITH(NOLOCK) 
-			INNER JOIN league l WITH(NOLOCK) ON m.leagueid = l.leagueid
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.matchid
-		WHERE m.eventdate >= @fromdate 
-			AND m.eventdate <= @todate
-			AND m.eventstatus = 'completed'
-			AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-						 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1
-						 WHEN @showVS = 1 AND l.sporttype IN (180, 186, 190, 191) THEN 1
-						 WHEN @showLK3 = 1 AND l.sporttype = 160 THEN 1
-						 ELSE 0 END
-			AND l.isTest = isnull(@IsShowAll, l.isTest);
-						
-		INSERT INTO #tmpLeagues(leagueid)
-		SELECT DISTINCT r.leagueid
-		FROM VSRaceInfo r WITH(NOLOCK) 
-			INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid
-			INNER JOIN VSOutright14 o WITH(NOLOCK) ON r.EventID = o.EventID		
+		INSERT INTO #tmpLeagues (leagueid)
+		SELECT DISTINCT l.leagueid
+		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON r.leagueid = l.leagueid
+			INNER JOIN dbo.VSOutright o WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
-		WHERE o.EventDate >= @fromdate 
-			AND o.EventDate <= @todate
+		WHERE o.eventdate BETWEEN @fdate AND @tdate
 			AND o.eventstatus = 'completed'
-			AND @showVS = 1 AND r.sporttype IN(181, 182, 184,183,185)
-			AND l.isTest = isnull(@IsShowAll, l.isTest);
-						
-		INSERT INTO #tmpLeagues(leagueid)
-		SELECT DISTINCT m.leagueid
-		FROM outright14 m WITH(NOLOCK) 
-			INNER JOIN league l WITH(NOLOCK) ON m.leagueid = l.leagueid 		
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.orid
-		WHERE m.eventdate >= @fromdate
-			AND m.eventdate <= @todate
-			AND m.oddsstatus = 'completed'
-			AND 1= CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-						WHEN @showRB = 1 AND l.sporttype BETWEEN 151 AND 153 THEN 1 
-						ELSE 0 END
-			AND l.isTest = isnull(@IsShowAll, l.isTest);
+			AND tmp.EventType = 3
+			AND l.isTest <= @IsShowAll;
 	END
 
-	DROP TABLE #tmpmatchid;
+	TRUNCATE TABLE #tmpmatchid
 
-	SELECT	DISTINCT l1.leagueid , l1.sporttype,
-			CASE @Language 
-				WHEN 'E' THEN l1.leaguename
-				WHEN 'CS' THEN (case when l1.leaguenamecn= '' or l1.leaguenamecn is null then l1.leaguename else l1.leaguenamecn end)
-				WHEN 'CT' THEN (case when l1.leaguenamec_uni= '' or l1.leaguenamec_uni is null then l1.leaguename else l1.leaguenamec_uni end)
-				WHEN 'TH' THEN (case when l1.leaguenameth = '' or l1.leaguenameth is null then l1.leaguename else l1.leaguenameth end)
-				WHEN 'J' THEN (case when l1.leaguenamej= '' or l1.leaguenamej is null then l1.leaguename else l1.leaguenamej end)
-				WHEN 'KO' THEN (case when l1.leaguenameko= '' or l1.leaguenameko is null then l1.leaguename else l1.leaguenameko end)
-				ELSE l1.leaguename
-			END	 as leaguename
-	FROM #tmpLeagues l
-		INNER JOIN league l1 WITH(NOLOCK)  ON l.leagueid = l1.leagueid
-	ORDER BY l1.sporttype;
+	/* bettrans14: using index on mrecommend, please consider if any change*/
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		SELECT @fdate = @FromDate, @tdate = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
+
+		-- Super
+		IF @roleid = 4
+		BEGIN
+			DECLARE @n INT = 2147483647
+			
+			DECLARE @tblMrecommend TABLE (mrecommend INT PRIMARY KEY)
+
+			INSERT INTO @tblMrecommend (mrecommend)
+			SELECT CustId
+			FROM dbo.custInfo WITH (NOLOCK)
+			WHERE roleid = 3 AND srecommend = @CustID;
+
+			INSERT INTO #tmpmatchid (matchid, EventType)
+			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2) THEN matchid ELSE oddsid END, tbl.EventType
+			FROM dbo.bettrans14 b WITH (NOLOCK)
+				INNER JOIN (
+					SELECT TOP (@n) mrecommend
+					FROM @tblMrecommend
+				) AS m ON b.mrecommend = m.mrecommend
+				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.statusID NOT IN (101, 102, 103)
+				AND winlostdate BETWEEN @fdate AND @tdate
+			OPTION (OPTIMIZE FOR (@n = 1));
+		END
+		-- Master
+		ELSE IF @RoleID = 3
+		BEGIN
+			INSERT INTO #tmpmatchid (matchid, EventType)
+			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2) THEN matchid ELSE oddsid END, tbl.EventType
+			FROM dbo.bettrans14 b WITH (NOLOCK)
+				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.mrecommend = @custid 
+				AND b.statusID NOT IN (101, 102, 103)
+				AND winlostdate BETWEEN @fdate AND @tdate;
+		END
+		-- Agent
+		ELSE IF @RoleID = 2
+		BEGIN
+			DECLARE @mrecommend INT
+			SELECT  @mrecommend = mrecommend
+			FROM dbo.custInfo WITH (NOLOCK)
+			WHERE custid = @custid
+
+			INSERT INTO #tmpmatchid (matchid, EventType)
+			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2) THEN matchid ELSE oddsid END, tbl.EventType
+			FROM dbo.bettrans14 b WITH (NOLOCK)
+				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
+			WHERE b.mrecommend = @mrecommend
+				AND b.recommend = @custid 
+				AND b.statusID NOT IN (101, 102, 103)
+				AND winlostdate BETWEEN @fdate AND @tdate;
+		END
+
+		-- get leagueid
+		INSERT INTO #tmpLeagues (leagueid)
+		SELECT DISTINCT l.leagueid
+		FROM dbo.match14 m WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.matchid
+		WHERE m.eventdate BETWEEN @fdate AND @tdate
+			AND m.eventstatus = 'completed'
+			AND tmp.EventType = 1
+			AND l.isTest <= @IsShowAll;
+								
+		INSERT INTO #tmpLeagues (leagueid) 
+		SELECT DISTINCT m.leagueid
+		FROM dbo.outright14 m WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.orid
+		WHERE m.eventdate BETWEEN @fdate AND @tdate
+			AND m.oddsstatus = 'completed'
+			AND tmp.EventType = 2
+			AND l.isTest <= @IsShowAll;
+
+		INSERT INTO #tmpLeagues (leagueid)
+		SELECT DISTINCT l.leagueid
+		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON r.leagueid = l.leagueid
+			INNER JOIN dbo.VSOutright14 o WITH (NOLOCK) ON r.EventID = o.EventID
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
+		WHERE o.eventdate BETWEEN @fdate AND @tdate
+			AND o.eventstatus = 'completed'
+			AND tmp.EventType = 3
+			AND l.isTest <= @IsShowAll;
+	END
+	
+	DROP TABLE #tmpmatchid;
+	DROP TABLE #SportBettype;
+
+	SELECT
+		DISTINCT
+		l.leagueid,
+		l.sporttype,
+		CASE @Language 
+			WHEN 'E' THEN l.leaguename
+			WHEN 'CS' THEN (CASE WHEN l.leaguenamecn= '' or l.leaguenamecn is null THEN l.leaguename ELSE l.leaguenamecn END)
+			WHEN 'CT' THEN (CASE WHEN l.leaguenamec_uni= '' or l.leaguenamec_uni is null THEN l.leaguename ELSE l.leaguenamec_uni END)
+			WHEN 'TH' THEN (CASE WHEN l.leaguenameth = '' or l.leaguenameth is null THEN l.leaguename ELSE l.leaguenameth END)
+			WHEN 'J' THEN (CASE WHEN l.leaguenamej= '' or l.leaguenamej is null THEN l.leaguename ELSE l.leaguenamej END)
+			WHEN 'KO' THEN (CASE WHEN l.leaguenameko= '' or l.leaguenameko is null THEN l.leaguename ELSE l.leaguenameko END)
+			ELSE l.leaguename
+		END	AS leaguename
+	FROM #tmpLeagues tmp
+		INNER JOIN league l WITH (NOLOCK) ON l.leagueid = tmp.leagueid
+	ORDER BY l.sporttype;
 
 	DROP TABLE #tmpLeagues;
-	DROP TABLE #SportBettype;
 
 	SET NOCOUNT OFF;
 END
