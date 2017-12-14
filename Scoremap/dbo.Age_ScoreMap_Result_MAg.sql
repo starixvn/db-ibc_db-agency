@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_MAg]
@@ -12,9 +13,10 @@ ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_MAg]
 	@awayEndScore	INT = 6
 AS
 /*
-	Task: Forecast this Agent's winloss based on match's score preset
+	Task: Forecast this Master's winloss based on match's score preset
 	Date: 20110919@Johnson
-	DB: DB053.bodb02	
+	DB: DBAGE.bodb02	
+	
 	Revisions:
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
 		- 20121003@Dan: update betteam for 121,122 bettype
@@ -28,6 +30,7 @@ AS
 		- 20151127@Percy: Add AOS choice for Correct Score [RedmineID: #48050]
 		- 20160509@Percy: Re-calculate 1H Correct Score [RedmineID: #48785]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
+		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -37,21 +40,59 @@ BEGIN
 
 	SET NOCOUNT ON;
 	
-	DECLARE @tmpScores TABLE(home INT, away INT)
-	DECLARE @tmpBettrans TABLE(transid BIGINT PRIMARY KEY, betteam NVARCHAR(10), matchid INT, custid INT, bettype SMALLINT, hdp1 SMALLMONEY, hdp2 SMALLMONEY, 
-							   odds SMALLMONEY, stake MONEY, liveindicator BIT, livehomescore SMALLINT, liveawayscore SMALLINT, mpositiontaking SMALLMONEY,oddsspread MONEY)
-	DECLARE @tblBetTypeHT_FT TABLE(BetType INT,isHT BIT)
-
-	INSERT INTO @tblBetTypeHT_FT(BetType,isHT)
-	SELECT val AS BetType,1 AS isHT  FROM strSplit('7, 303, 8, 304, 12, 15, 21,30, 126, 136, 138,167, 179, 181, 182, 188, 151, 191, 414, 410, 411, 427',',') 
+	-- half-time bettypes
+	DECLARE @hafltimeBettypes TABLE (BetType INT PRIMARY KEY)
+	INSERT INTO @hafltimeBettypes (BetType)
+	SELECT typeid
+	FROM dbo.bettype WITH (NOLOCK)
+	WHERE typeid IN (7,303,8,304,12,15,21,126,136,138,167,179,181,182,188,191,413,151,410,411,427,453)
 	
 	-- get scores template
-	INSERT INTO @tmpScores (home, away) SELECT home, away FROM scores WITH(NOLOCK) WHERE (home BETWEEN @homeBeginScore AND @homeEndScore) AND (away BETWEEN @awayBeginScore AND @awayEndScore )	
+	DECLARE @tmpScores TABLE (home INT, away INT)
+	INSERT INTO @tmpScores (home, away)
+	SELECT home, away
+	FROM dbo.Scores WITH (NOLOCK)
+	WHERE
+		(home BETWEEN @homeBeginScore AND @homeEndScore)
+		AND (away BETWEEN @awayBeginScore AND @awayEndScore )	
+	
 
-	-- get member tickets INTO temp TABLE		
+	DECLARE @tmpBettrans TABLE
+	(
+		transid BIGINT PRIMARY KEY,
+		betteam NVARCHAR(10),
+		matchid INT,
+		custid INT,
+		bettype SMALLINT,
+		hdp1 SMALLMONEY,
+		hdp2 SMALLMONEY,
+		odds SMALLMONEY,
+		stake MONEY,
+		liveindicator BIT,
+		livehomescore SMALLINT,
+		liveawayscore SMALLINT,
+		mpositiontaking SMALLMONEY,
+		oddsspread MONEY
+	)
+	
+	-- get member tickets INTO temp TABLE	
 	INSERT INTO @tmpBettrans 
-	SELECT transid, betteam, b.matchid, custid, bettype, hdp1, hdp2, odds, stake, liveindicator, b.livehomescore, b.liveawayscore, mpositiontaking,oddsspread
-	FROM bettrans b WITH (nolock)			
+	SELECT
+		transid,
+		betteam,
+		matchid,
+		custid,
+		bettype,
+		hdp1,
+		hdp2,
+		odds,
+		stake,
+		liveindicator,
+		livehomescore,
+		liveawayscore,
+		mpositiontaking,
+		oddsspread
+	FROM bettrans b WITH (NOLOCK)		
 	WHERE b.matchid IN (SELECT val FROM strSplit(@matchids , ','))
 		AND b.mrecommend = @mrecommend
 		AND (( b.bettype IN (SELECT val FROM strSplit(@bettypes_live,',')) AND liveindicator = 1) 
@@ -79,6 +120,7 @@ BEGIN
 												,157,167,170,188,159,161,162,179,181,182 --Bet Radar
 												,413,414 -- AOS choice
 												,406,407,409,410,427
+												,453
 												)THEN 1 --Dom 
 							WHEN r = 0 AND bt IN (20,21,25,191,411) AND home <> away THEN 1			--Bet Radar
 							WHEN r = 0 AND bt = 121 THEN CASE WHEN home > away THEN 0 ELSE 1 END
@@ -90,6 +132,7 @@ BEGIN
 												,157,167,170,188,159,161,162,179,181,182,191--Bet Radar
 												,413,414 -- AOS choice
 												,406,407,409,410,411,427
+												,453
 												)THEN 1 --Dom
 							ELSE 0
 						END * risk * trueodds)
@@ -173,9 +216,9 @@ BEGIN
 										
 						WHEN betteam = 'h' AND away = 0 AND home >= 1 AND bt = 27 THEN 1
 						WHEN betteam = 'a' AND home = 0 AND away >= 1 AND bt = 27 THEN 1
-						WHEN betteam = '1' AND hc + home - away > 0 AND  bt = 28 THEN 1 
-						WHEN betteam = '2' AND hc + away - home > 0 AND  bt = 28 THEN 1
-						WHEN betteam = 'x' AND hc - (home - away) = 0 AND bt = 28 THEN 1 	
+						WHEN betteam = '1' AND hc + home - away > 0 AND  bt IN (28, 453) THEN 1 
+						WHEN betteam = '2' AND hc + away - home > 0 AND  bt IN (28, 453) THEN 1
+						WHEN betteam = 'x' AND hc - (home - away) = 0 AND bt IN (28, 453) THEN 1 	
 						WHEN betteam = 'x' AND (home = away) AND bt = 121 THEN 1
 						WHEN betteam = 'a' AND (away > home) AND bt = 121 THEN 1						
 						WHEN betteam = 'h' AND (home > away) AND bt = 122 THEN 1
@@ -351,7 +394,7 @@ BEGIN
 								0 hd,
 								b.bettype bt
 						FROM @tmpBettrans b 
-						WHERE bettype = 28
+						WHERE bettype IN (28, 453)
 						GROUP BY betteam, hdp1, hdp2, matchid,b.bettype
 					UNION ALL
 						SELECT	matchid , betteam,
@@ -367,34 +410,23 @@ BEGIN
 						GROUP BY betteam, bettype, matchid				
 					)r
 				)u
-			LEFT JOIN @tblBetTypeHT_FT tmpBetType ON u.bt =  tmpBetType.BetType
-			GROUP BY home, away, matchid
-				,CASE WHEN  tmpBetType.BetType IS NOT NULL THEN 1 ELSE 0 END
-			--ORDER BY matchid ,away, home
+			LEFT JOIN @hafltimeBettypes tmpBetType ON u.bt =  tmpBetType.BetType
+			GROUP BY home, away, matchid, CASE WHEN  tmpBetType.BetType IS NOT NULL THEN 1 ELSE 0 END
 	
-		SELECT matchid	
-			,home	
-			,away	
-			,SUM(CASE WHEN isHT = 1 THEN total ELSE NULL END) HT
-			,SUM(CASE WHEN isHT = 1 THEN NULL ELSE total END) FT
-		FROM #ScoreMap_Master data
-		GROUP BY matchid, home, away
-		ORDER BY matchid ,away, home
+	SELECT matchid	
+		,home	
+		,away	
+		,SUM(CASE WHEN isHT = 1 THEN total ELSE NULL END) HT
+		,SUM(CASE WHEN isHT = 1 THEN NULL ELSE total END) FT
+	FROM #ScoreMap_Master
+	GROUP BY matchid, home, away
+	ORDER BY matchid ,away, home
 						
-		SELECT matchid, homeid, awayid
-		FROM match WITH(NOLOCK)
-		WHERE eventstatus <> 'completed'
-			AND matchid IN (SELECT val FROM strSplit(@matchids,','))
+	SELECT matchid, homeid, awayid
+	FROM match WITH(NOLOCK)
+	WHERE eventstatus <> 'completed'
+		AND matchid IN (SELECT val FROM strSplit(@matchids,','))
 			
-		DROP TABLE #ScoreMap_Master
+	DROP TABLE #ScoreMap_Master
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Age_ScoreMap_Result_MAg] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_ScoreMap_Result_MAg] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_ScoreMap_Result_MAg] TO [vnteam] AS [dbo]
 GO
