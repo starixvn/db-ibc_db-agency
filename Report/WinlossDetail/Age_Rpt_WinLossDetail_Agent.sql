@@ -1,8 +1,8 @@
-﻿SET QUOTED_IDENTIFIER ON
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
-SET ANSI_NULLS ON
-GO
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Agent] 
+
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Agent] 
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
@@ -313,14 +313,3 @@ BEGIN
 	SET NOCOUNT OFF;
 END
 GO
-SET QUOTED_IDENTIFIER OFF 
-GO
- SET ANSI_NULLS OFF 
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Agent] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Rpt_WinLossDetail_Agent] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_WinLossDetail_Agent] TO [vnteam]
-GO
-

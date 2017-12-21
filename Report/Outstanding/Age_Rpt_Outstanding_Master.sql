@@ -12,9 +12,11 @@ AS
 	Task : Report Outstanding
 	DB: DBAGE.bodb02
 	Original: Age_Rpt_Outstanding_SAg
+	
 	Revisions:
 		- 20161219@Paul: Create new [RedmineID: #68723]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+		- 20171020@Percy: get both running and waiting tickets [RedmineID: #84690]
 */
 
 BEGIN
@@ -29,7 +31,7 @@ BEGIN
 
 	INSERT INTO #SportBettype (bettype, RefTable)
 	SELECT bettype, RefTable
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
+	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest);
 
 	DECLARE @mrecommend TABLE (CustId INT PRIMARY KEY);
 
@@ -38,78 +40,91 @@ BEGIN
 	FROM dbo.custInfo (NOLOCK) 
 	WHERE roleid = 3 AND srecommend = @CustID;
 
-	WITH rt 
-	AS (
-		SELECT	mrecommend,  
-				SUM(CASE WHEN bettype <=19000 THEN ABS(actual_stake) END) AS Outstanding,  
-				SUM(case WHEN bettype <=19000 THEN actual_stake * spositiontaking END) AS PositionTaking
-		FROM bettrans b WITH (NOLOCK) 
-		WHERE ruben = 0
-			AND EXISTS (
-				SELECT 1 
-				FROM #SportBettype s 
-				WHERE s.RefTable = 0 AND s.bettype = b.bettype
-				)
-			AND srecommend =  @CustID
-		GROUP BY mrecommend
+	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY);
+
+	-- bettrans
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
+	SELECT
+		mrecommend,
+		SUM(ABS(actual_stake)) AS MemberOutstanding,
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding
+	FROM dbo.bettrans b WITH (NOLOCK)  
+	WHERE ruben = 0
+		AND EXISTS (
+			SELECT 1
+			FROM #SportBettype s
+			WHERE s.RefTable = 0 AND s.bettype = b.bettype
+		) -- bet tickets
+		AND srecommend =  @CustID		
+	GROUP BY mrecommend;
 	
-		UNION ALL 
-		SELECT	mrecommend,  
-				SUM(ABS(actual_stake)) AS Outstanding,  
-				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM translog t WITH (NOLOCK)
-			INNER JOIN @mrecommend m ON t.mrecommend = m.CustId
-		WHERE statusid = 0
-			AND EXISTS (
-				SELECT 1 
-				FROM #SportBettype s 
-				WHERE s.RefTable = 3 AND s.bettype = t.gameID
-			)
-		GROUP BY mrecommend
+	-- translog
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
+	SELECT
+		t.mrecommend,
+		SUM(ABS(actual_stake)) AS MemberOutstanding,
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding
+	FROM dbo.translog t WITH (NOLOCK)
+		INNER JOIN @mrecommend m ON t.mrecommend = m.CustId
+	WHERE t.statusID IN (0, 1)
+		AND EXISTS (
+			SELECT 1
+			FROM #SportBettype s
+			WHERE s.RefTable = 3 AND s.bettype = t.gameID
+		)
+	GROUP BY t.mrecommend;
 
-		UNION ALL -- bettransRNG
-		SELECT	mrecommend,  
-				SUM(ABS(actual_stake)) AS Outstanding,  
-				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM bettransRNG b WITH (NOLOCK) 
-		WHERE statusid = 0
-			AND srecommend =  @CustID
-			AND EXISTS (
-				SELECT 1 
-				FROM #SportBettype s 
-				WHERE s.RefTable = 1 AND s.bettype = b.gameID
-			)
-		GROUP BY mrecommend
+	-- bettransRnG
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
+	SELECT
+		mrecommend,
+		SUM(ABS(actual_stake)) AS MemberOutstanding,
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding
+	FROM dbo.bettransRnG b WITH (NOLOCK)  
+	WHERE b.statusID IN (0, 1)
+		AND EXISTS (
+			SELECT 1
+			FROM #SportBettype s
+			WHERE s.RefTable = 1 AND s.bettype = b.gameID
+		)
+		AND srecommend =  @CustID		
+	GROUP BY mrecommend;
 
-		UNION ALL -- bettransLC
-		SELECT	mrecommend,  
-				SUM(ABS(actual_stake)) AS Outstanding,  
-				SUM(actual_stake * spositiontaking) AS PositionTaking
-		FROM bettransLC b WITH (NOLOCK) 
-		WHERE statusid = 0
-			AND srecommend =  @CustID
-			AND EXISTS (
-				SELECT 1 
-				FROM #SportBettype s 
-				WHERE s.RefTable = 2 AND s.bettype = b.gameID
-			)
+	-- bettransLC
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
+	SELECT
+		mrecommend,
+		SUM(ABS(actual_stake)) AS MemberOutstanding,
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding
+	FROM dbo.bettransLC b WITH (NOLOCK)  
+	WHERE b.statusID IN (0, 1)
+		AND EXISTS (
+			SELECT 1
+			FROM #SportBettype s
+			WHERE s.RefTable = 2 AND s.bettype = b.gameID
+		)
+		AND srecommend =  @CustID		
+	GROUP BY mrecommend;
+
+	WITH rt AS (
+		SELECT
+			mrecommend,
+			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
+			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding
+		FROM #OutStanding
 		GROUP BY mrecommend
 	)
-	SELECT	b.mrecommend as CustId, 
-			username AS CustName,
-			ISNULL(Outstanding, 0) AS MemberOutstanding,
-			ISNULL(positiontaking,0) AS SuperOutstanding
-	FROM custinfo AS c WITH (NOLOCK)
-		INNER JOIN (
-			SELECT	mrecommend,
-					SUM(ISNULL(Outstanding,0)) AS Outstanding,
-					SUM(ISNULL(positiontaking,0)) AS PositionTaking
-			FROM rt
-			GROUP BY mrecommend
-			) b ON c.custid = b.mrecommend
-	ORDER BY username;
+	SELECT
+		rt.mrecommend AS CustId,
+		c.username AS CustName,
+		rt.MemberOutstanding,
+		rt.SuperOutstanding
+	FROM rt
+		INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.mrecommend = c.custid
+	ORDER BY c.username;
 
 	DROP TABLE #SportBettype;
+	DROP TABLE #OutStanding;
 
 	SET NOCOUNT OFF;
 END
