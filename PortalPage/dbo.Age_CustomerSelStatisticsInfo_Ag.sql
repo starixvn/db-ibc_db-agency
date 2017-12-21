@@ -5,99 +5,63 @@ GO
 ALTER PROCEDURE [dbo].[Age_CustomerSelStatisticsInfo_Ag]
 	 @custid INT
 AS
+
 /*
-	Created: Johnson
-	Date: 2011-05-31
-	DB: DBAGE/bodb02
-	Task: Get Agent Statictis Info 
-	Revisions:
-	- 20110819@Sophia: Count Negative stake as positive turnover
-	- 20111017@Tom: 1. Add P2P Transfer (23101)/Outstanding (23102)
-					2. Remove variable @ABSDate ('2011-09-01')	
-	- 20140305@Kathy: modify formula of Outstanding amount to be calculated based on table Bettrans and TransLog [Redmine:#11550]
-	- 20150707@Jim: exclude Metric Gaming running ticket from bettrans (Feature #38789
-	- 20151214@Percy: exclude Cock Fighting running ticket from bettrans [Redmine: #48601]
-	- 20160113@Percy: expand new bettype for RNG Casino [Redmine: #48283]
-	- 20160318@Percy: Support AllBet [Redmine: #50605]
-	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
-	- 20161003@Sophia: Remove redundant info of CS, BI, P2P [Redmine: #64636]
-	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
-*/
-SET NOCOUNT ON
-
--- SportBettypeMatrix
-DECLARE @isTest BIT
-SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
-
-CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
-INSERT INTO #SportBettype (ProductID, bettype, RefTable)
-SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
-
-DECLARE @roleid INT, 
-		@Outstanding MONEY,
-		@total_Outstanding MONEY,				
-		@total_memberActive INT,
-		@total_memberClosed INT,
-		@total_memberSuspended INT,
-		@number_newMembers INT,				
-		@CurrentMonth	DATETIME
-
-DECLARE @today DATE,
-		@yesterday DATE
-SELECT @today = CONVERT(DATE, GETDATE())
-SELECT @yesterday = DATEADD(DD, -1, @today)
-
-SELECT @currentMonth = convert(varchar(10),current_timestamp,120)
-SELECT @currentMonth = dateadd(day,- datepart(day,@currentMonth)+ 1,@currentMonth)
-
-DECLARE @translog_outstanding money, @translog_totalOutstanding money
-
-SELECT @translog_outstanding      = ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
-	   @translog_totalOutstanding = ISNULL(SUM(ABS(actual_stake)),0)
-FROM translog with(NOLOCK)
-WHERE recommend = @custid AND statusid = 0
-
-SELECT 
-		@OutStanding          = ISNULL(SUM(apositiontaking* ABS(actual_stake)),0) + @translog_outstanding,
-		@total_outstanding    = ISNULL(SUM(ABS(actual_stake)),0) + @translog_totalOutstanding		
-FROM bettrans WITH(NOLOCK)
-WHERE recommend = @custid AND ruben = 0 
-		AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0)
-		/*
-		AND bettype NOT IN (801,802,803,804,805,806,1003) -- Exclude Metric gaming, Cockfighting from bettrans
-		AND bettype NOT BETWEEN 2101 AND 2499 -- Exclude new bettype RNG Casino + Allbet
-		AND bettype NOT BETWEEN 4001 AND 7999 -- Voidbridge
-		*/
-
-SELECT  
-		@OutStanding       = @OutStanding       + ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
-		@total_outstanding = @total_outstanding + ISNULL(SUM(ABS(actual_stake)),0)
-FROM bettransRNG WITH(NOLOCK)
-WHERE recommend = @custid AND statusID IN (0, 1)
-	--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
-
-SELECT  
-		@OutStanding       = @OutStanding       + ISNULL(SUM(apositiontaking* ABS(actual_stake)),0),
-		@total_outstanding = @total_outstanding + ISNULL(SUM(ABS(actual_stake)),0)
-FROM bettransLC WITH(NOLOCK)
-WHERE recommend = @custid AND statusID IN (0, 1)
-	--AND gameID BETWEEN 2401 AND 2499
-			 
-SELECT @Total_memberActive = ISNULL(SUM(CASE WHEN Closed = 0 AND ISNULL(reject,0) = 0 THEN 1 ELSE 0 END), 0),
-	@Total_memberClosed = ISNULL(SUM(CASE WHEN Closed = 1 THEN 1 ELSE 0 END), 0),
-	@Total_memberSuspended = ISNULL(SUM(CASE WHEN ISNULL(reject,0) = 1 AND Closed = 0 tHEN 1 ELSE 0 END), 0)
-FROM custinfo WITH(NOLOCK)
-WHERE recommend = @custid AND roleid = 1
-
-SELECT @number_newMembers = count(1)
-	FROM customer with(nolock)
-	WHERE recommend = @custid and roleid = 1 and creatdate >= @currentMonth
+	Created by Percy
+	Date: 2017-10-20
+	DB: DBAGE.bodb02
+	Task: Home page - Agent Statictis Info 
 	
-SELECT @OutStanding AS outStanding,
-		@total_Outstanding AS total_outstanding,				
-		@total_memberActive AS total_memberActive,
-		@total_memberClosed AS total_memberClosed,
-		@total_memberSuspended AS total_memberSuspended,
-		@number_newMembers AS number_newMembers
-DROP TABLE #SportBettype
+	Revisions:
+		- 20171020@Percy: Apply core sp [RedmineID: #84690]
+*/
+
+BEGIN
+	SET NOCOUNT ON
+
+	DECLARE
+		-- member
+		@total_memberActive		INT,
+		@total_memberClosed		INT,
+		@total_memberSuspended	INT,
+		-- new members
+		@number_newMembers		INT
+
+	-- all downline's status
+	SELECT
+		@Total_memberActive    = ISNULL(SUM(CASE WHEN Closed = 0 AND ISNULL(reject, 0) = 0 THEN 1 ELSE 0 END), 0),
+		@Total_memberClosed    = ISNULL(SUM(CASE WHEN Closed = 1 THEN 1 ELSE 0 END), 0),
+		@Total_memberSuspended = ISNULL(SUM(CASE WHEN ISNULL(reject, 0) = 1 AND Closed = 0 THEN 1 ELSE 0 END), 0)
+	FROM dbo.custInfo WITH (NOLOCK)
+	WHERE recommend = @CustId
+		AND roleid = 1
+
+	-- new member of this month
+	DECLARE @FirstDayOfThisMonth SMALLDATETIME
+	SELECT  @FirstDayOfThisMonth = DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)
+
+	SELECT @number_newMembers = ISNULL(COUNT(1), 0)
+	FROM dbo.Customer WITH (NOLOCK)
+	WHERE recommend = @custid
+		AND roleid = 1
+		AND creatdate >= @FirstDayOfThisMonth
+
+	-- Outstanding
+	CREATE TABLE #Outstanding (superOutstanding MONEY, masterOutstanding MONEY, agentOutstanding MONEY, memberOutstanding MONEY)
+
+	INSERT INTO #Outstanding (superOutstanding, masterOutstanding, agentOutstanding, memberOutstanding)
+	EXEC dbo.Acc_CustomerSelOutstanding @CustId = @CustId
+
+	SELECT
+		SUM(agentOutstanding)	AS outStanding,
+		SUM(memberOutstanding)	AS total_outstanding,
+		@number_newMembers		AS number_newMembers,
+		-- member
+		@total_memberActive		AS total_memberActive,
+		@total_memberClosed		AS total_memberClosed,
+		@total_memberSuspended	AS total_memberSuspended
+	FROM #Outstanding
+
+	DROP TABLE #Outstanding
+END
 GO

@@ -111,13 +111,11 @@ BEGIN
 
 	INSERT INTO #SportBettype (ProductID, Bettype)
 	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest) s
+	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest) s
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId
 
 	INSERT INTO #TmpCondSumWL(ProductID, sporttype, bettype)
-	SELECT	ISNULL(p.GroupProductId, s.ProductID),
-			SportType,
-			BetType
+	SELECT ISNULL(p.GroupProductId, s.ProductID), SportType, BetType
 	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) s
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId
 		

@@ -16,6 +16,7 @@ AS
 		- 20170801@Percy: Add new bettype range of RnG Casino [RedmineID: #78424]
 		- 20170828@Percy: Add Lucky 3 [RedmineID: #76770]
 		- 20170919@Percy: PHAIO Phase 3, add 4 new bettypes 461 - 464 [RedmineID: #83356]
+		- 20171020@Percy: Add Bullfighting [RedmineID: #84690]
 	
 	- Columns:
 		- CommGroup:
@@ -117,6 +118,8 @@ FROM (
 
 	UNION ALL
 	SELECT 500 AS bettype, 6 AS CommGroup -- Charge_comm
-) AS A
 
+	UNION ALL
+	SELECT 1004 AS bettype, 7 AS CommGroup -- Others_comm
+) AS A
 GO
