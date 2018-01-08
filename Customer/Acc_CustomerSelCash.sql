@@ -37,11 +37,9 @@ BEGIN
 	SELECT  @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
 	-- Get Balance Information --
-
-	CREATE TABLE #recommend (custid INT) -- using for master level
+	DECLARE @recommend TABLE (custid INT) -- using for super and master level	
+	DECLARE @Super TABLE (custid INT) -- using for super level
 	
-	CREATE TABLE #custid (custid INT) -- using for super level
-	DECLARE @recommend TABLE (custid INT) -- using for super level
 	
 	CREATE TABLE #BalanceInfo
 	(
@@ -138,7 +136,7 @@ BEGIN
     END
     ELSE IF @roleid = 3
     BEGIN
-		INSERT INTO #recommend (custid)
+		INSERT INTO @recommend (custid)
 		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
 		WHERE mrecommend = @custid AND roleid = 2
 
@@ -180,7 +178,7 @@ BEGIN
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 
@@ -193,7 +191,7 @@ BEGIN
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
 			SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) AND custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate >= @yesterday
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
@@ -220,7 +218,7 @@ BEGIN
 		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
 		WHERE srecommend = @custid AND roleid = 2
 
-		INSERT INTO #custid (custid) -- this super and all masters
+		INSERT INTO @Super (custid) -- this super and all masters
 		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
 		WHERE srecommend = @custid AND roleid IN (3, 4)
 
@@ -300,7 +298,7 @@ BEGIN
 			0,
 			0
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #custid c WHERE b.custid = c.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM @Super c WHERE b.custid = c.custid)
 			AND b.matchid = 0
 			AND b.bettype >= 19999
 			AND b.ruben = 1
@@ -318,8 +316,7 @@ BEGIN
 	FROM #BalanceInfo
 	
 	DROP TABLE #SportBettype
-	DROP TABLE #recommend
 	DROP TABLE #BalanceInfo
-	DROP TABLE #custid
+	
 END
 GO

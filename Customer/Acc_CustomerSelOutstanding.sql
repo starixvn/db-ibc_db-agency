@@ -13,7 +13,8 @@ AS
 	Task: Core SP - Get Outstanding by CustId
 
 	Revisions:
-		20171020@Percy: Create new [RedmineID: #84690]
+		- 20171020@Percy: Create new [RedmineID: #84690]
+		- 20170108@Sophia: Enhance SP due to high CPU [Redmine: #89029]
 */
 
 BEGIN
@@ -33,8 +34,8 @@ BEGIN
 	SELECT  @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
 	-- Get Balance Information --
-	CREATE TABLE #recommend (custid INT) -- using for super and master level
-	CREATE TABLE #custid (custid INT) -- using for super level
+	DECLARE @recommend TABLE (custid INT) -- using for super and master level
+	DECLARE @Super TABLE (custid INT) -- using for super level
 
 	CREATE TABLE #Outstanding
 	(
@@ -116,7 +117,7 @@ BEGIN
     END
     ELSE IF @roleid = 3
     BEGIN
-		INSERT INTO #recommend (custid)
+		INSERT INTO @recommend (custid)
 		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
 		WHERE mrecommend = @custid AND roleid = 2
 
@@ -153,7 +154,7 @@ BEGIN
 			SUM(ABS(actual_stake * mpositiontaking)),
 		   SUM(CASE WHEN custid <> recommend THEN ABS(actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid) -- downline
+		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid) -- downline
 			AND b.ruben = 0
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 
@@ -169,11 +170,11 @@ BEGIN
     END
     ELSE IF @roleid = 4
     BEGIN
-	    INSERT INTO #recommend (custid)
+	    INSERT INTO @recommend (custid)
 		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
 		WHERE srecommend = @custid AND roleid = 2
 
-		INSERT INTO #custid (custid) -- this super and all masters
+		INSERT INTO @Super (custid) -- this super and all masters
 		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
 		WHERE srecommend = @custid AND roleid IN (3, 4)
 
@@ -214,7 +215,7 @@ BEGIN
 			SUM(ABS(actual_stake*spositiontaking)),
 			SUM(CASE WHEN custid <> recommend THEN ABS(actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid) -- agent downline
+		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid) -- agent downline
 			AND b.ruben = 0
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 
@@ -224,7 +225,7 @@ BEGIN
 			SUM(ABS(actual_stake*spositiontaking)),
 			0
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #custid c WHERE b.custid = c.custid) -- this super and all masters
+		WHERE EXISTS (SELECT TOP 1 1 FROM @Super c WHERE b.custid = c.custid) -- this super and all masters
 			AND b.matchid = 0
 			AND b.bettype >= 19999
 			AND b.ruben = 0
@@ -238,8 +239,6 @@ BEGIN
 	FROM #Outstanding
 	
 	DROP TABLE #SportBettype
-	DROP TABLE #recommend
-	DROP TABLE #custid
 	DROP TABLE #Outstanding
 END
 GO
