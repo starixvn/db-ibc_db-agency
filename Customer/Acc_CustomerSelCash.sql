@@ -13,7 +13,8 @@ AS
 	Task: Core SP - Get Cash by CustId
 
 	Revisions:
-		20171020@Percy: Create new [RedmineID: #84690]
+		- 20171020@Percy: Create new [RedmineID: #84690]
+		- 20170108@Sophia: Enhance SP due to high CPU [Redmine: #88837]
 */
 
 BEGIN
@@ -36,9 +37,12 @@ BEGIN
 	SELECT  @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
 	-- Get Balance Information --
-	CREATE TABLE #recommend (custid INT) -- using for super and master level
-	CREATE TABLE #custid (custid INT) -- using for super level
 
+	CREATE TABLE #recommend (custid INT) -- using for master level
+	
+	CREATE TABLE #custid (custid INT) -- using for super level
+	DECLARE @recommend TABLE (custid INT) -- using for super level
+	
 	CREATE TABLE #BalanceInfo
 	(
 		superCash	MONEY DEFAULT ((0)), yesterdaySuperCash		MONEY DEFAULT ((0)),
@@ -211,7 +215,8 @@ BEGIN
     END
     ELSE IF @roleid = 4
     BEGIN
-	    INSERT INTO #recommend (custid)
+		--- 20180108@Sophia: use table variable @recommend to avoid re-build plan in case big line 
+		INSERT INTO @recommend (custid)
 		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
 		WHERE srecommend = @custid AND roleid = 2
 
@@ -263,7 +268,7 @@ BEGIN
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 
@@ -278,7 +283,7 @@ BEGIN
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
 			SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) AND custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate >= @yesterday
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
