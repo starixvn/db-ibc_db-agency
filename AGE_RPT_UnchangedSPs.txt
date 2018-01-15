@@ -1,4 +1,10 @@
-Report/CommbyBettype/Age_Rpt_CommByBettype_Member.sql
-Report/CommbyBettype/Age_Rpt_CommByBettype_Agent.sql
-Report/CommbyBettype/Age_Rpt_CommByBettype_Master.sql
-Report/CommbyBettype/Age_MemCommission_SelBettype.sql
+Customer/Age_CustomerSelAllInfo.sql
+Customer/Age_CustomerSelBalance_Ag.sql
+Customer/Age_CustomerSelBalance_MAg.sql
+Customer/Age_CustomerSelBalance_SAg.sql
+PortalPage/dbo.Age_CustomerSelBalanceInfo_Ag.sql
+PortalPage/dbo.Age_CustomerSelBalanceInfo_MAg.sql
+PortalPage/dbo.Age_CustomerSelBalanceInfo_SAg.sql
+PortalPage/dbo.Age_CustomerSelStatisticsInfo_Ag.sql
+PortalPage/dbo.Age_CustomerSelStatisticsInfo_MAg.sql
+PortalPage/dbo.Age_CustomerSelStatisticsInfo_SAg.sql
