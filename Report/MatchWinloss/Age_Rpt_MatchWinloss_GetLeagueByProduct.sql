@@ -24,6 +24,7 @@ AS
 		- 20170828@Percy: Support Lucky 3 [RedmineID: #76770]
 		- 20171020@Percy: Return flag field for league/league3rd [RedmineID: #84690]
 		- 20171101@Percy: Enhance Performance on bettrans14 [RedmineID: #86200]
+		- 20180130@Percy: Clean redundant code [RedmineID: #86086]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -31,20 +32,6 @@ AS
 
 BEGIN
 	SET NOCOUNT ON;
-
-	DECLARE @showSB		BIT,
-			@showRB		BIT,
-			@showNG		BIT,
-			@showVS		BIT,
-			@showLK3	BIT,
-			@showBF		BIT;
-
-	SELECT	@showSB		= CASE WHEN PATINDEX('%,1,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showRB		= CASE WHEN PATINDEX('%,2,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showNG		= CASE WHEN PATINDEX('%,3,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showVS		= CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showLK3	= CASE WHEN PATINDEX('%,26,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showBF		= CASE WHEN PATINDEX('%,30,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END;
 
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
