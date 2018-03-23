@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20171020@Percy: Create new SP [RedmineID: #84690]
+		- 20180130@Percy: Remove Racing [RedmineID: #86086]
 */
 
 BEGIN
@@ -19,8 +20,8 @@ BEGIN
 
 	SELECT ProductId
 	FROM (
-		-- Sportbook, Racing, Number Game, Virtual Sport + Virtual Sport 2, Lucky 3, Bullfighting
-		VALUES (1), (2), (3), (5), (26), (30)
+		-- Sportbook, Number Game, Virtual Sport + Virtual Sport 2, Lucky 3, Bullfighting
+		VALUES (1), (3), (5), (26), (30)
 	) AS P (ProductId)
 END
 GO
