@@ -33,7 +33,8 @@ BEGIN
 	WHERE RefTable IN (0, 3) -- bettrans, translog
 
 	DECLARE @roleID TINYINT,
-			@srecommend INT
+			@srecommend INT,
+			@ID INT = 1 
 
 	SELECT  @roleID = roleid, @srecommend = srecommend FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
@@ -62,24 +63,15 @@ BEGIN
 			AND statusID NOT IN (0, 1)
   			
 		-- bettrans
-		;WITH BettransCTE AS (
-			SELECT winlostdate, bettype,
-					SUM(winlost) AS winlost,
-					SUM(actual_stake) AS actual_stake,
-					SUM(playercomm) AS playercomm
-			FROM dbo.bettrans b WITH (NOLOCK)
-			WHERE b.custid = @custid
-				AND b.srecommend = @srecommend
-				AND b.ruben = 1
-				AND b.winlostdate >= @yesterday
-			GROUP BY winlostdate, bettype
-		)
 		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
 		SELECT
 			SUM(CASE WHEN winlostdate > @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END),
 			SUM(CASE WHEN winlostdate = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END)
-		FROM BettransCTE b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)	
+		FROM dbo.bettrans b WITH (NOLOCK)
+		WHERE b.custid = @custid
+			AND b.ruben = 1
+			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+			
 			
     END
     ELSE IF @roleid = 2
@@ -111,7 +103,7 @@ BEGIN
 					SUM(comm) AS comm,
 					SUM(playercomm) AS playercomm
 			FROM dbo.bettrans b WITH (NOLOCK)
-			WHERE b.recommend = @custid
+			WHERE (b.recommend * @ID) = @custid   ---- use @ID to blind the optimize to use Index IX_srecommend instead of CIX_recommend_matchid_bettype in case big line
 				AND b.srecommend = @srecommend
 				AND b.ruben = 1
 				AND b.winlostdate >= @yesterday
@@ -121,8 +113,8 @@ BEGIN
 		SELECT
 			SUM(CASE WHEN winlostdate > @yesterday THEN awinlost+comm-playercomm ELSE 0 END),
 			SUM(CASE WHEN winlostdate = @yesterday THEN awinlost+comm-playercomm ELSE 0 END)
-		FROM BettransCTE b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+		FROM BettransCTE b  
+		WHERE EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 		
     END
     ELSE IF @roleid = 3
@@ -156,7 +148,7 @@ BEGIN
 					SUM(acomm) AS acomm,
 					SUM(comm) AS comm
 			FROM dbo.bettrans b WITH (NOLOCK)
-			WHERE mrecommend = @CustId
+			WHERE (mrecommend * @ID) = @CustId   ---- use @ID to blind the optimize to use Index IX_srecommend instead of IX_agent_all in case big line
 				AND srecommend = @srecommend
 				AND b.ruben = 1
 				AND b.winlostdate >= @yesterday
@@ -166,11 +158,11 @@ BEGIN
 		SELECT
 			SUM(CASE WHEN winlostdate > @yesterday THEN mwinlost+acomm-comm ELSE 0 END),
 			SUM(CASE WHEN winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END)
-		FROM BettransCTE b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+		FROM BettransCTE b  
+		WHERE EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 			
     END
-    ELSE IF @roleid = 4
+    ELSE IF @roleid = 4  
     BEGIN
 	  
 		-- bettransRNG
@@ -199,8 +191,8 @@ BEGIN
 					SUM(swinlost) AS swinlost,
 					SUM(scomm) AS scomm,
 					SUM(acomm) AS acomm
-			FROM dbo.bettrans  b WITH (NOLOCK)
-			WHERE srecommend = @CustId
+			FROM dbo.bettrans  b WITH (NOLOCK)		
+			WHERE srecommend = @CustId			---- use index IX_srecommend
 				AND b.ruben = 1
 				AND b.winlostdate >= @yesterday
 			GROUP BY winlostdate, bettype
@@ -209,8 +201,8 @@ BEGIN
 		SELECT 
 			SUM(CASE WHEN winlostdate > @yesterday THEN swinlost+scomm-acomm ELSE 0 END),
 			SUM(CASE WHEN winlostdate = @yesterday THEN swinlost+scomm-acomm ELSE 0 END)
-		FROM BettransCTE b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+		FROM BettransCTE b  
+		WHERE EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 		
     END
 

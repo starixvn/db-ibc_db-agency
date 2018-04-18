@@ -14,7 +14,8 @@ AS
 
 	Revisions:
 		- 20171020@Percy: Create new [RedmineID: #84690]
-		- 20170108@Sophia: Enhance SP due to high CPU [Redmine: #88837]
+		- 20170108@Sophia: Enhance SP due to high CPU (workaround)[Redmine: #88837]
+		- 20180416@Sophia: Enhance performance high CPU for WC2018 [Redmine: #93100]
 */
 
 BEGIN
@@ -32,15 +33,12 @@ BEGIN
 	SELECT bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	WHERE RefTable NOT IN (0, 3) -- exclude bettrans, translog
 
-	DECLARE @roleID TINYINT
+	DECLARE @roleID TINYINT, @srecommend INT, @ID INT = 1
 
-	SELECT  @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
+	SELECT @roleID = roleid, @srecommend = srecommend FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
 	-- Get Balance Information --
-	DECLARE @recommend TABLE (custid INT) -- using for super and master level	
-	DECLARE @Super TABLE (custid INT) -- using for super level
-	
-	
+
 	CREATE TABLE #BalanceInfo
 	(
 		superCash	MONEY DEFAULT ((0)), yesterdaySuperCash		MONEY DEFAULT ((0)),
@@ -83,6 +81,7 @@ BEGIN
 				b.winlostdate < @yesterday
 				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 			)
+							
     END
     ELSE IF @roleid = 2
     BEGIN
@@ -110,36 +109,44 @@ BEGIN
 			AND winlostdate >= @yesterday
 			AND statusID NOT IN (0, 1)
 
-		-- bettrans /* need check custid = recommend due to sum/balance/transfer tickets */
+		
+		-- bettrans 
 		INSERT INTO #BalanceInfo (agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
 		SELECT
-			SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
-			SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
-			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE b.recommend = @custid
+			SUM(CASE WHEN custid = @custid THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
+			SUM(CASE WHEN custid = @custid THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
+			SUM(CASE WHEN custid <> @custid THEN winlost-actual_stake+playercomm ELSE 0 END),
+			SUM(CASE WHEN custid <> @custid THEN winlost-actual_stake+playercomm ELSE 0 END)
+		FROM dbo.bettrans b WITH (NOLOCK)    
+		WHERE (b.recommend * @ID) = @custid          ---- use @ID to blind the optimize to use Index IX_srecommend instead of CIX_recommend_matchid_bettype in case big line
+			AND b.srecommend = @srecommend
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
-
+						
+		;WITH Bettrans_CTE AS (
+				SELECT
+					Winlostdate, Bettype,
+					SUM(CASE WHEN custid = @custid THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) AS agentCash,
+					SUM(CASE WHEN (winlostdate = @yesterday OR b.bettype > 20000) THEN CASE WHEN custid = @custid THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END) AS yesterdayAgentCash,
+					SUM(CASE WHEN custid <> @custid THEN winlost-actual_stake+playercomm ELSE 0 END) AS memberCash,
+					SUM(CASE WHEN custid <> @custid AND (winlostdate = @yesterday OR b.bettype > 20000) THEN winlost-actual_stake+playercomm ELSE 0 END) AS yesterdayMemberCash
+				FROM dbo.bettrans b WITH (NOLOCK)    
+				WHERE (b.recommend * @ID) = @custid         ---- use @ID to blind the optimize to use Index IX_srecommend instead of CIX_recommend_matchid_bettype in case big line
+					AND b.srecommend = @srecommend
+					AND b.ruben = 1
+					AND b.winlostdate >= @yesterday
+				GROUP BY Winlostdate, Bettype
+		)
 		INSERT INTO #BalanceInfo (agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
-		SELECT
-			SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
-			SUM(CASE WHEN (winlostdate = @yesterday OR b.bettype > 20000) THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
-			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN custid <> recommend AND (winlostdate = @yesterday OR b.bettype > 20000) THEN winlost-actual_stake+playercomm ELSE 0 END)
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE b.recommend = @custid
-			AND b.ruben = 1
-			AND b.winlostdate >= @yesterday
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+		SELECT  SUM (agentCash) AS agentCash,
+				SUM (yesterdayAgentCash) AS yesterdayAgentCash,
+				SUM (memberCash) AS memberCash,
+				SUM (yesterdayMemberCash) AS yesterdayMemberCash			   
+		FROM Bettrans_CTE b
+		WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
     END
     ELSE IF @roleid = 3
     BEGIN
-		INSERT INTO @recommend (custid)
-		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		WHERE mrecommend = @custid AND roleid = 2
-
 		-- bettransRNG
 		INSERT INTO #BalanceInfo (masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
 		SELECT 
@@ -168,7 +175,7 @@ BEGIN
 			AND winlostdate >= @yesterday
 			AND statusID NOT IN (0, 1)
 
-		-- bettrans /* need check custid = recommend due to sum/balance/transfer tickets */
+		-- bettrans  
 		INSERT INTO #BalanceInfo (masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
 		SELECT
 			SUM(mwinlost+acomm-comm),
@@ -178,25 +185,40 @@ BEGIN
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
+		WHERE b.srecommend = @srecommend
+			AND (b.mrecommend * @ID) = @CustId     ---- use @ID to blind the optimize to use Index IX_srecommend instead of IX_agent_all in case big line
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
+			
 
+		;WITH Bettrans_CTE AS (		
+				SELECT
+					Winlostdate, Bettype,
+					SUM(mwinlost+acomm-comm) AS masterCash,
+					SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) THEN mwinlost+acomm-comm ELSE 0 END) AS yesterdayMasterCash ,
+					SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END) AS agentCash,
+					SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END) AS yesterdayAgentCash,
+					SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END) AS memberCash,
+					SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) AND custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END) AS yesterdayMemberCash
+				FROM dbo.bettrans b WITH (NOLOCK)
+				WHERE b.srecommend = @srecommend
+					AND (b.mrecommend * @ID) = @CustId      ---- use @ID to blind the optimize to use Index IX_srecommend instead of IX_agent_all in case big line
+					AND b.ruben = 1
+					AND b.winlostdate >= @yesterday
+				GROUP BY Winlostdate, Bettype
+			)			
 		INSERT INTO #BalanceInfo (masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
 		SELECT
-			SUM(mwinlost+acomm-comm),
-			SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) THEN mwinlost+acomm-comm ELSE 0 END),
-			SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
-			SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
-			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) AND custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
-			AND b.ruben = 1
-			AND b.winlostdate >= @yesterday
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+			SUM(masterCash),
+			SUM(yesterdayMasterCash),
+			SUM(agentCash),
+			SUM(yesterdayAgentCash),
+			SUM(memberCash),
+			SUM(yesterdayMemberCash)
+		FROM Bettrans_CTE b
+		WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 
-			-- sum, balance, transfer tickets of this master
+		-- sum, balance, transfer tickets of this master
 		INSERT INTO #BalanceInfo (masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
 		SELECT
 			SUM(winlost-actual_stake),
@@ -213,14 +235,6 @@ BEGIN
     END
     ELSE IF @roleid = 4
     BEGIN
-		--- 20180108@Sophia: use table variable @recommend to avoid re-build plan in case big line 
-		INSERT INTO @recommend (custid)
-		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		WHERE srecommend = @custid AND roleid = 2
-
-		INSERT INTO @Super (custid) -- this super and all masters
-		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		WHERE srecommend = @custid AND roleid IN (3, 4)
 
 		-- bettransRNG
 		INSERT INTO #BalanceInfo (superCash, yesterdaySuperCash, masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
