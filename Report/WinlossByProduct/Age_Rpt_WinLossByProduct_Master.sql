@@ -19,6 +19,7 @@ AS
 	Revisions:
 		- 20161224@Paul: Create new [RedmineID: #70450]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+		- 20180419@Alvin: Combine Macau Games and Pragmatic [RedmineID: #92647]
 
 */
 
@@ -54,7 +55,7 @@ BEGIN
 	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType, f.EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
-			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23)
+			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (22, 23, 32)
 		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 	WHERE f.bettype <> 2799; -- Mix parlay of BRVS
 
@@ -88,6 +89,7 @@ BEGIN
 					s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN m.sporttype
+						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END AS SportType,
 					CASE s.ProductID
@@ -121,6 +123,7 @@ BEGIN
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN m.sporttype
+						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END,
 					CASE s.ProductID
@@ -207,6 +210,7 @@ BEGIN
 					s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN m.sporttype
+						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END AS SportType,
 					CASE s.ProductID
@@ -241,6 +245,7 @@ BEGIN
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN m.sporttype
+						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END,
 					CASE s.ProductID
