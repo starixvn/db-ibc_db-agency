@@ -69,6 +69,7 @@ BEGIN
 			SUM(CASE WHEN winlostdate = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
 		WHERE b.custid = @custid
+			AND winlostdate >= @yesterday
 			AND b.ruben = 1
 			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 			
