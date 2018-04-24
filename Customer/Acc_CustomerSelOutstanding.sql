@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20171020@Percy: Create new [RedmineID: #84690]
 		- 20170108@Sophia: Enhance SP due to high CPU [Redmine: #89029]
+		- 20180416@Sophia: Enhance performance high CPU for WC2018 [Redmine: #93100]
 */
 
 BEGIN
@@ -29,13 +30,20 @@ BEGIN
 	SELECT bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	WHERE RefTable <> 0 -- exclude bettrans
 
-	DECLARE @roleID TINYINT
+	DECLARE @roleID TINYINT, @srecommend INT, @ID INT = 1
 
-	SELECT  @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
+	SELECT  @roleID = roleid, @srecommend = srecommend FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
 	-- Get Balance Information --
-	DECLARE @recommend TABLE (custid INT) -- using for super and master level
-	DECLARE @Super TABLE (custid INT) -- using for super level
+	--DECLARE @recommend TABLE (custid INT) -- using for super and master level
+	--DECLARE @Super TABLE (custid INT) -- using for super level
+
+	DECLARE @MinDate SMALLDATETIME 
+
+	SELECT @MinDate = MIN (WinlostDate)
+	FROM dbo.bettrans b WITH (NOLOCK)
+	WHERE b.srecommend = @srecommend
+			AND b.ruben = 0
 
 	CREATE TABLE #Outstanding
 	(
@@ -71,13 +79,14 @@ BEGIN
 		-- bettrans
 		INSERT INTO #Outstanding (memberOutstanding)
 		SELECT SUM(ABS(actual_stake))
-		FROM dbo.bettrans b WITH (NOLOCK)
+		FROM dbo.bettrans b WITH (NOLOCK)     ---- use Index IX_custid_matchid_bettype
 		WHERE b.custid = @custid
 			AND b.ruben = 0
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+			AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
     END
     ELSE IF @roleid = 2
     BEGIN
+
 		-- bettransRNG
 		INSERT INTO #Outstanding (agentOutstanding, memberOutstanding)
 		SELECT 
@@ -106,20 +115,32 @@ BEGIN
 			AND statusID IN (0, 1)
 
 		-- bettrans
+		;WITH Bettrans_CTE AS (
+			SELECT
+				WinlostDate, Bettype,
+				SUM(ABS(actual_stake * apositiontaking)) AS agentOutstanding 
+			   ,SUM(CASE WHEN custid <> @custid THEN ABS(actual_stake) ELSE 0 END) AS memberOutstanding
+			FROM dbo.bettrans b WITH (NOLOCK)     ---- use @ID to blind the optimize to use Index IX_srecommend instead of CIX_recommend_matchid_bettype in case big line
+			WHERE b.srecommend = @srecommend  
+				AND (b.recommend * @ID) = @custid
+				AND b.ruben = 0
+				AND b.Winlostdate >= @MinDate
+			GROUP BY WinlostDate, Bettype
+			)
 		INSERT INTO #Outstanding (agentOutstanding, memberOutstanding)
 		SELECT
-			SUM(ABS(actual_stake * apositiontaking))
-		   ,SUM(CASE WHEN recommend <> custid THEN ABS(actual_stake) ELSE 0 END)
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE b.recommend = @custid
-			AND b.ruben = 0
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+			SUM(agentOutstanding)
+		   ,SUM(memberOutstanding)
+		FROM Bettrans_CTE b  
+		WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+
+
     END
     ELSE IF @roleid = 3
     BEGIN
-		INSERT INTO @recommend (custid)
-		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		WHERE mrecommend = @custid AND roleid = 2
+		--INSERT INTO @recommend (custid)
+		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
+		--WHERE mrecommend = @custid AND roleid = 2
 
 		-- bettransRNG
 		INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
@@ -149,34 +170,34 @@ BEGIN
 			AND statusID IN (0, 1)
 
 		-- bettrans
+		; WITH Bettrans_CTE AS (
+			SELECT WinlostDate, Bettype,
+				SUM(ABS(actual_stake * mpositiontaking)) AS masterOutstanding ,
+				SUM(CASE WHEN custid <> @custid AND custid <> recommend THEN ABS(actual_stake) ELSE 0 END) AS memberOutstanding
+			FROM dbo.bettrans b WITH (NOLOCK)
+			WHERE b.srecommend = @srecommend   
+				AND (b.mrecommend * @ID) = @CustId    ---- use @ID to blind the optimize to use Index IX_srecommend 
+				AND b.ruben = 0
+				AND b.WinlostDate >= @MinDate		
+			GROUP BY WinlostDate, Bettype				
+			)
 		INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
 		SELECT
-			SUM(ABS(actual_stake * mpositiontaking)),
-		   SUM(CASE WHEN custid <> recommend THEN ABS(actual_stake) ELSE 0 END)
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid) -- downline
-			AND b.ruben = 0
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+			SUM(masterOutstanding),
+		    SUM(memberOutstanding)
+		FROM Bettrans_CTE b
+		WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 
-		INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
-		SELECT
-			SUM(ABS(actual_stake*mpositiontaking)),
-			0
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE custid = @custid -- this master
-			AND b.matchid = 0
-			AND b.bettype >= 19999
-			AND b.ruben = 0
     END
     ELSE IF @roleid = 4
     BEGIN
-	    INSERT INTO @recommend (custid)
-		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		WHERE srecommend = @custid AND roleid = 2
+		-- INSERT INTO @recommend (custid)
+		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
+		--WHERE srecommend = @custid AND roleid = 2
 
-		INSERT INTO @Super (custid) -- this super and all masters
-		SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		WHERE srecommend = @custid AND roleid IN (3, 4)
+		--INSERT INTO @Super (custid) -- this super and all masters
+		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
+		--WHERE srecommend = @custid AND roleid IN (3, 4)
 
 		-- bettransRNG
 		INSERT INTO #Outstanding (superOutstanding, memberOutstanding)
@@ -203,32 +224,30 @@ BEGIN
 		   ,SUM(ABS(actual_stake))
 	    FROM dbo.translog t WITH (NOLOCK)
 		WHERE EXISTS (
-				SELECT TOP 1 1
+				SELECT 1
 				FROM dbo.custInfo c WITH (NOLOCK)
 				WHERE c.srecommend = @custid AND c.roleid = 3 AND t.mrecommend = c.custid
 			) -- using index on mrecommend
 			AND statusID IN (0, 1)
 
 		-- bettrans
+		; WITH Bettrans_CTE AS (
+			SELECT WinlostDate, Bettype,
+				SUM(ABS(actual_stake*spositiontaking)) AS superOutstanding,
+				SUM(CASE WHEN custid <> @CustId AND custid <> mrecommend AND custid <> recommend THEN ABS(actual_stake) ELSE 0 END) AS memberOutstanding
+			FROM dbo.bettrans b WITH (NOLOCK)   ---- use Index IX_srecommend 
+			WHERE b.srecommend = @custId					
+				AND b.ruben = 0
+				AND b.WinlostDate >= @MinDate
+			GROUP BY WinlostDate, Bettype
+			)
 		INSERT INTO #Outstanding (superOutstanding, memberOutstanding)
 		SELECT
-			SUM(ABS(actual_stake*spositiontaking)),
-			SUM(CASE WHEN custid <> recommend THEN ABS(actual_stake) ELSE 0 END)
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid) -- agent downline
-			AND b.ruben = 0
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+			SUM(superOutstanding),
+			SUM(memberOutstanding)
+		FROM Bettrans_CTE b
+		WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 
-			-- sum, balance, transfer tickets of this super and all masters
-		INSERT INTO #Outstanding (superOutstanding, memberOutstanding)
-		SELECT
-			SUM(ABS(actual_stake*spositiontaking)),
-			0
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM @Super c WHERE b.custid = c.custid) -- this super and all masters
-			AND b.matchid = 0
-			AND b.bettype >= 19999
-			AND b.ruben = 0
     END
 
 	SELECT
