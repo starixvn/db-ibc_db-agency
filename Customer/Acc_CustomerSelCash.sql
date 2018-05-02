@@ -38,11 +38,6 @@ BEGIN
 	SELECT @roleID = roleid, @srecommend = srecommend FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
 	-- Get Balance Information --
-	--DECLARE @recommend TABLE (custid INT) -- using for super and master level	
-	--DECLARE @Super TABLE (custid INT) -- using for super level
-	
-	-- Get Balance Information --
-
 	CREATE TABLE #BalanceInfo
 	(
 		superCash	MONEY DEFAULT ((0)), yesterdaySuperCash		MONEY DEFAULT ((0)),
@@ -190,7 +185,8 @@ BEGIN
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)   ---- use @ID to blind the optimize to use Index IX_srecommend instead of IX_agent_all in case big line
 		WHERE b.srecommend = @srecommend
-			AND (b.mrecommend * @ID) = @CustId      ---- master, agent, customer level
+			AND (b.mrecommend * @ID) = @CustId      
+			AND (b.recommend * @Id) <> 0 		----  agent, customer level
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 			
@@ -206,7 +202,8 @@ BEGIN
 					SUM(CASE WHEN (winlostdate = @yesterday OR bettype > 20000) AND custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END) AS yesterdayMemberCash
 				FROM dbo.bettrans b WITH (NOLOCK)     ---- use @ID to blind the optimize to use Index IX_srecommend instead of IX_agent_all in case big line
 				WHERE b.srecommend = @srecommend
-					AND (b.mrecommend * @ID) = @CustId    ---- master, agent, customer level    
+					AND (b.mrecommend * @ID) = @CustId  
+					AND (b.recommend * @Id) <> 0  ----  agent, customer level    
 					AND b.ruben = 1
 					AND b.winlostdate >= @yesterday
 				GROUP BY Winlostdate, Bettype
@@ -240,14 +237,7 @@ BEGIN
     ELSE IF @roleid = 4
     BEGIN
 		--- 20180108@Sophia: use table variable @recommend to avoid re-build plan in case big line 
-		--INSERT INTO @recommend (custid)
-		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		--WHERE srecommend = @CustId AND roleid = 2
-
-		--INSERT INTO @Super (custid) -- this super and all masters
-		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		--WHERE srecommend = @CustId AND roleid IN (3, 4)
-		
+			
 		-- bettransRNG
 		INSERT INTO #BalanceInfo (superCash, yesterdaySuperCash, masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash)
 		SELECT 
@@ -292,8 +282,7 @@ BEGIN
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END),
 			SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END)
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE ---EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
-			 --  b.custid <> @CustID  AND b.custID <> b.mrecommend
+		WHERE  
 			(b.recommend * @Id) <> 0 
 			AND b.srecommend = @CustID
 			AND b.ruben = 1
@@ -313,7 +302,6 @@ BEGIN
 			FROM dbo.bettrans b WITH (NOLOCK)
 			WHERE 
 				b.srecommend = @CustID  
-				--AND EXISTS (SELECT TOP 1 1 FROM @recommend r WHERE b.recommend = r.custid)
 				AND (b.recommend * @Id) <> 0   ---- level agent and customer    
 				AND b.ruben = 1
 				AND b.winlostdate >= @yesterday				
@@ -344,9 +332,8 @@ BEGIN
 			0,
 			0
 		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE --EXISTS (SELECT TOP 1 1 FROM @Super c WHERE b.custid = c.custid)
-			--(b.custID = b.srecommend OR b.CustID = b.mrecommend )
-			AND b.srecommend = @CustID
+		WHERE
+			b.srecommend = @CustID
 			AND (b.recommend * @Id) = 0   --- level master and super 
 			AND b.matchid = 0
 			AND b.bettype >= 19999

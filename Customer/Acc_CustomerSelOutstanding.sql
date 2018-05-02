@@ -35,8 +35,6 @@ BEGIN
 	SELECT  @roleID = roleid, @srecommend = srecommend FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @custID
 	
 	-- Get Balance Information --
-	--DECLARE @recommend TABLE (custid INT) -- using for super and master level
-	--DECLARE @Super TABLE (custid INT) -- using for super level
 
 	DECLARE @MinDate SMALLDATETIME 
 
@@ -138,10 +136,6 @@ BEGIN
     END
     ELSE IF @roleid = 3
     BEGIN
-		--INSERT INTO @recommend (custid)
-		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		--WHERE mrecommend = @custid AND roleid = 2
-
 		-- bettransRNG
 		INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
 		SELECT 
@@ -191,14 +185,7 @@ BEGIN
     END
     ELSE IF @roleid = 4
     BEGIN
-		-- INSERT INTO @recommend (custid)
-		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		--WHERE srecommend = @custid AND roleid = 2
-
-		--INSERT INTO @Super (custid) -- this super and all masters
-		--SELECT custid FROM dbo.custinfo WITH (NOLOCK)
-		--WHERE srecommend = @custid AND roleid IN (3, 4)
-
+	
 		-- bettransRNG
 		INSERT INTO #Outstanding (superOutstanding, memberOutstanding)
 		SELECT 
