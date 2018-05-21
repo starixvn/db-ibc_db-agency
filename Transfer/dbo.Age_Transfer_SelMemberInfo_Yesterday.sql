@@ -1,4 +1,5 @@
-﻿USE [bodb02]
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Transfer_SelMemberInfo_Yesterday]
@@ -34,6 +35,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday_1
 		- 20160321@Percy: Support AllBet [Redmine: #50605]
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
+		- 20180521@Percy: Add waiting tickets on translog [RedmineID: #95268]
 */
 SET NOCOUNT ON
 
@@ -165,7 +167,7 @@ WHERE /*GameID BETWEEN 2401 AND 2499
 
 SELECT @Oustanding = @Oustanding + ISNULL(SUM(actual_stake), 0) FROM translog WITH (NOLOCK)
 WHERE custid = @custid
-	AND statusID = 0
+	AND statusID IN (0, 1)
 
 --Start - nqminh - 19Feb09	
 IF (@RoleId = 1)
@@ -214,13 +216,4 @@ else
 DROP TABLE #SportBettype
 
 
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_SelMemberInfo_Yesterday] TO [vnteam] AS [dbo]
 GO
