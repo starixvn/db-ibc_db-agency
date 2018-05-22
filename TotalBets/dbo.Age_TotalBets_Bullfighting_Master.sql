@@ -13,6 +13,7 @@ AS
 	Original: 
 	Revisions:
 		- 20171024@Paul: Create new [RedmineID: #84690]
+		- 20180522@Paul: Get matches with EventStatus <> 'completed' [RedmineID: #95524]
 
 */
 
@@ -46,7 +47,7 @@ BEGIN
 		WHERE b.srecommend = @CustID
 			AND b.gameID = 1004
 			AND b.statusID IN (0, 1)
-			AND m.EventStatus = 'running'
+			AND m.EventStatus <> 'completed'
 		GROUP BY m.EventDate, m.Match3rdId,
 				m.League3rdId, m.HasLive, m.HomeId, m.AwayId
 		) d
