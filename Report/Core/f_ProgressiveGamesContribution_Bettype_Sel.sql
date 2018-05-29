@@ -15,17 +15,20 @@ RETURNS TABLE
 	Task: Select bettype offer Progressive Games Contribution
 
 	Revisions:
-		- 20180205@Percy: Initialize SP [RedmineID: #89117]
+		- 20180205@Percy: Initialize function [RedmineID: #89117]
+		- 20180529@Percy: Return ContributionBettype [RedmineID: #96053]
 */
 
 RETURN
-	SELECT ProductId, bettype
+	SELECT ProductId, bettype, ContributionBettype
 	FROM (
-		SELECT	DISTINCT s.Bettype, s.ProductID
+		SELECT	DISTINCT s.Bettype, s.ProductID, g.ContributionBettype
 		FROM	bodb02.dbo.SportBettypeMatrix s WITH (NOLOCK)
 				INNER JOIN
 					(
-						SELECT GameType2 AS Bettype FROM DBPRO.bodb02.dbo.GameListRNG WITH (NOLOCK) WHERE IsJackpotGame = 1
+						SELECT CONVERT(INT, GameType2) AS bettype, ContributionBettype
+						FROM DBPRO.bodb02.dbo.GameListRNG WITH (NOLOCK)
+						WHERE IsJackpotGame = 1
 					) g ON s.Bettype = g.Bettype
 	) AS A
 	WHERE
