@@ -20,6 +20,7 @@ AS
 	Revisions:  
 		- 20161111@Paul: Microsite for Report - [Redmine: #66991]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 
 	+ Note: Review index=IX_srecommend when modifying this SP   
 */  
@@ -148,6 +149,16 @@ BEGIN
 			SELECT @FDate = '2016-06-01';	
 		END						
 
+		-- using cte to remove predicate when seek on sum_winloss_old
+		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype) AS
+		(
+			SELECT @FDate AS winlostdate, SportType, BetType
+			FROM #TmpCondSumWL
+			UNION ALL
+			SELECT DATEADD(DAY, 1, winlostdate), SportType, BetType
+			FROM CTE_Winlostdate
+			WHERE winlostdate < @TDate
+		)		
 		INSERT INTO #SAgWinLoss(CustID, TurnOver, GrossComm, MAgTotal, SAgWinlost, Comm)
 		SELECT  CustID,
 				SUM(ABS(TurnOver)) AS TurnOver,
@@ -156,13 +167,16 @@ BEGIN
 				SUM(swinlost) AS SAgWinlost,
 				ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS Comm
 		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
-		WHERE b.Winlostdate BETWEEN @FDate AND @TDate  
+			CROSS APPLY CTE_Winlostdate w
+		WHERE b.winlostdate = w.winlostdate 
 			AND SRecommend = @CustID  
 			AND mrecommend = mrecommend
 			AND recommend = recommend
 			AND RoleID = 3  
-		GROUP BY CustID;
+			AND b.sporttype = w.sporttype
+			AND b.bettype = w.bettype
+		GROUP BY CustID
+		OPTION (MAXRECURSION 0)
 	END  
   
 	SELECT	w.CustID AS CustId,
