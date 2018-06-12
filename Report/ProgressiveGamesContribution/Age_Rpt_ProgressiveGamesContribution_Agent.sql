@@ -21,6 +21,7 @@ AS
 		- 20180205@Percy: Initialize SP [RedmineID: #89117]
 		- 20180420@Percy: Change stake to actual_stake for Contribution formula [RedmineID: #94025]
 		- 20180529@Percy: Change Contribution formula [RedmineID: #96053]
+		- 20180607@Percy: Change Contribution data type [RedmineID: #96053]
 
 	Param's Explanation:
 		@BalanceUpDay: SP do not use, just support web's param (MB-BU)
@@ -39,7 +40,7 @@ BEGIN
 	CREATE TABLE #Contribution
 	(
 		ProductId INT, BetType INT, TurnOver MONEY,
-		Contribution MONEY, ContributionMaster MONEY, ContributionAgent MONEY
+		Contribution DECIMAL(19,8), ContributionMaster MONEY, ContributionAgent MONEY
 	)
 
 	IF @ToDate > @MoveBetsDay
