@@ -51,6 +51,7 @@ BEGIN
 		WHERE
 				bettype IN (1,3,7,8,301,302,303,304)
 				AND mrecommend = @custid
+				AND statusID IN (0,1)
 		GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
 		INNER JOIN bodb02.dbo.match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
 	WHERE	

@@ -30,7 +30,7 @@ BEGIN
 		b.livehomescore,
 		b.liveawayscore,
 		sum(Case when bettype IN (1,301) and betteam = 'h' then Stake else 0 End) AS home_odds_HDP,
-		sum(Case when bettype IN (1,301)and betteam = 'a' then Stake else 0 End) AS away_odds_HDP,
+		sum(Case when bettype IN (1,301) and betteam = 'a' then Stake else 0 End) AS away_odds_HDP,
 		sum(Case when bettype IN (7,303) and betteam = 'h' then Stake else 0 End) AS home_odds_HTHDP,
 		sum(Case when bettype IN (7,303) and betteam = 'a' then Stake else 0 End) AS away_odds_HTHDP,
 		sum(Case when bettype IN (3,302) and betteam = 'h' then Stake else 0 End) AS home_odds_OU,
@@ -51,7 +51,7 @@ BEGIN
 			WHERE
 					bettype IN (1,3,7,8,301,302,303,304)
 					AND srecommend = @custid
-					--AND ruben = 0
+					AND statusID IN (0,1)
 			GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
 		INNER JOIN bodb02.dbo.match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
 	WHERE	
