@@ -10,7 +10,8 @@ AS
 /*
 	Created: 20180617@Percy
 	DB: DBAGE.bodb02
-	TASk: Alpha - Total Bets - Agent view
+	Task: Alpha - Total Bets - Agent view
+	Original: Age_TotalBets_Sel1378_Ag
 
 	Revisions:
 		- 20180617@Percy: Initilize SP [RedmineID: #97037]
@@ -48,7 +49,7 @@ BEGIN
 			liveindicator, livehomescore, liveawayscore,
 			SUM(apositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake,
 			COUNT(*) BetCount
-		FROM	dbo.bettrans WITH (NOLOCK)
+		FROM	dbo.bettrans WITH (NOLOCK, INDEX = IX_betrunning_recommend)
 		WHERE
 				bettype  IN (1,3,7,8,301,302,303,304)
 				AND recommend = @custid
