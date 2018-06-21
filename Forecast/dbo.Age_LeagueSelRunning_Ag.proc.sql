@@ -1,9 +1,5 @@
-﻿USE [bodb02]
-GO
-/****** Object:  StoredProcedure [dbo].[Age_LeagueSelRunning_Ag]    Script Date: 10/7/2015 11:15:12 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_LeagueSelRunning_Ag]
@@ -23,6 +19,7 @@ Revisions:
 	- 20110516@Johnson: expand length of @bettypes parameter
 	- 20150408@Cody: Apply bet radar bettype (167) [Remine: #32734]
 	- 20150826@Winnie: Myanmar Odds
+	- 20180621@Percy: Change status to statusID [RedmineID: #97249]
 */
 SET NOCOUNT ON
 
@@ -38,6 +35,7 @@ from
 where  match.eventstatus in ('running')
 	--and O.oddsstatus = 'running'
 	--and (IsNull(o.liveindicator,0) = 1 or match.kickofftime >= CURRENT_TIMESTAMP)
-	and match.matchid IN(select distinct matchid from bettrans with (nolock) where status in ('running','waiting') and recommend = @AgID and bettype in (select val from dbo.strSplit_Key(@Bettypes,',')))  
+	and match.matchid IN(select distinct matchid from bettrans with (nolock) where statusId in (0,1) and recommend = @AgID and bettype in (select val from dbo.strSplit_Key(@Bettypes,',')))  
 group by  match.leagueid, league.leaguename, match.sporttype
 order by league.leaguename
+GO

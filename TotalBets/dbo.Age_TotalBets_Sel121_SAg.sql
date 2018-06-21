@@ -1,73 +1,68 @@
-﻿CREATE PROCEDURE  [dbo].[Age_TotalBets_Sel1378_SAg]
-	@custid INT,
-	@Language varchar(2) = 'E'
-AS
-/*
-Original: SP eagenttotalbet13
-Task: Retrieve Total Bet values for 1,3,7,8 bet types.
-DB: DBAGE/bodb_AGE
-Revisions:
-	- 20090216@Kiwi: Remove status in ('running', 'waiting') to avoid Key Lookup while using Index named _MS_Sys_38_52_42.
-	- 20130925@Jamie: Change to bodb_Age / bettrans_running 
-*/
-SET NOCOUNT ON 
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
 
-SELECT
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel121_SAg]
+	@custid int,
+	@Language varchar(2) = 'E'
+ AS
+
+/*
+Created: 20120628@Sophia
+Task : Retrieve Total bets for bettype 25: Draw No Bet, 121: Home No Bet, 122: Away No Bet
+DB: DB053.bodb02
+Original: 
+Revisions:
+	- 20121003@Dan: update betteam for 121,122 bettype
+
+Param's Explanation:
+• @CustID: Super AgentID
+*/
+
+SET NOCOUNT ON
+SELECT 
 	m.showtime, 
-	m.leagueID,
-	m.matchcode,
-	b.liveindicator,
-	m.matchid,
-	m.homeID,
-	m.awayID,
+	m.leagueid,
+	m.matchcode, 
+	b.liveindicator, 
 	b.livehomescore,
 	b.liveawayscore,
-	sum(Case when bettype=1 and betteam = 'h' then Stake else 0 End) AS home_odds_HDP,
-	sum(Case when bettype=1 and betteam = 'a' then Stake else 0 End) AS away_odds_HDP,
-	sum(Case when bettype=7 and betteam = 'h' then Stake else 0 End) AS home_odds_HTHDP,
-	sum(Case when bettype=7 and betteam = 'a' then Stake else 0 End) AS away_odds_HTHDP,
-	sum(Case when bettype=3 and betteam = 'h' then Stake else 0 End) AS home_odds_OU,
-	sum(Case when bettype=3 and betteam = 'a' then Stake else 0 End) AS away_odds_OU,
-	sum(Case when bettype=8 and betteam = 'h' then Stake else 0 End) AS home_odds_HTOU,
-	sum(Case when bettype=8 and betteam = 'a' then Stake else 0 End) AS away_odds_HTOU,
-	sum(case when bettype=1 then BetCount else 0 end) as BetCount_HDP,
-	sum(case when bettype=7 then BetCount else 0 end) as BetCount_HTHDP,
-	sum(case when bettype=3 then BetCount else 0 end) as BetCount_OU,
-	sum(case when bettype=8 then BetCount else 0 end) as BetCount_HTOU,
+	m.matchid,
+	m.homeid,
+	m.awayid,
+
+	sum(Case when bettype=25 and betteam = 'h' then  (b.spositiontaking)*stake   else 0 end) AS home_odds_DNB,
+	sum(Case when bettype=25 and betteam = 'a' then  (b.spositiontaking)*stake   else 0 end) AS away_odds_DNB,
+
+	sum(Case when bettype=121 and betteam = 'x' then  (b.spositiontaking)*stake   else 0 end) AS home_odds_HNB,
+	sum(Case when bettype=121 and betteam = 'a' then  (b.spositiontaking)*stake   else 0 end) AS away_odds_HNB,
+	
+	sum(Case when bettype=122 and betteam = 'h' then  (b.spositiontaking)*stake   else 0 end) AS home_odds_ANB,
+	sum(Case when bettype=122 and betteam = 'x' then  (b.spositiontaking)*stake   else 0 end) AS away_odds_ANB,
+
+	sum(case when bettype=25 then 1 else 0 end) as BetCount_DNB,
+	sum(case when bettype=121 then 1 else 0 end) as BetCount_HNB,
+	sum(case when bettype=122 then 1 else 0 end) as BetCount_ANB,
+	
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 FROM
-	(	SELECT
-			matchid, bettype, betteam,
-			liveindicator, livehomescore, liveawayscore,
-			SUM(spositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake, COUNT(*) BetCount
-		FROM	dbo.bettrans_running with (nolock)
-		WHERE
-				bettype IN (1,3,7,8)
-				AND srecommend = @custid
-				--AND ruben = 0
-		GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
-	INNER JOIN bodb02.dbo.match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
-WHERE	
-	m.eventstatus = 'running'	
-	
-GROUP BY
-	m.showtime, 
-	m.leagueID,
-	m.matchcode,
-	b.liveindicator,
-	m.matchid,
-	m.homeID,
-	m.awayID,
+	bettrans AS b  WITH (NOLOCK)
+	INNER JOIN match AS m  WITH (NOLOCK) ON m.matchid = b.matchid and m.eventstatus='running'
+WHERE  	
+	b.srecommend=@custid 
+	AND m.eventstatus='running'
+	AND b.bettype in (25,121,122)
+	AND b.statusID in (0,1)
+	AND b.ruben = 0
+group by b.liveindicator, 
 	b.livehomescore,
 	b.liveawayscore,
+	m.homeid,
+	m.awayid,
+	m.matchid,
+	m.matchcode, 
+	m.leagueid,
+	m.showtime,
 	m.isNeutral
-ORDER BY	
-	b.liveindicator desc,m.matchcode
-
-
+order by b.liveindicator desc, m.matchcode
 GO
-GRANT EXECUTE ON [dbo].[Age_TotalBets_Sel1378_SAg] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_TotalBets_Sel1378_SAg] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_TotalBets_Sel1378_SAg] TO [vnteam] AS [dbo]
