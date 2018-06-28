@@ -18,6 +18,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20171020@Percy: get both running and waiting tickets [RedmineID: #84690]
 		- 20180625@Sophia: Modify to use index IX_srecommend (support move to DB052 - backup plan) [Redmine: #97391]
+		- 20180628@Sophia: Not to use IX_srecommend, change StatusID instead of Ruben - to use new index on DB052 [IX_betrunning_mrecommend]  [Redmine: #97391]
 */
 
 BEGIN
@@ -34,11 +35,6 @@ BEGIN
 	SELECT bettype, RefTable
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest);
 	
-	DECLARE @srecommend INT
-	SELECT 	@srecommend = srecommend
-	FROM 	dbo.CustInfo WITH (NOLOCK)
-	WHERE 	mrecommend = @CustID
-
 	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY);
  
 	-- bettrans
@@ -55,8 +51,7 @@ BEGIN
 			FROM #SportBettype s
 			WHERE s.RefTable = 0 AND s.bettype = b.bettype
 		) -- bet tickets
-		AND mrecommend =  @CustID
-		AND srecommend = @srecommend
+		AND mrecommend =  @CustID		
 	GROUP BY recommend;
 	
 	-- translog
