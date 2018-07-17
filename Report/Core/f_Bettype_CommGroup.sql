@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -19,6 +19,7 @@ AS
 		- 20171020@Percy: Add Bullfighting [RedmineID: #84690]
 		- 20171215@Percy: Add missing some bettypes of Sportbook [RedmineID: #87947]
 		- 20180315@Percy: Add bettypes of FM2 [RedmineID: #91902]
+		- 20180717@Louis: Add bettypes of Poker Games [RedmineID: #97785]
 	
 	- Columns:
 		- CommGroup:
@@ -109,6 +110,7 @@ FROM (
 		OR typeid BETWEEN 2501 AND 2699
 		OR typeid BETWEEN 2901 AND 2999
 		OR typeid BETWEEN 1600 AND 1610
+		OR typeid BETWEEN 1401 AND 1499
 
 	UNION ALL
 	SELECT bettype, 5 AS CommGroup -- MO_comm
