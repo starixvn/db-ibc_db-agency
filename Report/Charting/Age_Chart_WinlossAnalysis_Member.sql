@@ -20,6 +20,7 @@ AS
 		- 20170503@Paul: Create new [RedmineID: #75425]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170728@Paul: Return 0 if that month has no data [RedmineID: #80779]
+		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 */
 
 BEGIN
@@ -157,20 +158,31 @@ BEGIN
 		BEGIN
 			SELECT @FDate = '2016-06-01';	
 		END
-			
+
+		-- using cte to remove predicate when seek on sum_winloss_old
+		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype) AS
+		(
+			SELECT @FDate AS winlostdate, SportType, BetType
+			FROM #TmpCondSumWL
+			UNION ALL
+			SELECT DATEADD(DAY, 1, winlostdate), SportType, BetType
+			FROM CTE_Winlostdate
+			WHERE winlostdate < @TDate
+		)			
 		INSERT INTO #AgencyWinloss(winlossdate, turnover, winloss)
-		SELECT	winlostdate,
+		SELECT	b.winlostdate,
 				ABS(turnover) AS turnover,
 				awinlost + comm - playercomm AS winloss
 		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK)
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
-		WHERE winlostdate BETWEEN @FDate AND @TDate
+			CROSS APPLY CTE_Winlostdate w
+		WHERE b.winlostdate = w.winlostdate 
 			AND srecommend = @Srecommend  
 			AND mrecommend = @mrecommend 
-			AND recommend = @CID   
-			AND b.sporttype = b.sporttype
-			AND b.bettype = b.bettype
-			AND roleid = 2;
+			AND recommend = @CID   			
+			AND roleid = 2
+			AND b.sporttype = w.sporttype
+			AND b.bettype = w.bettype 
+		OPTION (MAXRECURSION 0)
 	END
 
 	UPDATE r
