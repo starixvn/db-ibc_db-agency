@@ -14,6 +14,7 @@ AS
 	
 	Revisions:
 		- 20171020@Percy: Apply core sp [RedmineID: #84690]
+		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 */
 
 BEGIN
@@ -50,7 +51,7 @@ BEGIN
 	CREATE TABLE #Outstanding (superOutstanding MONEY, masterOutstanding MONEY, agentOutstanding MONEY, memberOutstanding MONEY)
 
 	INSERT INTO #Outstanding (superOutstanding, masterOutstanding, agentOutstanding, memberOutstanding)
-	EXEC dbo.Acc_CustomerSelOutstanding @CustId = @CustId
+		EXEC dbo.Age_CustomerSelOutstanding @CustId = @CustId
 
 	SELECT
 		SUM(agentOutstanding)	AS outStanding,

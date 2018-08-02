@@ -17,6 +17,7 @@ AS
 		- 20161219@Paul: Create new [RedmineID: #68723]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20171020@Percy: get both running and waiting tickets [RedmineID: #84690]
+		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 */
 
 BEGIN
@@ -33,13 +34,6 @@ BEGIN
 	SELECT bettype, RefTable
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest);
 
-	DECLARE @mrecommend TABLE (CustId INT PRIMARY KEY);
-
-	INSERT INTO @mrecommend (CustId)
-	SELECT CustId 
-	FROM dbo.custInfo (NOLOCK) 
-	WHERE roleid = 3 AND srecommend = @CustID;
-
 	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY);
 
 	-- bettrans
@@ -49,13 +43,13 @@ BEGIN
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettrans b WITH (NOLOCK)  
-	WHERE ruben = 0
+	WHERE statusId IN (0, 1)
 		AND EXISTS (
 			SELECT 1
 			FROM #SportBettype s
 			WHERE s.RefTable = 0 AND s.bettype = b.bettype
 		) -- bet tickets
-		AND srecommend =  @CustID		
+		AND srecommend = @CustID		
 	GROUP BY mrecommend;
 	
 	-- translog
@@ -65,8 +59,8 @@ BEGIN
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.translog t WITH (NOLOCK)
-		INNER JOIN @mrecommend m ON t.mrecommend = m.CustId
 	WHERE t.statusID IN (0, 1)
+		AND t.srecommend = @CustID
 		AND EXISTS (
 			SELECT 1
 			FROM #SportBettype s
