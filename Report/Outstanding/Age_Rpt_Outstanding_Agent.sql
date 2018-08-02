@@ -17,6 +17,7 @@ AS
 		- 20161219@Paul: Create new [RedmineID: #68723]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20171020@Percy: get both running and waiting tickets [RedmineID: #84690]
+		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 */
 
 BEGIN
@@ -43,7 +44,7 @@ BEGIN
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettrans b WITH (NOLOCK)  
-	WHERE ruben = 0
+	WHERE statusId IN (0, 1)
 		AND EXISTS (
 			SELECT 1
 			FROM #SportBettype s

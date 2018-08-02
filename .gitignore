@@ -10,6 +10,9 @@
 *.backup
 *.del
 *.delete
+*.suo
+*.sqlite
+*.json
 del/
 delete/
 bk/
