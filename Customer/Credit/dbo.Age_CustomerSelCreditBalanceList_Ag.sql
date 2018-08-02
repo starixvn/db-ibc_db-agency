@@ -10,7 +10,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_Ag]
 	@Enabled	BIT = NULL,
 	@Closed		BIT = NULL,
 	@Suspended	BIT = NULL,
-	@TotalPages INT = 0 OUTPUT
+	@TotalItems INT = 0 OUTPUT
 AS
 /*
 Task : Credit/Balance of Agent
@@ -50,236 +50,241 @@ Param's Explanation:
 • @CustID: AgentID
 
 */
-SET NOCOUNT ON
-
-DECLARE @isTest BIT
-SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
-
-CREATE TABLE #SportBettype (bettype INT PRIMARY KEY, RefTable TINYINT)
-INSERT INTO #SportBettype (bettype, RefTable)
-SELECT DISTINCT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
-
-DECLARE /* @ABSDate DATETIME,*/
-		@today SMALLDATETIME,
-		@yesterday SMALLDATETIME
-
--- SET @ABSDate = '2011-09-01'
-SELECT @today = CONVERT(DATE, GETDATE())
-SELECT @yesterday = DATEADD(DD, -1, @today)
-
-DECLARE @RowCount INT, @RowStart INT, @RowEnd INT
-SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
-
-CREATE TABLE #tmp_customer
-(
-	[RowNumber]		INT,
-	[custid]		INT PRIMARY KEY,
-	[enabled]		BIT,
-	[username]		VARCHAR(30),
-	[closed]		BIT,
-	[suspended]		BIT,
-	[credit]		MONEY NULL
-)
-
-
-CREATE TABLE #balance
-(
-	custid		INT PRIMARY KEY,
-	outstanding MONEY,		
-	balance		MONEY,
-	turnover	MONEY
-) 
-
-
---Filter user
-IF @Username = ''
-	INSERT INTO #tmp_customer
-	SELECT ROW_NUMBER() OVER (
-			ORDER BY ci.enabled DESC
-				,ci.closed
-				,isnull(ci.reject, 0)
-				,ci.username
-			) AS RowNumber
-		,ci.custid
-		,ci.enabled
-		,ci.username
-		,ci.closed
-		,isnull(ci.reject, 0) AS suspended
-		,ci.credit
-	FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
-	WHERE 1 = ci.roleid AND @CustID = ci.recommend AND enabled = CASE 
-			WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
-			ELSE coalesce(@enabled, enabled)
-			END AND isnull(ci.closed, 0) = CASE 
-			WHEN @suspended = 1 THEN 0
-			ELSE coalesce(@closed, isnull(ci.closed, 0))
-			END AND isnull(ci.reject, 0) = CASE 
-			WHEN @Closed = 0 THEN 0
-			ELSE coalesce(@suspended, isnull(ci.reject, 0))
-			END
-ELSE
-	INSERT INTO #tmp_customer
-	SELECT ROW_NUMBER() OVER (
-			ORDER BY ci.enabled DESC
-				,ci.closed
-				,isnull(ci.reject, 0)
-				,ci.username
-			) AS RowNumber
-		,ci.custid
-		,ci.enabled
-		,ci.username
-		,ci.closed
-		,isnull(ci.reject, 0) AS suspended
-		,ci.credit
-	FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
-	WHERE 1 = ci.roleid AND @CustID = ci.recommend AND ci.username LIKE '%' + @Username + '%' AND enabled = CASE 
-			WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
-			ELSE coalesce(@enabled, enabled)
-			END AND isnull(ci.closed, 0) = CASE 
-			WHEN @suspended = 1 THEN 0
-			ELSE coalesce(@closed, isnull(ci.closed, 0))
-			END AND isnull(ci.reject, 0) = CASE 
-			WHEN @Closed = 0 THEN 0
-			ELSE coalesce(@suspended, isnull(ci.reject, 0))
-			END
- 
-
-;WITH rt AS
-(		
-	SELECT
-			 a.Custid, 
-			 SUM(CASE WHEN s.bettype IS NULL THEN outstanding ELSE 0 END) AS outstanding,  
-			 SUM(CASE WHEN ISNULL(s.RefTable, 3) = 3 THEN balance ELSE balanceBeforeYesterday END) AS balance, 
-			 SUM(
-				CASE WHEN ISNULL(s.RefTable, 0) = 0 THEN turnoverRubenAll
-					WHEN s.RefTable = 3 THEN turnoverRuben1
-					ELSE turnoverBeforeYesterday
-				END
-			 ) AS turnover
-		FROM (
-				SELECT b.Custid,b.matchID, Bettype,
-					ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) ELSE 0 END), 0) outstanding,
-					ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance,
-					ISNULL(SUM(CASE WHEN ruben = 1 AND winlostdate < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balanceBeforeYesterday,
-					ISNULL(SUM(CASE WHEN matchid > 0 THEN ABS(stake) ELSE 0 END), 0) turnoverRubenAll,
-					ISNULL(SUM(CASE WHEN matchid > 0 AND ruben = 1 THEN ABS(stake) ELSE 0 END), 0) turnoverRuben1,
-					ISNULL(SUM(CASE WHEN matchid > 0 AND winlostdate < @yesterday THEN ABS(stake) ELSE 0 END), 0) turnoverBeforeYesterday
-				FROM  (SELECT TOP (@PageSize) CustID FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) c
-				INNER JOIN bettrans b WITH (NOLOCK) ON c.CustID = b.CustID
-				GROUP BY b.custid,b.matchID, Bettype
-			) a
-		LEFT JOIN #SportBettype  s ON s.bettype = a.bettype AND s.RefTable <> 0 
-		GROUP BY a.Custid 
-	
-	UNION ALL
-	SELECT custid
-		,ISNULL(SUM(ABS(actual_stake)), 0) outstanding
-		,0 balance
-		,0 turnover
-	FROM  translog WITH (NOLOCK)
-	WHERE statusid IN (0,1) AND recommend = @custid
-	GROUP BY custid
-
-	UNION ALL
-	SELECT custid
-		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
-		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
-		,ISNULL(SUM(ABS(stake)),0) turnover
-	FROM  bettransRNG WITH (NOLOCK)
-	WHERE recommend = @custid
-		AND (
-				statusID IN (0, 1)
-				OR winlostdate >= @yesterday
-			)
-	GROUP BY custid
-
-	UNION ALL
-	SELECT custid
-		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
-		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-		,ISNULL(SUM(ABS(stake)),0) turnover
-	FROM  bettransLC WITH (NOLOCK)
-	WHERE recommend = @custid
-		AND (
-				statusID IN (0, 1)
-				OR winlostdate >= @yesterday
-			)
-	GROUP BY custid
-)
-INSERT INTO #balance
-SELECT custid,
-	SUM(outstanding),
-	SUM(balance),
-	SUM(turnover)
-FROM rt
-GROUP BY custid
- 
-
-CREATE TABLE #today_balance
-(
-	custid	INT PRIMARY KEY,
-	balance MONEY
-)
-
-;WITH today_balance AS (
-	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
-	FROM   bettrans WITH (NOLOCK)
-	WHERE  recommend = @CustID AND ruben = 1 AND bettype IN (SELECT bettype FROM #SportBettype WHERE RefTable IN(0,3))
-		AND winlostdate = @today
-	GROUP BY custid
-	UNION ALL
-	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
-	FROM   bettransRNG WITH (NOLOCK)
-	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) 
-		AND winlostdate = @today
-	GROUP BY custid
-	UNION ALL
-	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
-	FROM   bettransLC WITH (NOLOCK)
-	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) 
-		AND winlostdate = @today
-	GROUP BY custid
-)
-INSERT INTO #today_balance
-SELECT	custid, SUM(balance) AS balance
-FROM	today_balance
-GROUP BY custid
-
-
-IF @TotalPages = 0
 BEGIN
-	SELECT @TotalPages = count(1)
-		,@TotalPages = @TotalPages / @PageSize + CASE 
-			WHEN @TotalPages % @PageSize > 0 THEN 1
-			ELSE 0
-			END
-	FROM #tmp_customer
+	SET NOCOUNT ON
+
+	DECLARE @isTest BIT
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+
+	CREATE TABLE #SportBettype (bettype INT PRIMARY KEY, RefTable TINYINT)
+	INSERT INTO #SportBettype (bettype, RefTable)
+	SELECT DISTINCT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0, 0, 0, 2, '', '', @isTest)
+
+	DECLARE /* @ABSDate DATETIME,*/
+			@today SMALLDATETIME,
+			@yesterday SMALLDATETIME
+
+	-- SET @ABSDate = '2011-09-01'
+	SELECT @today = CONVERT(DATE, GETDATE())
+	SELECT @yesterday = DATEADD(DD, -1, @today)
+
+	DECLARE @RowCount INT, @RowStart INT, @RowEnd INT
+	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
+
+	CREATE TABLE #tmp_customer
+	(
+		[RowNumber]		INT,
+		[custid]		INT PRIMARY KEY,
+		[enabled]		BIT,
+		[username]		VARCHAR(30),
+		[closed]		BIT,
+		[suspended]		BIT,
+		[credit]		MONEY NULL
+	)
+
+
+	CREATE TABLE #balance
+	(
+		custid		INT PRIMARY KEY,
+		outstanding MONEY,		
+		balance		MONEY,
+		turnover	MONEY
+	) 
+
+	SET @Username = ISNULL(@Username, '')
+
+	--Filter user
+	IF @Username = ''
+		INSERT INTO #tmp_customer
+		SELECT ROW_NUMBER() OVER (
+				ORDER BY ci.enabled DESC
+					,ci.closed
+					,isnull(ci.reject, 0)
+					,ci.username
+				) AS RowNumber
+			,ci.custid
+			,ci.enabled
+			,ci.username
+			,ci.closed
+			,isnull(ci.reject, 0) AS suspended
+			,ci.credit
+		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		WHERE 1 = ci.roleid AND @CustID = ci.recommend AND enabled = CASE 
+				WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
+				ELSE coalesce(@enabled, enabled)
+				END AND isnull(ci.closed, 0) = CASE 
+				WHEN @suspended = 1 THEN 0
+				ELSE coalesce(@closed, isnull(ci.closed, 0))
+				END AND isnull(ci.reject, 0) = CASE 
+				WHEN @Closed = 0 THEN 0
+				ELSE coalesce(@suspended, isnull(ci.reject, 0))
+				END
+	ELSE
+		INSERT INTO #tmp_customer
+		SELECT ROW_NUMBER() OVER (
+				ORDER BY ci.enabled DESC
+					,ci.closed
+					,isnull(ci.reject, 0)
+					,ci.username
+				) AS RowNumber
+			,ci.custid
+			,ci.enabled
+			,ci.username
+			,ci.closed
+			,isnull(ci.reject, 0) AS suspended
+			,ci.credit
+		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		WHERE 1 = ci.roleid AND @CustID = ci.recommend AND ci.username LIKE '%' + @Username + '%' AND enabled = CASE 
+				WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
+				ELSE coalesce(@enabled, enabled)
+				END AND isnull(ci.closed, 0) = CASE 
+				WHEN @suspended = 1 THEN 0
+				ELSE coalesce(@closed, isnull(ci.closed, 0))
+				END AND isnull(ci.reject, 0) = CASE 
+				WHEN @Closed = 0 THEN 0
+				ELSE coalesce(@suspended, isnull(ci.reject, 0))
+				END
+ 
+
+	;WITH rt AS
+	(		
+		SELECT
+				 a.Custid, 
+				 SUM(CASE WHEN s.bettype IS NULL THEN outstanding ELSE 0 END) AS outstanding,  
+				 SUM(CASE WHEN ISNULL(s.RefTable, 3) = 3 THEN balance ELSE balanceBeforeYesterday END) AS balance, 
+				 SUM(
+					CASE WHEN ISNULL(s.RefTable, 0) = 0 THEN turnoverRubenAll
+						WHEN s.RefTable = 3 THEN turnoverRuben1
+						ELSE turnoverBeforeYesterday
+					END
+				 ) AS turnover
+			FROM (
+					SELECT b.Custid,b.matchID, Bettype,
+						ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) ELSE 0 END), 0) outstanding,
+						ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance,
+						ISNULL(SUM(CASE WHEN ruben = 1 AND winlostdate < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balanceBeforeYesterday,
+						ISNULL(SUM(CASE WHEN matchid > 0 THEN ABS(stake) ELSE 0 END), 0) turnoverRubenAll,
+						ISNULL(SUM(CASE WHEN matchid > 0 AND ruben = 1 THEN ABS(stake) ELSE 0 END), 0) turnoverRuben1,
+						ISNULL(SUM(CASE WHEN matchid > 0 AND winlostdate < @yesterday THEN ABS(stake) ELSE 0 END), 0) turnoverBeforeYesterday
+					FROM  (SELECT TOP (@PageSize) CustID FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) c
+					INNER JOIN bettrans b WITH (NOLOCK) ON c.CustID = b.CustID
+					GROUP BY b.custid,b.matchID, Bettype
+				) a
+			LEFT JOIN #SportBettype  s ON s.bettype = a.bettype AND s.RefTable <> 0 
+			GROUP BY a.Custid 
+	
+		UNION ALL
+		SELECT custid
+			,ISNULL(SUM(ABS(actual_stake)), 0) outstanding
+			,0 balance
+			,0 turnover
+		FROM  translog WITH (NOLOCK)
+		WHERE statusid IN (0,1) AND recommend = @custid
+		GROUP BY custid
+
+		UNION ALL
+		SELECT custid
+			,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
+			,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
+			,ISNULL(SUM(ABS(stake)),0) turnover
+		FROM  bettransRNG WITH (NOLOCK)
+		WHERE recommend = @custid
+			AND (
+					statusID IN (0, 1)
+					OR winlostdate >= @yesterday
+				)
+		GROUP BY custid
+
+		UNION ALL
+		SELECT custid
+			,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
+			,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
+			,ISNULL(SUM(ABS(stake)),0) turnover
+		FROM  bettransLC WITH (NOLOCK)
+		WHERE recommend = @custid
+			AND (
+					statusID IN (0, 1)
+					OR winlostdate >= @yesterday
+				)
+		GROUP BY custid
+	)
+	INSERT INTO #balance
+	SELECT custid,
+		SUM(outstanding),
+		SUM(balance),
+		SUM(turnover)
+	FROM rt
+	GROUP BY custid
+ 
+
+	CREATE TABLE #today_balance
+	(
+		custid	INT PRIMARY KEY,
+		balance MONEY
+	)
+
+	;WITH today_balance AS (
+		SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
+		FROM   bettrans WITH (NOLOCK)
+		WHERE  recommend = @CustID AND ruben = 1 AND bettype IN (SELECT bettype FROM #SportBettype WHERE RefTable IN(0,3))
+			AND winlostdate = @today
+		GROUP BY custid
+		UNION ALL
+		SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
+		FROM   bettransRNG WITH (NOLOCK)
+		WHERE  recommend = @CustID AND statusID NOT IN (0, 1) 
+			AND winlostdate = @today
+		GROUP BY custid
+		UNION ALL
+		SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
+		FROM   bettransLC WITH (NOLOCK)
+		WHERE  recommend = @CustID AND statusID NOT IN (0, 1) 
+			AND winlostdate = @today
+		GROUP BY custid
+	)
+	INSERT INTO #today_balance
+	SELECT	custid, SUM(balance) AS balance
+	FROM	today_balance
+	GROUP BY custid
+
+
+	IF @TotalItems = 0
+	BEGIN
+		SELECT @TotalItems = count(1)
+		FROM #tmp_customer
+	END
+
+	SELECT RowNumber
+			,ci.username
+			,ci.enabled
+			,isnull(c.iplogin, '') AS iplogin
+			,ci.custid
+			,ci.closed closed
+			,ci.suspended
+			,c.firstname
+			,c.lastname
+			,isnull(balance.outstanding, 0) outstanding
+			,isnull(balance.balance, 0) balance
+			,isnull(balance.balance, 0) - isnull(today_balance.balance, 0) yesterday_balance
+			,isnull(balance.balance, 0) + isnull(ci.credit, 0) - isnull(balance.outstanding, 0) betCredit
+			,isnull(balance.turnover, 0) AS turnover
+			,isnull(ci.credit, 0) AS credit
+			,CONVERT(NVARCHAR(30), c.lastlogged, 121) AS lastlogged
+		FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
+			JOIN Customer c (NOLOCK) ON ci.custid = c.custid
+			LEFT JOIN #balance AS balance ON c.custid = balance.custid
+			LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
+		ORDER BY RowNumber
+
+	DROP TABLE #balance
+	DROP TABLE #today_balance
+	DROP TABLE #tmp_customer
+	DROP TABLE #SportBettype
 END
+GO
 
-SELECT RowNumber
-		,ci.username
-		,ci.enabled
-		,isnull(c.iplogin, '') AS iplogin
-		,ci.custid
-		,ci.closed closed
-		,ci.suspended
-		,c.firstname
-		,c.lastname
-		,isnull(balance.outstanding, 0) outstanding
-		,isnull(balance.balance, 0) balance
-		,isnull(balance.balance, 0) - isnull(today_balance.balance, 0) yesterday_balance
-		,isnull(balance.balance, 0) + isnull(ci.credit, 0) - isnull(balance.outstanding, 0) betCredit
-		,isnull(balance.turnover, 0) AS turnover
-		,isnull(ci.credit, 0) AS credit
-		,CONVERT(NVARCHAR(30), c.lastlogged, 121) AS lastlogged
-	FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
-		JOIN Customer c (NOLOCK) ON ci.custid = c.custid
-		LEFT JOIN #balance AS balance ON c.custid = balance.custid
-		LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
-	ORDER BY RowNumber
+GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [bodbDownlineNet] AS [dbo]
+GO
 
-DROP TABLE #balance
-DROP TABLE #today_balance
-DROP TABLE #tmp_customer
-DROP TABLE #SportBettype
+GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_Ag] TO [bodbDownlineNetView] AS [dbo]
 GO

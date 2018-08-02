@@ -10,7 +10,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
-CREATE PROCEDURE [dbo].[Age_CustomerSelCreditBalNetPosition_Ag]
+ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalNetPosition_Ag]
 	@CustID		INT,
 	@PageSize	INT = 500,
 	@PageIndex	INT = 1,
@@ -51,15 +51,18 @@ BEGIN
 					) AS RowNumber
 				,ci.custid
 			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK)
-			WHERE 1 = ci.roleid AND @CustID = ci.recommend AND enabled = CASE 
-					WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
-					ELSE coalesce(@enabled, enabled)
-					END AND isnull(ci.closed, 0) = CASE 
-					WHEN @suspended = 1 THEN 0
-					ELSE coalesce(@closed, isnull(ci.closed, 0))
-					END AND isnull(ci.reject, 0) = CASE 
-					WHEN @Closed = 0 THEN 0
-					ELSE coalesce(@suspended, isnull(ci.reject, 0))
+			WHERE ci.roleid = 1 AND ci.recommend = @CustID
+				AND enabled = CASE 
+						WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
+						ELSE coalesce(@enabled, enabled)
+					END
+				AND isnull(ci.closed, 0) = CASE 
+						WHEN @suspended = 1 THEN 0
+						ELSE coalesce(@closed, isnull(ci.closed, 0))
+					END
+				AND isnull(ci.reject, 0) = CASE 
+						WHEN @Closed = 0 THEN 0
+						ELSE coalesce(@suspended, isnull(ci.reject, 0))
 					END
 		) a
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
@@ -75,15 +78,19 @@ BEGIN
 					) AS RowNumber
 				,ci.custid
 			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK)
-			WHERE 1 = ci.roleid AND @CustID = ci.recommend AND ci.username LIKE '%' + @Username + '%' AND enabled = CASE 
-					WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
-					ELSE coalesce(@enabled, enabled)
-					END AND isnull(ci.closed, 0) = CASE 
-					WHEN @suspended = 1 THEN 0
-					ELSE coalesce(@closed, isnull(ci.closed, 0))
-					END AND isnull(ci.reject, 0) = CASE 
-					WHEN @Closed = 0 THEN 0
-					ELSE coalesce(@suspended, isnull(ci.reject, 0))
+			WHERE ci.roleid = 1 AND ci.recommend = @CustID
+				AND ci.username LIKE '%' + @Username + '%'
+				AND enabled = CASE 
+						WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
+						ELSE coalesce(@enabled, enabled)
+					END
+				AND isnull(ci.closed, 0) = CASE 
+						WHEN @suspended = 1 THEN 0
+						ELSE coalesce(@closed, isnull(ci.closed, 0))
+					END
+				AND isnull(ci.reject, 0) = CASE 
+						WHEN @Closed = 0 THEN 0
+						ELSE coalesce(@suspended, isnull(ci.reject, 0))
 					END
 		) a
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
