@@ -1,4 +1,5 @@
-﻿Alter PROCEDURE [dbo].[Age_TotalBets_Sel6_Ag]
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
+Alter PROCEDURE [dbo].[Age_TotalBets_Sel6_Ag]
 	@custid int,
 	@Language varchar(2) = 'E'
 AS
@@ -14,6 +15,8 @@ Revisions:
 	- 20111122@Sophia: Add Checktime and SecAcceptFlag to show status waiting or running
 	- 20140416@Dom: Add First Half Total Goal (1H Total Goal) (126)
 	- 20140814@Dom:  [Redmine: #19661] Offering 11 new bettypes - Include 7&Over, 4&over
+	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+	
 */					 
 SET NOCOUNT ON
 SELECT   
@@ -36,19 +39,18 @@ SELECT
 
 	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 	
-FROM  bettrans with (nolock)
-	inner join match m with (nolock) on m.matchid = bettrans.matchid 
+FROM  bettrans WITH (NOLOCK, INDEX = IX_betrunning_recommend)
+	inner join match m WITH (NOLOCK) ON m.matchid = bettrans.matchid 
 
 WHERE    
 	bettrans.recommend=@custid 
 	AND bettrans.bettype IN (6,126) 
 	AND m.eventstatus = 'running'
 	--AND bettrans.status = 'running'
-	AND bettrans.statusID = 0  
+	AND bettrans.statusID IN (0,1)
 	AND (	IsNull(bettrans.SecAcceptFlag, 0) = 0	
 			OR (IsNull(bettrans.SecAcceptFlag, 0) = 1 AND IsNull(bettrans.checktime, CURRENT_TIMESTAMP) <= CURRENT_TIMESTAMP )
 		)
-	AND bettrans.ruben = 0
 GROUP BY
 	bettrans.matchid,
 	m.homeid,

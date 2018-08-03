@@ -1,7 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_SAg]
  	@srecommend INT, 	
  	@matchids	VARCHAR(4000) = '',
@@ -31,6 +28,7 @@ AS
 		- 20160509@Percy: Re-calculate 1H Correct Score [RedmineID: #48785]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
+		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -75,6 +73,12 @@ BEGIN
 		oddsspread MONEY
 	)
 	
+	;WITH bettype_tmp (bettype, liveindicator) as 
+	(
+		SELECT val, 1 FROM strSplit(@bettypes_live,',')
+		UNION ALL
+		SELECT val, 0 FROM strSplit(@bettypes_dead,',')
+	)
 	-- get member tickets INTO temp TABLE	
 	INSERT INTO @tmpBettrans 
 	SELECT
@@ -82,23 +86,20 @@ BEGIN
 		betteam,
 		matchid,
 		custid,
-		bettype,
+		b.bettype,
 		hdp1,
 		hdp2,
 		odds,
 		stake,
-		liveindicator,
+		b.liveindicator,
 		livehomescore,
 		liveawayscore,
 		spositiontaking,
 		oddsspread
 	FROM bettrans b WITH (NOLOCK)	
+		INNER JOIN bettype_tmp bt ON bt.bettype = b.bettype AND bt.liveindicator = b.liveindicator
 	WHERE b.matchid IN (SELECT val FROM strSplit(@matchids , ','))
 		AND b.srecommend = @srecommend
-		AND (( b.bettype IN (SELECT val FROM strSplit(@bettypes_live,',')) AND liveindicator = 1) 
-				OR (b.bettype IN (SELECT val FROM strSplit(@bettypes_dead,',')) AND liveindicator = 0)
-			)
-		AND b.ruben = 0
 		AND b.statusid IN (0,1)
 		AND b.spositiontaking > 0 -- get tickets that agent get PT on these.
 				

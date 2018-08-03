@@ -1,6 +1,4 @@
-﻿USE bodb02
-GO
-
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel25_Ag]
 	@custid int,
 	@Language varchar(2) = 'E'
@@ -15,6 +13,8 @@ Revisions:
 	- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 	- 20120626@Sophia: Add new bettype 123 for Draw/No Draw
 	- 20150408@Cody: Apply bet radar bettype (157, 167) [Remine: #32734]
+	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
+	
 Param's Explanation:
 • @CustID: AgentID
 */
@@ -64,7 +64,6 @@ where
 	a.bettype in (2, 12, 5, 15, 123, 157, 167)
 	--AND a.status in('running','waiting')
 	AND a.statusID in (0,1)
-	and a.ruben = 0
 group by a.liveindicator, 
 	a.livehomescore,
 	a.liveawayscore,

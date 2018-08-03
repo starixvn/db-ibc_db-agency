@@ -1,7 +1,5 @@
-﻿ USE bodb02
-GO
-
-ALTER PROCEDURE Age_Forecast1x2_SelByLeague_Ag
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
+ALTER PROCEDURE [dbo].[Age_Forecast1x2_SelByLeague_Ag]
 	@leagueid int,
 	@custid int
 AS
@@ -14,6 +12,8 @@ Revisions:
 	-- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 	- 20110520@Johnson: change the type of variables @Bettype1x2, @BettypeHT1x2 to int
 	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
+	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+	Sample: exec Age_Forecast1x2_SelByLeague_Ag 1,1
 */
 BEGIN
 	SET NOCOUNT ON
@@ -54,23 +54,18 @@ BEGIN
 			sum(case when betteam='1' and tblBetType.isHT = 1 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.apositiontaking) else 0 end) ht_homelose,
 			sum(case when betteam='2' and tblBetType.isHT = 1 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.apositiontaking) else 0 end) ht_awaylose,
 			sum(case when betteam='x' and tblBetType.isHT = 1 then (case when odds < 0 then abs(odds - 1) else 1 end)  * stake * (b.apositiontaking) else 0 end) ht_drawlose
-		from dbo.bettrans b with(nolock)
+		from dbo.bettrans b WITH(NOLOCK, INDEX = IX_betrunning_recommend )
 			inner join dbo.Match M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
 			INNER JOIN @tblBetType tblBetType ON b.bettype = tblBetType.BetType
-		where --b.bettype in (@Bettype1x2, @BettypeHT1x2)
-			--AND LeagueID = @LeagueID
-			M.LeagueID = @LeagueID
+		where M.LeagueID = @LeagueID
 			AND b.recommend = @custid
-			--AND b.status in ('running','waiting')
 			and b.statusID in (0,1)
-			AND b.ruben = 0
 			
 		group by b.liveindicator, b.currency ,m.MatchID, m.homeid, m.awayid,	
 			b.liveindicator, b.LiveHomeScore,b.LiveAwayScore,M.ShowTime,M.MatchCode,m.isNeutral
 		)x 
 
 END
-
 GO
 GRANT EXEC ON Age_Forecast1x2_SelByLeague_Ag TO [bodbDownlineNet]
 GO
