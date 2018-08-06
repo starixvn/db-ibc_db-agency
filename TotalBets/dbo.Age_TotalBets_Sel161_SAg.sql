@@ -1,5 +1,5 @@
 ﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
-alter PROCEDURE [dbo].[Age_TotalBets_Sel161_SAg]
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel161_SAg]
 	@custid INT,
 	@Language varchar(2) = 'E'
 AS
