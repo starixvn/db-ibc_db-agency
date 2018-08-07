@@ -29,6 +29,8 @@ AS
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+		- 20180802@Helen: Wrongly calculation for bettype correct score half time  - [Redmine:99508] 
+		
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -43,7 +45,7 @@ BEGIN
 	INSERT INTO @hafltimeBettypes (BetType)
 	SELECT typeid
 	FROM dbo.bettype WITH (NOLOCK)
-	WHERE typeid IN (7,303,8,304,12,15,21,126,136,138,167,179,181,182,188,191,413,151,410,411,427,453)
+	WHERE typeid IN (7,303,8,304,12,15,21,126,136,138,167,179,181,182,188,191,414,151,410,411,427,453)
 	
 	-- get scores template
 	DECLARE @tmpScores TABLE (home INT, away INT)
