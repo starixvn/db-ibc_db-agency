@@ -1,4 +1,5 @@
-﻿alter PROCEDURE [dbo].[Age_TotalBets_Sel161_SAg]
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
+ALTER PROCEDURE [dbo].[Age_TotalBets_Sel161_SAg]
 	@custid INT,
 	@Language varchar(2) = 'E'
 AS
@@ -12,6 +13,7 @@ Revisions:
 	- 20110729@Sophia: Add bettype 88,89,90
 	- 20110809@Sophia: do not separate Live or Deadball to 2 row anymore
 	- 20120627@Sophia: Add new bettype = 90 for NumberGroup
+    - 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
     
 Param's Explanation:
 • @custid: Super Agent ID
@@ -141,11 +143,11 @@ FROM (
 						liveindicator,
 						SUM(spositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake,
 						count(1) AS BetCount
-				FROM bettrans with (nolock)
+				FROM bettrans WITH (NOLOCK)
 				WHERE
 						bettype BETWEEN 81 AND 120
 						AND srecommend = @custid
-						AND ruben = 0
+						AND statusID IN (0,1)
 				GROUP BY matchid, bettype, betteam, liveindicator) as b
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid  	
 			WHERE	
