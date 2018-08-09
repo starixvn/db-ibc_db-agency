@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -23,6 +23,7 @@ AS
 		- 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE [RedmineID: #58288]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
+		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 */
 
 BEGIN
@@ -50,10 +51,9 @@ BEGIN
 		WHERE m.leagueid = @leagueid
 			AND m.eventstatus <> 'completed'
 			AND matchid IN ( SELECT DISTINCT matchid
-							FROM dbo.bettrans b WITH(NOLOCK)
+							FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_srecommend)
 							WHERE b.srecommend = @agentid
 								AND b.statusid IN (0,1)
-								AND b.ruben = 0 
 								AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 						)
 	END
@@ -64,10 +64,9 @@ BEGIN
 		WHERE m.leagueid = @leagueid
 			AND m.eventstatus <> 'completed'
 			AND matchid IN ( SELECT DISTINCT matchid
-							FROM dbo.bettrans b WITH(NOLOCK)
+							FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_mrecommend)
 							WHERE b.mrecommend = @agentid
 								AND b.statusid IN (0,1)
-								AND b.ruben = 0 
 								AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 						)
 	END
@@ -78,10 +77,9 @@ BEGIN
 		WHERE m.leagueid = @leagueid
 			AND m.eventstatus <> 'completed'
 			AND matchid IN ( SELECT DISTINCT matchid
-							FROM dbo.bettrans b WITH(NOLOCK)
+							FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_recommend)
 							WHERE b.recommend = @agentid
 								AND b.statusid IN (0,1)
-								AND b.ruben = 0 
 								AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 						)
 	END

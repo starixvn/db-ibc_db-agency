@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -21,6 +21,7 @@ AS
 		- 20160509@Percy: Add 2 bettype Correct Score (AOS) [RedmineID: #48785]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
+		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 */
 
 BEGIN
@@ -49,10 +50,9 @@ BEGIN
 		FROM match m WITH(NOLOCK)			
 		WHERE m.eventstatus <> 'completed'
 			AND m.matchid IN (SELECT DISTINCT matchid 
-								FROM dbo.bettrans b WITH(NOLOCK)
+								FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_srecommend)
 								WHERE b.srecommend = @agentid 
 									AND b.statusid IN (0,1)
-									AND b.ruben = 0
 									AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 							)
 		GROUP BY m.sporttype,m.leagueid 
@@ -63,10 +63,9 @@ BEGIN
 		FROM match m WITH(NOLOCK)
 		WHERE m.eventstatus <> 'completed'
 			AND m.matchid IN (SELECT DISTINCT matchid 
-								FROM dbo.bettrans b WITH(NOLOCK)
+								FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_mrecommend)
 								WHERE b.mrecommend = @agentid 
 									AND b.statusid IN (0,1)
-									AND b.ruben = 0
 									AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 							)
 		GROUP BY  m.sporttype ,m.leagueid 
@@ -77,10 +76,9 @@ BEGIN
 		FROM match m WITH(NOLOCK)			
 		WHERE m.eventstatus <> 'completed'
 			AND m.matchid IN (SELECT DISTINCT matchid 
-								FROM dbo.bettrans b WITH(NOLOCK)
+								FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_recommend)
 								WHERE b.recommend = @agentid 
 									AND b.statusid IN (0,1)
-									AND b.ruben = 0
 									AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 							)
 		GROUP BY m.sporttype ,m.leagueid
