@@ -106,12 +106,11 @@ BEGIN
 	SELECT
 		CASE WHEN DATEDIFF(DAY, @ToDate, m.eventdate) = 0 THEN 1 ELSE 0 END AS IsToday,
 		m.eventdate, m.sporttype,
-		SUM(CASE WHEN m.eventstatus IN ('completed') THEN 1 ELSE 0 END) AS Entered,
-		SUM(CASE WHEN m.eventstatus NOT IN ('completed') THEN 1 ELSE 0 END) AS NonEntered
+		SUM(CASE WHEN m.eventstatus = 'Completed' THEN 1 ELSE 0 END) AS Entered,
+		SUM(CASE WHEN m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS NonEntered
 	FROM dbo.Match3rd m WITH (NOLOCK)
 		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.League3rdId = l.League3rdId
 	WHERE m.EventDate BETWEEN @FromDate AND @ToDate
-		AND m.EventStatus <> 'closed'
 	GROUP BY m.eventdate, m.sporttype
 	
 	SELECT IsToday, EventDate, Sporttype, Entered, NonEntered
