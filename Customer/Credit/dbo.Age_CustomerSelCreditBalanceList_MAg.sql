@@ -85,16 +85,14 @@ BEGIN
 	(
 		custid		INT PRIMARY KEY,
 		outstanding MONEY,		
-		balance		MONEY,
-		turnover	MONEY
+		balance		MONEY
 	)
 
 	;WITH rt AS
 	(
 		SELECT recommend AS custid,
 			ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) * apositiontaking ELSE 0 END), 0) AS outstanding,
-			ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0) AS balance,
-			ISNULL(SUM(CASE WHEN matchid > 0 THEN ABS(stake) ELSE 0 END), 0) AS turnover
+			ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0) AS balance
 		FROM  bettrans WITH (NOLOCK)
 		WHERE mrecommend = @CustID
 			AND	(
@@ -113,8 +111,7 @@ BEGIN
 
 		SELECT recommend AS custid,
 			ISNULL(SUM(ABS(actual_stake) * apositiontaking),0) AS outstanding, 
-			0 balance,
-			0 turnover
+			0 balance
 		FROM  translog WITH (NOLOCK)
 		WHERE mrecommend = @CustID
 			AND statusid IN (0,1)
@@ -125,8 +122,7 @@ BEGIN
 		SELECT
 			recommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * apositiontaking ELSE 0 END),0) outstanding, 
-			ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0) AS balance,
-			ISNULL(SUM(ABS(stake)), 0) AS turnover
+			ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0) AS balance
 		FROM  bettransRNG WITH (NOLOCK)
 		WHERE mrecommend = @CustID
 			AND (
@@ -140,8 +136,7 @@ BEGIN
 		SELECT
 			recommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * apositiontaking ELSE 0 END),0) outstanding, 
-			ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0) AS balance,
-			ISNULL(SUM(ABS(stake)), 0) AS turnover
+			ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN CASE WHEN custid=recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),0) AS balance
 		FROM  bettransLC WITH (NOLOCK)
 		WHERE mrecommend = @CustID
 			AND (
@@ -153,8 +148,7 @@ BEGIN
 	INSERT INTO #balance
 	SELECT custid,
 		SUM(outstanding),
-		SUM(balance),
-		SUM(turnover)
+		SUM(balance)
 	FROM rt
 	GROUP BY custid
 
@@ -247,7 +241,6 @@ BEGIN
 			isnull(balance.balance,0) AS balance, 
 			isnull(balance.balance,0) - isnull(today_balance.balance,0) yesterday_balance,
 			isnull(c.credit,0) - isnull(c.usedCredit,0) betCredit,
-			isnull(balance.turnover,0) AS turnover,
 			isnull(c.credit,0) credit,		
 			CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged
 		FROM #tmp_customer c

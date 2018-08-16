@@ -87,8 +87,7 @@ BEGIN
 	(
 		custid		INT PRIMARY KEY,
 		outstanding MONEY,		
-		balance		MONEY,
-		turnover	MONEY
+		balance		MONEY
 	) 
 
 	SET @Username = ISNULL(@Username, '')
@@ -151,23 +150,14 @@ BEGIN
 		SELECT
 				 a.Custid, 
 				 SUM(CASE WHEN s.bettype IS NULL THEN outstanding ELSE 0 END) AS outstanding,  
-				 SUM(CASE WHEN ISNULL(s.RefTable, 3) = 3 THEN balance ELSE balanceBeforeYesterday END) AS balance, 
-				 SUM(
-					CASE WHEN ISNULL(s.RefTable, 0) = 0 THEN turnoverRubenAll
-						WHEN s.RefTable = 3 THEN turnoverRuben1
-						ELSE turnoverBeforeYesterday
-					END
-				 ) AS turnover
+				 SUM(CASE WHEN ISNULL(s.RefTable, 3) = 3 THEN balance ELSE balanceBeforeYesterday END) AS balance
 			FROM (
 					SELECT b.Custid,b.matchID, Bettype,
 						ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) ELSE 0 END), 0) outstanding,
 						ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance,
-						ISNULL(SUM(CASE WHEN ruben = 1 AND winlostdate < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balanceBeforeYesterday,
-						ISNULL(SUM(CASE WHEN matchid > 0 THEN ABS(stake) ELSE 0 END), 0) turnoverRubenAll,
-						ISNULL(SUM(CASE WHEN matchid > 0 AND ruben = 1 THEN ABS(stake) ELSE 0 END), 0) turnoverRuben1,
-						ISNULL(SUM(CASE WHEN matchid > 0 AND winlostdate < @yesterday THEN ABS(stake) ELSE 0 END), 0) turnoverBeforeYesterday
+						ISNULL(SUM(CASE WHEN ruben = 1 AND winlostdate < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balanceBeforeYesterday
 					FROM  (SELECT TOP (@PageSize) CustID FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) c
-					INNER JOIN bettrans b WITH (NOLOCK) ON c.CustID = b.CustID
+						INNER JOIN bettrans b WITH (NOLOCK) ON c.CustID = b.CustID
 					GROUP BY b.custid,b.matchID, Bettype
 				) a
 			LEFT JOIN #SportBettype  s ON s.bettype = a.bettype AND s.RefTable <> 0 
@@ -177,7 +167,6 @@ BEGIN
 		SELECT custid
 			,ISNULL(SUM(ABS(actual_stake)), 0) outstanding
 			,0 balance
-			,0 turnover
 		FROM  translog WITH (NOLOCK)
 		WHERE statusid IN (0,1) AND recommend = @custid
 		GROUP BY custid
@@ -186,7 +175,6 @@ BEGIN
 		SELECT custid
 			,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 			,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
-			,ISNULL(SUM(ABS(stake)),0) turnover
 		FROM  bettransRNG WITH (NOLOCK)
 		WHERE recommend = @custid
 			AND (
@@ -199,7 +187,6 @@ BEGIN
 		SELECT custid
 			,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
 			,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
-			,ISNULL(SUM(ABS(stake)),0) turnover
 		FROM  bettransLC WITH (NOLOCK)
 		WHERE recommend = @custid
 			AND (
@@ -211,8 +198,7 @@ BEGIN
 	INSERT INTO #balance
 	SELECT custid,
 		SUM(outstanding),
-		SUM(balance),
-		SUM(turnover)
+		SUM(balance)
 	FROM rt
 	GROUP BY custid
  
@@ -267,7 +253,6 @@ BEGIN
 			,isnull(balance.balance, 0) balance
 			,isnull(balance.balance, 0) - isnull(today_balance.balance, 0) yesterday_balance
 			,isnull(balance.balance, 0) + isnull(ci.credit, 0) - isnull(balance.outstanding, 0) betCredit
-			,isnull(balance.turnover, 0) AS turnover
 			,isnull(ci.credit, 0) AS credit
 			,CONVERT(NVARCHAR(30), c.lastlogged, 121) AS lastlogged
 		FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
