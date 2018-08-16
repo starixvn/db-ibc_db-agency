@@ -153,9 +153,9 @@ BEGIN
 				 SUM(CASE WHEN ISNULL(s.RefTable, 3) = 3 THEN balance ELSE balanceBeforeYesterday END) AS balance
 			FROM (
 					SELECT b.Custid,b.matchID, Bettype,
-						ISNULL(SUM(CASE WHEN ruben = 0 THEN ABS(actual_stake) ELSE 0 END), 0) outstanding,
-						ISNULL(SUM(CASE WHEN ruben = 1 THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance,
-						ISNULL(SUM(CASE WHEN ruben = 1 AND winlostdate < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balanceBeforeYesterday
+						ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding,
+						ISNULL(SUM(CASE WHEN statusID > 1 THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance,
+						ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balanceBeforeYesterday
 					FROM  (SELECT TOP (@PageSize) CustID FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) c
 						INNER JOIN bettrans b WITH (NOLOCK) ON c.CustID = b.CustID
 					GROUP BY b.custid,b.matchID, Bettype
@@ -174,7 +174,7 @@ BEGIN
 		UNION ALL
 		SELECT custid
 			,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
-			,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
+			,ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balance
 		FROM  bettransRNG WITH (NOLOCK)
 		WHERE recommend = @custid
 			AND (
@@ -186,7 +186,7 @@ BEGIN
 		UNION ALL
 		SELECT custid
 			,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
-			,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
+			,ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
 		FROM  bettransLC WITH (NOLOCK)
 		WHERE recommend = @custid
 			AND (
@@ -212,19 +212,19 @@ BEGIN
 	;WITH today_balance AS (
 		SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 		FROM   bettrans WITH (NOLOCK)
-		WHERE  recommend = @CustID AND ruben = 1 AND bettype IN (SELECT bettype FROM #SportBettype WHERE RefTable IN(0,3))
+		WHERE  recommend = @CustID AND statusID > 1 AND bettype IN (SELECT bettype FROM #SportBettype WHERE RefTable IN(0,3))
 			AND winlostdate = @today
 		GROUP BY custid
 		UNION ALL
 		SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 		FROM   bettransRNG WITH (NOLOCK)
-		WHERE  recommend = @CustID AND statusID NOT IN (0, 1) 
+		WHERE  recommend = @CustID AND statusID > 1
 			AND winlostdate = @today
 		GROUP BY custid
 		UNION ALL
 		SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 		FROM   bettransLC WITH (NOLOCK)
-		WHERE  recommend = @CustID AND statusID NOT IN (0, 1) 
+		WHERE  recommend = @CustID AND statusID > 1 
 			AND winlostdate = @today
 		GROUP BY custid
 	)
