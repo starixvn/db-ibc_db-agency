@@ -28,6 +28,7 @@ AS
 		- 20161228@Paul: change IsToday data type from INT to BIT, @isShowAll to @IncludeTestData -  [Redmine: #66991]
 		- 20171020@Percy: Add match3rd table [RedmineID: #84690]
 		- 20180125@Percy: Rollback code for BF [RedmineID: #90043]
+		- 20180814@Percy: Reopen code for BF [RedmineID: #90258]
 */
  
 BEGIN
@@ -101,19 +102,16 @@ BEGIN
 	GROUP BY m.EventDate, l.sporttype
 	
 	-- match3rd
-	/*
 	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
 	SELECT
 		CASE WHEN DATEDIFF(DAY, @ToDate, m.eventdate) = 0 THEN 1 ELSE 0 END AS IsToday,
 		m.eventdate, m.sporttype,
-		SUM(CASE WHEN m.eventstatus IN ('completed') THEN 1 ELSE 0 END) AS Entered,
-		SUM(CASE WHEN m.eventstatus NOT IN ('completed') THEN 1 ELSE 0 END) AS NonEntered
+		SUM(CASE WHEN m.eventstatus = 'Completed' THEN 1 ELSE 0 END) AS Entered,
+		SUM(CASE WHEN m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS NonEntered
 	FROM dbo.Match3rd m WITH (NOLOCK)
 		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.League3rdId = l.League3rdId
 	WHERE m.EventDate BETWEEN @FromDate AND @ToDate
-		AND m.EventStatus <> 'closed'
 	GROUP BY m.eventdate, m.sporttype
-	*/
 	
 	SELECT IsToday, EventDate, Sporttype, Entered, NonEntered
 	FROM #tmp
