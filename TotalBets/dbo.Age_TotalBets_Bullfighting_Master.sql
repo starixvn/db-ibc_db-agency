@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DB042-bodb02,DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -9,7 +9,7 @@ AS
 /*
 	Created: 
 	Task: 
-	DB: DBAGE.bodb02
+	DB: DB042-bodb02,DBAGE-bodb02
 	Original: 
 	Revisions:
 		- 20171024@Paul: Create new [RedmineID: #84690]
