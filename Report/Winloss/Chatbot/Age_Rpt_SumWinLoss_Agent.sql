@@ -21,6 +21,7 @@ AS
 	Database:	DBAGE/bodb02
 	
 	Revisions:
+		- 20180912@Alvin: Correct GrossComm column name - [Redmine: #95940]
 		
 	Parameter's Explaination:
 		
@@ -54,7 +55,7 @@ BEGIN
 			)
 	BEGIN
 		SELECT SUM(Turnover) AS Turnover
-			,SUM(GrossComm) AS GrossCom
+			,SUM(GrossComm) AS GrossComm
 			,SUM(AgTotal) AS AgentTotal
 			,SUM(MAgWinLoss) AS MasterWinLoss
 			,SUM(MAgComm) AS MasterComm

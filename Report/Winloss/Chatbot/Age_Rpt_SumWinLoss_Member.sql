@@ -23,6 +23,7 @@ AS
 	Revisions:
 		
 	Parameter's Explaination:
+		- 20180912@Alvin: Correct GrossComm column name - [Redmine: #95940]
 		
 	Developer's Notes:
 	Example:
@@ -55,7 +56,7 @@ BEGIN
 			)
 	BEGIN
 		SELECT SUM(Turnover) AS Turnover
-			,SUM(GrossComm) AS GrossCom
+			,SUM(GrossComm) AS GrossComm
 			,SUM(MemberWinLoss) AS MemberWinLoss
 			,SUM(MemberComm) AS MemberComm
 			,SUM(AgWinLoss) AS AgentWinLoss
