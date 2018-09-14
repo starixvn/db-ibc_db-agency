@@ -1,6 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetailPokerGames_Member]
 	@CustID			INT = NULL, --recommend
@@ -241,8 +239,3 @@ BEGIN
 END
 GO
 
-
-GRANT EXECUTE ON [Age_Rpt_WinLossDetailPokerGames_Member] TO bodbDownlineNetView
-GO 
-GRANT EXECUTE ON [Age_Rpt_WinLossDetailPokerGames_Member] TO bodbDownlineNet
-GO
