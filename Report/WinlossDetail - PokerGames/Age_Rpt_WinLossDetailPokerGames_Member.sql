@@ -17,7 +17,8 @@ AS
 	Task : 		Poker Games Win Loss Detail Report [redmine: #101376]
 	DB: 		DBAGE/bodb02
 	Original SP: Age_Rpt_WinLossDetail_Member
-	Revisions:
+	Revisions: 
+		-20180912@Sophia: initial SP
 		 
 */
 

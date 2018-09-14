@@ -20,7 +20,7 @@ AS
 	DB: 		DBAGE/bodb02
 	Original SP: Age_Rpt_WinLossDetail_Master
 	Revisions:
-	 
+		-20180912@Sophia: initial SP
 */
 
 BEGIN
@@ -69,7 +69,7 @@ BEGIN
 	DECLARE @SportBettypeMatrix TABLE(BetType SMALLINT);
 
 	INSERT INTO @SportBettypeMatrix(BetType)
-	SELECT DISTINCT BetType
+	SELECT BetType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
 		
 	----Get data
