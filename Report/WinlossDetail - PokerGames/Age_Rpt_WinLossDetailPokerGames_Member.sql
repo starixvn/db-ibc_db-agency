@@ -47,11 +47,6 @@ BEGIN
 		RoundCount			INT
 	);
 
-	 
-	DECLARE @isTest BIT = 0;
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
-
-
 	--Avoid Parameter Sniffing
 	DECLARE @FDate	SMALLDATETIME,
 			@TDate	SMALLDATETIME,
@@ -61,7 +56,11 @@ BEGIN
 			@TDate = @ToDate, 
 			@CID = @custid;
 
-	DECLARE @SportBettypeMatrix TABLE(BetType	smallint);
+			
+	DECLARE @isTest BIT = 0;
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
+	
+	DECLARE @SportBettypeMatrix TABLE(BetType smallint);
 
 	INSERT INTO @SportBettypeMatrix(BetType)
 	SELECT	DISTINCT BetType
