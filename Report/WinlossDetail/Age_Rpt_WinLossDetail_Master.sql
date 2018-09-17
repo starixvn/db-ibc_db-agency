@@ -26,6 +26,7 @@ Revisions:
 	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 	- 20170914@Percy: Enhance performance on sum_winloss_old [RedmineID: #83171]
 	- 20180913@Percy: Bullfighting - Add data into TurnoverNoDraw column [RedmineID: #101288]
+	- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 */
 
 BEGIN
@@ -123,7 +124,10 @@ BEGIN
 						WHEN s.ProductID = 21 THEN b.oddsspread -- Allbet
 						ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
-				SUM(case when b.bettype = 1000 then oddsspread else case when tpositiontaking = 1 then 0 else scomm/(1 - tpositiontaking) end end) as GrossComm,
+				SUM(CASE
+					WHEN b.bettype = 1000 THEN oddsspread
+					WHEN b.bettype BETWEEN 1401 AND 1499 THEN scomm
+					ELSE CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END END) AS GrossComm,
 				SUM(winlost - actual_stake) AS MemberWinlost,
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,

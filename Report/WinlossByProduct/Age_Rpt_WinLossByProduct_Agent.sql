@@ -20,7 +20,7 @@ AS
 		- 20161224@Paul: Create new [RedmineID: #70450]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180419@Alvin: Combine Macau Games and Pragmatic [RedmineID: #92647]
-
+		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 */
 
 BEGIN
@@ -98,8 +98,8 @@ BEGIN
 					END AS liveindicator,
 					SUM(CASE 
 						WHEN b.bettype = 1000 THEN oddsspread
-						ELSE acomm / (1 - apositiontaking - mpositiontaking)
-						END) AS GrossComm,
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN acomm
+						ELSE CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm / (1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
 					SUM(CASE 
 						WHEN winlostdate >= @ABSDate THEN CASE 
 								WHEN b.bettype IN (33, 43)
