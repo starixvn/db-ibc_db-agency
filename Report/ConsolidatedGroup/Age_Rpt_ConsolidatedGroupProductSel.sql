@@ -21,7 +21,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports - using DCS [RedmineID: #78339]
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
-		
+				
 	Param's Explanation:
 
 */

@@ -74,12 +74,10 @@ BEGIN
 		
 	----Get data
 	
-	IF @ToDate >= @BalanceUpDay
-	BEGIN 
-		IF @FromDate <= @MoveBetsDay
-		BEGIN
-			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
-		END
+	IF @ToDate > @MoveBetsDay
+	BEGIN
+		SELECT	@TDate = @ToDate,
+				@FDate = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
 
 		INSERT INTO #SAgWinLossDetails(CustID, Turnover, NetTurnover, TaxComm, TotalMemberWinLoss, MemberWinLoss, InsGemMemberWinLoss, PlayerComm, 
 									   InsGemAgWinLoss, AgComm, InsGemMAgWinLoss, MAgComm, InsGemSAgWinLoss, SAgComm, RoundCount)
@@ -104,21 +102,13 @@ BEGIN
 			AND b.statusID IN (111, 112, 113) 
 			AND EXISTS (SELECT 1 FROM @SportBettypeMatrix s WHERE b.bettype = s.Bettype)
 		GROUP BY MRecommend, b.bettype;
-
-		IF @BalanceUpDay < @FromDate
-		BEGIN
-			SET @FDate = @FromDate;
-		END
-		ELSE
-		BEGIN
-			SET @FDate = @BalanceUpDay;
-		END
-		
-		IF @ToDate > @MoveBetsDay
-		BEGIN
-			SET @TDate = @MoveBetsDay;
-		END
-		
+	END 
+	
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		SELECT  @FDate = @FromDate,
+				@TDate = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
+				
 		INSERT INTO #SAgWinLossDetails(CustID, Turnover, NetTurnover, TaxComm, TotalMemberWinLoss, MemberWinLoss, InsGemMemberWinLoss, PlayerComm, 
 									   InsGemAgWinLoss, AgComm, InsGemMAgWinLoss, MAgComm, InsGemSAgWinLoss, SAgComm, RoundCount)
 		SELECT	CustID,		   --- = mrecommend	
@@ -142,41 +132,6 @@ BEGIN
 			AND RoleID = 3   
 		GROUP BY CustID;
 	END
-
-	SELECT	@FDate = @FromDate,
-			@TDate = @ToDate;
-
-	IF @FromDate < @BalanceUpDay 
-	BEGIN
-		IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)
-		BEGIN
-			SELECT @TDate = DATEADD(dd, -1, @BalanceUpDay);
-		END
-	
-		
-		INSERT INTO #SAgWinLossDetails(CustID, Turnover, NetTurnover, TaxComm, TotalMemberWinLoss, MemberWinLoss, InsGemMemberWinLoss, PlayerComm, 
-									   InsGemAgWinLoss, AgComm, InsGemMAgWinLoss, MAgComm, InsGemSAgWinLoss, SAgComm, RoundCount)
-		SELECT	CustID,		   --- = mrecommend	
-				SUM(Turnover) AS Turnover,
-				SUM(NetTurnover) AS NetTurnover,
-				SUM(TotalComm) AS TaxComm,
-				SUM(WinLoss) AS TotalMemberWinLoss,
-				SUM(WinLoss) - SUM(InsGemMemberWinLoss) AS MemberWinLoss,
-				SUM(InsGemMemberWinLoss) AS InsGemMemberWinLoss,
-				SUM(PlayerComm) AS PlayerComm,
-				SUM(AgWinLoss) AS InsGemAgWinLoss,
-				SUM(AgComm) - SUM(PlayerComm) AS AgComm,
-				SUM(MAgWinLoss) AS InsGemMAgWinLoss,
-				SUM(MAgComm) - SUM(AgComm) AS MAgComm,
-				SUM(SAgWinLoss) AS InsGemSAgWinLoss,
-				SUM(SAgComm) - SUM(MAgComm) AS SAgComm,
-				SUM(RoundCount) AS RoundCount
-		FROM bodb_Summary.dbo.rptPokerGamesSumWinloss_Old b WITH(NOLOCK)
-		WHERE Winlostdate BETWEEN @FDate AND @TDate
-			AND Srecommend = @CID
-			AND RoleID = 3   
-		GROUP BY CustID;
-	END	
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
