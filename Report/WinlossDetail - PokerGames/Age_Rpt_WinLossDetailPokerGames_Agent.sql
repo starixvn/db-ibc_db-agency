@@ -124,7 +124,7 @@ BEGIN
 				SUM(AgComm) - SUM(PlayerComm) AS AgComm,
 				SUM(MAgWinLoss) AS InsGemMAgWinLoss,
 				SUM(MAgComm) - SUM(AgComm) AS MAgComm,
-				SUM(betcount) AS RoundCount
+				SUM(RoundCount) AS RoundCount
 		FROM bodb_Summary.dbo.rptPokerGamesSumWinloss b WITH(NOLOCK)
 		WHERE winlostdate BETWEEN @FDate AND @TDate			
 			AND MRecommend = @CID
