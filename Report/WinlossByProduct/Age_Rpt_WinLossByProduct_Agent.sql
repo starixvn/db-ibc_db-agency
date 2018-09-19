@@ -146,7 +146,7 @@ BEGIN
 					s.GroupTypeId,
 					r.sporttype,
 					0 AS liveindicator,
-					SUM(ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0)) AS GrossComm,
+					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(comm, 0)) AS AgTotal,
 					SUM(ISNULL(mwinlost, 0)) AS MAgWinlost,
@@ -176,7 +176,7 @@ BEGIN
 					2799 AS bettype,
 					s.sporttype,
 					0 AS liveindicator,
-					SUM(ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0)) AS GrossComm,
+					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(comm, 0)) AS AgTotal,
 					SUM(ISNULL(mwinlost, 0)) AS MAgWinlost,
@@ -224,7 +224,10 @@ BEGIN
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
 					END AS liveindicator,
-					SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm,
+					SUM(CASE 
+						WHEN b.bettype = 1000 THEN oddsspread
+						WHEN b.bettype BETWEEN 1401 AND 1499 THEN acomm
+						ELSE CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm / (1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
 					SUM(CASE 
 						WHEN winlostdate >= @ABSDate THEN CASE 
 								WHEN b.bettype IN (33, 43)
@@ -267,7 +270,7 @@ BEGIN
 					s.GroupTypeId,
 					r.sporttype,
 					0 AS liveindicator,
-					SUM(ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0)) AS GrossComm,
+					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(comm, 0)) AS AgTotal,
 					SUM(ISNULL(mwinlost, 0)) AS MAgWinlost,
@@ -297,7 +300,7 @@ BEGIN
 					2799 AS bettype,
 					s.sporttype,
 					0 AS liveindicator,
-					SUM(ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0)) AS GrossComm,
+					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE ISNULL(acomm / (1 - apositiontaking - mpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(awinlost, 0) + ISNULL(comm, 0)) AS AgTotal,
 					SUM(ISNULL(mwinlost, 0)) AS MAgWinlost,
