@@ -21,6 +21,7 @@ AS
         - 20161111@Paul: Microsite for Report - [Redmine: #66991]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
+		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 */
     
 BEGIN
@@ -101,7 +102,10 @@ BEGIN
 		INSERT INTO #AgWinLoss(CustID, TurnOver, GrossComm, MemberWinLost, AgWinLost, PlayerComm, AgComm)
 		SELECT	CustID,
 		   		SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN(33,43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver,
-				SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE comm/(1 - apositiontaking) END) AS GrossComm,
+				SUM(CASE
+					WHEN b.bettype = 1000 THEN oddsspread
+					WHEN b.bettype BETWEEN 1401 AND 1499 THEN comm
+					ELSE CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END END) AS GrossComm,
 				SUM(winlost - actual_stake) AS MemberWinLost,
 				SUM(awinlost) AS AgWinLost,
 				SUM(playercomm) AS PlayerComm,

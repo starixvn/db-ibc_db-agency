@@ -25,6 +25,8 @@ Revisions:
 	- 20170110@Paul: Use new functions to get sum_winloss condition and SportBettypeMatrix [RedmineID: #69515]
 	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 	- 20170914@Percy: Enhance performance on sum_winloss_old [RedmineID: #83171]
+	- 20180913@Percy: Bullfighting - Add data into TurnoverNoDraw column [RedmineID: #101288]
+	- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 */
 
 BEGIN
@@ -122,11 +124,14 @@ BEGIN
 				SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
 				SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 
 						WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
-						WHEN b.StatusID = 111 AND s.ProductId = 1 THEN 0 
+						WHEN b.StatusID = 111 AND s.ProductId IN (1,30) THEN 0 -- Sportsbook, Bullfighting
 						WHEN s.ProductID = 21 THEN b.oddsspread -- Allbet
 						ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
-				SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN (apositiontaking + mpositiontaking = 1) THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
+				SUM(CASE
+					WHEN b.bettype = 1000 THEN oddsspread
+					WHEN b.bettype BETWEEN 1401 AND 1499 THEN acomm
+					ELSE CASE WHEN (apositiontaking + mpositiontaking = 1) THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
 				SUM(winlost - actual_stake) AS MemberWinlost,
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,
