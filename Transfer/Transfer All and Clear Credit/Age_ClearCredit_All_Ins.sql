@@ -208,9 +208,9 @@ BEGIN
 
 		IF @RoleId = 4
 			INSERT INTO #tblrecommend (custid, credit, updCredit)
-			SELECT a.custid, a.credit, m.usedCredit
+			SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
 			FROM dbo.custInfo a WITH (NOLOCK)
-				INNER JOIN (
+				LEFT JOIN (
 					SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
 					FROM dbo.custInfo WITH (NOLOCK)
 					WHERE mrecommend = @DownlineCustId AND roleId = 1
@@ -219,9 +219,9 @@ BEGIN
 			WHERE a.mrecommend = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
 		ELSE
 			INSERT INTO #tblrecommend (custid, credit, updCredit)
-			SELECT a.custid, a.credit, m.usedCredit
+			SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
 			FROM dbo.custInfo a WITH (NOLOCK)
-				INNER JOIN (
+				LEFT JOIN (
 					SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
 					FROM dbo.custInfo WITH (NOLOCK)
 					WHERE recommend = @DownlineCustId AND roleId = 1
@@ -282,6 +282,8 @@ BEGIN
 			SELECT  @usedCreditMaster = SUM(ISNULL(credit, 0))
 			FROM dbo.custInfo WITH (NOLOCK)
 			WHERE mrecommend = @DownlineCustId AND roleId = 2
+
+			SELECT  @usedCreditMaster = ISNULL(@usedCreditMaster, 0)
 
 			UPDATE dbo.custInfo WITH (ROWLOCK, UPDLOCK)
 			SET credit = @usedCreditMaster
