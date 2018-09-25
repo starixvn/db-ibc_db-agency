@@ -95,7 +95,7 @@ BEGIN
 		CREATE TABLE #tblMember (custId INT, recommend INT, credit MONEY, betCredit MONEY, newCredit MONEY)
 
 		INSERT INTO #MemberAmount (custId, amount)
-		EXEC DBTXN.bodb02.dbo.Age_Customer_TotalAmount_Sel @custId = @DownlineCustId, @RoleId = @DownlineRoleId
+		EXEC DBTXN.bodb02.dbo.sp_executesql N'exec dbo.Age_Customer_TotalAmount_Sel @custId = @DownlineCustId, @RoleId = @DownlineRoleId', N'@DownlineCustId INT, @DownlineRoleId TINYINT', @DownlineCustId, @DownlineRoleId
 
 		IF @RoleId = 4
 		BEGIN
