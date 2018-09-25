@@ -15,7 +15,7 @@ AS
 
 /*
 	Created: 20180801@Percy
-	DB: DBAGE.bodb02
+	DB: DBCUST.CustDB
 	Task: Alpha - Transfer - Transfer All & Clear Credit - Clear Credit
 
 	Revisions:
@@ -95,7 +95,7 @@ BEGIN
 		CREATE TABLE #tblMember (custId INT, recommend INT, credit MONEY, betCredit MONEY, newCredit MONEY)
 
 		INSERT INTO #MemberAmount (custId, amount)
-		EXEC DBTXN.bodb02.dbo.sp_executesql N'exec dbo.Age_Customer_TotalAmount_Sel @custId = @DownlineCustId, @RoleId = @DownlineRoleId', N'@DownlineCustId INT, @DownlineRoleId TINYINT', @DownlineCustId, @DownlineRoleId
+		EXEC DBTXN.bodb02.dbo.Age_Customer_TotalAmount_Sel @custId = @DownlineCustId, @RoleId = @DownlineRoleId
 
 		IF @RoleId = 4
 		BEGIN
