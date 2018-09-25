@@ -173,13 +173,13 @@ BEGIN
 			-- bettransRnG
 			INSERT INTO #tempData
 			(
-				statusId, custid, recommend,
+				winlostdate, statusId, custid, recommend,
 				winlost, actual_stake, playercomm,
 				awinlost, comm,
 				mwinlost, acomm
 			)
 			SELECT
-				b.statusId, b.custid, b.recommend,
+				b.winlostdate, b.statusId, b.custid, b.recommend,
 				SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
 				SUM(b.awinlost), SUM(b.comm),
 				SUM(b.mwinlost), SUM(b.acomm)
@@ -187,18 +187,18 @@ BEGIN
 				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
 			WHERE (b.winlostdate >= @yesterday OR statusId IN (0,1))
 			GROUP BY
-				b.statusId, b.custid, b.recommend
+				b.winlostdate, b.statusId, b.custid, b.recommend
 
 			-- bettransLC
 			INSERT INTO #tempData
 			(
-				statusId, custid, recommend,
+				winlostdate, statusId, custid, recommend,
 				winlost, actual_stake, playercomm,
 				awinlost, comm,
 				mwinlost, acomm
 			)
 			SELECT
-				b.statusId, b.custid, b.recommend,
+				b.winlostdate, b.statusId, b.custid, b.recommend,
 				SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
 				SUM(b.awinlost), SUM(b.comm),
 				SUM(b.mwinlost), SUM(b.acomm)
@@ -206,7 +206,7 @@ BEGIN
 				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
 			WHERE (b.winlostdate >= @yesterday OR statusId IN (0,1))
 			GROUP BY
-				b.statusId, b.custid, b.recommend
+				b.winlostdate, b.statusId, b.custid, b.recommend
 
 			-- translog
 			INSERT INTO #tempData
@@ -232,7 +232,7 @@ BEGIN
 
 		DECLARE @TransferredMember MONEY = 0, @TransferredAgent MONEY = 0
 
-		DECLARE @IsTotalTransfer MONEY = 0
+		DECLARE @IsTotalTransfer BIT = 0
 
 		IF ',' + @SuperIDsTransferTotal + ',' LIKE '%,' + CONVERT(VARCHAR(20), @srecommend) + ',%'
 			SELECT @IsTotalTransfer = 1
