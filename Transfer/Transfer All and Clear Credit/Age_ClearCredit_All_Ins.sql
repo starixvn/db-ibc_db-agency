@@ -36,9 +36,15 @@ BEGIN
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
 	DECLARE @DownlineCustId INT, @DownlineRoleId TINYINT, @DownlineCredit MONEY
-	SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)
-	FROM	dbo.custInfo WITH (NOLOCK)
-	WHERE	username = @DownlineUsername AND roleId = @RoleId - 1
+	
+	IF @RoleId = 4
+		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)
+		FROM	dbo.custInfo WITH (NOLOCK)
+		WHERE	srecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
+	ELSE IF @RoleId = 3
+		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)
+		FROM	dbo.custInfo WITH (NOLOCK)
+		WHERE	mrecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 
 	-- super/master only -- invalid downline
 	IF @RoleId NOT IN (3,4) OR @DownlineCustId IS NULL
@@ -49,7 +55,7 @@ BEGIN
 		RETURN
 	END
 
-	IF @DownlineCredit = 0
+	IF @DownlineCredit <= 0
 	BEGIN
 		SELECT  @ErrCode = 101,
 				@ErrMsg = CASE @Language WHEN 'E' THEN 'The selected customer has no credit to be cleared.' ELSE dbo.f_Get_MsgNamebyMsgID (40036, @Language) END
@@ -155,6 +161,7 @@ BEGIN
 					OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
 				FROM dbo.CustInfo c
 					INNER JOIN #tblMember t ON c.custid = t.custid
+				WHERE c.recommend = @recommend
 
 				IF @@ERROR <> 0
 				BEGIN
