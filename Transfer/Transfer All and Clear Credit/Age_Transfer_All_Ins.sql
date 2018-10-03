@@ -37,10 +37,16 @@ BEGIN
 
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
-	DECLARE @DownlineCustId INT
-	SELECT  @DownlineCustId = custId
-	FROM	CustDB.dbo.custInfo WITH (NOLOCK)
-	WHERE	username = @DownlineUsername AND roleId = @RoleId - 1
+	DECLARE @DownlineCustId INT, @DownlineCredit MONEY
+
+	IF @RoleId = 4
+		SELECT  @DownlineCustId = custId, @DownlineCredit = ISNULL(credit, 0)
+		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK)
+		WHERE	srecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
+	ELSE IF @RoleId = 3
+		SELECT  @DownlineCustId = custId, @DownlineCredit = ISNULL(credit, 0)
+		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK)
+		WHERE	mrecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 
 	-- super/master only -- invalid downline
 	IF @RoleId NOT IN (3,4) OR @DownlineCustId IS NULL
@@ -55,20 +61,116 @@ BEGIN
 	FROM	CustDB.dbo.Exchange WITH (NOLOCK)
 	WHERE	exchangeid = @currency
 
-	-- Check processing data
-	DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
-	EXEC dbo.Acc_CheckProcessingData @EndProcessingTime = @EndProcessingTime OUTPUT
-
-	IF @EndProcessingTime IS NOT NULL
+	-- Check rule before transfer
 	BEGIN
-		SELECT  @ErrCode = 101,
-				@ErrMsg = CASE @Language WHEN 'E' THEN 'To ensure the accuracy of data while being processed, all transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.'
-									ELSE dbo.f_Get_MsgNamebyMsgID(50010, @Language)	END,
-				@RemainingTime = CONVERT(VARCHAR(8), DATEADD(HOUR, 12, @EndProcessingTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 12, @EndProcessingTime), 101) --convert time to GMT +8
+		DECLARE @IsErr BIT = 0
+		DECLARE @ErrTable TABLE (Id TINYINT, Content NVARCHAR(4000))
+	
+		-- 1. Given credit of selected account
+		IF @DownlineCredit <= 0
+		BEGIN
+			INSERT INTO @ErrTable (Id, Content)
+			SELECT 1, dbo.f_Get_MsgNamebyMsgID(40036, @Language)
+		END
 
-		SELECT	@ErrMsg = REPLACE(@ErrMsg, '{expandedtime}', @RemainingTime)
+		-- 2. Check processing data
+		DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
+		EXEC dbo.Acc_CheckProcessingData @EndProcessingTime = @EndProcessingTime OUTPUT
 
-		RETURN
+		IF @EndProcessingTime IS NOT NULL
+		BEGIN
+			SELECT  @ErrMsg = CASE @Language WHEN 'E' THEN 'To ensure the accuracy of data while being processed, all transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.'
+										ELSE dbo.f_Get_MsgNamebyMsgID(50010, @Language)	END,
+					@RemainingTime = CONVERT(VARCHAR(8), DATEADD(HOUR, 12, @EndProcessingTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 12, @EndProcessingTime), 101) --convert time to GMT +8
+
+			SELECT	@ErrMsg = REPLACE(@ErrMsg, '{expandedtime}', @RemainingTime)
+
+			INSERT INTO @ErrTable (Id, Content)
+			SELECT 2, @ErrMsg
+
+			SELECT @ErrMsg = ''
+		END
+
+		-- 3. Nagative given credit
+		IF @RoleId = 4
+		BEGIN
+			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 3, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+			END
+		END
+		ELSE IF @RoleId = 3
+		BEGIN
+			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 3, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+			END
+		END
+
+		-- 4. Nagative bet credit after transfer -- calculate balance part
+
+		-- 5.Transferred to member
+		DECLARE @tblcustId TABLE (custid INT)
+		
+		IF @IsAllDayTransfer = 0
+		BEGIN
+			IF @RoleId = 4
+				INSERT INTO @tblcustId (custid)
+				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 1
+			ELSE IF @RoleId = 3
+				INSERT INTO @tblcustId (custid)
+				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND roleId = 1
+
+			IF EXISTS (
+					SELECT TOP 1 1
+					FROM @tblcustId c
+						CROSS APPLY (
+							SELECT TOP 1 1 AS t FROM dbo.bettrans b WITH (NOLOCK)
+							WHERE b.custid = c.custid
+								AND b.matchId = 0
+								AND b.bettype IN (21003, 21004)
+						) AS b
+				)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 5, dbo.f_Get_MsgNamebyMsgID(50013, @Language)
+			END
+		END
+
+		-- 6. Condition transfer (Exclude Super)
+		IF @RoleId = 3
+		BEGIN
+			DECLARE @strTransferOption VARCHAR(8)
+
+			SELECT @ErrCode = 0, @ErrMsg = ''
+
+			EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
+				@CustId				= @CustId,
+				@Language			= @Language,
+				@ErrCode			= @ErrCode OUTPUT,
+				@ErrMsg				= @ErrMsg OUTPUT,
+				@strTransferOption	= @strTransferOption OUTPUT
+				
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrMsg = dbo.f_Get_MsgNamebyMsgID(50014, @Language)
+							+	CASE WHEN SUBSTRING(@strTransferOption, 2, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90002,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 3, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90003,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 4, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90004,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 5, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90005,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 6, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90006,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 7, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90007,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 1, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90008,@Language) + ' - ' ELSE '' END
+				SELECT @ErrMsg = LEFT(@ErrMsg, LEN(@ErrMsg) - 2)
+
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 6, @ErrMsg
+			END
+
+			SELECT @ErrCode = 0, @ErrMsg = ''
+		END
 	END
 
 	-- Get Agent List
@@ -224,19 +326,49 @@ BEGIN
 		END
 	END
 
-	-- Calculate transfer amount
+	DECLARE @IsTotalTransfer BIT = 0
+	IF ',' + @SuperIDsTransferTotal + ',' LIKE '%,' + CONVERT(VARCHAR(20), @srecommend) + ',%'
+		SELECT @IsTotalTransfer = 1
+
+	-- Back to check rule before transfer
+	-- 4. Nagative bet credit after transfer
+	CREATE TABLE #MemberNagativeBetCredit (custId INT)
+
+	;WITH cte_member AS
+	(
+		SELECT custId,
+			SUM(CASE WHEN statusId IN (0,1) THEN -ISNULL(actual_stake, 0) ELSE ISNULL(winlost - actual_stake + playercomm, 0) END
+				- CASE WHEN statusId NOT IN (0,1) AND (@IsTotalTransfer = 1 OR winlostdate <= @yesterday) THEN ISNULL(winlost - actual_stake + playercomm, 0) ELSE 0 END)
+				AS amountAfterTransfer
+		FROM #tempData
+		GROUP BY custId
+	)
+	INSERT INTO #MemberNagativeBetCredit (custid)
+	SELECT m.custid
+	FROM cte_member m
+		INNER JOIN DBCUST.CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId
+	WHERE c.roleId = 1 AND ISNULL(c.credit, 0) - m.amountAfterTransfer < 0
+
+	IF @@ROWCOUNT <> 0
 	BEGIN
-		CREATE TABLE #Member (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT, memberName VARCHAR(50), agentName VARCHAR(50), memberBalance MONEY DEFAULT 0)
-		CREATE TABLE #Agent  (recommend	INT PRIMARY KEY, mrecommend INT, srecommend INT, agentName VARCHAR(50), masterName VARCHAR(50), agentBalance MONEY DEFAULT 0)
-		CREATE TABLE #SkippedMember (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT)
+		INSERT INTO @ErrTable (Id, Content)
+		SELECT 4, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+	END
 
-		DECLARE @TransferredMember MONEY = 0, @TransferredAgent MONEY = 0
+	DROP TABLE #MemberNagativeBetCredit
 
-		DECLARE @IsTotalTransfer BIT = 0
+	IF EXISTS (SELECT 1 FROM @ErrTable)
+		SELECT @IsErr = 1
 
-		IF ',' + @SuperIDsTransferTotal + ',' LIKE '%,' + CONVERT(VARCHAR(20), @srecommend) + ',%'
-			SELECT @IsTotalTransfer = 1
+	-- Calculate transfer amount
+	CREATE TABLE #Member (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT, memberName VARCHAR(50), agentName VARCHAR(50), memberBalance MONEY DEFAULT 0)
+	CREATE TABLE #Agent  (recommend	INT PRIMARY KEY, mrecommend INT, srecommend INT, agentName VARCHAR(50), masterName VARCHAR(50), agentBalance MONEY DEFAULT 0)
+	CREATE TABLE #SkippedMember (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT)
 
+	DECLARE @TransferredMember MONEY = 0, @TransferredAgent MONEY = 0
+
+	IF @IsErr = 0
+	BEGIN
 		-- Member
 		;WITH cte_member AS
 		(
@@ -316,6 +448,7 @@ BEGIN
 		WHERE SubAccID = @SubAccID
 	END
 
+	IF @IsErr = 0
 	BEGIN
 		-- same error message when insert failed
 		SELECT  @ErrMsg = 'Transfer all unsuccessfully. Please try again.'
@@ -975,13 +1108,19 @@ BEGIN
 					@Doing		= @LogData
 			END CATCH
 		END
-
-		SELECT 1 AS RowId, @TransferredMember AS TransferredAmount, @memberOutStanding AS MemberOutStanding
-		UNION ALL
-		SELECT 2, @TransferredAgent, NULL
-		UNION ALL
-		SELECT 3, @masterBalance, NULL
-		WHERE @RoleId = 4
 	END
+	
+	-- Return error table
+	SELECT ROW_NUMBER() OVER(ORDER BY Id) AS RowId, Content
+	FROM @ErrTable
+	ORDER BY RowId
+
+	-- Return transferred table
+	SELECT 1 AS RowId, @TransferredMember AS TransferredAmount, @memberOutStanding AS MemberOutStanding
+	UNION ALL
+	SELECT 2, @TransferredAgent, NULL
+	UNION ALL
+	SELECT 3, @masterBalance, NULL
+	WHERE @RoleId = 4
 END
 GO

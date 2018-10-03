@@ -55,12 +55,53 @@ BEGIN
 		RETURN
 	END
 
-	IF @DownlineCredit <= 0
+	-- Check rule before clear credit
 	BEGIN
-		SELECT  @ErrCode = 101,
-				@ErrMsg = CASE @Language WHEN 'E' THEN 'The selected customer has no credit to be cleared.' ELSE dbo.f_Get_MsgNamebyMsgID (40036, @Language) END
-		
-		RETURN
+		DECLARE @IsErr BIT = 0
+		DECLARE @ErrTable TABLE (Id TINYINT, Content NVARCHAR(4000))
+
+		-- 1. Given credit of selected account
+		IF @DownlineCredit <= 0
+		BEGIN
+			INSERT INTO @ErrTable (Id, Content)
+			SELECT 1, dbo.f_Get_MsgNamebyMsgID(40036, @Language)
+		END
+
+		-- 2. Check processing data
+		EXEC DBTXN.bodb02.dbo.Acc_Core_IsMainProcessRunning
+				@CustId				= @DownlineCustId,
+				@UplineId			= @CustId,
+				@IsDepositMember	= 0,
+				@ErrCode			= @ErrCode OUTPUT,
+				@ErrMsg				= @ErrMsg OUTPUT
+
+		IF @ErrCode <> 0
+		BEGIN
+			INSERT INTO @ErrTable (Id, Content)
+			SELECT 2, @ErrMsg
+
+			SELECT @ErrCode = 0, @ErrMsg = ''
+		END
+
+		-- 3. Nagative given credit
+		IF @RoleId = 4
+		BEGIN
+			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 3, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+			END
+		END
+		ELSE IF @RoleId = 3
+		BEGIN
+			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 3, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+			END
+		END
+
+		-- 4. Nagative bet credit -- calculate amount part
 	END
 
 	-- List of Agents
@@ -113,7 +154,6 @@ BEGIN
 			FROM dbo.custInfo c WITH (NOLOCK)
 				LEFT JOIN #MemberAmount m ON c.custid = m.custId
 			WHERE c.mrecommend = @DownlineCustId AND c.roleId = 1
-				AND ISNULL(c.credit, 0) <> 0
 		END
 		ELSE
 		BEGIN
@@ -125,182 +165,142 @@ BEGIN
 			FROM dbo.custInfo c WITH (NOLOCK)
 				LEFT JOIN #MemberAmount m ON c.custid = m.custId
 			WHERE c.recommend = @DownlineCustId AND c.roleId = 1
-				AND ISNULL(c.credit, 0) <> 0
 		END
 
 		DROP TABLE #MemberAmount
 
-		SELECT @GivenCreditMember = SUM(credit) FROM #tblMember
-
-		DELETE #tblMember WHERE betCredit < 0
-
-		DECLARE CS_agent CURSOR
-			FOR SELECT recommend FROM @tblrecommend
-
-		OPEN CS_agent
-
-		FETCH NEXT FROM CS_agent
-			INTO @recommend
-
-		WHILE @@FETCH_STATUS = 0
+		-- Back to check rule before transfer
+		-- 4. Nagative bet credit
+		IF EXISTS (SELECT 1 FROM #tblMember WHERE betCredit < 0)
 		BEGIN
-			SELECT @ErrCode = 0
+			INSERT INTO @ErrTable (Id, Content)
+			SELECT 4, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+		END
 
-			-- Prevent user from decreasing given credit due to processing data
-			EXEC DBTXN.bodb02.dbo.Acc_Core_IsMainProcessRunning
-					@CustId				= 0,
-					@UplineId			= @recommend,
-					@IsDepositMember	= 0,
-					@ErrCode			= @ErrCode OUTPUT,
-					@ErrMsg				= @ErrMsg OUTPUT
+		IF EXISTS (SELECT 1 FROM @ErrTable)
+			SELECT @IsErr = 1
 
-			IF @ErrCode = 0
-			BEGIN
-				UPDATE c WITH (ROWLOCK, UPDLOCK)
-				SET c.credit = t.newCredit
-					OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
-				FROM dbo.CustInfo c
-					INNER JOIN #tblMember t ON c.custid = t.custid
-				WHERE c.recommend = @recommend
+		IF @IsErr = 0
+		BEGIN
+			SELECT @GivenCreditMember = SUM(credit) FROM #tblMember
 
-				IF @@ERROR <> 0
-				BEGIN
-					SELECT @ErrCode = 111
-					RETURN
-				END
+			DELETE #tblMember WHERE betCredit <= 0
 
-				SELECT @ClearedCreditMember = @ClearedCreditMember + SUM(oldCredit - newCredit) FROM @UpdCredit
+			DECLARE CS_agent CURSOR
+				FOR SELECT recommend FROM @tblrecommend
 
-				-- for log
-				SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
-
-				IF @SubAccID > 0
-					SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
-
-				-- Write log
-				BEGIN TRY
-					INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
-					SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-					FROM	@UpdCredit 
-				END TRY
-				BEGIN CATCH
-					SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
-	
-					INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
-					SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-					FROM	@UpdCredit 
-				END CATCH
-
-				DELETE @UpdCredit
-			END
+			OPEN CS_agent
 
 			FETCH NEXT FROM CS_agent
 				INTO @recommend
-		END
 
-		CLOSE CS_agent
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+				SELECT @ErrCode = 0
 
-		DEALLOCATE CS_agent
+				-- Prevent user from decreasing given credit due to processing data
+				EXEC DBTXN.bodb02.dbo.Acc_Core_IsMainProcessRunning
+						@CustId				= 0,
+						@UplineId			= @recommend,
+						@IsDepositMember	= 0,
+						@ErrCode			= @ErrCode OUTPUT,
+						@ErrMsg				= @ErrMsg OUTPUT
 
-		DROP TABLE #tblMember
+				IF @ErrCode = 0
+				BEGIN
+					UPDATE c WITH (ROWLOCK, UPDLOCK)
+					SET c.credit = t.newCredit
+						OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
+					FROM dbo.CustInfo c
+						INNER JOIN #tblMember t ON c.custid = t.custid
+					WHERE c.recommend = @recommend
 
-		/*
-			========================= End Member =========================
-		*/
+					IF @@ERROR <> 0
+					BEGIN
+						SELECT @ErrCode = 111
+						RETURN
+					END
 
-		/*
-			========================= Start Agent =========================
-		*/
-		CREATE TABLE #tblrecommend (custId INT PRIMARY KEY, credit MONEY, updCredit MONEY DEFAULT(0))
+					SELECT @ClearedCreditMember = @ClearedCreditMember + SUM(oldCredit - newCredit) FROM @UpdCredit
 
-		IF @RoleId = 4
-			INSERT INTO #tblrecommend (custid, credit, updCredit)
-			SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
-			FROM dbo.custInfo a WITH (NOLOCK)
-				LEFT JOIN (
-					SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
-					FROM dbo.custInfo WITH (NOLOCK)
-					WHERE mrecommend = @DownlineCustId AND roleId = 1
-					GROUP BY recommend
-				) m ON a.custid = m.recommend
-			WHERE a.mrecommend = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
-		ELSE
-			INSERT INTO #tblrecommend (custid, credit, updCredit)
-			SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
-			FROM dbo.custInfo a WITH (NOLOCK)
-				LEFT JOIN (
-					SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
-					FROM dbo.custInfo WITH (NOLOCK)
-					WHERE recommend = @DownlineCustId AND roleId = 1
-					GROUP BY recommend
-				) m ON a.custid = m.recommend
-			WHERE a.custid = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
-			
-		UPDATE c WITH (ROWLOCK, UPDLOCK)
-		SET c.credit = t.UpdCredit
-			OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
-		FROM dbo.CustInfo c
-			INNER JOIN #tblrecommend t ON c.custid = t.custid
+					-- for log
+					SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
 
-		IF @@ERROR <> 0
-		BEGIN
-			SELECT @ErrCode = 112
-			RETURN
-		END
+					IF @SubAccID > 0
+						SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
 
-		SELECT @ClearedCreditAgent = SUM(oldCredit - newCredit) FROM @UpdCredit
-
-		-- for log
-		SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
-
-		IF @SubAccID > 0
-			SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
-
-		-- Write log
-		BEGIN TRY
-			INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
-			SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-			FROM	@UpdCredit
-		END TRY
-		BEGIN CATCH
-			SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
+					-- Write log
+					BEGIN TRY
+						INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
+						SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+						FROM	@UpdCredit 
+					END TRY
+					BEGIN CATCH
+						SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
 	
-			INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
-			SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-			FROM	@UpdCredit
-		END CATCH
+						INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
+						SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+						FROM	@UpdCredit 
+					END CATCH
 
-		DELETE @UpdCredit
+					DELETE @UpdCredit
+				END
 
-		SELECT @GivenCreditAgent = SUM(credit) FROM #tblrecommend
+				FETCH NEXT FROM CS_agent
+					INTO @recommend
+			END
 
-		DROP TABLE #tblrecommend
+			CLOSE CS_agent
 
-		/*
-			========================= End Agent =========================
-		*/
+			DEALLOCATE CS_agent
 
-		/*
-			========================= Start Master =========================
-		*/
-		IF @RoleId = 4
-		BEGIN
-			DECLARE @usedCreditMaster MONEY
-			SELECT  @usedCreditMaster = SUM(ISNULL(credit, 0))
-			FROM dbo.custInfo WITH (NOLOCK)
-			WHERE mrecommend = @DownlineCustId AND roleId = 2
+			DROP TABLE #tblMember
 
-			SELECT  @usedCreditMaster = ISNULL(@usedCreditMaster, 0)
+			/*
+				========================= End Member =========================
+			*/
 
-			UPDATE dbo.custInfo WITH (ROWLOCK, UPDLOCK)
-			SET credit = @usedCreditMaster
-			WHERE custId = @DownlineCustId
+			/*
+				========================= Start Agent =========================
+			*/
+			CREATE TABLE #tblrecommend (custId INT PRIMARY KEY, credit MONEY, updCredit MONEY DEFAULT(0))
+
+			IF @RoleId = 4
+				INSERT INTO #tblrecommend (custid, credit, updCredit)
+				SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
+				FROM dbo.custInfo a WITH (NOLOCK)
+					LEFT JOIN (
+						SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
+						FROM dbo.custInfo WITH (NOLOCK)
+						WHERE mrecommend = @DownlineCustId AND roleId = 1
+						GROUP BY recommend
+					) m ON a.custid = m.recommend
+				WHERE a.mrecommend = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
+			ELSE
+				INSERT INTO #tblrecommend (custid, credit, updCredit)
+				SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
+				FROM dbo.custInfo a WITH (NOLOCK)
+					LEFT JOIN (
+						SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
+						FROM dbo.custInfo WITH (NOLOCK)
+						WHERE recommend = @DownlineCustId AND roleId = 1
+						GROUP BY recommend
+					) m ON a.custid = m.recommend
+				WHERE a.custid = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
+			
+			UPDATE c WITH (ROWLOCK, UPDLOCK)
+			SET c.credit = t.UpdCredit
+				OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
+			FROM dbo.CustInfo c
+				INNER JOIN #tblrecommend t ON c.custid = t.custid
 
 			IF @@ERROR <> 0
 			BEGIN
-				SELECT @ErrCode = 113
+				SELECT @ErrCode = 112
 				RETURN
 			END
+
+			SELECT @ClearedCreditAgent = SUM(oldCredit - newCredit) FROM @UpdCredit
 
 			-- for log
 			SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
@@ -308,36 +308,96 @@ BEGIN
 			IF @SubAccID > 0
 				SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
 
-			-- write log
-			BEGIN TRY  
-				EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
-					@UserID		= @UserID,
-					@CustID		= @DownlineCustId,
-					@Doing		= @LogData,
-					@OldValue	= @DownlineCredit,
-					@NewValue	= @usedCreditMaster,
-					@IP			= @IP,
-					@ActionID	= @ActionId
-			END TRY  
-			BEGIN CATCH  
+			-- Write log
+			BEGIN TRY
+				INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
+				SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+				FROM	@UpdCredit
+			END TRY
+			BEGIN CATCH
 				SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
-      
-				EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
-					@UserID		= @UserID,
-					@CustID		= @DownlineCustId,
-					@Doing		= @LogData,
-					@OldValue	= @DownlineCredit,
-					@NewValue	= @usedCreditMaster,
-					@IP			= @IP,
-					@ActionID	= @ActionId
+	
+				INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
+				SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+				FROM	@UpdCredit
 			END CATCH
+
+			DELETE @UpdCredit
+
+			SELECT @GivenCreditAgent = SUM(credit) FROM #tblrecommend
+
+			DROP TABLE #tblrecommend
+
+			/*
+				========================= End Agent =========================
+			*/
+
+			/*
+				========================= Start Master =========================
+			*/
+			IF @RoleId = 4
+			BEGIN
+				DECLARE @usedCreditMaster MONEY
+				SELECT  @usedCreditMaster = SUM(ISNULL(credit, 0))
+				FROM dbo.custInfo WITH (NOLOCK)
+				WHERE mrecommend = @DownlineCustId AND roleId = 2
+
+				SELECT  @usedCreditMaster = ISNULL(@usedCreditMaster, 0)
+
+				UPDATE dbo.custInfo WITH (ROWLOCK, UPDLOCK)
+				SET credit = @usedCreditMaster
+				WHERE custId = @DownlineCustId
+
+				IF @@ERROR <> 0
+				BEGIN
+					SELECT @ErrCode = 113
+					RETURN
+				END
+
+				-- for log
+				SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
+
+				IF @SubAccID > 0
+					SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
+
+				-- write log
+				BEGIN TRY  
+					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
+						@UserID		= @UserID,
+						@CustID		= @DownlineCustId,
+						@Doing		= @LogData,
+						@OldValue	= @DownlineCredit,
+						@NewValue	= @usedCreditMaster,
+						@IP			= @IP,
+						@ActionID	= @ActionId
+				END TRY  
+				BEGIN CATCH  
+					SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
+      
+					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
+						@UserID		= @UserID,
+						@CustID		= @DownlineCustId,
+						@Doing		= @LogData,
+						@OldValue	= @DownlineCredit,
+						@NewValue	= @usedCreditMaster,
+						@IP			= @IP,
+						@ActionID	= @ActionId
+				END CATCH
+			END
 		END
+
 		/*
 			========================= End Master =========================
 		*/
 
 		SELECT @ErrMsg = ''
 
+		-- Return error table
+		SELECT ROW_NUMBER() OVER(ORDER BY Id) AS RowId, Content
+		FROM @ErrTable
+		ORDER BY RowId
+
+		-- Return cleared credit table
 		SELECT 1 AS RowId, @GivenCreditMember AS GivenCredit, @ClearedCreditMember AS ClearedCredit
 		UNION ALL
 		SELECT 2, @GivenCreditAgent, @ClearedCreditAgent

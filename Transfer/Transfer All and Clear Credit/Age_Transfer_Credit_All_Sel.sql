@@ -5,7 +5,9 @@ GO
 ALTER PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
-	@SuperIDsTransferTotal	NVARCHAR(50) = ''
+	@SuperIDsTransferTotal	NVARCHAR(50) = '',
+	@IsAllDayTransfer		BIT = 0,
+	@Language				VARCHAR(2) = 'E'
 AS
 
 /*
@@ -29,11 +31,11 @@ BEGIN
 
 	IF @RoleId = 4
 		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId
-		FROM	dbo.custInfo WITH (NOLOCK) -- using DBACC to get index seek on username
+		FROM	dbo.custInfo WITH (NOLOCK)
 		WHERE	srecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 	ELSE IF @RoleId = 3
 		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId
-		FROM	dbo.custInfo WITH (NOLOCK) -- using DBACC to get index seek on username
+		FROM	dbo.custInfo WITH (NOLOCK)
 		WHERE	mrecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 
 	-- super/master only -- invalid downline
@@ -48,6 +50,77 @@ BEGIN
 		WHERE 1 = 0
 
 		RETURN
+	END
+
+	-- Check rule before calculate
+	BEGIN
+		DECLARE @IsErr BIT = 0
+		DECLARE @ErrTable TABLE (Id TINYINT, Content NVARCHAR(4000))
+		
+		-- 1. Nagative given credit
+		IF @RoleId = 4
+		BEGIN
+			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 1, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+			END
+		END
+		ELSE IF @RoleId = 3
+		BEGIN
+			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 1, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+			END
+		END
+
+		-- 2. Nagative bet credit after transfer -- calculate balance part
+
+		-- 3. Transferred to member
+		DECLARE @tblcustId TABLE (custid INT)
+		
+		IF @IsAllDayTransfer = 0
+		BEGIN
+			IF @RoleId = 4
+				INSERT INTO @tblcustId (custid)
+				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 1
+			ELSE IF @RoleId = 3
+				INSERT INTO @tblcustId (custid)
+				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND roleId = 1
+
+			IF EXISTS (
+					SELECT TOP 1 1
+					FROM @tblcustId c
+						CROSS APPLY (
+							SELECT TOP 1 1 AS t FROM dbo.bettrans b WITH (NOLOCK)
+							WHERE b.custid = c.custid
+								AND b.matchId = 0
+								AND b.bettype IN (21003, 21004)
+						) AS b
+				)
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 3, dbo.f_Get_MsgNamebyMsgID(50013, @Language)
+			END
+		END
+
+		-- 4. Condition transfer (Exclude Super)
+		IF @RoleId = 3
+		BEGIN
+			DECLARE @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = ''
+			EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
+				@CustId		= @CustId,
+				@Language	= @Language,
+				@ErrCode	= @ErrCode OUTPUT,
+				@ErrMsg		= @ErrMsg OUTPUT
+				
+			IF @ErrCode <> 0
+			BEGIN
+				INSERT INTO @ErrTable (Id, Content)
+				SELECT 4, dbo.f_Get_MsgNamebyMsgID(50014, @Language)
+			END
+		END
 	END
 	
 	-- Calculate balance
@@ -72,8 +145,6 @@ BEGIN
 			awinlost MONEY, comm MONEY,
 			mwinlost MONEY, acomm MONEY
 		)
-
-		--CREATE CLUSTERED INDEX CIX_WLD ON #Data (winlostdate, bettype, statusId)
 
 		-- Get Total Balance
 		IF @RoleId = 4 -- Super view Master
@@ -312,7 +383,7 @@ BEGIN
 	
 	-- Return data
 	BEGIN
-		DECLARE @IsTotalTransfer MONEY = 0
+		DECLARE @IsTotalTransfer BIT = 0
 
 		IF ',' + @SuperIDsTransferTotal + ',' LIKE '%,' + CONVERT(VARCHAR(20), @srecommend) + ',%'
 			SELECT @IsTotalTransfer = 1
@@ -397,45 +468,99 @@ BEGIN
 		DECLARE @memberOutStanding MONEY
 		SELECT  @memberOutStanding = ISNULL(SUM(Outstanding), 0) FROM #Result
 
-		CREATE TABLE #NetPosition (custid INT, netPosition MONEY)
-		INSERT INTO #NetPosition (custId, netPosition)
-		EXEC DBTXN.bodb02.dbo.Age_GetCustomerNetPosition
-			@CustId = @DownlineCustId,
-			@RoleId = @DownlineRoleId
-
-		DECLARE @memberClearableCredit MONEY
-		
-		IF @RoleId = 4
+		-- Calculate credit
 		BEGIN
-			SELECT @memberClearableCredit =
-				SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
-						WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
-						ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
-			FROM dbo.custInfo c WITH (NOLOCK)
-				LEFT JOIN #Result r ON c.custId = r.custId
-				LEFT JOIN #NetPosition np ON c.custId = np.custId
-			WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1
-				AND ISNULL(c.credit, 0) > 0
-		END
-		ELSE IF @RoleId = 3
-		BEGIN
-			SELECT @memberClearableCredit =
-				SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
-						WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
-						ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
-			FROM dbo.custInfo c WITH (NOLOCK)
-				LEFT JOIN #Result r ON c.custId = r.custId
-				LEFT JOIN #NetPosition np ON c.custId = np.custId
-			WHERE c.recommend = @DownlineCustId AND c.RoleId = 1
-				AND ISNULL(c.credit, 0) > 0
+			CREATE TABLE #NetPosition (custid INT, netPosition MONEY)
+
+			INSERT INTO #NetPosition (custId, netPosition)
+			EXEC DBTXN.bodb02.dbo.Age_GetCustomerNetPosition
+				@CustId = @DownlineCustId,
+				@RoleId = @DownlineRoleId
+
+			-- Back to check rule before calculate
+			-- 2. Nagative bet credit after transfer
+			IF @RoleId = 4
+			BEGIN
+				IF EXISTS (
+					SELECT TOP 1 1
+					FROM dbo.custInfo c WITH (NOLOCK)
+						LEFT JOIN #Result r ON c.custId = r.custId
+						LEFT JOIN #NetPosition np ON c.custId = np.custId
+					WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1 AND ISNULL(c.credit, 0) >= 0
+						AND (ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0)) < 0
+				)
+				BEGIN
+					INSERT INTO @ErrTable (Id, Content)
+					SELECT 2, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+				END
+			END
+			ELSE IF @RoleId = 3
+			BEGIN
+				IF EXISTS (
+					SELECT TOP 1 1
+					FROM dbo.custInfo c WITH (NOLOCK)
+						LEFT JOIN #Result r ON c.custId = r.custId
+						LEFT JOIN #NetPosition np ON c.custId = np.custId
+					WHERE c.recommend = @DownlineCustId AND c.RoleId = 1 AND ISNULL(c.credit, 0) >= 0
+						AND (ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0)) < 0
+				)
+				BEGIN
+					INSERT INTO @ErrTable (Id, Content)
+					SELECT 2, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+				END
+			END
+
+			DECLARE @memberClearableCredit MONEY = 0
+
+			IF EXISTS (SELECT 1 FROM @ErrTable)
+			BEGIN
+				SELECT @IsErr = 1
+			END
+			ELSE IF @RoleId = 4
+			BEGIN
+				SELECT @memberClearableCredit =
+					SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
+							WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
+							ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
+				FROM dbo.custInfo c WITH (NOLOCK)
+					LEFT JOIN #Result r ON c.custId = r.custId
+					LEFT JOIN #NetPosition np ON c.custId = np.custId
+				WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1
+					AND ISNULL(c.credit, 0) > 0
+			END
+			ELSE IF @RoleId = 3
+			BEGIN
+				SELECT @memberClearableCredit =
+					SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
+							WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
+							ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
+				FROM dbo.custInfo c WITH (NOLOCK)
+					LEFT JOIN #Result r ON c.custId = r.custId
+					LEFT JOIN #NetPosition np ON c.custId = np.custId
+				WHERE c.recommend = @DownlineCustId AND c.RoleId = 1
+					AND ISNULL(c.credit, 0) > 0
+			END
+
+			SELECT @memberClearableCredit = ISNULL(@memberClearableCredit, 0)
+
+			DROP TABLE #NetPosition
 		END
 
-		SELECT @memberClearableCredit = ISNULL(@memberClearableCredit, 0)
-
-		DROP TABLE #NetPosition
+		-- Return error table
+		SELECT ROW_NUMBER() OVER(ORDER BY Id) AS RowId, Content
+		FROM @ErrTable
+		ORDER BY RowId
 
 		-- Return transfer table
-		IF @IsTotalTransfer = 1
+		IF @IsErr = 1
+		BEGIN
+			SELECT 1 AS RowId, 0 AS TransferableAmount, @memberOutStanding AS MemberOutStanding
+			UNION ALL
+			SELECT 2, 0, NULL
+			UNION ALL
+			SELECT 3, 0, NULL WHERE @RoleId = 4
+		END
+		ELSE IF @IsTotalTransfer = 1
 		BEGIN
 			SELECT
 				Detail AS RowId,
@@ -501,12 +626,23 @@ BEGIN
 			WHERE	recommend = @DownlineCustId
 		END
 		
-		SELECT 1 AS RowId, @memberCredit AS GivenCredit, @memberClearableCredit AS ClearableCredit
-		UNION ALL
-		SELECT 2, @agentCredit, @agentCredit - @memberCredit + @memberClearableCredit
-		UNION ALL
-		SELECT 3, @masterCredit, @masterCredit - @memberCredit + @memberClearableCredit
-		WHERE @RoleId = 4
+		IF @IsErr = 1
+		BEGIN
+			SELECT 1 AS RowId, @memberCredit AS GivenCredit, 0 AS ClearableCredit
+			UNION ALL
+			SELECT 2, @agentCredit, 0
+			UNION ALL
+			SELECT 3, @masterCredit, 0 WHERE @RoleId = 4
+		END
+		ELSE
+		BEGIN
+			SELECT 1 AS RowId, @memberCredit AS GivenCredit, @memberClearableCredit AS ClearableCredit
+			UNION ALL
+			SELECT 2, @agentCredit, @agentCredit - @memberCredit + @memberClearableCredit
+			UNION ALL
+			SELECT 3, @masterCredit, @masterCredit - @memberCredit + @memberClearableCredit
+			WHERE @RoleId = 4
+		END
 	END
 END
 GO
