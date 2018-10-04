@@ -97,6 +97,7 @@ BEGIN
 							WHERE b.custid = c.custid
 								AND b.matchId = 0
 								AND b.bettype IN (21003, 21004)
+								AND b.transdate >= CONVERT(DATE, GETDATE()) AND b.transdate < DATEADD(DAY, 1, CONVERT(DATE, GETDATE()))
 						) AS b
 				)
 			BEGIN
