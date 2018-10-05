@@ -108,7 +108,7 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		-- running tickets
+			-- running tickets
 		INSERT INTO #BalanceInfo (agentCash, memberCash, memberOutstanding)
 		SELECT 0, 0, SUM(ABS(actual_stake))
 		FROM dbo.bettrans b WITH(NOLOCK)
@@ -116,8 +116,8 @@ BEGIN
 			AND b.ruben = 0
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 			
-		-- settle tickets
-		-- < yesterday
+			-- settle tickets
+				-- < yesterday
 		INSERT INTO #BalanceInfo (agentCash, memberCash, memberOutstanding)
 		SELECT
 			SUM(CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
@@ -128,7 +128,7 @@ BEGIN
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 				
-		-- >= yesterday
+				-- >= yesterday
 		INSERT INTO #BalanceInfo (agentCash, memberCash, memberOutstanding)
 		SELECT
 			SUM(CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE awinlost+comm-playercomm END),
@@ -190,7 +190,7 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		-- running tickets
+			-- running tickets
 		INSERT INTO #BalanceInfo (masterCash, agentCash, agentOutstanding)
 		SELECT 0, 0, SUM(ABS(actual_stake*apositiontaking))
 		FROM dbo.bettrans b WITH(NOLOCK)
@@ -198,16 +198,15 @@ BEGIN
 			AND b.ruben = 0
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
-		-- settle tickets
-		-- < yesterday
+			-- settle tickets
+				-- < yesterday
 		INSERT INTO #BalanceInfo (masterCash, agentCash, agentOutstanding)
 		SELECT
 			SUM(mwinlost+acomm-comm),
 			SUM(CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE mrecommend = @uplineId
-			--EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 				
@@ -218,13 +217,12 @@ BEGIN
 			SUM(CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE mrecommend = @uplineId
-			--EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate >= @yesterday
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 
-		-- sum, balance, transfer tickets of this master
+				-- sum, balance, transfer tickets of this master
 		INSERT INTO #BalanceInfo (masterCash, agentCash, agentOutstanding)
 		SELECT
 			SUM(winlost-actual_stake),
@@ -286,42 +284,39 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		-- running tickets
+			-- running tickets
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
-		SELECT 0, 0, SUM(CASE WHEN mrecommend = @CustID THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
+		SELECT 0, 0, SUM(ABS(actual_stake*mpositiontaking))
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE srecommend = @uplineId
-			--EXISTS (SELECT TOP 1 1 FROM dbo.custInfo c WITH(NOLOCK) WHERE b.recommend = c.custid AND c.mrecommend = @CustID AND c.roleid = 2)
+		WHERE EXISTS (SELECT TOP 1 1 FROM dbo.custInfo c WITH(NOLOCK) WHERE b.recommend = c.custid AND c.mrecommend = @CustID AND c.roleid = 2)
 			AND b.ruben = 0
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
-		-- settle tickets
-		-- < yesterday
+			-- settle tickets
+				-- < yesterday
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
 		SELECT
 			SUM(swinlost+scomm-acomm),
 			SUM(CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE srecommend = @uplineId
-			--EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 
-		-- >= yesterday
+				-- >= yesterday
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
 		SELECT
 			SUM(swinlost+scomm-acomm),
 			SUM(CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE srecommend = @uplineId
-			--EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
 			AND b.ruben = 1
 			AND b.winlostdate >= @yesterday
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 
-		-- sum, balance, transfer tickets of this master and upline super
+				-- sum, balance, transfer tickets of this master and upline super
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
 		SELECT
 			SUM(CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE 0 END),

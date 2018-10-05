@@ -42,7 +42,6 @@ Revisions:
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 	- 20171020@Percy: Add waiting tickets on translog [RedmineID: #84690]
-	- 20181003@Patrick: Index revolution [RedmineID: #101405]
 
 Param's Explanation:
 
@@ -105,8 +104,8 @@ CREATE TABLE #balance
 				OR ruben <> 0
 			)
 		AND (
-				(winlostdate >= @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN(0,3)))
-				OR winlostdate < @yesterday
+				(CONVERT(DATE, winlostdate) >= @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN(0,3)))
+				OR CONVERT(DATE, winlostdate) < @yesterday
 			)
 	GROUP BY custid
 	
@@ -130,21 +129,21 @@ CREATE TABLE #balance
 		--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
 		AND (
 				statusID IN (0, 1)
-				OR (statusID NOT IN (0, 1) AND winlostdate >= @yesterday)
+				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 			)
 	GROUP BY custid
 
 	UNION ALL
 	SELECT custid
 		,ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) outstanding
-		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND winlostdate >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
+		,ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday THEN winlost - actual_stake + playercomm ELSE 0	END), 0) balance
 		,ISNULL(SUM(ABS(stake)),0) turnover
 	FROM  bettransLC WITH (NOLOCK)
 	WHERE recommend = @custid
 		--AND gameID BETWEEN 2401 AND 2499
 		AND (
 				statusID IN (0, 1)
-				OR (statusID NOT IN (0, 1) AND winlostdate >= @yesterday)
+				OR (statusID NOT IN (0, 1) AND CONVERT(DATE, winlostdate) >= @yesterday)
 			)
 	GROUP BY custid
 )
@@ -166,19 +165,19 @@ CREATE TABLE #today_balance
 	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 	FROM   bettrans WITH (NOLOCK)
 	WHERE  recommend = @CustID AND ruben = 1 AND bettype < 19001 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN(0,3))
-		AND winlostdate = @today
+		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY custid
 	UNION ALL
 	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 	FROM   bettransRNG WITH (NOLOCK)
 	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) --AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
-		AND winlostdate = @today
+		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY custid
 	UNION ALL
 	SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance
 	FROM   bettransLC WITH (NOLOCK)
 	WHERE  recommend = @CustID AND statusID NOT IN (0, 1) --AND gameID BETWEEN 2401 AND 2499
-		AND winlostdate = @today
+		AND CONVERT(DATE, winlostdate) = @today
 	GROUP BY custid
 )
 INSERT INTO #today_balance
