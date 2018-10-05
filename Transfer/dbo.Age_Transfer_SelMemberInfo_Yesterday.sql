@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -36,6 +36,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday_1
 		- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		- 20180521@Percy: Add waiting tickets on translog [RedmineID: #95268]
+		- 20181005@Percy: Remove convert date on winlostdate [RedmineID: #101644]
 */
 SET NOCOUNT ON
 
@@ -77,10 +78,10 @@ IF (@IsAllowTotalBalance = 0)
 						FROM bettrans as b with (NOLOCK) 
 						WHERE custid = @CustID and ruben  =1
 							AND (
-									(CONVERT(DATE, winlostdate) >= @yesterday
+									(winlostdate >= @yesterday
 										AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN (0,3))
 									)
-									OR CONVERT(DATE, winlostdate) < @yesterday
+									OR winlostdate < @yesterday
 								)
 						GROUP BY custid
 						UNION ALL
@@ -88,14 +89,14 @@ IF (@IsAllowTotalBalance = 0)
 						FROM bettransRNG as b with (NOLOCK) 
 						WHERE custid = @CustID and statusID NOT IN (0, 1)
 							--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
-							AND CONVERT(DATE, winlostdate)= @yesterday
+							AND winlostdate = @yesterday
 						GROUP BY custid
 						UNION ALL
 						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance 
 						FROM bettransLC as b with (NOLOCK) 
 						WHERE custid = @CustID and statusID NOT IN (0, 1)
 							--AND gameID BETWEEN 2401 AND 2499
-							AND CONVERT(DATE, winlostdate)= @yesterday
+							AND winlostdate = @yesterday
 						GROUP BY custid
 					  ) AS A
 				GROUP BY custid
@@ -121,10 +122,10 @@ ELSE
 						FROM bettrans as b with (NOLOCK) 
 						WHERE custid = @CustID and ruben  =1
 							AND (
-									(CONVERT(DATE, winlostdate) >= @yesterday
+									(winlostdate >= @yesterday
 										AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN (0,3))
 									)
-									OR CONVERT(DATE, winlostdate) < @yesterday
+									OR winlostdate < @yesterday
 								)
 						GROUP BY custid
 						UNION ALL
@@ -132,14 +133,14 @@ ELSE
 						FROM bettransRNG as b with (NOLOCK) 
 						WHERE custid = @CustID and statusID NOT IN (0, 1)
 							--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
-							AND CONVERT(DATE, winlostdate) >= @yesterday
+							AND winlostdate >= @yesterday
 						GROUP BY custid
 						UNION ALL
 						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance 
 						FROM bettransLC as b with (NOLOCK) 
 						WHERE custid = @CustID and statusID NOT IN (0, 1)
 							--AND gameID BETWEEN 2401 AND 2499
-							AND CONVERT(DATE, winlostdate) >= @yesterday
+							AND winlostdate >= @yesterday
 						GROUP BY custid
 					) AS A
 				GROUP BY custid
@@ -174,15 +175,15 @@ IF (@RoleId = 1)
 BEGIN
 	DECLARE @TotalCash money
 	SELECT  @TotalCash      = ISNULL(SUM(winlost-actual_stake+playercomm), 0),
-		    @AmtTransferred = ISNULL(SUM(case when CONVERT(DATE, winlostdate) = @today AND bettype = 21004 then winlost - actual_stake else 0 end), 0)
+		    @AmtTransferred = ISNULL(SUM(case when winlostdate = @today AND bettype = 21004 then winlost - actual_stake else 0 end), 0)
 	FROM bettrans WITH (NOLOCK)
 	WHERE custid = @CustID
 		AND ruben = 1
 		AND (
-				(CONVERT(DATE, winlostdate) >= @yesterday
+				(winlostdate >= @yesterday
 					AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable NOT IN (0,3))
 				)
-				OR CONVERT(DATE, winlostdate) < @yesterday
+				OR winlostdate < @yesterday
 			)
 
 	SELECT  @TotalCash      = @TotalCash + ISNULL(SUM(winlost-actual_stake+playercomm), 0)
@@ -190,14 +191,14 @@ BEGIN
 	WHERE custid = @CustID
 		AND statusID NOT IN (0, 1)
 		--AND (gameID BETWEEN 2101 AND 2399 OR gameID BETWEEN 4001 AND 7999)
-		AND CONVERT(DATE, winlostdate) >= @yesterday
+		AND winlostdate >= @yesterday
 
 	SELECT  @TotalCash      = @TotalCash + ISNULL(SUM(winlost-actual_stake+playercomm), 0)
 	FROM bettransLC WITH (NOLOCK)
 	WHERE custid = @CustID
 		AND statusID NOT IN (0, 1)
 		--AND gameID BETWEEN 2401 AND 2499
-		AND CONVERT(DATE, winlostdate) >= @yesterday
+		AND winlostdate >= @yesterday
 
 
 	SELECT @BetCredit = @GivenCredit + @TotalCash - @Oustanding

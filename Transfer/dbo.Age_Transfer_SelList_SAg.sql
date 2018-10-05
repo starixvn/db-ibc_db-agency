@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -43,6 +44,7 @@ Revisions:
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	- 20170620@Percy: Apply new formula yesterday balance [RedmineID: #74291]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
+	- 20181005@Percy: Revise indexes [RedmineID: #101644]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -114,14 +116,6 @@ FROM custinfo as c (nolock)
 WHERE srecommend = @SAgID AND roleid < 4
 GROUP BY c.mrecommend
 
-CREATE TABLE #recommend
-(
-	recommend int
-)
-
-INSERT INTO #recommend (recommend)
-SELECT custid FROM dbo.custInfo WITH(NOLOCK) WHERE srecommend = @SAgID AND roleid = 2
-
 /* Balance Info */
 -- bettransRnG
 INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
@@ -190,7 +184,7 @@ SELECT
 	0,
 	ISNULL(SUM(ABS(actual_stake*mpositiontaking)), 0)
 FROM dbo.bettrans b WITH(NOLOCK)
-WHERE EXISTS (SELECT 1 FROM #recommend r WHERE r.recommend = b.recommend)
+WHERE b.srecommend = @SAgID
 	AND ruben = 0
 	AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
 GROUP BY mrecommend
@@ -203,13 +197,13 @@ SELECT
 	ISNULL(SUM(mwinlost+acomm-comm), 0),
 	ISNULL(SUM(mwinlost+acomm-comm), 0)
 		+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 	ISNULL(SUM(mwinlost+acomm-comm), 0)
 		+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 	0
 FROM dbo.bettrans b WITH(NOLOCK)
-WHERE EXISTS (SELECT 1 FROM #recommend r WHERE r.recommend = b.recommend)
+WHERE b.srecommend = @SAgID
 	AND ruben = 1
 	AND winlostdate < @yesterday
 GROUP BY mrecommend
@@ -221,13 +215,13 @@ SELECT
 	ISNULL(SUM(mwinlost+acomm-comm), 0),
 	ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN mwinlost+acomm-comm ELSE 0 END), 0)
 		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0),
+		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0),
 	ISNULL(SUM(mwinlost+acomm-comm), 0)
 		+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 	0
 FROM dbo.bettrans b WITH(NOLOCK)
-WHERE EXISTS (SELECT 1 FROM #recommend r WHERE r.recommend = b.recommend)
+WHERE b.srecommend = @SAgID
 	AND ruben = 1
 	AND winlostdate >= @yesterday
 	AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable IN (1,2))
@@ -243,7 +237,7 @@ SELECT
 	ISNULL(SUM(winlost-actual_stake), 0),
 	0
 FROM dbo.bettrans b WITH(NOLOCK)
-WHERE EXISTS (SELECT 1 FROM #credit c WHERE c.mrecommend = b.custid)
+WHERE b.srecommend = @SAgID
 	AND bettype >= 19999
 	AND matchid = 0
 GROUP BY mrecommend
@@ -430,16 +424,8 @@ END
 
 DROP TABLE #balance
 DROP TABLE #result_balance
-DROP TABLE #recommend
 DROP TABLE #credit
 DROP TABLE #tmp_customer
 DROP TABLE #SportBettype
 DROP TABLE #ClosedReason
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Transfer_SelList_SAg] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_SelList_SAg] TO [bodbDownlineNetView]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_SelList_SAg] TO [vnteam]
 GO

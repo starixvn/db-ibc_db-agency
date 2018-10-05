@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -12,6 +13,7 @@ AS
 	
 	Revisions:
 		- 20170609@Percy: Create new [RedmineID: #74291]
+		- 20181005@Percy: Revise indexes [RedmineID: #101644]
 
 	Param's Explanation:
 		- @CustID: custid of Master/Agent/Member
@@ -46,8 +48,6 @@ BEGIN
 	END
 
 	-- Get Balance Information --
-	CREATE TABLE #recommend (custid INT)
-
 	CREATE TABLE #BalanceInfo
 	(
 		superCash MONEY,
@@ -152,10 +152,6 @@ BEGIN
     END
     ELSE IF @roleid = 2
     BEGIN
-		INSERT INTO #recommend (custid)
-		SELECT custid FROM dbo.custinfo WITH(NOLOCK)
-		WHERE mrecommend = @uplineId AND roleid = 2
-
 		-- bettransRNG
 		INSERT INTO #BalanceInfo (masterCash, agentCash, agentOutstanding)
 		SELECT 
@@ -206,7 +202,7 @@ BEGIN
 			SUM(CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE b.mrecommend = @uplineId
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 				
@@ -217,7 +213,7 @@ BEGIN
 			SUM(CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE b.mrecommend = @uplineId
 			AND b.ruben = 1
 			AND b.winlostdate >= @yesterday
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
@@ -246,10 +242,6 @@ BEGIN
     END
     ELSE IF @roleid = 3
     BEGIN
-		INSERT INTO #recommend (custid)
-		SELECT custid FROM dbo.custinfo WITH(NOLOCK)
-		WHERE srecommend = @uplineId AND roleid = 2
-
 		-- bettransRNG
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
 		SELECT 
@@ -300,7 +292,7 @@ BEGIN
 			SUM(CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE b.srecommend = @uplineId
 			AND b.ruben = 1
 			AND b.winlostdate < @yesterday
 
@@ -311,7 +303,7 @@ BEGIN
 			SUM(CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM #recommend r WHERE b.recommend = r.custid)
+		WHERE b.srecommend = @uplineId
 			AND b.ruben = 1
 			AND b.winlostdate >= @yesterday
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
@@ -340,11 +332,6 @@ BEGIN
     END
 	
 	DROP TABLE #SportBettype
-	DROP TABLE #recommend
 	DROP TABLE #BalanceInfo
 END
-GO
-GRANT EXECUTE ON [Age_Transfer_CashBalance_Sel] TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [Age_Transfer_CashBalance_Sel] TO [bodbDownlineNetView]
 GO
