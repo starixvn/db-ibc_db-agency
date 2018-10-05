@@ -27,6 +27,7 @@ Revisions:
 	- 20170914@Percy: Enhance performance on sum_winloss_old [RedmineID: #83171]
 	- 20180913@Percy: Bullfighting - Add data into TurnoverNoDraw column [RedmineID: #101288]
 	- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
+	- 20181003@Patrick: Index revolution [RedmineID: #101405]
 */
 
 BEGIN
@@ -137,7 +138,7 @@ BEGIN
 				SUM(swinlost) AS SAgWinlost,
 				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) AS NoOfTicket
-		FROM dbo.bettrans b WITH(NOLOCK, index = IX_srecommend)
+		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FDate AND @Tdate
 			AND srecommend = @CID

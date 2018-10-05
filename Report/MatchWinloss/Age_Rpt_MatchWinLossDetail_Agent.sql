@@ -28,6 +28,7 @@ AS
 			1. @isGetAll: get data all (support Parlay)
 			2. @leagueIds: get data from league table
 			2. @league3rdIds: get data from league3rd table
+		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 */
 
 BEGIN
@@ -110,8 +111,8 @@ BEGIN
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus, '') <> 'refund'
 				AND s.ProductID = 3				
@@ -146,8 +147,8 @@ BEGIN
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID NOT IN (3, 30)
@@ -220,8 +221,8 @@ BEGIN
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND o.eventdate >= @fromdate
-					AND o.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -321,8 +322,8 @@ BEGIN
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND s.EventType = 5
 			GROUP BY m.Match3rdId, m.homeid, m.awayid, b.bettype, m.League3rdId, l.LeagueCode
@@ -357,8 +358,8 @@ BEGIN
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
 				AND b.bettype NOT IN (9,29,10)
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID = 3				
@@ -385,7 +386,7 @@ BEGIN
 					m.matchcode,
 					isnull(m.isNeutral, CONVERT(BIT, 0)) as IsNeutral,
 					isnull(m.showtime, '') as showtime
-			FROM bettrans14 b WITH (NOLOCK, index=IX_bettrans4)
+			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
@@ -393,8 +394,8 @@ BEGIN
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
 				AND b.bettype NOT IN (9,29,10)
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID NOT IN (3, 30)
@@ -425,7 +426,7 @@ BEGIN
 						'' as matchcode,
 						CONVERT(BIT,0) as IsNeutral,
 						'' as showtime
-				FROM bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
+				FROM bettrans14 b WITH (NOLOCK)
 				WHERE b.mrecommend = @custid
 					AND b.bettype IN (9, 29)
 					AND b.winlostdate >= @fromdate
@@ -466,8 +467,8 @@ BEGIN
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND o.eventdate >= @fromdate
-					AND o.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus, '') <> 'refund'
 					AND s.ProductID = 5
@@ -526,7 +527,7 @@ BEGIN
 					'ZZZZ' as matchcode,
 					CONVERT(BIT,0) as IsNeutral,
 					'' as showtime
-			FROM bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
+			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN outright14 m WITH (NOLOCK) ON m.orid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE b.mrecommend = @custid
@@ -566,8 +567,8 @@ BEGIN
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND s.EventType = 5
 			GROUP BY m.Match3rdId, m.homeid, m.awayid, b.bettype, m.League3rdId, l.LeagueCode
@@ -615,8 +616,8 @@ BEGIN
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND m.eventdate >= @fromdate
-					AND m.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus, '') <> 'refund'
 					AND s.ProductID = 3
@@ -652,8 +653,8 @@ BEGIN
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND m.eventdate >= @fromdate
-					AND m.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID NOT IN (3, 30)
@@ -690,8 +691,8 @@ BEGIN
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND o.eventdate >= @fromdate
-					AND o.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus, '') <> 'refund'
 					AND s.ProductID = 5
@@ -755,7 +756,7 @@ BEGIN
 						m.matchcode,
 						isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 						'' as showtime
-				FROM bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
+				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
@@ -763,8 +764,8 @@ BEGIN
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
 					AND b.bettype NOT IN (9,29,10)
-					AND m.eventdate >= @fromdate
-					AND m.eventdate <= @todate 
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate 
 					AND m.eventstatus = 'completed'  
 					AND isnull(m.betstatus,'') <> 'refund'  
 					AND s.ProductID = 3
@@ -790,7 +791,7 @@ BEGIN
 						m.matchcode,
 						isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 						isnull(m.showtime, '') as showtime
-				FROM bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
+				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
@@ -800,8 +801,8 @@ BEGIN
 					AND b.ruben = 1
 					AND b.bettype < 19001 
 					AND b.bettype NOT IN (9,29,10)
-					AND m.eventdate >= @fromdate
-					AND m.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund' 
 					AND s.ProductID <> 3
@@ -838,8 +839,8 @@ BEGIN
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND o.eventdate >= @fromdate
-					AND o.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -867,7 +868,7 @@ BEGIN
 						'ZZZZ' as matchcode,
 						CONVERT(BIT,0) as IsNeutral,
 						'' as showtime
-				FROM bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
+				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN outright14 m WITH (NOLOCK) ON m.orid = b.matchid
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
@@ -918,8 +919,8 @@ BEGIN
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND m.eventdate >= @fromdate
-					AND m.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND m.eventstatus = 'completed'
 					AND s.EventType = 5
 				GROUP BY m.Match3rdId, m.homeid, m.awayid, b.bettype, m.League3rdId, l.LeagueCode
@@ -950,12 +951,12 @@ BEGIN
 				FROM dbo.bettrans14 b WITH (NOLOCK)
 					INNER JOIN dbo.Match3rd14 m WITH (NOLOCK) ON m.Match3rdId = b.matchid
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype	
-					INNER JOIN @tmpLeague3rd l ON m.League3rdId = l.league3rdId 			
+					INNER JOIN @tmpLeague3rd l ON m.League3rdId = l.league3rdId
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND m.eventdate >= @fromdate
-					AND m.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND m.eventstatus = 'completed'
 					AND s.EventType = 5
 				GROUP BY m.Match3rdId, m.homeid, m.awayid, b.bettype, m.League3rdId, l.LeagueCode

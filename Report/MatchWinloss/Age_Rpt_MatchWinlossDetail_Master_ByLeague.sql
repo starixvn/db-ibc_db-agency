@@ -24,6 +24,7 @@ AS
 		- 20170828@Percy: Support Lucky 3 [RedmineID: #76770]
 		- 20171003@Percy: Add ruben = 1 to avoid recover tickets [RedmineID: #83356]
 		- 20171020@Percy: Add @league3rdIds params to get data from league3rd table [RedmineID: #84690]
+		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 */
 
 BEGIN 
@@ -130,8 +131,8 @@ BEGIN
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype 		
 			WHERE b.srecommend = @custid
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed' 
 				AND ISNULL(m.betstatus,'') <> 'refund'					
 				AND b.statusID NOT IN (101, 102, 103)
@@ -168,8 +169,8 @@ BEGIN
 				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype			
 			WHERE b.srecommend = @custid				
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed'
 				AND ISNULL(m.betstatus,'') <> 'refund'
 				AND b.Bettype < 19001
@@ -251,8 +252,8 @@ BEGIN
 				WHERE b.srecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND o.eventdate >= @fromdate
-					AND o.eventdate <= @todate
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
 					AND o.eventstatus = 'completed'
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -290,8 +291,8 @@ BEGIN
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 				INNER JOIN #RecommendList R ON R.recommend = b.recommend
-			WHERE m.eventdate >= @fdate
-				AND m.eventdate <= @tdate
+			WHERE b.winlostdate >= @fdate
+				AND b.winlostdate <= @tdate
 				AND m.eventstatus = 'completed'
 				AND ISNULL(m.betstatus,'') <> 'refund'
 				AND b.statusID NOT IN (101, 102, 103)
@@ -328,8 +329,8 @@ BEGIN
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				INNER JOIN #RecommendList R ON R.recommend = b.recommend			
-			WHERE m.eventdate >= @fdate
-				AND m.eventdate <= @tdate
+			WHERE b.winlostdate >= @fdate
+				AND b.winlostdate <= @tdate
 				AND m.eventstatus = 'completed'
 				AND ISNULL(m.betstatus,'') <> 'refund'
 				AND b.bettype < 19001 
@@ -411,8 +412,8 @@ BEGIN
 					INNER JOIN #RecommendList Re ON Re.recommend = b.recommend
 				WHERE b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND o.eventdate >= @fdate
-					AND o.eventdate <= @tdate
+					AND b.winlostdate >= @fdate
+					AND b.winlostdate <= @tdate
 					AND o.eventstatus = 'completed' 
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -459,8 +460,8 @@ BEGIN
 				INNER JOIN #tmpLeague3rd l ON l.league3rdId = m.league3rdId
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE b.srecommend = @custid
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed' 
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
@@ -498,8 +499,8 @@ BEGIN
 				INNER JOIN #tmpLeague3rd l ON l.league3rdId = m.league3rdId
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				INNER JOIN #RecommendList r ON b.recommend = r.recommend
-			WHERE m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+			WHERE b.winlostdate >= @fromdate
+				AND b.winlostdate <= @todate
 				AND m.eventstatus = 'completed' 
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1

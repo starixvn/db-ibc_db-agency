@@ -21,6 +21,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180419@Alvin: Combine Macau Games and Pragmatic [RedmineID: #92647]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
+		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 */
 
 BEGIN
@@ -68,8 +69,8 @@ BEGIN
 
 	DECLARE @recommend TABLE (recommend INT);
 
-	INSERT INTO @recommend (recommend)
-	SELECT custID FROM custInfo (NOLOCK) WHERE srecommend = @CustID AND roleID = 2;
+	--INSERT INTO @recommend (recommend)
+	--SELECT custID FROM custInfo (NOLOCK) WHERE srecommend = @CustID AND roleID = 2;
 
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
 
@@ -116,11 +117,12 @@ BEGIN
 				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)
-				AND EXISTS(
-					SELECT 1
-					FROM @recommend r
-					WHERE b.recommend = r.recommend
-				)
+				--AND EXISTS(
+				--	SELECT 1
+				--	FROM @recommend r
+				--	WHERE b.recommend = r.recommend
+				--)
+				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN m.sporttype
@@ -153,11 +155,12 @@ BEGIN
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					--AND EXISTS(
+					--	SELECT 1
+					--	FROM @recommend r
+					--	WHERE b.recommend = r.recommend
+					--)
+					AND b.srecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
 			
@@ -188,11 +191,12 @@ BEGIN
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					--AND EXISTS(
+					--	SELECT 1
+					--	FROM @recommend r
+					--	WHERE b.recommend = r.recommend
+					--)
+					AND b.srecommend = @CustID
 				GROUP BY s.sporttype
 			END
 		END
@@ -239,11 +243,12 @@ BEGIN
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)	
 				AND b.ruben = 1			
-				AND EXISTS(
-					SELECT 1
-					FROM @recommend r
-					WHERE b.recommend = r.recommend
-				)
+				--AND EXISTS(
+				--	SELECT 1
+				--	FROM @recommend r
+				--	WHERE b.recommend = r.recommend
+				--)
+				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN m.sporttype
@@ -276,11 +281,12 @@ BEGIN
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					--AND EXISTS(
+					--	SELECT 1
+					--	FROM @recommend r
+					--	WHERE b.recommend = r.recommend
+					--)
+					AND b.srecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
 			
@@ -311,11 +317,12 @@ BEGIN
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					--AND EXISTS(
+					--	SELECT 1
+					--	FROM @recommend r
+					--	WHERE b.recommend = r.recommend
+					--)
+					AND b.srecommend = @CustID
 				GROUP BY s.sporttype
 			END
 		END
