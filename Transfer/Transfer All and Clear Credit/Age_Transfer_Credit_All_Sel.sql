@@ -109,17 +109,29 @@ BEGIN
 		-- 4. Condition transfer (Exclude Super)
 		IF @RoleId = 3
 		BEGIN
-			DECLARE @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = ''
+			DECLARE @ErrCode INT = 0, @ErrMsg NVARCHAR(4000) = '', @strTransferOption VARCHAR(8) = ''
+
 			EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
-				@CustId		= @CustId,
-				@Language	= @Language,
-				@ErrCode	= @ErrCode OUTPUT,
-				@ErrMsg		= @ErrMsg OUTPUT
+				@CustId				= @CustId,
+				@Language			= @Language,
+				@ErrCode			= @ErrCode OUTPUT,
+				@ErrMsg				= @ErrMsg OUTPUT,
+				@strTransferOption	= @strTransferOption OUTPUT
 				
 			IF @ErrCode <> 0
 			BEGIN
+				SELECT @ErrMsg = dbo.f_Get_MsgNamebyMsgID(50014, @Language)
+							+	CASE WHEN SUBSTRING(@strTransferOption, 2, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90002,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 3, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90003,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 4, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90004,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 5, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90005,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 6, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90006,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 7, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90007,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 1, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90008,@Language) + ' - ' ELSE '' END
+				SELECT @ErrMsg = LEFT(@ErrMsg, LEN(@ErrMsg) - 2)
+
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 4, dbo.f_Get_MsgNamebyMsgID(50014, @Language)
+				SELECT 4, @ErrMsg
 			END
 		END
 	END
@@ -166,16 +178,10 @@ BEGIN
 				SUM(awinlost), SUM(comm),
 				SUM(mwinlost), SUM(acomm)
 			FROM dbo.bettrans WITH (NOLOCK)
-			WHERE srecommend = CASE WHEN @n = 1 THEN @srecommend ELSE 0 END -- using index IX_srecommend, using CASE WHEN to remove sort GROUP BY (@n=1)
+			WHERE mrecommend = @DownlineCustId
 			GROUP BY
 				winlostdate, bettype, statusId,
 				custId, CASE custid WHEN mrecommend THEN 3 WHEN recommend THEN 2 ELSE 1 END
-
-			-- Remove custid is not belong to mrecommend = @DownlineCustId
-			DELETE d
-			FROM #Data d
-				INNER JOIN dbo.custInfo c WITH (NOLOCK) ON d.custId = c.custId
-			WHERE c.srecommend = @srecommend AND c.mrecommend <> @DownlineCustId
 
 			-- Don't get tickets on bettrans which have bettypes on bettransRnG/LC with winlostdate >= yesterday
 			DELETE d
@@ -292,16 +298,10 @@ BEGIN
 				SUM(winlost), SUM(actual_stake), SUM(playercomm),
 				SUM(awinlost), SUM(comm)
 			FROM dbo.bettrans WITH (NOLOCK)
-			WHERE srecommend = CASE WHEN @n = 1 THEN @srecommend ELSE 0 END -- using index IX_srecommend, using CASE WHEN to remove sort GROUP BY (@n=1)
+			WHERE recommend = @DownlineCustId
 			GROUP BY
 				winlostdate, bettype, statusId,
 				custId, CASE custid WHEN recommend THEN 2 ELSE 1 END
-
-			-- Remove custid is not belong to mrecommend = @DownlineCustId
-			DELETE d
-			FROM #Data d
-				INNER JOIN dbo.custInfo c WITH (NOLOCK) ON d.custId = c.custId
-			WHERE c.srecommend = @srecommend AND c.recommend <> @DownlineCustId
 
 			-- Don't get tickets on bettrans which have bettypes on bettransRnG/LC with winlostdate >= yesterday
 			DELETE d

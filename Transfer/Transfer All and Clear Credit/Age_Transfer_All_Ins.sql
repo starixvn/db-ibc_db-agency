@@ -66,14 +66,7 @@ BEGIN
 		DECLARE @IsErr BIT = 0
 		DECLARE @ErrTable TABLE (Id TINYINT, Content NVARCHAR(4000))
 	
-		-- 1. Given credit of selected account
-		IF @DownlineCredit <= 0
-		BEGIN
-			INSERT INTO @ErrTable (Id, Content)
-			SELECT 1, dbo.f_Get_MsgNamebyMsgID(40036, @Language)
-		END
-
-		-- 2. Check processing data
+		-- 1. Check processing data
 		DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
 		EXEC dbo.Acc_CheckProcessingData @EndProcessingTime = @EndProcessingTime OUTPUT
 
@@ -86,18 +79,18 @@ BEGIN
 			SELECT	@ErrMsg = REPLACE(@ErrMsg, '{expandedtime}', @RemainingTime)
 
 			INSERT INTO @ErrTable (Id, Content)
-			SELECT 2, @ErrMsg
+			SELECT 1, @ErrMsg
 
 			SELECT @ErrMsg = ''
 		END
 
-		-- 3. Nagative given credit
+		-- 2. Nagative given credit
 		IF @RoleId = 4
 		BEGIN
 			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 3, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+				SELECT 2, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
 			END
 		END
 		ELSE IF @RoleId = 3
@@ -105,13 +98,13 @@ BEGIN
 			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 3, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+				SELECT 2, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
 			END
 		END
 
-		-- 4. Nagative bet credit after transfer -- calculate balance part
+		-- 3. Nagative bet credit after transfer -- calculate balance part
 
-		-- 5.Transferred to member
+		-- 4.Transferred to member
 		DECLARE @tblcustId TABLE (custid INT)
 		
 		IF @IsAllDayTransfer = 0
@@ -136,11 +129,11 @@ BEGIN
 				)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 5, dbo.f_Get_MsgNamebyMsgID(50013, @Language)
+				SELECT 4, dbo.f_Get_MsgNamebyMsgID(50013, @Language)
 			END
 		END
 
-		-- 6. Condition transfer (Exclude Super)
+		-- 5. Condition transfer (Exclude Super)
 		IF @RoleId = 3
 		BEGIN
 			DECLARE @strTransferOption VARCHAR(8)
@@ -167,7 +160,7 @@ BEGIN
 				SELECT @ErrMsg = LEFT(@ErrMsg, LEN(@ErrMsg) - 2)
 
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 6, @ErrMsg
+				SELECT 5, @ErrMsg
 			END
 
 			SELECT @ErrCode = 0, @ErrMsg = ''
@@ -332,7 +325,7 @@ BEGIN
 		SELECT @IsTotalTransfer = 1
 
 	-- Back to check rule before transfer
-	-- 4. Nagative bet credit after transfer
+	-- 3. Nagative bet credit after transfer
 	CREATE TABLE #MemberNagativeBetCredit (custId INT)
 
 	;WITH cte_member AS
@@ -353,13 +346,16 @@ BEGIN
 	IF @@ROWCOUNT <> 0
 	BEGIN
 		INSERT INTO @ErrTable (Id, Content)
-		SELECT 4, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+		SELECT 3, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
 	END
 
 	DROP TABLE #MemberNagativeBetCredit
 
 	IF EXISTS (SELECT 1 FROM @ErrTable)
+	BEGIN
+		SELECT @ErrCode = 200
 		SELECT @IsErr = 1
+	END
 
 	-- Calculate transfer amount
 	CREATE TABLE #Member (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT, memberName VARCHAR(50), agentName VARCHAR(50), memberBalance MONEY DEFAULT 0)

@@ -178,7 +178,10 @@ BEGIN
 		END
 
 		IF EXISTS (SELECT 1 FROM @ErrTable)
+		BEGIN
+			SELECT @ErrCode = 200
 			SELECT @IsErr = 1
+		END
 
 		IF @IsErr = 0
 		BEGIN
