@@ -240,6 +240,7 @@ FROM dbo.bettrans b WITH(NOLOCK)
 WHERE b.srecommend = @SAgID
 	AND bettype >= 19999
 	AND matchid = 0
+	AND b.mrecommend = b.custid
 GROUP BY mrecommend
 /* End Balance Info */
 
