@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_MAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
@@ -39,6 +36,7 @@ Revisions:
 	- 20160607@Percy: Enhance Performance - Using index recommend on bettrans table [Redmine: #58268]
 	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
 	- 20161020@Francis: Revise SP to aggregate data querying from bettrans/bettrans14 to enhance performance [Redmine: #58268]
+	- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -162,7 +160,7 @@ BEGIN
 				,ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) - SUM(comm) AS MAgTotal
 				,- (ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost - actual_stake), 0)) AS Company
 				,COUNT(transid) AS NoOfTicket
-			FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
+			FROM dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND mrecommend = @CustID
