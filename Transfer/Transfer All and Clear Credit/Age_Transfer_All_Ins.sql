@@ -41,11 +41,11 @@ BEGIN
 
 	IF @RoleId = 4
 		SELECT  @DownlineCustId = custId, @DownlineCredit = ISNULL(credit, 0)
-		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK)
+		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) -- get credit amount real time
 		WHERE	srecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 	ELSE IF @RoleId = 3
 		SELECT  @DownlineCustId = custId, @DownlineCredit = ISNULL(credit, 0)
-		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK)
+		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) -- get credit amount real time
 		WHERE	mrecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 
 	-- super/master only -- invalid downline
@@ -87,6 +87,7 @@ BEGIN
 		-- 2. Nagative given credit
 		IF @RoleId = 4
 		BEGIN
+			 -- get credit amount real time: DBCUST
 			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
@@ -95,6 +96,7 @@ BEGIN
 		END
 		ELSE IF @RoleId = 3
 		BEGIN
+			-- get credit amount real time: DBCUST
 			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
@@ -111,10 +113,10 @@ BEGIN
 		BEGIN
 			IF @RoleId = 4
 				INSERT INTO @tblcustId (custid)
-				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 1
+				SELECT custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 1
 			ELSE IF @RoleId = 3
 				INSERT INTO @tblcustId (custid)
-				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND roleId = 1
+				SELECT custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND roleId = 1
 
 			IF EXISTS (
 					SELECT TOP 1 1
@@ -340,7 +342,7 @@ BEGIN
 	INSERT INTO #MemberNagativeBetCredit (custid)
 	SELECT m.custid
 	FROM cte_member m
-		INNER JOIN DBCUST.CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId
+		INNER JOIN DBCUST.CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId -- get credit amount real time
 	WHERE c.roleId = 1 AND ISNULL(c.credit, 0) - m.amountAfterTransfer < 0
 
 	IF @@ROWCOUNT <> 0
