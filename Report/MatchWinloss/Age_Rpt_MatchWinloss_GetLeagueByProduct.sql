@@ -72,17 +72,10 @@ BEGIN
 		-- Super
 		IF @roleid = 4
 		BEGIN
-			DECLARE @tblRecommend TABLE (recommend INT PRIMARY KEY);
-
-			INSERT INTO @tblRecommend (recommend)
-			SELECT CustId
-			FROM dbo.custInfo WITH (NOLOCK)
-			WHERE roleid = 2 AND srecommend = @CustID;
 
 			INSERT INTO #tmpmatchid (matchid, EventType)
 			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
 			FROM dbo.bettrans b WITH (NOLOCK)
-				--INNER JOIN @tblRecommend r ON b.recommend = r.recommend
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.srecommend = @CustID
 				AND b.statusID NOT IN (101, 102, 103)
@@ -168,20 +161,9 @@ BEGIN
 		BEGIN
 			DECLARE @n INT = 2147483647
 			
-			DECLARE @tblMrecommend TABLE (mrecommend INT PRIMARY KEY)
-
-			INSERT INTO @tblMrecommend (mrecommend)
-			SELECT CustId
-			FROM dbo.custInfo WITH (NOLOCK)
-			WHERE roleid = 3 AND srecommend = @CustID;
-
 			INSERT INTO #tmpmatchid (matchid, EventType)
 			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
 			FROM dbo.bettrans14 b WITH (NOLOCK)
-				--INNER JOIN (
-				--	SELECT TOP (@n) mrecommend
-				--	FROM @tblMrecommend
-				--) AS m ON b.mrecommend = m.mrecommend
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.srecommend = @CustID
 				AND b.statusID NOT IN (101, 102, 103)
@@ -202,10 +184,6 @@ BEGIN
 		-- Agent
 		ELSE IF @RoleID = 2
 		BEGIN
-			--DECLARE @mrecommend INT
-			--SELECT  @mrecommend = mrecommend
-			--FROM dbo.custInfo WITH (NOLOCK)
-			--WHERE custid = @custid
 
 			INSERT INTO #tmpmatchid (matchid, EventType)
 			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType

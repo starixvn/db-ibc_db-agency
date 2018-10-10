@@ -67,11 +67,6 @@ BEGIN
 
 	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
 
-	DECLARE @recommend TABLE (recommend INT);
-
-	--INSERT INTO @recommend (recommend)
-	--SELECT custID FROM custInfo (NOLOCK) WHERE srecommend = @CustID AND roleID = 2;
-
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
 
 	SELECT  @FDate = @FromDate, @TDate = @ToDate;
@@ -117,11 +112,6 @@ BEGIN
 				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)
-				--AND EXISTS(
-				--	SELECT 1
-				--	FROM @recommend r
-				--	WHERE b.recommend = r.recommend
-				--)
 				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
@@ -155,11 +145,6 @@ BEGIN
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					--AND EXISTS(
-					--	SELECT 1
-					--	FROM @recommend r
-					--	WHERE b.recommend = r.recommend
-					--)
 					AND b.srecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
@@ -191,11 +176,6 @@ BEGIN
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					--AND EXISTS(
-					--	SELECT 1
-					--	FROM @recommend r
-					--	WHERE b.recommend = r.recommend
-					--)
 					AND b.srecommend = @CustID
 				GROUP BY s.sporttype
 			END
@@ -243,11 +223,6 @@ BEGIN
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND statusID NOT IN (0, 1, 101, 102, 103)	
 				AND b.ruben = 1			
-				--AND EXISTS(
-				--	SELECT 1
-				--	FROM @recommend r
-				--	WHERE b.recommend = r.recommend
-				--)
 				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
@@ -281,11 +256,6 @@ BEGIN
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					--AND EXISTS(
-					--	SELECT 1
-					--	FROM @recommend r
-					--	WHERE b.recommend = r.recommend
-					--)
 					AND b.srecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
@@ -317,11 +287,6 @@ BEGIN
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					--AND EXISTS(
-					--	SELECT 1
-					--	FROM @recommend r
-					--	WHERE b.recommend = r.recommend
-					--)
 					AND b.srecommend = @CustID
 				GROUP BY s.sporttype
 			END

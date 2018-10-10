@@ -78,7 +78,6 @@ BEGIN
 				mrecommend
 		FROM dbo.bettrans14 b WITH(NOLOCK) 
 			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype
-			--INNER JOIN (SELECT custid AS recommend FROM custInfo WITH (NOLOCK) WHERE srecommend = @CID AND roleid = 2) r ON b.recommend = r.recommend -- to use faster index: recommend
 		WHERE b.srecommend = @CID
 			AND winlostdate BETWEEN @FromDate AND @TDate
 		GROUP BY
