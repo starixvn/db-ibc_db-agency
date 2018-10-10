@@ -160,7 +160,7 @@ BEGIN
 				,ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) - SUM(comm) AS MAgTotal
 				,- (ISNULL(SUM(awinlost), 0) + ISNULL(SUM(mwinlost), 0) + ISNULL(SUM(acomm), 0) + ISNULL(SUM(winlost - actual_stake), 0)) AS Company
 				,COUNT(transid) AS NoOfTicket
-			FROM dbo.bettrans14 b WITH (NOLOCK)
+			FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_mrecommend)
 				INNER JOIN @SportBettype s ON b.bettype = s.Bettype
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND mrecommend = @CustID
