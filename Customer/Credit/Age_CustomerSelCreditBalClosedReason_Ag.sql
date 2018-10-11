@@ -48,7 +48,7 @@ BEGIN
 					ci.custid,
 					m.ClosedReason,
 					ci.closed
-			FROM dbo.CustInfo AS ci WITH (NOLOCK)
+			FROM dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
 				JOIN dbo.CustLoginInfo_Member m WITH(NOLOCK) ON m.CustID = ci.custid
 			WHERE ci.roleid = 1 AND ci.recommend = @CustID
 				AND enabled = CASE 
@@ -78,7 +78,7 @@ BEGIN
 					ci.custid,
 					m.ClosedReason,
 					ci.closed
-			FROM dbo.CustInfo AS ci WITH (NOLOCK)
+			FROM dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
 				JOIN dbo.CustLoginInfo_Member m WITH(NOLOCK) ON m.CustID = ci.custid
 			WHERE ci.roleid = 1 AND ci.recommend = @CustID
 				AND ci.username LIKE '%' + @Username + '%'

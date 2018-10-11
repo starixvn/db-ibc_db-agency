@@ -50,7 +50,7 @@ BEGIN
 						,ci.username
 					) AS RowNumber
 				,ci.custid
-			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK)
+			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
 			WHERE ci.roleid = 1 AND ci.recommend = @CustID
 				AND enabled = CASE 
 						WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
@@ -77,7 +77,7 @@ BEGIN
 						,ci.username
 					) AS RowNumber
 				,ci.custid
-			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK)
+			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
 			WHERE ci.roleid = 1 AND ci.recommend = @CustID
 				AND ci.username LIKE '%' + @Username + '%'
 				AND enabled = CASE 
