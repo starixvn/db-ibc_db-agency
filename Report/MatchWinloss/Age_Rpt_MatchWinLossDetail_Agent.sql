@@ -351,7 +351,7 @@ BEGIN
 					m.matchcode,
 					isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral,
 					'' as showtime
-			FROM bettrans14 b WITH (NOLOCK,index=IX_bettrans4)
+			FROM bettrans14 b WITH (NOLOCK,index=IX_mrecommend)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype				
 			WHERE b.mrecommend = @custid
