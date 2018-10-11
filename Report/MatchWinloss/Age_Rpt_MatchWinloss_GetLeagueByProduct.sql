@@ -25,6 +25,7 @@ AS
 		- 20171020@Percy: Return flag field for league/league3rd [RedmineID: #84690]
 		- 20171101@Percy: Enhance Performance on bettrans14 [RedmineID: #86200]
 		- 20180130@Percy: Clean redundant code [RedmineID: #86086]
+		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -71,19 +72,13 @@ BEGIN
 		-- Super
 		IF @roleid = 4
 		BEGIN
-			DECLARE @tblRecommend TABLE (recommend INT PRIMARY KEY);
-
-			INSERT INTO @tblRecommend (recommend)
-			SELECT CustId
-			FROM dbo.custInfo WITH (NOLOCK)
-			WHERE roleid = 2 AND srecommend = @CustID;
 
 			INSERT INTO #tmpmatchid (matchid, EventType)
 			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
 			FROM dbo.bettrans b WITH (NOLOCK)
-				INNER JOIN @tblRecommend r ON b.recommend = r.recommend
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
-			WHERE b.statusID NOT IN (101, 102, 103)
+			WHERE b.srecommend = @CustID
+				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
 				AND winlostdate BETWEEN @fdate AND @tdate;
 		END
@@ -166,24 +161,14 @@ BEGIN
 		BEGIN
 			DECLARE @n INT = 2147483647
 			
-			DECLARE @tblMrecommend TABLE (mrecommend INT PRIMARY KEY)
-
-			INSERT INTO @tblMrecommend (mrecommend)
-			SELECT CustId
-			FROM dbo.custInfo WITH (NOLOCK)
-			WHERE roleid = 3 AND srecommend = @CustID;
-
 			INSERT INTO #tmpmatchid (matchid, EventType)
 			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
 			FROM dbo.bettrans14 b WITH (NOLOCK)
-				INNER JOIN (
-					SELECT TOP (@n) mrecommend
-					FROM @tblMrecommend
-				) AS m ON b.mrecommend = m.mrecommend
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
-			WHERE b.statusID NOT IN (101, 102, 103)
+			WHERE b.srecommend = @CustID
+				AND b.statusID NOT IN (101, 102, 103)
 				AND winlostdate BETWEEN @fdate AND @tdate
-			OPTION (OPTIMIZE FOR (@n = 1));
+			--OPTION (OPTIMIZE FOR (@n = 1));
 		END
 		-- Master
 		ELSE IF @RoleID = 3
@@ -199,17 +184,12 @@ BEGIN
 		-- Agent
 		ELSE IF @RoleID = 2
 		BEGIN
-			DECLARE @mrecommend INT
-			SELECT  @mrecommend = mrecommend
-			FROM dbo.custInfo WITH (NOLOCK)
-			WHERE custid = @custid
 
 			INSERT INTO #tmpmatchid (matchid, EventType)
 			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
 			FROM dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
-			WHERE b.mrecommend = @mrecommend
-				AND b.recommend = @custid 
+			WHERE b.recommend = @custid 
 				AND b.statusID NOT IN (101, 102, 103)
 				AND winlostdate BETWEEN @fdate AND @tdate;
 		END

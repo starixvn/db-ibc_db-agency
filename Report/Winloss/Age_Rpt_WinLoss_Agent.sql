@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Agent]
 	@CustID 		INT, --mrecommend
 	@FromDate 		SMALLDATETIME,
@@ -22,6 +19,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
+		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 
 */
 
@@ -108,7 +106,7 @@ BEGIN
 				ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(comm), 0) AS AgTotal,
 				SUM(mwinlost) AS MAgWinlost,
 				ISNULL(SUM(acomm), 0) - ISNULL(SUM(comm), 0) AS Comm
-		FROM dbo.bettrans b WITH (NOLOCK, index = bettrans16)
+		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE mrecommend = @CID 
 			AND winlostdate BETWEEN @FDate AND @TDate

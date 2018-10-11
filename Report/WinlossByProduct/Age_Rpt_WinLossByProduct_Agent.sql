@@ -21,6 +21,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180419@Alvin: Combine Macau Games and Pragmatic [RedmineID: #92647]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
+		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 */
 
 BEGIN
@@ -48,7 +49,6 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-
 	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)
@@ -65,11 +65,6 @@ BEGIN
 		INNER JOIN dbo.f_GroupBettype() f ON s.Bettype = f.Bettype;
 
 	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype);
-
-	DECLARE @recommend TABLE (recommend INT);
-
-	INSERT INTO @recommend (recommend)
-	SELECT custID FROM custInfo (NOLOCK) WHERE mrecommend = @CustID AND roleID = 2;
 
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
 
@@ -122,11 +117,7 @@ BEGIN
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND EXISTS(
-					SELECT 1
-					FROM @recommend r
-					WHERE b.recommend = r.recommend
-				)
+				AND b.mrecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN m.sporttype
@@ -159,11 +150,7 @@ BEGIN
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					AND b.mrecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
 			
@@ -194,11 +181,7 @@ BEGIN
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					AND b.mrecommend = @CustID
 				GROUP BY s.sporttype
 			END
 		END
@@ -244,7 +227,7 @@ BEGIN
 					SUM(mwinlost) AS MAgWinlost,
 					ISNULL(SUM(acomm), 0) - ISNULL(SUM(comm), 0) AS Comm,
 					COUNT(transid) AS NoOfTicket
-			FROM dbo.bettrans14 b WITH (NOLOCK, INDEX = IX_bettrans4)
+			FROM dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			WHERE winlostdate BETWEEN @FDate AND @TDate
@@ -283,11 +266,7 @@ BEGIN
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					AND b.mrecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
 			
@@ -318,11 +297,7 @@ BEGIN
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND EXISTS(
-						SELECT 1
-						FROM @recommend r
-						WHERE b.recommend = r.recommend
-					)
+					AND b.mrecommend = @CustID
 				GROUP BY s.sporttype
 			END
 		END	
