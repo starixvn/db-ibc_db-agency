@@ -66,7 +66,7 @@ BEGIN
 			CROSS JOIN dbo.f_CurrencyBySystem(@GroupName) AS c
 	END
 
-	SELECT f.ProductId
+	SELECT DISTINCT f.ProductId
 	FROM dbo.f_Get_ExcludeProduct_SiteCurrency() f
 		INNER JOIN @SiteCurrency sc ON f.Site = sc.Site AND f.Currency = sc.Currency
 END
