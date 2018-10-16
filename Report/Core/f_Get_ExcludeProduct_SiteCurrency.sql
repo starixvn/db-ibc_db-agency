@@ -23,9 +23,6 @@ RETURN
 		VALUES
 			-- 789y
 			('789y', 16), -- Yen
-			('789y', 64), -- UT
-			-- Best-Odds
-			('Best-Odds', 16), -- Yen
-			('Best-Odds', 64) -- UT
+			('789y', 64) -- UT
 		) AS t(site, currency)
 GO
