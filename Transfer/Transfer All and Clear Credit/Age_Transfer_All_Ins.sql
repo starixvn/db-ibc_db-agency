@@ -37,14 +37,14 @@ BEGIN
 
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
-	DECLARE @DownlineCustId INT, @DownlineCredit MONEY
+	DECLARE @DownlineCustId INT, @DownlineRoleId TINYINT, @DownlineCredit MONEY
 
 	IF @RoleId = 4
-		SELECT  @DownlineCustId = custId, @DownlineCredit = ISNULL(credit, 0)
+		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)
 		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) -- get credit amount real time
 		WHERE	srecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 	ELSE IF @RoleId = 3
-		SELECT  @DownlineCustId = custId, @DownlineCredit = ISNULL(credit, 0)
+		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)
 		FROM	DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) -- get credit amount real time
 		WHERE	mrecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 
@@ -328,6 +328,13 @@ BEGIN
 
 	-- Back to check rule before transfer
 	-- 3. Nagative bet credit after transfer
+	CREATE TABLE #NetPosition (custid INT, netPosition MONEY)
+
+	INSERT INTO #NetPosition (custId, netPosition)
+	EXEC dbo.Age_GetCustomerNetPosition
+		@CustId = @DownlineCustId,
+		@RoleId = @DownlineRoleId
+
 	CREATE TABLE #MemberNagativeBetCredit (custId INT)
 
 	;WITH cte_member AS
@@ -343,7 +350,8 @@ BEGIN
 	SELECT m.custid
 	FROM cte_member m
 		INNER JOIN DBCUST.CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId -- get credit amount real time
-	WHERE c.roleId = 1 AND ISNULL(c.credit, 0) - m.amountAfterTransfer < 0
+		LEFT JOIN #NetPosition np ON m.custid = np.custid
+	WHERE c.roleId = 1 AND ISNULL(c.credit, 0) + m.amountAfterTransfer + ISNULL(np.netPosition, 0) < 0
 
 	IF @@ROWCOUNT <> 0
 	BEGIN
