@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [CustDB]
 GO
 
@@ -20,6 +20,7 @@ AS
 
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
+		- 20181102@Johnson: Apply service broker for logging [Redmine: #103547]
 */
 
 BEGIN
@@ -132,6 +133,7 @@ BEGIN
 		DECLARE @UpdCredit TABLE (custId INT, oldCredit MONEY, newCredit MONEY)
 		DECLARE @ActionId INT = 1212
 		DECLARE @LogData VARCHAR(1000)
+		DECLARE @log xml, @SB_Error BIT = 0
 		/*
 			========================= Start Member =========================
 		*/
@@ -231,21 +233,37 @@ BEGIN
 
 					IF @SubAccID > 0
 						SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
+					
+					SELECT @log = '', @SB_Error = 0
+					
+					SELECT @log = (
+						SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID
+						FROM @UpdCredit
+						FOR XML RAW('Row')
+					)
 
-					-- Write log
-					BEGIN TRY
-						INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
-						SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-						FROM	@UpdCredit 
-					END TRY
-					BEGIN CATCH
-						SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
-	
-						INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
-						SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-						FROM	@UpdCredit 
-					END CATCH
+					EXEC bodb_CustomerLog.sb.CustomerLog_SendMessage @xml = @log, 
+																	@MessageType='MessageType_CustomerLog_UserLog_Credit', 
+																	@functionName = 'UserLog_Credit',
+																	@SB_Error = @SB_Error out
 
+					--if ssb error
+					IF @SB_Error = 1
+					BEGIN
+						-- Write log
+						BEGIN TRY
+							INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
+							SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+							FROM	@UpdCredit 
+						END TRY
+						BEGIN CATCH
+							SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
+		
+							INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
+							SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+							FROM	@UpdCredit 
+						END CATCH						
+					END	
 					DELETE @UpdCredit
 				END
 
@@ -310,21 +328,38 @@ BEGIN
 
 			IF @SubAccID > 0
 				SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
+			
+			SELECT @log = '', @SB_Error = 0
+					
+			SELECT @log = (
+				SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID
+				FROM @UpdCredit
+				FOR XML RAW('Row')
+			)
 
-			-- Write log
-			BEGIN TRY
-				INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
-				SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-				FROM	@UpdCredit
-			END TRY
-			BEGIN CATCH
-				SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
-	
-				INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
-				SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-				FROM	@UpdCredit
-			END CATCH
+			EXEC bodb_CustomerLog.sb.CustomerLog_SendMessage @xml = @log, 
+															@MessageType='MessageType_CustomerLog_UserLog_Credit', 
+															@functionName = 'UserLog_Credit',
+															@SB_Error = @SB_Error out
 
+			--if ssb error
+			IF @SB_Error = 1
+			BEGIN
+				-- Write log
+				BEGIN TRY
+					INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
+					SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+					FROM	@UpdCredit
+				END TRY
+				BEGIN CATCH
+					SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
+		
+					INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
+					SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+					FROM	@UpdCredit
+				END CATCH
+			END
+			
 			DELETE @UpdCredit
 
 			SELECT @GivenCreditAgent = SUM(credit) FROM #tblrecommend
@@ -362,30 +397,51 @@ BEGIN
 
 				IF @SubAccID > 0
 					SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
+				
+				SELECT @log = '', @SB_Error = 0
+					
+				SELECT @log = (SELECT @UserID as '@UserID',
+									@DownlineCustId as '@CustID',
+									@LogData as '@Doing',
+									@DownlineCredit as '@OldValue',
+									@usedCreditMaster as '@NewValue',
+									@IP as '@IP',
+									@ActionId as '@ActionID'
+								FOR XML PATH('Row')	
+							)
 
-				-- write log
-				BEGIN TRY  
-					EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
-						@UserID		= @UserID,
-						@CustID		= @DownlineCustId,
-						@Doing		= @LogData,
-						@OldValue	= @DownlineCredit,
-						@NewValue	= @usedCreditMaster,
-						@IP			= @IP,
-						@ActionID	= @ActionId
-				END TRY  
-				BEGIN CATCH  
-					SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
-      
-					EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
-						@UserID		= @UserID,
-						@CustID		= @DownlineCustId,
-						@Doing		= @LogData,
-						@OldValue	= @DownlineCredit,
-						@NewValue	= @usedCreditMaster,
-						@IP			= @IP,
-						@ActionID	= @ActionId
-				END CATCH
+				EXEC bodb_CustomerLog.sb.CustomerLog_SendMessage @xml = @log, 
+																@MessageType='MessageType_CustomerLog_UserLog_Credit', 
+																@functionName = 'UserLog_Credit',
+																@SB_Error = @SB_Error out
+
+				--if ssb error
+				IF @SB_Error = 1
+				BEGIN
+					-- write log
+					BEGIN TRY  
+						EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
+							@UserID		= @UserID,
+							@CustID		= @DownlineCustId,
+							@Doing		= @LogData,
+							@OldValue	= @DownlineCredit,
+							@NewValue	= @usedCreditMaster,
+							@IP			= @IP,
+							@ActionID	= @ActionId
+					END TRY  
+					BEGIN CATCH  
+						SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
+		  
+						EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_Credit  
+							@UserID		= @UserID,
+							@CustID		= @DownlineCustId,
+							@Doing		= @LogData,
+							@OldValue	= @DownlineCredit,
+							@NewValue	= @usedCreditMaster,
+							@IP			= @IP,
+							@ActionID	= @ActionId
+					END CATCH
+				END	
 			END
 		END
 
