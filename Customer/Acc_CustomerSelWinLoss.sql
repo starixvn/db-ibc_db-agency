@@ -59,7 +59,7 @@ BEGIN
 			SELECT winlostdate, winlost-actual_stake+playercomm as memberWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_custid)		
 			WHERE custid = @__custId
-				AND b.statusID > 1
+				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
 		) x
@@ -87,7 +87,7 @@ BEGIN
 			SELECT winlostdate, awinlost+comm-playercomm as agentWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_recommend)		
 			WHERE recommend = @__custId
-				AND b.statusID > 1
+				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
 		) x		
@@ -115,7 +115,7 @@ BEGIN
 			SELECT winlostdate, mwinlost+acomm-comm as masterWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_mrecommend)		
 			WHERE mrecommend = @__custId
-				AND b.statusID > 1
+				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
 		) x
@@ -144,7 +144,7 @@ BEGIN
 			SELECT winlostdate, swinlost+scomm-acomm as superWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_srecommend)		
 			WHERE srecommend = @__custId
-				AND b.statusID > 1
+				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
 		) x
