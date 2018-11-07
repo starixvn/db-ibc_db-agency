@@ -61,7 +61,7 @@ BEGIN
 			WHERE custid = @__custId
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
-				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
 		) x
     END
     ELSE IF @roleid = 2
@@ -89,7 +89,7 @@ BEGIN
 			WHERE recommend = @__custId
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
-				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
 		) x		
     END
     ELSE IF @roleid = 3
@@ -117,7 +117,7 @@ BEGIN
 			WHERE mrecommend = @__custId
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
-				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
 		) x
 			
     END
@@ -146,7 +146,7 @@ BEGIN
 			WHERE srecommend = @__custId
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
-				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest = @isTest)
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
 		) x
 
     END
