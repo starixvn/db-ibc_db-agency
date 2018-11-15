@@ -14,6 +14,7 @@ AS
 	
 	Revisions:
 		- 20181102@Kan: Create new [RedmineId: #103467]
+		- 20181108@Paul: Add more code [RedmineId: #103467]
 */
 
 BEGIN
