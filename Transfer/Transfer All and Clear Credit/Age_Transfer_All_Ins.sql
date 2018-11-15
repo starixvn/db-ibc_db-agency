@@ -22,6 +22,7 @@ AS
 
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
+		- 20181109@Percy: Correct balance member [RedmineID: #104536]
 */
 
 BEGIN
@@ -654,7 +655,7 @@ BEGIN
 				---update credit balance  
 				SELECT @ABSmemberBalance = ABS(@memberBalance)
 
-				EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @ABSmemberBalance, @Type = 2
+				EXEC Dot_BalanceCreditUpd @CustID = @memberId, @balance = @ABSmemberBalance, @Type = 2
 
 				-- log data
 				SELECT @LogData = 'Transfer all:'

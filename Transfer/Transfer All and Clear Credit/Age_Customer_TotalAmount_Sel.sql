@@ -61,7 +61,7 @@ BEGIN
 		FROM #tempData t
 		WHERE EXISTS (
 			SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
-			WHERE t.bettype = s.bettype AND s.RefTable IN (3)
+			WHERE t.bettype = s.bettype AND s.RefTable IN (1,2,3)
 		)
 			AND t.statusId IN (0,1)
 
