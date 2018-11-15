@@ -16,6 +16,7 @@ AS
 		20171020@Percy: Create new [RedmineID: #84690]
 		20180413@Sophia: Enhance performance for WC2018 (HighCPU)[Redmine: #93100]
 		20181003@Patrick: Index revolution [RedmineID: #101405]
+		20181105@Paul: Enhance perf [RedmineID: #103443]
 */
 
 BEGIN
@@ -27,193 +28,127 @@ BEGIN
 	-- Get bettype --
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
-	
-	CREATE TABLE #SportBettype (bettype INT)
-	INSERT INTO #SportBettype (bettype)
-	SELECT bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
-	WHERE RefTable IN (0, 3) -- bettrans, translog
-
-	DECLARE @roleID TINYINT,
-			@srecommend INT,
+		
+	DECLARE @roleID TINYINT,			
 			@__custId INT
 
 	SET @__custId = @CustId
 
-	SELECT  @roleID = roleid, @srecommend = srecommend FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @__custId
+	SELECT  @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @__custId
 	
-	CREATE TABLE #WinLoss (todayWinloss MONEY, yesterdayWinloss MONEY)
-
     IF @roleid = 1
 	BEGIN
-		-- bettransRNG
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END)
-	    FROM dbo.bettransRNG WITH (NOLOCK)
-		WHERE custid = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
+		SELECT todayWinloss = SUM(CASE WHEN winlostdate > @yesterday THEN memberWL ELSE 0 END)
+				,yesterdayWinloss = SUM(CASE WHEN winlostdate = @yesterday THEN memberWL ELSE 0 END)	
+		FROM (
+			-- bettransRNG
+			SELECT winlostdate, winlost-actual_stake+playercomm as memberWL
+			FROM dbo.bettransRNG WITH(NOLOCK, INDEX=IX_custid)
+			WHERE custid = @__custId
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1)
 
-		-- bettransLC
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END)
-	    FROM dbo.bettransLC WITH (NOLOCK)
-		WHERE custid = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
-  			
-		-- bettrans
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT
-			SUM(CASE WHEN winlostdate > @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END)
-		FROM dbo.bettrans b WITH (NOLOCK)
-		WHERE b.custid = @__custId
-			AND winlostdate >= @yesterday
-			AND b.ruben = 1
-			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
-			
-			
+			UNION ALL -- bettransLC
+			SELECT winlostdate, winlost-actual_stake+playercomm as memberWL
+			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_custid)
+			WHERE custid = @__custId
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1)
+
+			UNION ALL --bettrans
+			SELECT winlostdate, winlost-actual_stake+playercomm as memberWL
+			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_custid)		
+			WHERE custid = @__custId
+				AND b.statusID NOT IN (0, 1)
+				AND b.winlostdate >= @yesterday
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+		) x
     END
     ELSE IF @roleid = 2
     BEGIN
-		-- bettransRNG
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN awinlost+comm-playercomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN awinlost+comm-playercomm ELSE 0 END)
-	    FROM dbo.bettransRNG WITH (NOLOCK)
-		WHERE recommend = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
+		SELECT todayWinloss = SUM(CASE WHEN winlostdate > @yesterday THEN agentWL ELSE 0 END)
+				,yesterdayWinloss = SUM(CASE WHEN winlostdate = @yesterday THEN agentWL ELSE 0 END)	
+		FROM (
+			-- bettransRNG
+			SELECT winlostdate, awinlost+comm-playercomm as agentWL
+			FROM dbo.bettransRNG WITH (NOLOCK, INDEX=IX_recommend)
+			WHERE recommend = @__custId
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1)
 
-		-- bettransLC
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN awinlost+comm-playercomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN awinlost+comm-playercomm ELSE 0 END)
-	    FROM dbo.bettransLC WITH (NOLOCK)
-		WHERE recommend = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
-			
-		-- bettrans
-		;WITH BettransCTE AS (
-			SELECT winlostdate, bettype,
-					SUM(awinlost) AS awinlost,
-					SUM(comm) AS comm,
-					SUM(playercomm) AS playercomm
-			FROM dbo.bettrans b WITH (NOLOCK)
-			WHERE b.recommend = @__custId
-				AND b.ruben = 1
+			UNION ALL -- bettransLC
+			SELECT winlostdate, awinlost+comm-playercomm as agentWL
+			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_recommend)
+			WHERE recommend = @__custId
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1)
+
+			UNION ALL --bettrans
+			SELECT winlostdate, awinlost+comm-playercomm as agentWL
+			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_recommend)		
+			WHERE recommend = @__custId
+				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
-			GROUP BY winlostdate, bettype
-		)
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT
-			SUM(CASE WHEN winlostdate > @yesterday THEN awinlost+comm-playercomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN awinlost+comm-playercomm ELSE 0 END)
-		FROM BettransCTE b  
-		WHERE EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
-		
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+		) x		
     END
     ELSE IF @roleid = 3
     BEGIN 
-
-		-- bettransRNG
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN mwinlost+acomm-comm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END)
-	    FROM dbo.bettransRNG WITH (NOLOCK)
-		WHERE mrecommend = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
-
-		-- bettransLC
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN mwinlost+acomm-comm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END)
-	    FROM dbo.bettransLC WITH (NOLOCK)
-		WHERE mrecommend = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
-
-			
-		-- bettrans
-		;WITH BettransCTE AS (
-			SELECT winlostdate, bettype,
-					SUM(mwinlost) AS mwinlost,
-					SUM(acomm) AS acomm,
-					SUM(comm) AS comm
-			FROM dbo.bettrans b WITH (NOLOCK)
+		SELECT todayWinloss = SUM(CASE WHEN winlostdate > @yesterday THEN masterWL ELSE 0 END)
+				,yesterdayWinloss = SUM(CASE WHEN winlostdate = @yesterday THEN masterWL ELSE 0 END)	
+		FROM (
+			-- bettransRNG
+			SELECT winlostdate, mwinlost+acomm-comm as masterWL
+			FROM dbo.bettransRNG WITH (NOLOCK, INDEX=IX_mrecommend)
 			WHERE mrecommend = @__custId
-				AND b.ruben = 1
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1)
+
+			UNION ALL -- bettransLC
+			SELECT winlostdate, mwinlost+acomm-comm as masterWL
+			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_mrecommend)
+			WHERE mrecommend = @__custId
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1)
+
+			UNION ALL --bettrans
+			SELECT winlostdate, mwinlost+acomm-comm as masterWL
+			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_mrecommend)		
+			WHERE mrecommend = @__custId
+				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
-			GROUP BY winlostdate, bettype
-		)
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT
-			SUM(CASE WHEN winlostdate > @yesterday THEN mwinlost+acomm-comm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END)
-		FROM BettransCTE b  
-		WHERE EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+		) x
 			
     END
     ELSE IF @roleid = 4  
     BEGIN
-	  
-		-- bettransRNG
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN swinlost+scomm-acomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN swinlost+scomm-acomm ELSE 0 END)
-	    FROM dbo.bettransRNG WITH (NOLOCK)
-		WHERE srecommend = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
+	  SELECT todayWinloss = SUM(CASE WHEN winlostdate > @yesterday THEN superWL ELSE 0 END)
+				,yesterdayWinloss = SUM(CASE WHEN winlostdate = @yesterday THEN superWL ELSE 0 END)	
+		FROM (
+			-- bettransRNG
+			SELECT winlostdate, swinlost+scomm-acomm as superWL
+			FROM dbo.bettransRNG WITH (NOLOCK, INDEX=IX_srecommend)
+			WHERE srecommend = @__custId
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1) 
 
-		-- bettransLC
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN swinlost+scomm-acomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN swinlost+scomm-acomm ELSE 0 END)
-	    FROM dbo.bettransLC WITH (NOLOCK)
-		WHERE srecommend = @__custId
-			AND winlostdate >= @yesterday
-			AND statusID NOT IN (0, 1)
+			UNION ALL -- bettransLC
+			SELECT winlostdate, swinlost+scomm-acomm as superWL
+			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_srecommend)
+			WHERE srecommend = @__custId
+				AND winlostdate >= @yesterday
+				AND statusID NOT IN (0, 1)
 
-		-- bettrans
-		;WITH BettransCTE AS (
-			SELECT	winlostdate, bettype,
-					SUM(swinlost) AS swinlost,
-					SUM(scomm) AS scomm,
-					SUM(acomm) AS acomm
-			FROM dbo.bettrans  b WITH (NOLOCK)		
-			WHERE srecommend = @__custId			---- use index IX_srecommend
-				AND b.ruben = 1
+			UNION ALL --bettrans
+			SELECT winlostdate, swinlost+scomm-acomm as superWL
+			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_srecommend)		
+			WHERE srecommend = @__custId
+				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
-			GROUP BY winlostdate, bettype
-		)
-		INSERT INTO #WinLoss (todayWinloss, yesterdayWinloss)
-		SELECT 
-			SUM(CASE WHEN winlostdate > @yesterday THEN swinlost+scomm-acomm ELSE 0 END),
-			SUM(CASE WHEN winlostdate = @yesterday THEN swinlost+scomm-acomm ELSE 0 END)
-		FROM BettransCTE b  
-		WHERE EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
-		
-    END
+				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+		) x
 
-	SELECT
-		SUM(todayWinloss)		AS todayWinloss,
-		SUM(yesterdayWinloss)	AS yesterdayWinloss
-	FROM #WinLoss
-	
-	DROP TABLE #SportBettype 
-	DROP TABLE #WinLoss
+    END
 END
 GO
