@@ -237,7 +237,7 @@ BEGIN
 					SELECT @log = '', @SB_Error = 0
 					
 					SELECT @log = (
-						SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID
+						SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID, getdate() as LogDate
 						FROM @UpdCredit
 						FOR XML RAW('Row')
 					)
@@ -332,7 +332,7 @@ BEGIN
 			SELECT @log = '', @SB_Error = 0
 					
 			SELECT @log = (
-				SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID
+				SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID, getdate() as LogDate
 				FROM @UpdCredit
 				FOR XML RAW('Row')
 			)
@@ -406,7 +406,8 @@ BEGIN
 									@DownlineCredit as '@OldValue',
 									@usedCreditMaster as '@NewValue',
 									@IP as '@IP',
-									@ActionId as '@ActionID'
+									@ActionId as '@ActionID',
+									getdate() as '@LogDate'
 								FOR XML PATH('Row')	
 							)
 
