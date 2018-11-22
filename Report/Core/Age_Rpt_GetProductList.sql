@@ -1,25 +1,23 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
 ALTER PROCEDURE [dbo].[Age_Rpt_GetProductList]
 AS
+
 /*  
- Created: 20161129@Paul  
- Task : Get all products for report
- DB: DBAGE/bodb02  
- Original:  
+	Created: 20161129@Paul  
+	Task : Get all products for report
+	DB: DBAGE/bodb02  
   
- Revisions:  
-  - 20161129@Paul: Smartphone Friendly UI for Microsite Report - [Redmine: #61531]
-  - 20170508@Paul: Return EndOfSupportDate - [Redmine: #70450]
-  - 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
-    
- Param's Explanation:  
-   
- */  
+	Revisions:
+		- 20161129@Paul: Smartphone Friendly UI for Microsite Report - [Redmine: #61531]
+		- 20170508@Paul: Return EndOfSupportDate - [Redmine: #70450]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+*/
+
 BEGIN
-	SET NOCOUNT ON;
+	SET NOCOUNT ON
 
 	SELECT
 		CAST(ISNULL(gp.GroupProductId, p.ProductID) AS INT) AS ProductID
@@ -27,10 +25,8 @@ BEGIN
 	   ,p.EndOfSupportDate
 	FROM dbo.Products p WITH (NOLOCK)
 		LEFT JOIN dbo.f_GroupProduct() gp ON p.ProductID = gp.ProductId AND gp.ProductId <> gp.GroupProductId
-	WHERE p.GroupType = 0 AND gp.ProductId IS NULL;
+	WHERE p.GroupType = 0 AND gp.ProductId IS NULL
 
-	SET NOCOUNT OFF;
+	SET NOCOUNT OFF
 END
 GO
-
-
