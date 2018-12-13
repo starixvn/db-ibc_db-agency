@@ -35,6 +35,7 @@ AS
 		- 20150425@Tom: Select League By Custid
 		- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #53152]
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
+		- 20181213@Razor: Add Sporttype = 164 for NG [RedmineId: #104006]
 	
 	Parameter's Explanation
 		- @custid : Agent's ID	
@@ -311,7 +312,7 @@ BEGIN
 		AND m.eventdate <= @todate
 		AND m.eventstatus = 'completed'
 		AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-					 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
+					 WHEN @showNG = 1 AND l.sporttype IN (161, 164) THEN 1 
 					 WHEN @showP2P = 1 AND l.sporttype = 253 THEN 1 
 					 WHEN @showLiveCasino = 1 AND l.sporttype = 162 THEN 1
 					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT in (181, 182, 184,183,185) THEN 1
@@ -357,7 +358,7 @@ BEGIN
 		AND m.eventdate <= @todate
 		AND m.eventstatus = 'completed'
 		AND 1 = CASE WHEN @showSB = 1 AND l.sporttype <= 99 THEN 1
-					 WHEN @showNG = 1 AND l.sporttype = 161 THEN 1 
+					 WHEN @showNG = 1 AND l.sporttype IN (161, 164) THEN 1 
 					 WHEN @showP2P = 1 AND l.sporttype = 253 THEN 1 
 					 WHEN @showLiveCasino = 1 AND l.sporttype = 162 THEN 1
 					 WHEN @showVS = 1 AND l.sporttype BETWEEN 180 AND 186 AND l.sporttype NOT IN (181, 182, 184,183,185) THEN 1
