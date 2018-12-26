@@ -1,4 +1,7 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Age_Forecast_SelByLeague_SAg]
 	@BaseOffsetHDP int,
 	@BaseOffsetOU int,
@@ -9,23 +12,19 @@ ALTER PROCEDURE [dbo].[Age_Forecast_SelByLeague_SAg]
 	@Language varchar(2)
 AS
 /*
-	--DB: DB05.bodb02
-	--WARNING: TAKE A DEEP BREATH BEFORE READING THIS SP
-	--Original: ForecastSAgByLeague2
+	Created:
+	DB: DB042.bodb02
+	WARNING: TAKE A DEEP BREATH BEFORE READING THIS SP
+	Original: ForecastSAgByLeague2
 	
 	Revisions:
 		- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 		- 20150903@Winnie: Myanmar odds
-		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
-		
+		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
+		- 20181226@Percy: Add table OddsES for E-Sports [RedmineID: #106994]
+
+	Supported bettypes: 1,3,7,8,301,302,303,304
 	
-	--Declare @BetTypeHDP int, @BetTypeOU int, 
-	--@VScoreHDP smallmoney, @VScoreOU smallmoney, 
-	--@BetTypeHTHDP int, @BetTypeHTOU int
-	--Select @BetTypeHDP = 1, @BetTypeOU = 3,@BetTypeHTHDP = 7, @BetTypeHTOU = 8
-
-
-	--Declare @Result TABLE (ForecastID int, bettype int, liveindicator bit, status varchar(10), offset smallmoney, hometotal money, awaytotal money, homelose money, awaylose money, betcount int, BaseOffset smallmoney, WinLostStatus int, MatchID int, FOffset smallmoney)
 	--WinlostStatus: 
 	--	1: home win 1/2
 	--	2: home win 1
@@ -151,6 +150,32 @@ BEGIN
 					--			status, 
 								b.bettype,
 								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+
+							union all
+							select 
+								b.bettype,
+								b.currency, b.hdp2 - b.hdp1 as hdp, b.livehomescore - b.liveawayscore AS score, b.liveindicator,
+								0 as MOwin,
+								0 as MOlose,
+								sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) AS homewin,
+								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) AS awaywin,
+								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) AS homelose,
+								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) AS awaylose,
+								M.MatchID,
+								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
+								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+							from 
+								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_srecommend) 
+								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
+								inner join OddsES as O with (NOLOCK) on b.OddsID = O.OddsID
+								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
+							where 
+								b.srecommend = @srecommend
+								and b.bettype = 1
+								and b.statusID in (0,1)
+							group by 
+								b.bettype,
+								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
 						) AS x 
 					group by 
 					--	x.status, 
@@ -203,6 +228,33 @@ BEGIN
 								
 							group by 
 					--			status, 
+								b.bettype,
+								b.currency, b.hdp1, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+
+							union all
+							select 
+								b.liveindicator,  
+								b.bettype,
+								b.currency, b.hdp1 as hdp, 0 AS score,
+								0 as MOwin,
+								0 as MOlose,
+								sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) AS homewin,
+								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) AS awaywin,
+								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) AS homelose,
+								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) AS awaylose,
+								M.MatchID,
+								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
+								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+							from 
+								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_srecommend) 							
+								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
+								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
+								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
+							where 
+								b.srecommend = @srecommend
+								and b.bettype = 3
+								and b.statusID in (0,1)
+							group by 
 								b.bettype,
 								b.currency, b.hdp1, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
 						) AS x 
