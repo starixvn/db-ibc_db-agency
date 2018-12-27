@@ -1,10 +1,9 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
   
 ALTER PROCEDURE [dbo].[Age_CustomerSelTopWinningMembers_Ag]
-	@custid INT,
+	@custid			INT,
 	@BalanceUpDay	DATETIME,
 	@MoveBetsDay	DATETIME
 AS
@@ -14,9 +13,11 @@ AS
 	Date: 2011-05-31
 	DB: DBAGE/BODB02
 	Task: Get top highest winning members
+	
 	Revisions:	
 		- 20130121@Dan: add linked server DBSUM for bodb_Summary
 		- 20170503@Percy: add constraint winlostdate due to MB BU process [RedmineID: #75955]
+		- 20181120@Percy: Remove linked-server DBSUM [RedmineID: #105170]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -65,7 +66,7 @@ BEGIN
 
 		INSERT INTO @tmpStatistics(custid, winlost)
 		SELECT custid, SUM(winlost)
-		FROM DBSUM.bodb_summary.dbo.sum_winloss_old with(nolock)
+		FROM bodb_summary.dbo.sum_winloss_old with(nolock)
 		WHERE recommend = @custid and roleid = 1
 			AND winlostdate BETWEEN @tmpFromDate AND @tmpToDate
 		GROUP BY custid 
