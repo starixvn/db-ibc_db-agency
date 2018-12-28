@@ -309,6 +309,39 @@ BEGIN
 					--			status,
 								b.bettype, 
 								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+							UNION ALL
+							select 
+					--			status, 
+								b.bettype,
+								b.currency, b.hdp2 - b.hdp1 as hdp, b.livehomescore - b.liveawayscore AS score, b.liveindicator,
+	--							sum(case when betteam='h' then case when abs(odds) > 1 then abs(odds) * stake else stake end * (b.mpositiontaking) else 0 end) AS hometotal,
+	--							sum(case when betteam='a' then case when abs(odds) > 1 then abs(odds) * stake else stake end * (b.mpositiontaking) else 0 end) AS awaytotal, 
+								sum(case when b.bettype =303 AND oddsspread>0 then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOwin,
+								sum(case when b.bettype =303 AND oddsspread<0 then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOlose,
+								sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS homewin,
+								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
+								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
+								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+	--							count(*) AS c,
+
+								M.MatchID,
+								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
+								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+							from 
+								bettrans AS b WITH (NOLOCK,INDEX = IX_betrunning_mrecommend)
+								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
+								inner join OddsES as O with (NOLOCK) on b.OddsID = O.OddsID
+								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
+							where 
+								b.MRecommend = @MRecommend
+								and b.bettype IN(7)--=@BetTypeHTHDP
+								and b.statusID in (0,1) 
+								
+							group by 
+					--			status,
+								b.bettype, 
+								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+							
 						) AS x 
 					group by 
 					--	x.status, 
@@ -357,6 +390,39 @@ BEGIN
 							where 
 								b.MRecommend = @MRecommend
 								and b.bettype IN (8,304)--=@BetTypeHTOU
+								and b.statusID in (0,1)
+								
+							group by 
+					--			status, 
+								b.bettype,
+								b.currency, b.hdp1, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+							UNION ALL
+							select 
+								b.liveindicator,  
+					--			status, 
+								b.bettype,
+								b.currency, b.hdp1 as hdp, 0 AS score,
+	--							sum(case when betteam='h' then case when abs(odds) > 1 then abs(odds) * stake else stake end * (b.mpositiontaking) else 0 end) AS hometotal,
+	--							sum(case when betteam='a' then case when abs(odds) > 1 then abs(odds) * stake else stake end * (b.mpositiontaking) else 0 end) AS awaytotal, 
+								sum(case when b.bettype =304 AND oddsspread>0 then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOwin,
+								sum(case when b.bettype =304 AND oddsspread<0 then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOlose,
+								sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS homewin,
+								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
+								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
+								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+	--							count(*) AS c,
+
+								M.MatchID,
+								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
+								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+							from 
+								bettrans AS b WITH (NOLOCK,INDEX = IX_betrunning_mrecommend)						
+								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
+								inner join OddsES as O with (NOLOCK) on b.OddsID = O.OddsID
+								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
+							where 
+								b.MRecommend = @MRecommend
+								and b.bettype IN (8)--=@BetTypeHTOU
 								and b.statusID in (0,1)
 								
 							group by 
