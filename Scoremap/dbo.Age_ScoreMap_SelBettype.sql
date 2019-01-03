@@ -8,7 +8,7 @@ AS
 /*
 	Task: Get bet types for Score Map function  
 	Date: 20110919@Johnson  
-	DB: DBAGE.bodb02   
+	DB: DB042.bodb02
 	
 	Revisions:  
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
