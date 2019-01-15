@@ -1,43 +1,47 @@
-﻿
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
 ALTER PROCEDURE [dbo].[Age_Forecast_OddsSelTopByMatch]
 	@matchid INT,
 	@Language NVARCHAR(2) = 'E',
-	@bettype INT = 1  
+	@bettype INT = 1
 AS
 /*
 	Task: Forecast at Agent Site 
-	DB: DB052.bodb02
+	DB: DBAGE.bodb02 - DBEXT.bodb02
 	Original:OddsSelTopByMatch
 	
 	Revisions: 
 		- 20100721@Jacob: Add param @bettype 
 		- 20130730@Lukas: get live score from match instead odds		
-		
+		- 20181226@Percy: Add table OddsES for E-Sports [RedmineID: #106994]
 */
 SET NOCOUNT ON
-SELECT 	
-	TOP 1 hdp1, 
-	hdp2, 
-	odds1a, 
-	odds2a,
-	ISNULL(m.livehomescore,0) livehomescore,
-	ISNULL(m.liveawayscore,0) liveawayscore, 
-	switch, 
-	oddsstatus,
+
+SELECT TOP 1 matchid, hdp1, hdp2, odds1a, odds2a, switch, oddsstatus
+INTO #odds
+FROM dbo.odds WITH (NOLOCK)
+WHERE bettype = @bettype AND matchid = @matchid
+ORDER BY oddsid DESC
+
+IF @@ROWCOUNT = 0
+	INSERT INTO #odds
+	SELECT TOP 1 matchid, hdp1, hdp2, odds1a, odds2a, switch, oddsstatus
+	FROM dbo.oddsES WITH (NOLOCK)
+	WHERE bettype = @bettype AND matchid = @matchid
+	ORDER BY oddsid DESC
+
+SELECT o.hdp1, o.hdp2, o.odds1a, o.odds2a,
+	ISNULL(m.livehomescore, 0) livehomescore,
+	ISNULL(m.liveawayscore, 0) liveawayscore, 
+	o.switch, 
+	o.oddsstatus,
 	m.homeid,
 	m.awayid,
-	isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral	
-FROM 
-	odds WITH(NOLOCK)
-	left join match M with (nolock) on odds.matchid = M.matchid 		
-WHERE 
-	bettype = @bettype AND
-	odds.matchid = @matchid
-ORDER BY 
-	oddsid DESC
-
+	isnull(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral	
+FROM #odds o
+	LEFT JOIN dbo.match m WITH (NOLOCK) ON o.matchid = m.matchid
+	
+DROP TABLE #odds	
 GO
-
-GRANT EXECUTE ON [dbo].Age_Forecast_OddsSelTopByMatch TO [bodbDownlineNet]
-GO
-GRANT EXECUTE ON [dbo].Age_Forecast_OddsSelTopByMatch TO [bodbDownlineNetView]
