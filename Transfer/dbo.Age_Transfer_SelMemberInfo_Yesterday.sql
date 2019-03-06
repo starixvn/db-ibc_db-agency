@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Transfer_SelMemberInfo_Yesterday]
 	@custid int,--member 
 	@IsAllowTotalBalance bit = null,
@@ -21,7 +18,7 @@ AS
 /*
 Created: ???
 Task : 
-DB: DB053.bodb02
+DB: DBTXN.bodb02
 Original: Age_Transfer_SelMemberInfo_Yesterday_1
 	Revisions:
 		- 20090505@Phuc: get amount transferred.
@@ -37,6 +34,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday_1
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		- 20180521@Percy: Add waiting tickets on translog [RedmineID: #95268]
 		- 20181005@Percy: Remove convert date on winlostdate [RedmineID: #101644]
+		- 20190305@Helen: Move SP to DBTRANS - Enhance Transfer function to avoid replication delay [RedmineID : #107963]
 */
 SET NOCOUNT ON
 
@@ -65,9 +63,8 @@ IF (@IsAllowTotalBalance = 0)
 		 @DisableCasino = ci.DisableCasino,
 	     @GivenCredit = ci.credit,
 	     @CashBalance = isnull(b.CashBalance,0)
-    from   
-	    customer with (NOLOCK)  
-	    INNER JOIN CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
+    from CUSTDB.dbo.customer with (NOLOCK)  
+	    INNER JOIN CUSTDB.dbo.CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
 	    LEFT JOIN 
 		    (	
 				SELECT custid, SUM(CashBalance) AS CashBalance
@@ -112,9 +109,8 @@ ELSE
 		 @DisableCasino = ci.DisableCasino,
 	     @GivenCredit = ci.credit,
 	     @CashBalance = isnull(b.CashBalance,0)
-    from   
-	    customer with (NOLOCK)  
-	    INNER JOIN CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
+    from CUSTDB.dbo.customer with (NOLOCK)  
+	    INNER JOIN CUSTDB.dbo.CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
 	    LEFT JOIN 
 		    (   SELECT custid, SUM(CashBalance) AS CashBalance
 				FROM (

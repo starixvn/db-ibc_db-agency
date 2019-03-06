@@ -1,8 +1,5 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
-ALTER PROCEDURE [Age_Transfer_SelList_MAg]
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Age_Transfer_SelList_MAg]
 	@masterid int,
 	@PageSize int=500,
 	@PageIndex int=1,
@@ -24,7 +21,7 @@ AS
 --Vinh@20080102: add yesterday balance columns
 /*
 Task : Select transfer list of MAgent
-DB: DBAGE/bodb02
+DB: DBTXN/bodb02
 Original: 
 
 Revisions:
@@ -45,365 +42,403 @@ Revisions:
 	- 20170620@Percy: Apply new formula yesterday balance [RedmineID: #74291]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 	- 20181005@Percy: Revise indexes [RedmineID: #101644]
-
+	- 20190305@Helen: Move SP to DBTRANS - Enhance Transfer function to avoid replication delay [RedmineID : #107963]
+	
 Param's Explanation:
 • @CustID: MAgentID
 • @IsAllowTotalBalance: filter data based on total balance transfer
 */
+BEGIN
+	SET NOCOUNT ON
 
-SET NOCOUNT ON
+	-- SportBettypeMatrix
+	DECLARE @isTest BIT
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
--- SportBettypeMatrix
-DECLARE @isTest BIT
-SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
+	CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
+	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
+	SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
 
-CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
-INSERT INTO #SportBettype (ProductID, bettype, RefTable)
-SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
+	DECLARE @RowCount int, @RowStart int, @RowEnd int
+	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
 
-DECLARE @RowCount int, @RowStart int, @RowEnd int
-SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
+	DECLARE @today SMALLDATETIME,
+			@yesterday SMALLDATETIME
+	SELECT  @today     = CONVERT(DATE, GETDATE())
+	SELECT	@yesterday = DATEADD(DD, -1, @today)
 
-DECLARE @today SMALLDATETIME,
-		@yesterday SMALLDATETIME
-SELECT  @today     = CONVERT(DATE, GETDATE())
-SELECT	@yesterday = DATEADD(DD, -1, @today)
-
-CREATE TABLE #tmp_customer
-(
-	[custid] int primary key,
-	[enabled] bit,
-	[username] varchar(30),
-	[closed] bit,
-	[suspended] bit,
-	[firstname] nvarchar(50) null,
-	[lastname] nvarchar(50) null,
-)
-
-CREATE TABLE #balance  
-(
-	recommend int,
-	YesterdayCashBalance money,		
-	TotalCashBalance money,
-	YesterdayBalance money,		
-	TotalBalance money,
-	Outstanding money
-)
-
-CREATE TABLE #result_balance  
-(
-	recommend int,
-	YesterdayCashBalance money,		
-	TotalCashBalance money,
-	YesterdayBalance money,		
-	TotalBalance money,
-	Outstanding money
-)
-
-CREATE TABLE #credit
-(
-	recommend int primary key,
-	agentCredit money,
-	agentUsedCredit money
-)
-
-INSERT INTO #credit
-SELECT c.recommend,
-	isnull(SUM(CASE WHEN roleid = 2 THEN credit ELSE 0 END), 0) AS agentCredit,			
-	isnull(SUM(CASE WHEN roleid = 1 THEN credit ELSE 0 END), 0) AS agentUsedCredit
-FROM custinfo as c (nolock)
-WHERE mrecommend = @masterid AND roleid < 3
-GROUP BY c.recommend
-
-/* Balance Info */
--- bettransRnG
-INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT
-	recommend,
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 0)
-FROM dbo.bettransRnG WITH(NOLOCK)
-WHERE mrecommend = @masterid
-	AND (
-		statusID IN (0, 1)
-		OR winlostdate >= @yesterday
+	CREATE TABLE #tmp_customer
+	(
+		[custid] int primary key,
+		[enabled] bit,
+		[username] varchar(30),
+		[closed] bit,
+		[suspended] bit,
+		[firstname] nvarchar(50) null,
+		[lastname] nvarchar(50) null,
 	)
-GROUP BY recommend
 
--- bettransLC
-INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT
-	recommend,
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 0)
-FROM dbo.bettransLC WITH(NOLOCK)
-WHERE mrecommend = @masterid
-	AND (
-		statusID IN (0, 1)
-		OR winlostdate >= @yesterday
+	CREATE TABLE #balance  
+	(
+		recommend int,
+		YesterdayCashBalance money,		
+		TotalCashBalance money,
+		YesterdayBalance money,		
+		TotalBalance money,
+		Outstanding money
 	)
-GROUP BY recommend
 
--- translog
-INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT
-	recommend,
-	0,
-	0,
-	0,
-	0,
-	ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0)
-FROM dbo.translog t WITH(NOLOCK)
-WHERE mrecommend = @masterid
-	AND statusID IN (0, 1)
-GROUP BY recommend
+	CREATE TABLE #result_balance  
+	(
+		recommend int,
+		YesterdayCashBalance money,		
+		TotalCashBalance money,
+		YesterdayBalance money,		
+		TotalBalance money,
+		Outstanding money
+	)
 
--- bettrans
-	-- running ticket
-INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT
-	recommend,
-	0,
-	0,
-	0,
-	0,
-	ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0)
-FROM dbo.bettrans b WITH(NOLOCK)
-WHERE b.mrecommend = @masterid
-	AND ruben = 0
-	AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
-GROUP BY recommend
+	DECLARE @credit AS TABLE
+	(
+		recommend int primary key,
+		agentCredit money,
+		agentUsedCredit money
+	)
 
+	INSERT INTO @credit
+	SELECT c.recommend,
+		isnull(SUM(CASE WHEN roleid = 2 THEN credit ELSE 0 END), 0) AS agentCredit,			
+		isnull(SUM(CASE WHEN roleid = 1 THEN credit ELSE 0 END), 0) AS agentUsedCredit
+	FROM custinfo as c (nolock)
+	WHERE mrecommend = @masterid AND roleid IN (1,2)
+	GROUP BY c.recommend
+	
+	/* Balance Info */
+	-- bettransRnG
+	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+	SELECT
+		recommend
+		, YesterdayCashBalance
+		, TotalCashBalance
+		, YesterdayBalance
+		, TotalBalance
+		, Outstanding
+	FROM @credit r
+		CROSS APPLY (SELECT
+						ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0) AS YesterdayCashBalance,
+						ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0) AS TotalCashBalance,
+						ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+							+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS YesterdayBalance,
+						ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+							+ ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS TotalBalance,
+						ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 0) AS Outstanding
+					FROM dbo.bettransRnG b WITH(NOLOCK)
+					WHERE b.recommend = r.recommend
+						AND (
+							statusID IN (0, 1)
+							OR winlostdate >= @yesterday
+						)
+					GROUP BY b.recommend	
+					) AS tmp
+	-- bettransLC
+	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+	SELECT
+		recommend
+		, YesterdayCashBalance
+		, TotalCashBalance
+		, YesterdayBalance
+		, TotalBalance
+		, Outstanding
+	FROM @credit r
+		CROSS APPLY (SELECT
+						
+						ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0) AS YesterdayCashBalance,
+						ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0) AS TotalCashBalance,
+						ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+							+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS YesterdayBalance,
+						ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+							+ ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0) TotalBalance,
+						ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 0) AS Outstanding
+					FROM dbo.bettransLC b WITH(NOLOCK)
+					WHERE b.recommend = r.recommend
+						AND (
+							statusID IN (0, 1)
+							OR winlostdate >= @yesterday
+						)
+					GROUP BY b.recommend) AS tmp
+	-- translog
+	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+	SELECT
+		r.recommend,
+		0,
+		0,
+		0,
+		0,
+		Outstanding
+	FROM @credit r
+		CROSS APPLY (SELECT	ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0) AS Outstanding
+					FROM dbo.translog t WITH(NOLOCK)
+					WHERE r.recommend = t.recommend
+						AND statusID IN (0, 1)
+					GROUP BY recommend
+					) AS tmp 
+	-- bettrans
+		-- running ticket
+	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+	SELECT
+		recommend,
+		0,
+		0,
+		0,
+		0,
+		Outstanding
+	FROM @credit r
+		CROSS APPLY (SELECT	ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0) AS Outstanding
+					FROM dbo.bettrans b WITH(NOLOCK)
+					WHERE b.recommend = r.recommend
+						AND ruben = 0
+						AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
+					GROUP BY recommend
+					) AS tmp
 	-- settle ticket
-INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT
-	recommend,
-	ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0),
-	ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0),
-	ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	0
-FROM dbo.bettrans b WITH(NOLOCK)
-WHERE b.mrecommend = @masterid
-	AND ruben = 1
-	AND winlostdate < @yesterday
-GROUP BY recommend
+	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+	SELECT
+		recommend
+		, YesterdayCashBalance
+		, TotalCashBalance
+		, YesterdayBalance
+		, TotalBalance
+		, 0 Outstanding
+	FROM @credit r
+		CROSS APPLY (SELECT
+						ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0) AS YesterdayCashBalance,
+						ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0) AS TotalCashBalance,
+						ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
+							+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS YesterdayBalance,
+						ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
+							+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS TotalBalance
+						
+					FROM dbo.bettrans b WITH(NOLOCK)
+					WHERE r.recommend = b.recommend
+						AND ruben = 1
+						AND winlostdate < @yesterday
+					GROUP BY recommend
+					) AS tmp
 
-INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT
-	recommend,
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0),
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	0
-FROM dbo.bettrans b WITH(NOLOCK)
-WHERE b.mrecommend = @masterid
-	AND ruben = 1
-	AND winlostdate >= @yesterday
-	AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable IN (1,2))
-GROUP BY recommend
-/* End Balance Info */
+	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+	SELECT
+		recommend
+		, YesterdayCashBalance
+		, TotalCashBalance
+		, YesterdayBalance
+		, TotalBalance
+		, 0 AS Outstanding
+	FROM @credit r
+		CROSS APPLY (SELECT
+						
+						ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0) AS YesterdayCashBalance,
+						ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0) AS TotalCashBalance,
+						ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
+							+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0) AS YesterdayBalance,
+						ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
+							+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS TotalBalance
+						
+					FROM dbo.bettrans b WITH(NOLOCK)
+					WHERE r.recommend = b.recommend
+						AND ruben = 1
+						AND winlostdate >= @yesterday
+						AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable IN (1,2))
+					GROUP BY recommend
+					) AS tmp 
+	
+	/* End Balance Info */
 
-INSERT INTO #result_balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT recommend, SUM(YesterdayCashBalance), SUM(TotalCashBalance), SUM(YesterdayBalance), SUM(TotalBalance), SUM(Outstanding)
-FROM #balance
-GROUP BY recommend
+	INSERT INTO #result_balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+	SELECT recommend, SUM(YesterdayCashBalance), SUM(TotalCashBalance), SUM(YesterdayBalance), SUM(TotalBalance), SUM(Outstanding)
+	FROM #balance
+	GROUP BY recommend
 
-SET @Username = isnull(@Username, '')
+	SET @Username = isnull(@Username, '')
 
---Filter user
-IF @Username = ''
-	INSERT INTO #tmp_customer 
-	SELECT 
-		c.custid, ci.enabled, c.username, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname
-	FROM
-		CustInfo as ci with (NOLOCK,index=ix_custinfo) INNER JOIN Customer c (nolock) on ci.custid = c.custid
-	WHERE 
-		ci.roleid=2 and ci.mrecommend=@masterid 
-		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-		AND	isnull(ci.closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
-		AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end
-ELSE
-	INSERT INTO #tmp_customer 
-	SELECT 
-		c.custid, ci.enabled, c.username, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname
-	FROM
-		CustInfo as ci with (NOLOCK,index=ix_custinfo) INNER JOIN Customer c (nolock) on ci.custid = c.custid
-	WHERE 
-		ci.roleid=2 and ci.mrecommend=@masterid and ci.username like '%' + @Username + '%' 
-		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-		AND	isnull(ci.closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
-		AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end
-
-IF @TotalPages = 0
-BEGIN
-	IF isnull(@IsYesterdayBalance,0) = 0 
+	--Filter user
+	IF @Username = ''
+		INSERT INTO #tmp_customer ([custid],[enabled],[username],[closed],[suspended],[firstname],[lastname])
 		SELECT 
-			@TotalPages = count(1),@TotalPages=@TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end
+			c.custid, ci.enabled, c.username, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname
 		FROM
-			#tmp_customer
+			CUSTDB.dbo.CustInfo as ci WITH (NOLOCK) 
+			INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK) ON ci.custid = c.custid
+			INNER JOIN @credit r ON r.recommend = ci.custid
+		WHERE enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
+			AND	isnull(ci.closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
+			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end
 	ELSE
+		INSERT INTO #tmp_customer ([custid],[enabled],[username],[closed],[suspended],[firstname],[lastname])
 		SELECT 
-			@TotalPages = count(1),@TotalPages=@TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end
-		FROM 
-			#tmp_customer c
-			LEFT JOIN #result_balance balance ON c.custid = balance.recommend
-		WHERE
-		    CASE 
-		        WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
-		        WHEN @IsAllowTotalBalance = 1 THEN ISNULL(balance.TotalBalance, 0)
-		    END <> 0
-END
+			c.custid, ci.enabled, c.username, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname
+		FROM CUSTDB.dbo.CustInfo as ci WITH (NOLOCK) 
+			INNER JOIN CUSTDB.dbo.Customer c WITH (NOLOCK) ON ci.custid = c.custid
+			INNER JOIN @credit r ON r.recommend = ci.custid
+		WHERE ci.username like '%' + @Username + '%' 
+			AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
+			AND	isnull(ci.closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
+			AND isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end
 
-CREATE TABLE #ClosedReason (custid INT, ClosedReason TINYINT)
-DECLARE @SQL NVARCHAR(MAX)
+	IF @TotalPages = 0
+	BEGIN
+		IF isnull(@IsYesterdayBalance,0) = 0 
+			SELECT 
+				@TotalPages = count(1),@TotalPages=@TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end
+			FROM
+				#tmp_customer
+		ELSE
+			SELECT 
+				@TotalPages = count(1),@TotalPages=@TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end
+			FROM 
+				#tmp_customer c
+				LEFT JOIN #result_balance balance ON c.custid = balance.recommend
+			WHERE
+				CASE 
+					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
+					WHEN @IsAllowTotalBalance = 1 THEN ISNULL(balance.TotalBalance, 0)
+				END <> 0
+	END
 
-SELECT  @SQL = 'SELECT CustID, ClosedReason
-				FROM OPENQUERY(DBCUST, ''SELECT m.CustID, m.ClosedReason
-										FROM CustDB.dbo.CustLoginInfo m WITH(NOLOCK)
-											INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON m.CustID = c.custid
-										WHERE c.roleid = 2 AND c.mrecommend = ' + CONVERT(VARCHAR(30), @masterid) + ''')'
-INSERT INTO #ClosedReason (custid, ClosedReason)
-EXEC (@SQL)
+	CREATE TABLE #ClosedReason (custid INT, ClosedReason TINYINT)
+	DECLARE @SQL NVARCHAR(MAX)
 
-IF isnull(@IsYesterdayBalance,0) = 0
-BEGIN
-	SELECT * FROM 
-	(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
-			c.username, 
-			c.custid,
-			c.closed,
-			ISNULL(cr.ClosedReason, 0) AS ClosedReason,
-			c.enabled,
-			c.suspended,
-			IsNull(credit.agentCredit, 0) AS agentCredit,
-			credit.agentUsedCredit,
-			IsNull(balance.Outstanding,0) agentOutstanding,
-			IsNull(balance.TotalCashBalance,0) agentCashBalance,
-			IsNull(balance.TotalBalance,0) agentBalance,
-			IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
-			IsNull(balance.YesterdayBalance,0) yesterday_agentBalance,
-			c.firstname, 
-			c.lastname
-		FROM 
-			#tmp_customer c	
-			INNER JOIN #credit credit ON c.custid = credit.recommend
-			LEFT JOIN #result_balance balance ON c.custid = balance.recommend
-			LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
-	)a
-	WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
-	--Total
-	SELECT @TotalOutStanding = sum(agentOutstanding),
-			@TotalCredit = sum(agentCredit),
-			@TotalUsedCredit = sum(agentUsedCredit),
-			@TotalAgentBalance = sum(agentbalance),
-			@TotalYesterdayAgentBalance = sum(yesterday_agentbalance),
-			@TotalAgentCashBalance = sum(agentCashBalance),
-			@TotalYesterday_AgentCashBalance = sum(yesterday_agentCashBalance)
-	FROM
-	(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
-			c.username, 
-			c.closed,
-			c.enabled,
-			c.suspended,
-			IsNull(credit.agentCredit, 0) AS agentCredit, 
-			credit.agentUsedCredit, 
-			IsNull(balance.Outstanding,0) agentOutstanding,
-			IsNull(balance.TotalCashBalance,0) agentCashBalance,
-			IsNull(balance.TotalBalance,0) agentBalance,
-			IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
-			IsNull(balance.YesterdayBalance,0) yesterday_agentBalance
+	SELECT  @SQL = 'SELECT CustID, ClosedReason
+					FROM OPENQUERY(DBCUST, ''SELECT m.CustID, m.ClosedReason
+											FROM CustDB.dbo.CustLoginInfo m WITH(NOLOCK)
+												INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON m.CustID = c.custid
+											WHERE c.roleid = 2 AND c.mrecommend = ' + CONVERT(VARCHAR(30), @masterid) + ''')'
+	INSERT INTO #ClosedReason (custid, ClosedReason)
+	EXEC (@SQL)
+
+	IF isnull(@IsYesterdayBalance,0) = 0
+	BEGIN
+		SELECT * FROM 
+		(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
+				c.username, 
+				c.custid,
+				c.closed,
+				ISNULL(cr.ClosedReason, 0) AS ClosedReason,
+				c.enabled,
+				c.suspended,
+				IsNull(credit.agentCredit, 0) AS agentCredit,
+				credit.agentUsedCredit,
+				IsNull(balance.Outstanding,0) agentOutstanding,
+				IsNull(balance.TotalCashBalance,0) agentCashBalance,
+				IsNull(balance.TotalBalance,0) agentBalance,
+				IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
+				IsNull(balance.YesterdayBalance,0) yesterday_agentBalance,
+				c.firstname, 
+				c.lastname
+			FROM 
+				#tmp_customer c	
+				INNER JOIN @credit credit ON c.custid = credit.recommend
+				LEFT JOIN #result_balance balance ON c.custid = balance.recommend
+				LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
+		)a
+		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
+		--Total
+		SELECT @TotalOutStanding = sum(agentOutstanding),
+				@TotalCredit = sum(agentCredit),
+				@TotalUsedCredit = sum(agentUsedCredit),
+				@TotalAgentBalance = sum(agentbalance),
+				@TotalYesterdayAgentBalance = sum(yesterday_agentbalance),
+				@TotalAgentCashBalance = sum(agentCashBalance),
+				@TotalYesterday_AgentCashBalance = sum(yesterday_agentCashBalance)
 		FROM
-			#tmp_customer c	
-			INNER JOIN #credit credit ON c.custid = credit.recommend
-			LEFT JOIN #result_balance balance ON c.custid = balance.recommend
-	)a
-	WHERE a.RowNumber <= @RowEND
-END
-ELSE --Yesterday balance <> 0
-BEGIN
-	SELECT * FROM 
-	(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
-			c.username, 
-			c.custid,
-			c.closed,
-			ISNULL(cr.ClosedReason, 0) AS ClosedReason,
-			c.enabled,
-			c.suspended,
-			IsNull(credit.agentCredit, 0) AS agentCredit, 
-			credit.agentUsedCredit, 
-			IsNull(balance.Outstanding,0) agentOutstanding,
-			IsNull(balance.TotalCashBalance,0) agentCashBalance,
-			IsNull(balance.TotalBalance,0) agentBalance,
-			IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
-			IsNull(balance.YesterdayBalance,0) yesterday_agentBalance,
-			c.firstname, 
-			c.lastname
+		(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
+				c.username, 
+				c.closed,
+				c.enabled,
+				c.suspended,
+				IsNull(credit.agentCredit, 0) AS agentCredit, 
+				credit.agentUsedCredit, 
+				IsNull(balance.Outstanding,0) agentOutstanding,
+				IsNull(balance.TotalCashBalance,0) agentCashBalance,
+				IsNull(balance.TotalBalance,0) agentBalance,
+				IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
+				IsNull(balance.YesterdayBalance,0) yesterday_agentBalance
+			FROM
+				#tmp_customer c	
+				INNER JOIN @credit credit ON c.custid = credit.recommend
+				LEFT JOIN #result_balance balance ON c.custid = balance.recommend
+		)a
+		WHERE a.RowNumber <= @RowEND
+	END
+	ELSE --Yesterday balance <> 0
+	BEGIN
+		SELECT * FROM 
+		(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
+				c.username, 
+				c.custid,
+				c.closed,
+				ISNULL(cr.ClosedReason, 0) AS ClosedReason,
+				c.enabled,
+				c.suspended,
+				IsNull(credit.agentCredit, 0) AS agentCredit, 
+				credit.agentUsedCredit, 
+				IsNull(balance.Outstanding,0) agentOutstanding,
+				IsNull(balance.TotalCashBalance,0) agentCashBalance,
+				IsNull(balance.TotalBalance,0) agentBalance,
+				IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
+				IsNull(balance.YesterdayBalance,0) yesterday_agentBalance,
+				c.firstname, 
+				c.lastname
+			FROM
+				#tmp_customer c	
+				INNER JOIN @credit credit ON c.custid = credit.recommend
+				LEFT JOIN #result_balance balance ON c.custid = balance.recommend
+				LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
+			WHERE
+				CASE 
+					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
+					WHEN @IsAllowTotalBalance = 1 THEN ISNULL(balance.TotalBalance, 0)
+				END <> 0
+		)a
+		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
+		--Total
+		SELECT @TotalOutStanding = sum(agentOutstanding),
+				@TotalCredit = sum(agentCredit),
+				@TotalUsedCredit = sum(agentUsedCredit),
+				@TotalAgentBalance = sum(agentbalance),
+				@TotalYesterdayAgentBalance = sum(yesterday_agentbalance),
+				@TotalAgentCashBalance = sum(agentCashBalance),
+				@TotalYesterday_AgentCashBalance = sum(yesterday_agentCashBalance)
 		FROM
-			#tmp_customer c	
-			INNER JOIN #credit credit ON c.custid = credit.recommend
-			LEFT JOIN #result_balance balance ON c.custid = balance.recommend
-			LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
-		WHERE
-		    CASE 
-		        WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
-		        WHEN @IsAllowTotalBalance = 1 THEN ISNULL(balance.TotalBalance, 0)
-		    END <> 0
-	)a
-	WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
-	--Total
-	SELECT @TotalOutStanding = sum(agentOutstanding),
-			@TotalCredit = sum(agentCredit),
-			@TotalUsedCredit = sum(agentUsedCredit),
-			@TotalAgentBalance = sum(agentbalance),
-			@TotalYesterdayAgentBalance = sum(yesterday_agentbalance),
-			@TotalAgentCashBalance = sum(agentCashBalance),
-			@TotalYesterday_AgentCashBalance = sum(yesterday_agentCashBalance)
-	FROM
-	(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
-			c.username, 
-			c.closed,
-			c.enabled, 
-			c.suspended,
-			IsNull(credit.agentCredit, 0) AS agentCredit, 
-			credit.agentUsedCredit, 
-			IsNull(balance.Outstanding,0) agentOutstanding,
-			IsNull(balance.TotalCashBalance,0) agentCashBalance,
-			IsNull(balance.TotalBalance,0) agentBalance,
-			IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
-			IsNull(balance.YesterdayBalance,0) yesterday_agentBalance
-		FROM
-			#tmp_customer c	
-			INNER JOIN #credit credit ON c.custid = credit.recommend
-			LEFT JOIN #result_balance balance ON c.custid = balance.recommend
-		WHERE
-		    CASE 
-		        WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
-		        WHEN @IsAllowTotalBalance = 1 THEN ISNULL(balance.TotalBalance, 0)
-		    END <> 0
-	)a
-	WHERE a.RowNumber <= @RowEND
-END
+		(	SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, username) as RowNumber,
+				c.username, 
+				c.closed,
+				c.enabled, 
+				c.suspended,
+				IsNull(credit.agentCredit, 0) AS agentCredit, 
+				credit.agentUsedCredit, 
+				IsNull(balance.Outstanding,0) agentOutstanding,
+				IsNull(balance.TotalCashBalance,0) agentCashBalance,
+				IsNull(balance.TotalBalance,0) agentBalance,
+				IsNull(balance.YesterdayCashBalance,0) yesterday_agentCashBalance,
+				IsNull(balance.YesterdayBalance,0) yesterday_agentBalance
+			FROM
+				#tmp_customer c	
+				INNER JOIN @credit credit ON c.custid = credit.recommend
+				LEFT JOIN #result_balance balance ON c.custid = balance.recommend
+			WHERE
+				CASE 
+					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
+					WHEN @IsAllowTotalBalance = 1 THEN ISNULL(balance.TotalBalance, 0)
+				END <> 0
+		)a
+		WHERE a.RowNumber <= @RowEND
+	END
 
-DROP TABLE #balance
-DROP TABLE #result_balance
-DROP TABLE #credit
-DROP TABLE #tmp_customer
-DROP TABLE #SportBettype
-DROP TABLE #ClosedReason
+	DROP TABLE #balance
+	DROP TABLE #result_balance
+	DROP TABLE #tmp_customer
+	DROP TABLE #SportBettype
+	DROP TABLE #ClosedReason
+	
+END	
 GO
