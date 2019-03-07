@@ -109,7 +109,7 @@ BEGIN
 	SELECT c.recommend,
 		isnull(SUM(CASE WHEN roleid = 2 THEN credit ELSE 0 END), 0) AS agentCredit,			
 		isnull(SUM(CASE WHEN roleid = 1 THEN credit ELSE 0 END), 0) AS agentUsedCredit
-	FROM custinfo as c (nolock)
+	FROM CUSTDB.dbo.custinfo as c (nolock)
 	WHERE mrecommend = @masterid AND roleid IN (1,2)
 	GROUP BY c.recommend
 	
