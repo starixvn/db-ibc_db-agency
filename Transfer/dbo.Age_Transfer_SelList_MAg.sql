@@ -1,5 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[Age_Transfer_SelList_MAg_xtest]
+CREATE PROCEDURE [dbo].[Age_Transfer_SelList_MAg]
 	@masterid int,
 	@PageSize int=500,
 	@PageIndex int=1,
