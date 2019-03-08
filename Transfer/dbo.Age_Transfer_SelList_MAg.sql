@@ -1,5 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_Transfer_SelList_MAg]
+CREATE PROCEDURE [dbo].[Age_Transfer_SelList_MAg_xtest]
 	@masterid int,
 	@PageSize int=500,
 	@PageIndex int=1,
@@ -104,7 +104,7 @@ BEGIN
 		agentCredit money,
 		agentUsedCredit money
 	)
-
+	DECLARE @n INT 
 	INSERT INTO @credit
 	SELECT c.recommend,
 		isnull(SUM(CASE WHEN roleid = 2 THEN credit ELSE 0 END), 0) AS agentCredit,			
@@ -112,6 +112,8 @@ BEGIN
 	FROM CUSTDB.dbo.custinfo as c (nolock)
 	WHERE mrecommend = @masterid AND roleid IN (1,2)
 	GROUP BY c.recommend
+	
+	SET @n = @@ROWCOUNT
 	
 	/* Balance Info */
 	-- bettransRnG
@@ -123,7 +125,7 @@ BEGIN
 		, YesterdayBalance
 		, TotalBalance
 		, Outstanding
-	FROM @credit r
+	FROM (SELECT TOP (@n) * FROM @credit )as  r
 		CROSS APPLY (SELECT
 						ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0) AS YesterdayCashBalance,
 						ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0) AS TotalCashBalance,
@@ -140,6 +142,8 @@ BEGIN
 						)
 					GROUP BY b.recommend	
 					) AS tmp
+	OPTION (OPTIMIZE FOR (@n=0))
+						
 	-- bettransLC
 	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
@@ -149,7 +153,7 @@ BEGIN
 		, YesterdayBalance
 		, TotalBalance
 		, Outstanding
-	FROM @credit r
+	FROM (SELECT TOP (@n) * FROM @credit )as  r
 		CROSS APPLY (SELECT
 						
 						ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0) AS YesterdayCashBalance,
@@ -166,6 +170,7 @@ BEGIN
 							OR winlostdate >= @yesterday
 						)
 					GROUP BY b.recommend) AS tmp
+	OPTION (OPTIMIZE FOR (@n=0))
 	-- translog
 	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
@@ -175,13 +180,14 @@ BEGIN
 		0,
 		0,
 		Outstanding
-	FROM @credit r
-		CROSS APPLY (SELECT	ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0) AS Outstanding
+	FROM (SELECT TOP (@n) * FROM @credit )as  r
+		CROSS APPLY (SELECT	ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 0) AS Outstanding
 					FROM dbo.translog t WITH(NOLOCK)
 					WHERE r.recommend = t.recommend
-						AND statusID IN (0, 1)
+						
 					GROUP BY recommend
 					) AS tmp 
+	OPTION (OPTIMIZE FOR (@n=0))
 	-- bettrans
 		-- running ticket
 	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
@@ -192,7 +198,7 @@ BEGIN
 		0,
 		0,
 		Outstanding
-	FROM @credit r
+	FROM (SELECT TOP (@n) * FROM @credit )as  r
 		CROSS APPLY (SELECT	ISNULL(SUM(ABS(actual_stake*apositiontaking)), 0) AS Outstanding
 					FROM dbo.bettrans b WITH(NOLOCK)
 					WHERE b.recommend = r.recommend
@@ -200,6 +206,7 @@ BEGIN
 						AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
 					GROUP BY recommend
 					) AS tmp
+	OPTION (OPTIMIZE FOR (@n=0))
 	-- settle ticket
 	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
@@ -224,7 +231,7 @@ BEGIN
 						AND winlostdate < @yesterday
 					GROUP BY recommend
 					) AS tmp
-
+	
 	INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
 		recommend
@@ -233,7 +240,7 @@ BEGIN
 		, YesterdayBalance
 		, TotalBalance
 		, 0 AS Outstanding
-	FROM @credit r
+	FROM (SELECT TOP (@n) * FROM @credit )as  r
 		CROSS APPLY (SELECT
 						
 						ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0) AS YesterdayCashBalance,
@@ -250,7 +257,7 @@ BEGIN
 						AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable IN (1,2))
 					GROUP BY recommend
 					) AS tmp 
-	
+	OPTION (OPTIMIZE FOR (@n=0))
 	/* End Balance Info */
 
 	INSERT INTO #result_balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
@@ -442,3 +449,4 @@ BEGIN
 	
 END	
 GO
+
