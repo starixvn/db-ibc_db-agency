@@ -233,15 +233,11 @@ BEGIN
 							ISNULL(SUM(mwinlost+acomm-comm ), 0) AS YesterdayCashBalance,
 							ISNULL(SUM(mwinlost+acomm-comm) , 0) AS TotalCashBalance,
 							ISNULL(SUM(mwinlost+acomm-comm ), 0)
-								+ ISNULL(SUM(CASE WHEN custid = b.recommend THEN winlost-actual_stake 
-												  ELSE winlost+comm-playercomm 
-												  END), 0)
+								+ ISNULL(SUM(CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
 								+ ISNULL(SUM(CASE WHEN custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0) YesterdayBalance,
 
 							ISNULL(SUM(mwinlost+acomm-comm), 0)
-								+ ISNULL(SUM(CASE WHEN custid = b.recommend THEN winlost-actual_stake 
-												  ELSE awinlost+comm-playercomm 
-												END), 0)
+								+ ISNULL(SUM(CASE WHEN custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
 								+ ISNULL(SUM(CASE WHEN custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS TotalBalance
 						FROM dbo.bettrans b WITH(NOLOCK)
 						WHERE  r.recommend = b.recommend
