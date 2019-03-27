@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -16,43 +16,45 @@ AS
 
 /*
 	Created: 	20180912@Sophia
-	Task : 		Poker Games Win Loss Detail Report [redmine: #101376]
+	Task : 		Poker Games Win Loss Detail Report [RedmineID: #101376]
 	DB: 		DBAGE/bodb02
-	Original SP: Age_Rpt_WinLossDetail_Master
+	
 	Revisions:
-		-20180912@Sophia: initial SP
+		- 20180912@Sophia: Initial SP [RedmineID: #101376]
+		- 20190327@Percy: Add Video Poker Games [RedmineID: #107703]
 */
 
 BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE @RowStart	INT,
-			@RowEnd		INT;  
-
+			@RowEnd		INT;
+		
 	SELECT	@PageIndex = @PageIndex - 1,
 			@RowStart = @PageSize * @PageIndex + 1,
 			@RowEnd = @RowStart + @PageSize - 1;
 
-	CREATE TABLE #SAgWinLossDetails
+	CREATE TABLE #TempData
 	(
-		CustID				INT,
-		Turnover			MONEY,
-		NetTurnover			MONEY,
-		TaxComm				MONEY,
-		TotalMemberWinLoss	MONEY,
-		MemberWinLoss		MONEY,
-		InsGemMemberWinLoss	MONEY,
-		PlayerComm			MONEY,
-		InsGemAgWinLoss		MONEY,
-		AgComm				MONEY,
-		InsGemMAgWinLoss	MONEY,
-		MAgComm				MONEY,
-		InsGemSAgWinLoss	MONEY,
-		SAgComm				MONEY,
-		RoundCount			INT
-	);
-	 
-	----Avoid Parameter Sniffing 
+		mrecommend				INT
+		,bettype				INT
+		,roundCount				INT
+		,turnover				MONEY
+		,netTurnover			MONEY
+		,taxComm				MONEY
+		,InsGemMemberWinLoss	MONEY
+		,winlost				MONEY
+		,awinlost				MONEY
+		,mwinlost				MONEY
+		,swinlost				MONEY
+		,playercomm				MONEY
+		,comm					MONEY
+		,acomm					MONEY
+		,scomm					MONEY
+		
+	)
+
+	---- Avoid Parameter Sniffing
 	DECLARE @FDate	SMALLDATETIME,
 			@TDate	SMALLDATETIME,
 			@CID	INT;
@@ -60,179 +62,213 @@ BEGIN
 	SELECT	@FDate = @FromDate,
 			@TDate = @ToDate, 
 			@CID = @custid;
-			
-	----SportBettypeMatrix		
-			
-	DECLARE @isTest BIT;
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
-			
-	DECLARE @SportBettypeMatrix TABLE(BetType SMALLINT);
 
-	INSERT INTO @SportBettypeMatrix(BetType)
-	SELECT BetType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
-		
-	----Get data
+	---- SportBettypeMatrix
+	DECLARE @isTest BIT;
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 	
+	DECLARE @SportBettypeMatrix TABLE (BetType SMALLINT);
+
+	INSERT INTO @SportBettypeMatrix (BetType)
+	SELECT DISTINCT BetType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest);
+
+	---- Get data
 	IF @ToDate > @MoveBetsDay
 	BEGIN
 		SELECT	@TDate = @ToDate,
-				@FDate = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END
+				@FDate = CASE WHEN @FromDate <= @MoveBetsDay THEN DATEADD(DAY, 1, @MoveBetsDay) ELSE @FromDate END;
 
-		INSERT INTO #SAgWinLossDetails(CustID, Turnover, NetTurnover, TaxComm, TotalMemberWinLoss, MemberWinLoss, InsGemMemberWinLoss, PlayerComm, 
-									   InsGemAgWinLoss, AgComm, InsGemMAgWinLoss, MAgComm, InsGemSAgWinLoss, SAgComm, RoundCount)
-		SELECT	MRecommend,
-				SUM(ABS(b.stake)) as Turnover,				
-				SUM(CASE WHEN b.bettype = 1499 THEN ABS(b.stake) ELSE ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p33/@to)[1]','MONEY'), 0) END ) AS NetTurnover,
-				SUM(ISNULL(b.oddsspread,0)) as TaxComm,
-				SUM(b.winlost - b.actual_stake) AS TotalMemberWinLoss,
-				SUM(b.winlost - b.actual_stake) - SUM(ISNULL(b.TransID2,0)/ CONVERT(DECIMAL(19,8),10000)) AS MemberWinLoss,
-				SUM(ISNULL(b.TransID2,0)/ CONVERT(DECIMAL(19,8),10000)) AS InsGemMemberWinLoss,
-				SUM(ISNULL(b.playercomm,0)) AS PlayerComm,
-				SUM(b.awinlost) AS InsGemAgWinLoss,
-				SUM(ISNULL(b.comm,0)) - SUM(ISNULL(b.playercomm,0)) AS AgComm,
-				SUM(b.mwinlost) AS InsGemMAgWinLoss,
-				SUM(ISNULL(b.acomm,0)) - SUM(ISNULL(b.comm,0)) AS MAgComm,
-				SUM(b.swinlost) AS InsGemSAgWinLoss,
-				SUM(ISNULL(b.scomm,0)) - SUM(ISNULL(b.acomm,0)) AS SAgComm,
-				SUM(ISNULL(b.BetId,0)) AS RoundCount
+		INSERT INTO #TempData
+		(
+			mrecommend, bettype, roundCount
+			,turnover, netTurnover, taxComm, InsGemMemberWinLoss
+			,winlost, awinlost, mwinlost, swinlost
+			,playercomm, comm, acomm, scomm
+		)
+		SELECT
+			b.mrecommend
+			,CASE WHEN b.bettype BETWEEN 1901 AND 1999 THEN 1901 ELSE 0 END AS bettype
+			,SUM(ISNULL(b.betid, 0)) AS roundCount
+			,SUM(ABS(ISNULL(b.stake, 0))) AS turnover
+			,SUM(CASE
+					WHEN b.bettype = 1499 THEN ABS(b.stake)
+					ELSE ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p33/@to)[1]','MONEY'), 0)
+					END) AS netTurnover
+			,SUM(ISNULL(b.oddsspread, 0)) AS taxComm
+			,SUM(ISNULL(b.transid2, 0) / CONVERT(DECIMAL(19, 8), 10000)) AS InsGemMemberWinLoss
+			,SUM(ISNULL(b.winlost, 0) - ISNULL(b.actual_stake, 0)) AS winlost
+			,SUM(ISNULL(b.awinlost, 0)) AS awinlost
+			,SUM(ISNULL(b.mwinlost, 0)) AS mwinlost
+			,SUM(ISNULL(b.swinlost, 0)) AS swinlost
+			,SUM(ISNULL(b.playercomm, 0)) AS playercomm
+			,SUM(ISNULL(b.comm, 0)) AS comm
+			,SUM(ISNULL(b.acomm, 0)) AS acomm
+			,SUM(ISNULL(b.scomm, 0)) AS scomm
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE winlostdate BETWEEN @FDate AND @Tdate
-			AND srecommend = @CID
-			AND b.statusID IN (111, 112, 113) 
+		WHERE b.winlostdate BETWEEN @FDate AND @TDate
+			AND b.statusID IN (111, 112, 113)
+			AND b.srecommend = @CID
 			AND EXISTS (SELECT 1 FROM @SportBettypeMatrix s WHERE b.bettype = s.Bettype)
-		GROUP BY MRecommend, b.bettype;
-	END 
+		GROUP BY
+			b.mrecommend
+			,CASE WHEN b.bettype BETWEEN 1901 AND 1999 THEN 1901 ELSE 0 END;
+	END	
 	
 	IF @FromDate <= @MoveBetsDay
 	BEGIN
 		SELECT  @FDate = @FromDate,
-				@TDate = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END
-				
-		INSERT INTO #SAgWinLossDetails(CustID, Turnover, NetTurnover, TaxComm, TotalMemberWinLoss, MemberWinLoss, InsGemMemberWinLoss, PlayerComm, 
-									   InsGemAgWinLoss, AgComm, InsGemMAgWinLoss, MAgComm, InsGemSAgWinLoss, SAgComm, RoundCount)
-		SELECT	CustID,		   --- = mrecommend	
-				SUM(Turnover) AS Turnover,
-				SUM(NetTurnover) AS NetTurnover,
-				SUM(TotalComm) AS TaxComm,
-				SUM(WinLoss) AS TotalMemberWinLoss,
-				SUM(WinLoss) - SUM(InsGemMemberWinLoss) AS MemberWinLoss,
-				SUM(InsGemMemberWinLoss) AS InsGemMemberWinLoss,
-				SUM(PlayerComm) AS PlayerComm,
-				SUM(AgWinLoss) AS InsGemAgWinLoss,
-				SUM(AgComm) - SUM(PlayerComm) AS AgComm,
-				SUM(MAgWinLoss) AS InsGemMAgWinLoss,
-				SUM(MAgComm) - SUM(AgComm) AS MAgComm,
-				SUM(SAgWinLoss) AS InsGemSAgWinLoss,
-				SUM(SAgComm) - SUM(MAgComm) AS SAgComm,
-				SUM(RoundCount) AS RoundCount
-		FROM bodb_Summary.dbo.rptPokerGamesSumWinloss b WITH(NOLOCK)
-		WHERE Winlostdate BETWEEN @FDate AND @TDate
-			AND Srecommend = @CID
-			AND RoleID = 3   
-		GROUP BY CustID;
+				@TDate = CASE WHEN @ToDate > @MoveBetsDay THEN @MoveBetsDay ELSE @ToDate END;
+	
+		INSERT INTO #TempData
+		(
+			mrecommend, bettype, roundCount
+			,turnover, netTurnover, taxComm, InsGemMemberWinLoss
+			,winlost, awinlost, mwinlost, swinlost
+			,playercomm, comm, acomm, scomm
+		)
+		SELECT
+			r.CustID AS mrecommend
+			,CASE WHEN r.bettype BETWEEN 1901 AND 1999 THEN 1901 ELSE 0 END AS bettype
+			,SUM(ISNULL(r.RoundCount, 0)) AS roundCount
+			,SUM(ISNULL(r.Turnover, 0)) AS turnover
+			,SUM(ISNULL(r.NetTurnover, 0)) AS netTurnover
+			,SUM(ISNULL(r.TotalComm, 0)) AS taxComm
+			,SUM(ISNULL(r.InsGemMemberWinLoss, 0)) AS InsGemMemberWinLoss
+			,SUM(ISNULL(r.WinLoss, 0)) AS winlost
+			,SUM(ISNULL(r.AgWinLoss, 0)) AS awinlost
+			,SUM(ISNULL(r.MAgWinLoss, 0)) AS mwinlost
+			,SUM(ISNULL(r.SAgWinLoss, 0)) AS swinlost
+			,SUM(ISNULL(r.PlayerComm, 0)) AS playercomm
+			,SUM(ISNULL(r.AgComm, 0)) AS comm
+			,SUM(ISNULL(r.MAgComm, 0)) AS acomm
+			,SUM(ISNULL(r.SAgComm, 0)) AS scomm
+		FROM bodb_Summary.dbo.rptPokerGamesSumWinloss r WITH(NOLOCK)
+		WHERE r.winlostdate BETWEEN @FDate AND @TDate
+			AND r.srecommend = @CID
+			AND r.RoleID = 3
+		GROUP BY
+			r.CustID
+			,CASE WHEN r.bettype BETWEEN 1901 AND 1999 THEN 1901 ELSE 0 END;
 	END
 
-	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
-	BEGIN
-		SELECT	w.CustID AS CustId, 
-				c.UserName AS CustName, 
-				SUM(Turnover) as Turnover,
-				SUM(NetTurnover) as NetTurnover,
-				SUM(TaxComm) as TaxComm,
-				SUM(TotalMemberWinLoss) as TotalMemberWinLoss,
-				SUM(MemberWinLoss) as MemberWinLoss,
-				SUM(InsGemMemberWinLoss) as InsGemMemberWinLoss,
-				SUM(PlayerComm) as MemberComm,
-				SUM(InsGemAgWinLoss) as InsGemAgWinLoss,
-				SUM(AgComm) as AgComm,
-				SUM(InsGemMAgWinLoss) as InsGemMAgWinLoss,
-				SUM(MAgComm) as MAgComm,
-				SUM(InsGemSAgWinLoss) as InsGemSAgWinLoss,
-				SUM(SAgComm) as SAgComm,
-				SUM(RoundCount) as RoundCount
-		FROM #SAgWinLossDetails w 
-			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-		GROUP BY w.CustID, c.UserName
-		ORDER BY c.Username;
+	---- Total rows
+	SELECT @TotalRecords = COUNT(DISTINCT mrecommend) FROM #TempData;
 
-		SELECT	NULL AS CustId,
-				'Total' AS CustName,
-				SUM(Turnover) as Turnover,
-				SUM(NetTurnover) as NetTurnover,
-				SUM(TaxComm) as TaxComm,
-				SUM(TotalMemberWinLoss) as TotalMemberWinLoss,
-				SUM(MemberWinLoss) as MemberWinLoss,
-				SUM(InsGemMemberWinLoss) as InsGemMemberWinLoss,
-				SUM(PlayerComm) as MemberComm,
-				SUM(InsGemAgWinLoss) as InsGemAgWinLoss,
-				SUM(AgComm) as AgComm,
-				SUM(InsGemMAgWinLoss) as InsGemMAgWinLoss,
-				SUM(MAgComm) as MAgComm,
-				SUM(InsGemSAgWinLoss) as InsGemSAgWinLoss,
-				SUM(SAgComm) as SAgComm,
-				SUM(RoundCount) as RoundCount
-		FROM #SAgWinLossDetails;
+	---- Detail data
+	;WITH CTE_Sum AS
+	(
+		SELECT
+			mrecommend			AS CustId
+			,SUM(turnover)		AS Turnover
+			,SUM(netTurnover)	AS NetTurnover
+			,SUM(taxComm)		AS TaxComm
+			,SUM(roundCount)	AS RoundCount
+			-- member
+			,SUM(CASE WHEN bettype = 0 THEN winlost - InsGemMemberWinLoss ELSE 0 END)	AS MemberWinLoss
+			,SUM(InsGemMemberWinLoss)													AS InsGemMemberWinLoss
+			,SUM(CASE WHEN bettype = 1901 THEN winlost ELSE 0 END)						AS VideoMemberWinLoss
+			,SUM(playercomm)															AS MemberComm
+			-- agent
+			,SUM(CASE WHEN bettype = 0 THEN awinlost ELSE 0 END)						AS InsGemAgWinLoss
+			,SUM(CASE WHEN bettype = 1901 THEN awinlost ELSE 0 END)						AS VideoAgWinLoss
+			,SUM(comm - playercomm)														AS AgComm
+			-- master
+			,SUM(CASE WHEN bettype = 0 THEN mwinlost ELSE 0 END)						AS InsGemMAgWinLoss
+			,SUM(CASE WHEN bettype = 1901 THEN mwinlost ELSE 0 END)						AS VideoMAgWinLoss
+			,SUM(acomm - comm)															AS MAgComm
+			-- super
+			,SUM(CASE WHEN bettype = 0 THEN swinlost ELSE 0 END)						AS InsGemSAgWinLoss
+			,SUM(CASE WHEN bettype = 1901 THEN swinlost ELSE 0 END)						AS VideoSAgWinLoss
+			,SUM(scomm - acomm)															AS SAgComm
+		FROM #TempData
+		GROUP BY
+			mrecommend
+	)
+	,CTE_Data AS
+	(
+		SELECT
+			d.CustId
+			,c.UserName
+			,Turnover
+			,NetTurnover
+			,TaxComm
+			,RoundCount
+			-- member
+			,MemberWinLoss
+			,InsGemMemberWinLoss
+			,VideoMemberWinLoss
+			,MemberComm
+			-- agent
+			,InsGemAgWinLoss
+			,VideoAgWinLoss
+			,AgComm
+			-- master
+			,InsGemMAgWinLoss
+			,VideoMAgWinLoss
+			,MAgComm
+			-- super
+			,InsGemSAgWinLoss
+			,VideoSAgWinLoss
+			,SAgComm
+			,ROW_NUMBER() OVER(ORDER BY c.username) AS rn
+		FROM CTE_Sum d
+			INNER JOIN dbo.custInfo c WITH (NOLOCK) ON d.CustId = c.custid 
+	)
+	SELECT
+		CustId
+		,UserName
+		,Turnover
+		,NetTurnover
+		,TaxComm
+		,RoundCount
+		-- member
+		,MemberWinLoss
+		,InsGemMemberWinLoss
+		,VideoMemberWinLoss
+		,MemberComm
+		-- agent
+		,InsGemAgWinLoss
+		,VideoAgWinLoss
+		,AgComm
+		-- master
+		,InsGemMAgWinLoss
+		,VideoMAgWinLoss
+		,MAgComm
+		-- super
+		,InsGemSAgWinLoss
+		,VideoSAgWinLoss
+		,SAgComm
+	FROM CTE_Data
+	WHERE rn BETWEEN @RowStart AND @RowEnd;
 
-		RETURN;
-	END
+	---- Total data
+	SELECT
+		NULL				AS CustId
+		,'Total'			AS CustName
+		,SUM(turnover)		AS Turnover
+		,SUM(netTurnover)	AS NetTurnover
+		,SUM(taxComm)		AS TaxComm
+		,SUM(roundCount)	AS RoundCount
+		-- member
+		,SUM(CASE WHEN bettype = 0 THEN winlost - InsGemMemberWinLoss ELSE 0 END)	AS MemberWinLoss
+		,SUM(InsGemMemberWinLoss)													AS InsGemMemberWinLoss
+		,SUM(CASE WHEN bettype = 1901 THEN winlost ELSE 0 END)						AS VideoMemberWinLoss
+		,SUM(playercomm)															AS MemberComm
+		-- agent
+		,SUM(CASE WHEN bettype = 0 THEN awinlost ELSE 0 END)						AS InsGemAgWinLoss
+		,SUM(CASE WHEN bettype = 1901 THEN awinlost ELSE 0 END)						AS VideoAgWinLoss
+		,SUM(comm - playercomm)														AS AgComm
+		-- master
+		,SUM(CASE WHEN bettype = 0 THEN mwinlost ELSE 0 END)						AS InsGemMAgWinLoss
+		,SUM(CASE WHEN bettype = 1901 THEN mwinlost ELSE 0 END)						AS VideoMAgWinLoss
+		,SUM(acomm - comm)															AS MAgComm
+		-- super
+		,SUM(CASE WHEN bettype = 0 THEN swinlost ELSE 0 END)						AS InsGemSAgWinLoss
+		,SUM(CASE WHEN bettype = 1901 THEN swinlost ELSE 0 END)						AS VideoSAgWinLoss
+		,SUM(scomm - acomm)															AS SAgComm
+	FROM #TempData;
 
-	IF @TotalRecords = 0  
-	BEGIN  
-		SELECT @TotalRecords = count(tmp.CustID)
-		FROM (
-			SELECT CustID
-			FROM #SAgWinLossDetails
-			GROUP BY CustID
-		) tmp;
- 
-	END
-
-	SELECT wl.*
-	FROM (
-		SELECT	w.CustID AS CustId, 
-				c.UserName AS CustName, 
-				SUM(Turnover) as Turnover,
-				SUM(NetTurnover) as NetTurnover,
-				SUM(TaxComm) as TaxComm,
-				SUM(TotalMemberWinLoss) as TotalMemberWinLoss,
-				SUM(MemberWinLoss) as MemberWinLoss,
-				SUM(InsGemMemberWinLoss) as InsGemMemberWinLoss,
-				SUM(PlayerComm) as MemberComm,
-				SUM(InsGemAgWinLoss) as InsGemAgWinLoss,
-				SUM(AgComm) as AgComm,
-				SUM(InsGemMAgWinLoss) as InsGemMAgWinLoss,
-				SUM(MAgComm) as MAgComm,
-				SUM(InsGemSAgWinLoss) as InsGemSAgWinLoss,
-				SUM(SAgComm) as SAgComm,
-				SUM(RoundCount) as RoundCount,
-				ROW_NUMBER() over(order by c.UserName) as RowNum
-		FROM #SAgWinLossDetails w 
-			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-		GROUP BY w.CustID, c.UserName
-	) wl
-	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
-
-	SELECT	NULL AS CustId,
-			'Total' AS CustName,
-			SUM(Turnover) as Turnover,
-			SUM(NetTurnover) as NetTurnover,
-			SUM(TaxComm) as TaxComm,
-			SUM(TotalMemberWinLoss) as TotalMemberWinLoss,
-			SUM(MemberWinLoss) as MemberWinLoss,
-			SUM(InsGemMemberWinLoss) as InsGemMemberWinLoss,
-			SUM(PlayerComm) as MemberComm,
-			SUM(InsGemAgWinLoss) as InsGemAgWinLoss,
-			SUM(AgComm) as AgComm,
-			SUM(InsGemMAgWinLoss) as InsGemMAgWinLoss,
-			SUM(MAgComm) as MAgComm,
-			SUM(InsGemSAgWinLoss) as InsGemSAgWinLoss,
-			SUM(SAgComm) as SAgComm,
-			SUM(RoundCount) as RoundCount
-	FROM #SAgWinLossDetails;
-
-	DROP TABLE #SAgWinLossDetails;
-
-	SET NOCOUNT OFF;
+	DROP TABLE #TempData;
 END
 GO
