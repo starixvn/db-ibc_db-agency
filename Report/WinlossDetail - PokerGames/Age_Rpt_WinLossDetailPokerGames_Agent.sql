@@ -89,7 +89,7 @@ BEGIN
 			,SUM(ISNULL(b.betid, 0)) AS roundCount
 			,SUM(ABS(ISNULL(b.stake, 0))) AS turnover
 			,SUM(CASE
-					WHEN b.bettype = 1499 THEN ABS(b.stake)
+					WHEN b.bettype = 1499 OR b.bettype BETWEEN 1901 AND 1999 THEN ABS(b.stake)
 					ELSE ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p33/@to)[1]','MONEY'), 0)
 					END) AS netTurnover
 			,SUM(ISNULL(b.oddsspread, 0)) AS taxComm
@@ -178,7 +178,7 @@ BEGIN
 	(
 		SELECT
 			d.CustId
-			,c.UserName
+			,c.UserName AS CustName
 			,Turnover
 			,NetTurnover
 			,TaxComm
@@ -202,7 +202,7 @@ BEGIN
 	)
 	SELECT
 		CustId
-		,UserName
+		,CustName
 		,Turnover
 		,NetTurnover
 		,TaxComm
