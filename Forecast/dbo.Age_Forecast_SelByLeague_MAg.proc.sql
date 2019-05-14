@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
 USE [bodb02]
 GO
 
@@ -22,6 +22,7 @@ AS
 		- 20150903@Winnie: Myanmar odds
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 		- 20181226@Percy: Add table OddsES for E-Sports [RedmineID: #106994]
+		- 20190415@Percy: Get livehomescore/liveawayscore data from match table instead of odds table [RedmineID: #113303]
 
 	Supported bettypes: 1,3,7,8,301,302,303,304
 
@@ -134,8 +135,8 @@ BEGIN
 	--							count(*) AS c,
 
 								M.MatchID,
-								isnull(O.livehomescore, 0) - isnull(O.liveawayscore, 0) as VScoreHDP,
-								isnull(O.livehomescore, 0) + isnull(O.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b WITH (NOLOCK,INDEX = IX_betrunning_mrecommend) 
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
@@ -149,7 +150,7 @@ BEGIN
 							group by 
 					--			status, 
 								b.bettype,
-								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 
 							union all
 							select 
@@ -214,8 +215,8 @@ BEGIN
 	--							count(*) AS c,
 
 								M.MatchID,
-								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
-								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b WITH (NOLOCK,INDEX = IX_betrunning_mrecommend)							
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
@@ -228,7 +229,7 @@ BEGIN
 							group by 
 					--			status, 
 								b.bettype,
-								b.currency, b.hdp1, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp1, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 
 							union all
 							select 
@@ -293,8 +294,8 @@ BEGIN
 	--							count(*) AS c,
 
 								M.MatchID,
-								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
-								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b WITH (NOLOCK,INDEX = IX_betrunning_mrecommend)
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
@@ -308,7 +309,7 @@ BEGIN
 							group by 
 					--			status,
 								b.bettype, 
-								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 							UNION ALL
 							select 
 					--			status, 
@@ -380,8 +381,8 @@ BEGIN
 	--							count(*) AS c,
 
 								M.MatchID,
-								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
-								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b WITH (NOLOCK,INDEX = IX_betrunning_mrecommend)						
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
@@ -395,7 +396,7 @@ BEGIN
 							group by 
 					--			status, 
 								b.bettype,
-								b.currency, b.hdp1, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp1, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 							UNION ALL
 							select 
 								b.liveindicator,  
