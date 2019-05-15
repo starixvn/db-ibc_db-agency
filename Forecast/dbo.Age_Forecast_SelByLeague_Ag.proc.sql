@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
 USE [bodb02]
 GO
 
@@ -23,6 +23,7 @@ AS
 		- 20150903@Winnie: Myanmar odds
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 		- 20181226@Percy: Add table OddsES for E-Sports [RedmineID: #106994]
+		- 20190415@Percy: Get livehomescore/liveawayscore data from match table instead of odds table [RedmineID: #113303]
 	
 	Supported bettypes: 1,3,7,8,301,302,303,304
 	
@@ -130,12 +131,11 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) AS awaylose,
 	--							count(*) AS c,
 								M.MatchID,
-								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
-								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_recommend)
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.recommend = @recommend
@@ -145,7 +145,7 @@ BEGIN
 							group by 
 					--			status, 
 								b.bettype,
-								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 
 							union all
 							select 
@@ -209,12 +209,11 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) AS awaylose,
 	--							count(*) AS c,
 								M.MatchID,
-								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
-								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b with (nolock)  							
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.recommend = @recommend
@@ -223,7 +222,7 @@ BEGIN
 							group by 
 					--			status, 
 								b.bettype,
-								b.currency, b.hdp1, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp1, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 
 							union all
 							select 
@@ -287,12 +286,11 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) AS awaylose,
 	--							count(*) AS c,
 								M.MatchID,
-								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
-								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_recommend) 
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.recommend = @recommend
@@ -301,7 +299,7 @@ BEGIN
 							group by 
 					--			status, 
 								b.bettype,
-								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp2 - b.hdp1, b.livehomescore - b.liveawayscore, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 							
 							UNION ALL
 							select 
@@ -370,12 +368,11 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) AS awaylose,
 	--							count(*) AS c,
 								M.MatchID,
-								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
-								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
+								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
+								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
 							from 
 								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_recommend)  							
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.recommend = @recommend
@@ -384,7 +381,7 @@ BEGIN
 							group by 
 					--			status, 
 								b.bettype,
-								b.currency, b.hdp1, b.liveindicator, M.MatchID, o.livehomescore, o.liveawayscore
+								b.currency, b.hdp1, b.liveindicator, M.MatchID, m.livehomescore, m.liveawayscore
 							
 							UNION ALL
 							select 
