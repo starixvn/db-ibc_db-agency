@@ -141,7 +141,6 @@ BEGIN
 							from 
 								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_srecommend) 
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.srecommend = @srecommend
@@ -220,7 +219,6 @@ BEGIN
 							from 
 								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_srecommend) 							
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.srecommend = @srecommend
@@ -300,7 +298,6 @@ BEGIN
 							from 
 								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_srecommend) 
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.srecommend = @srecommend
@@ -388,7 +385,6 @@ BEGIN
 							from 
 								bettrans AS b WITH (NOLOCK, INDEX = IX_betrunning_srecommend)  							
 								inner join Match as M with (NOLOCK) on b.MatchID = M.MatchID and M.EventStatus = 'running'
-								inner join Odds as O with (NOLOCK) on b.OddsID = O.OddsID
 								inner join League as L with (NOLOCK) on M.LeagueID = L.LeagueID and L.LeagueID = @LeagueID
 							where 
 								b.srecommend = @srecommend
