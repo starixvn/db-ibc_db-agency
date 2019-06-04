@@ -21,7 +21,7 @@ AS
 		- 20180315@Percy: Add bettypes of FM2 [RedmineID: #91902]
 		- 20180717@Louis: Add bettypes of Poker Games [RedmineID: #97785]
 		- 20181023@Razor: Add bettypes of eSport 2 [RedmineId: #102924]
-	
+		- 20190525@Razor: Add bettypes BetBuilder [RedmineId: #108791]
 	- Columns:
 		- CommGroup:
 			1: Comm_1 (Asian HDP, OU, OE)
@@ -94,7 +94,8 @@ FROM (
 			(221),(222),(223),(224),(225),(226),(227),
 			(601),(602),(608),(614),
 			(22),(143),(144),
-			(448),(449),(450),(451),(452),(454),(455),(456),(457),(460)
+			(448),(449),(450),(451),(452),(454),(455),(456),(457),(460),
+			(38)
 		)
 	C (bettype)
 
