@@ -19,6 +19,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20171020@Percy: Add Bullfighting [RedmineID: #84690]
 		- 20170419@Razor: Add Pragmatic [RedmineID: #92647]
 		- 20180717@Louis: Add Poker Games [RedmineID: #97785]
+		- 20190627@Razor: Add CardClub [RedmineID: #115611]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -45,7 +46,8 @@ RETURN
 				(26, 160, 0), -- Lucky 3
 				(30, 207, 0), -- Bullfighting
 				(32, 248, 0), -- Pragmatic
-				(33, 163, 0)  -- Poker Games
+				(33, 163, 0), -- Poker Games
+				(34, 165, 0), -- Card Club
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO

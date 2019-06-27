@@ -1,3 +1,13 @@
-Report/CommbyBettype/Age_Rpt_CommByBettype_Agent.sql
-Report/CommbyBettype/Age_Rpt_CommByBettype_Master.sql
-Report/CommbyBettype/Age_Rpt_CommByBettype_Member.sql
+Report/Charting/Age_Chart_WinlossAnalysis_Agent.sql
+Report/Charting/Age_Chart_WinlossAnalysis_Master.sql
+Report/Charting/Age_Chart_WinlossAnalysis_Member.sql
+Report/ConsolidatedGroup/Age_Rpt_ConsolidatedGroup.sql
+Report/Winloss/Age_Rpt_WinLoss_Agent.sql
+Report/Winloss/Age_Rpt_WinLoss_Master.sql
+Report/Winloss/Age_Rpt_WinLoss_Member.sql
+Report/WinlossAnalysis/Age_Rpt_WinlossAnalysis_Agent.sql
+Report/WinlossAnalysis/Age_Rpt_WinlossAnalysis_Master.sql
+Report/WinlossAnalysis/Age_Rpt_WinlossAnalysis_Member.sql
+Report/WinlossDetail/Age_Rpt_WinLossDetail_Agent.sql
+Report/WinlossDetail/Age_Rpt_WinLossDetail_Master.sql
+Report/WinlossDetail/Age_Rpt_WinLossDetail_Member.sql
