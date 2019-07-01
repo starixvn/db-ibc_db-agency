@@ -1,3 +1,4 @@
+/*<info serverAlias="DBSUM-bodb_Summary" executers="bodbAdminNet" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_CheckSPVersion]
 (
 	@PROCID INT
@@ -7,7 +8,7 @@ ALTER FUNCTION [dbo].[f_CheckSPVersion]
 	Date: 2016-03-23
 	Task: Check SP Version
 	DB:
-		DBAGE.bodb02, DBAGE.bodb_Age, DBEXT.bodb02, DBDWH.bodb02, DBDWH.bodb_dwrs, DBEAS.bodb_EAS,
+		DBAGE.bodb02, DBAGE.bodb_Age, DBEXT.bodb02, DBDWH.bodb02, DBDWH.bodb_dwrs, DBEAS.bodb_EAS, DBSUM.bodb_Summary
 		DBACC.bodb02, DBACC.bodb_ACC, DBRPT.bodb_Report,
 		DBPRO.bodb02
 	Revision:
