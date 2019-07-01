@@ -47,7 +47,7 @@ RETURN
 				(30, 207, 0), -- Bullfighting
 				(32, 248, 0), -- Pragmatic
 				(33, 163, 0), -- Poker Games
-				(34, 165, 0), -- Card Club
+				(34, 165, 0) -- Card Club
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
