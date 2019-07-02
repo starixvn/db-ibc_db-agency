@@ -21,7 +21,8 @@ AS
 		- 20180315@Percy: Add bettypes of FM2 [RedmineID: #91902]
 		- 20180717@Louis: Add bettypes of Poker Games [RedmineID: #97785]
 		- 20181023@Razor: Add bettypes of eSport 2 [RedmineId: #102924]
-		- 20190525@Razor: Add bettypes BetBuilder [RedmineId: #108791]
+		- 20190525@Razor: Add bettypes of BetBuilder [RedmineId: #108791]
+		- 20190612@Percy: Add bettypes of Card Club [RedmineID: #115611]
 		- 20190717@Razor: PHAIO Phase 4a, add 3 new bettypes[RedmineID: #117061]
 	- Columns:
 		- CommGroup:
@@ -117,6 +118,7 @@ FROM (
 		OR typeid BETWEEN 2901 AND 2999
 		OR typeid BETWEEN 1600 AND 1610
 		OR typeid BETWEEN 1401 AND 1499
+		OR typeid BETWEEN 1901 AND 1999
 
 	UNION ALL
 	SELECT bettype, 5 AS CommGroup -- MO_comm
