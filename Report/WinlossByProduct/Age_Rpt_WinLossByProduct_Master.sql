@@ -56,7 +56,7 @@ BEGIN
 	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType, f.EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
-			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (22, 23, 32)
+			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (22, 23, 32, 34)
 		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 	WHERE f.bettype <> 2799; -- Mix parlay of BRVS
 
