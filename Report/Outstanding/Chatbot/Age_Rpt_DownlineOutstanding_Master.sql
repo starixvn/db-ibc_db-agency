@@ -21,7 +21,7 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @isTest BIT;
-    SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
+    SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
     SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
