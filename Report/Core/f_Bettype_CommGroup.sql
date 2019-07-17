@@ -22,6 +22,7 @@ AS
 		- 20180717@Louis: Add bettypes of Poker Games [RedmineID: #97785]
 		- 20181023@Razor: Add bettypes of eSport 2 [RedmineId: #102924]
 		- 20190525@Razor: Add bettypes BetBuilder [RedmineId: #108791]
+		- 20190717@Razor: PHAIO Phase 4a, add 3 new bettypes[RedmineID: #117061]
 	- Columns:
 		- CommGroup:
 			1: Comm_1 (Asian HDP, OU, OE)
@@ -95,7 +96,8 @@ FROM (
 			(601),(602),(608),(614),
 			(22),(143),(144),
 			(448),(449),(450),(451),(452),(454),(455),(456),(457),(460),
-			(38)
+			(38),
+			(467),(468),(469)
 		)
 	C (bettype)
 
