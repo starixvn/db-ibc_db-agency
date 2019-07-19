@@ -22,6 +22,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelMessages]
 		- 20140106@Viet: revise SP.
 		- 20161130@Paul: return vietnamese content [RedmineID #66535]
 		- 20170428@Percy: sort by top level message [RedmineID: #75763]
+		- 20190719@Andy: return content_zhcn to support for cn88 new simplify Chinese [RedmineID: #117259]
 */
 AS
 BEGIN
@@ -52,7 +53,7 @@ BEGIN
 	ORDER BY m.TopLevel ASC, m.Posttime	DESC
 
 	SELECT DISTINCT TOP (@totalMessage) m.MessageId, m.Content_en, m.Content_cs, m.Content_ch,
-			m.Content_jp, m.Content_th, m.Content_it, m.Content_ko,	m.Content_es, m.Content_vn,
+			m.Content_jp, m.Content_th, m.Content_it, m.Content_ko,	m.Content_es, m.Content_vn, m.Content_zhcn,
 			m.PostTime, m.MsgType, m.IsSticky, m.LastUpdateTime, mt.bettransid, mt.isRead, m.TopLevel
 	FROM dbo.Msg m WITH(NOLOCK)
 		INNER JOIN dbo.MsgTarget mt with (NOLOCK) ON m.MessageId = mt.MessageId
