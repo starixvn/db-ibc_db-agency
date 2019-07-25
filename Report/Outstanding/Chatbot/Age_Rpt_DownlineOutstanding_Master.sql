@@ -1,4 +1,4 @@
-/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -21,7 +21,7 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @isTest BIT;
-    SELECT @isTest = dbo.f_CheckSPVersion(@@PROCID);
+    SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
     SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
