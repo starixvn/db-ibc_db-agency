@@ -18,7 +18,7 @@ RETURN
 		- 20160712@Percy: PH AIO phase 2 [Redmine: #53152]
 		- 20161007@Sophia: PHAIO Phase 2 , add more couple of Parent - Child [Redmine: #65406]
 		- 20170919@Percy: PHAIO Phase 3, add 4 new bettypes 461 - 464 [RedmineID: #83356]
-		- 20190805@Sophia: PHAIO 4B, Bettype 470 -> 497, Change GroupTypeId of 11, 193 [RedmineID: #115231]
+		- 20190805@Sophia: PHAIO 4B, Bettype 470 -> 497, Change GroupTypeId of 11, 199 [RedmineID: #115231]
 */
 	-------- Grouped bettype for Sporting Solution
 	SELECT 153 AS Bettype, 153 AS GroupTypeId
