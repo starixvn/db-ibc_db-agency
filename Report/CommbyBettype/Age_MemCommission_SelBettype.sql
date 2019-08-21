@@ -17,6 +17,7 @@ AS
 		1. Add new bettypes of BAIO [RedmineID: #74558]
 		2. Remove 2 excess bettypes 807, 808 [RedmineID: #56344]
 	- 20170425@Percy: Use related bettype - commission group function [RedmineID: #71665]
+	- 20190816@Percy: Apply primary-secondary bettype [RedmineID: #117068]
 */
 
 BEGIN
@@ -45,12 +46,12 @@ BEGIN
 						OR bc.bettype <> 501
 						)
 					AND bc.isShow = 1
+					AND NOT EXISTS (SELECT 1 FROM dbo.f_GroupBettype() g WHERE bc.bettype = g.Bettype AND g.Bettype <> g.GroupTypeId)
 				FOR XML PATH('')
 				), 1, 1, '') AS typeid
 		,CommGroup AS OrderID
 	FROM dbo.f_Bettype_CommGroup() c
 	WHERE CommGroup IN (1,2)
-		AND NOT EXISTS (SELECT 1 FROM dbo.f_GroupBettype() g WHERE c.bettype = g.Bettype AND g.Bettype <> g.GroupTypeId)
 	GROUP BY CommGroup
 	ORDER BY CommGroup
 END
