@@ -36,17 +36,24 @@ BEGIN
 			SELECT @isIMBC = 1
 	END
 
+	;WITH CTE_bettype AS
+	(
+		SELECT DISTINCT ISNULL(g.GroupTypeId, bc.bettype) AS bettype, bc.CommGroup
+		FROM f_Bettype_CommGroup() bc
+			LEFT JOIN dbo.f_GroupBettype() g ON bc.bettype = g.Bettype AND g.Bettype <> g.GroupTypeId
+		WHERE
+			(
+				@isIMBC = 0
+				OR bc.bettype <> 501
+			)
+			AND bc.isShow = 1
+	)
+
 	SELECT CommGroup AS CommID
 		,STUFF((
-				SELECT ',' + CONVERT(VARCHAR(10), bettype)
-				FROM f_Bettype_CommGroup() bc
-				WHERE bc.CommGroup = c.CommGroup
-					AND (
-						@isIMBC = 0
-						OR bc.bettype <> 501
-						)
-					AND bc.isShow = 1
-					AND NOT EXISTS (SELECT 1 FROM dbo.f_GroupBettype() g WHERE bc.bettype = g.Bettype AND g.Bettype <> g.GroupTypeId)
+				SELECT ',' + CONVERT(VARCHAR(10), b.bettype)
+				FROM CTE_bettype b
+				WHERE b.CommGroup = c.CommGroup
 				FOR XML PATH('')
 				), 1, 1, '') AS typeid
 		,CommGroup AS OrderID
