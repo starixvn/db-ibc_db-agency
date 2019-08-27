@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -29,6 +29,7 @@ AS
 		- 20171020@Percy: Add match3rd table [RedmineID: #84690]
 		- 20180125@Percy: Rollback code for BF [RedmineID: #90043]
 		- 20180814@Percy: Reopen code for BF [RedmineID: #90258]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 */
  
 BEGIN
@@ -100,18 +101,6 @@ BEGIN
 		INNER JOIN dbo.League l WITH (NOLOCK) ON m.LeagueID = l.LeagueID
 	WHERE l.isTest <= @IncludeTestData
 	GROUP BY m.EventDate, l.sporttype
-	
-	-- match3rd
-	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
-	SELECT
-		CASE WHEN DATEDIFF(DAY, @ToDate, m.eventdate) = 0 THEN 1 ELSE 0 END AS IsToday,
-		m.eventdate, m.sporttype,
-		SUM(CASE WHEN m.eventstatus = 'Completed' THEN 1 ELSE 0 END) AS Entered,
-		SUM(CASE WHEN m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS NonEntered
-	FROM dbo.Match3rd m WITH (NOLOCK)
-		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.League3rdId = l.League3rdId
-	WHERE m.EventDate BETWEEN @FromDate AND @ToDate
-	GROUP BY m.eventdate, m.sporttype
 	
 	SELECT IsToday, EventDate, Sporttype, Entered, NonEntered
 	FROM #tmp

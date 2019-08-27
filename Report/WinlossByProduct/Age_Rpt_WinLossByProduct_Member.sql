@@ -15,12 +15,13 @@ AS
 	Created: 
 	Task: 
 	DB: DBAGE.bodb02
-	Original: Age_Rpt_WinLossByBettype_Ag
+	
 	Revisions:
 		- 20161224@Paul: Create new [RedmineID: #70450]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180419@Alvin: Combine Macau Games and Pragmatic [RedmineID: #92647]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 BEGIN
@@ -39,9 +40,6 @@ BEGIN
 		AgComm			MONEY, 
 		NumberOfTickets INT
 	);
-
-	DECLARE @ABSDate DATETIME;
-	SET @ABSDate = '2011-09-01';
 
 	DECLARE @isTest BIT = 0;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -91,15 +89,8 @@ BEGIN
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 
 					END AS liveindicator,
-					SUM(CASE
-						WHEN b.bettype = 1000 THEN oddsspread
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN comm
-						ELSE CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END END) AS GrossComm,
-					SUM(CASE WHEN winlostdate >= @ABSDate THEN 
-								CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-							ELSE CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN stake/2 ELSE stake END
-					END
-					) AS Turnover,
+					SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END) AS GrossComm,
+					SUM(ABS(stake)) AS Turnover,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(awinlost) AS AgWinLoss,
 					SUM(playercomm) AS MemberComm,
@@ -204,15 +195,8 @@ BEGIN
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 
 					END AS liveindicator,
-					SUM(CASE
-						WHEN b.bettype = 1000 THEN oddsspread
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN comm
-						ELSE CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END END) AS GrossComm,
-					SUM(CASE WHEN winlostdate >= @ABSDate THEN 
-								CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN ABS(stake)/2 ELSE ABS(stake) END
-							ELSE CASE WHEN b.bettype in (33, 43) AND b.liveawayscore = 0 THEN stake/2 ELSE stake END
-					END
-					) AS Turnover,
+					SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END) AS GrossComm,
+					SUM(ABS(stake)) AS Turnover,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(awinlost) AS AgWinLoss,
 					SUM(playercomm) AS MemberComm,
