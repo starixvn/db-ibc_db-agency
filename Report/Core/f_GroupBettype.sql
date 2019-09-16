@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView"  isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -18,6 +18,7 @@ RETURN
 		- 20160712@Percy: PH AIO phase 2 [Redmine: #53152]
 		- 20161007@Sophia: PHAIO Phase 2 , add more couple of Parent - Child [Redmine: #65406]
 		- 20170919@Percy: PHAIO Phase 3, add 4 new bettypes 461 - 464 [RedmineID: #83356]
+		- 20190805@Sophia: PHAIO 4B, Bettype 470 -> 497, Change GroupTypeId of 11, 199 [RedmineID: #115231]
 */
 	-------- Grouped bettype for Sporting Solution
 	SELECT 153 AS Bettype, 153 AS GroupTypeId
@@ -83,10 +84,13 @@ RETURN
 	UNION ALL  
 	SELECT 183, 17	
 	
-	UNION ALL  
-	SELECT 11, 11	
-	UNION ALL  
-	SELECT 199, 11	
+	UNION ALL
+	SELECT 11, 473
+	UNION ALL
+	SELECT 199, 473
+	UNION ALL
+	SELECT 473, 473
+
 	-------- Grouped bettypes for PH AIO
 	UNION ALL
 	SELECT * FROM ( VALUES
@@ -125,6 +129,15 @@ RETURN
 		,(402, 402), (462, 402) -- Away Team Over/Under
 		,(403, 403), (463, 403) -- 1H Home Team Over/Under
 		,(404, 404), (464, 404) -- 1 H Away Team Over/Under
+		
+		,(194, 194), (470, 194) -- Corners Odd/Even
+		,(203, 203), (471, 203) -- 1H Corners Odd/Even
+		,(202, 202), (474, 202) -- 1H Total Corners
+		,(206, 206), (488, 206) -- First Corner
+		,(207, 207), (489, 207) -- 1H First Corner
+		,(208, 208), (491, 208) -- Last Corner
+		,(209, 209), (492, 209) -- 1H Last Corner
+		
 
 	) PH (Bettype, GroupTypeId)
 GO
