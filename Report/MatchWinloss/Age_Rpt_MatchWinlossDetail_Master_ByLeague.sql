@@ -87,7 +87,6 @@ BEGIN
 	---- End get sport bettype ----
 
 	CREATE TABLE #tmpLeague (LeagueId INT)
-	CREATE TABLE #tmpLeague3rd (League3rdId INT, LeagueCode VARCHAR(50))
 
 	--CREATE TABLE #RecommendList (recommend INT);
 		
@@ -459,7 +458,6 @@ BEGIN
 	DROP TABLE #SAgMatchWLDetails
 	DROP TABLE #SportBettype
 	DROP TABLE #tmpLeague
-	DROP TABLE #tmpLeague3rd
 
 	SET NOCOUNT OFF;
 END

@@ -508,7 +508,6 @@ BEGIN
 	ELSE 
 	BEGIN
 		DECLARE @tmpLeague		TABLE (leagueId INT)
-		DECLARE @tmpLeague3rd	TABLE (league3rdId INT, LeagueCode VARCHAR(50))
 	
 		IF ISNULL(@leagueIds, '') <> ''
 		BEGIN
