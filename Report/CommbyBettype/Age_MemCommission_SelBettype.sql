@@ -17,6 +17,7 @@ AS
 		2. Remove 2 excess bettypes 807, 808 [RedmineID: #56344]
 	- 20170425@Percy: Use related bettype - commission group function [RedmineID: #71665]
 	- 20190816@Percy: Apply primary-secondary bettype [RedmineID: #117068]
+	- 20190826@Percy: Sort by bet type [RedmineID: #118699]
 */
 
 BEGIN
@@ -53,6 +54,7 @@ BEGIN
 				SELECT ',' + CONVERT(VARCHAR(10), b.bettype)
 				FROM CTE_bettype b
 				WHERE b.CommGroup = c.CommGroup
+				ORDER BY b.bettype
 				FOR XML PATH('')
 				), 1, 1, '') AS typeid
 		,CommGroup AS OrderID
