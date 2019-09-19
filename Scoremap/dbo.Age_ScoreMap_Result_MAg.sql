@@ -1,7 +1,7 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_MAg]
- 	@mrecommend INT, 	
- 	@matchids	VARCHAR(4000) = '',
+ 	@mrecommend		INT, 	
+ 	@matchids		VARCHAR(4000) = '',
  	@bettypes_live	VARCHAR(500),
  	@bettypes_dead	VARCHAR(500),
 	@homeBeginScore INT = 0,
@@ -23,14 +23,14 @@ AS
 		- 20140616@Dom: Support BetRadar [Redmine: #17148]
 		- 20140814@Dom:  [Redmine: #19661] Offering 11 new bettypes
 		- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
-		- 20150903@Winnie: Myanmar odds
+		- 20150903@Winnie: Myanmar Odds
 		- 20151127@Percy: Add AOS choice for Correct Score [RedmineID: #48050]
 		- 20160509@Percy: Re-calculate 1H Correct Score [RedmineID: #48785]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
-		- 20180802@Helen: Wrongly calculation for bettype correct score half time  - [Redmine:99508] 
-		
+		- 20180802@Helen: Wrongly calculation for bettype correct score half time  - [Redmine:99508]
+		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -108,13 +108,13 @@ BEGIN
 				
 		SELECT matchid, home, away,
 				ISNULL(-SUM(CASE
-							WHEN r<=-0.5 AND bt IN (1,3,7,8,301,302,303,304) THEN 1
-							WHEN r<0 AND bt IN (1,3,7,8,301,302,303,304) THEN 1+(r*2)
+							WHEN r<=-0.5 AND bt IN (1,3,7,8) THEN 1
+							WHEN r<0 AND bt IN (1,3,7,8) THEN 1+(r*2)
 							ELSE 0
 						END * risk) 
 						+SUM(CASE
-							WHEN r>=0.5 AND bt IN (1,3,7,8,301,302,303,304) THEN 1
-							WHEN r>0 AND bt IN (1,3,7,8,301,302,303,304) THEN 1-(r*2)
+							WHEN r>=0.5 AND bt IN (1,3,7,8) THEN 1
+							WHEN r>0 AND bt IN (1,3,7,8) THEN 1-(r*2)
 							ELSE 0
 						END * risk * trueodds),0)
 					+/*once bt = 1,3,7,8,25 will calculate equation above ,the other way will calculate below*/
@@ -138,12 +138,7 @@ BEGIN
 												,453
 												)THEN 1 --Dom
 							ELSE 0
-						END * risk * trueodds)
-						+SUM(CASE
-							WHEN r=0 AND bt IN (301,302,303,304)
-							THEN 1 
-							ELSE 0
-						END *drawMO),0)
+						END * risk * trueodds),0)
 				  total
 				  ,CASE WHEN tmpBetType.BetType IS NOT NULL THEN 1 ELSE 0 END isHT
 		INTO #ScoreMap_Master
@@ -153,13 +148,12 @@ BEGIN
 					matchid, home, away,
 					r.risk,
 					r.trueodds,
-					r.MOwin+r.MOlose AS drawMO,
-					CASE WHEN betteam  = 'h' AND bt IN (1,301, 7,303) THEN (home+hc) - (away) 
-						WHEN betteam <> 'h' AND bt IN (1,301, 7,303) THEN (away+hc) - (home) 
-						WHEN betteam  = 'h' AND bt IN (2, 12,136,137,138,139,157) THEN (home+away)&1  --Dom & Radar
-						WHEN betteam <> 'h' AND bt IN (2, 12,136,137,138,139,157) THEN 1-( (home+away)&1) --Dom & Radar
-						WHEN betteam  = 'h' AND bt IN (3,302, 8,304) THEN (home+away) - hc 
-						WHEN betteam <> 'h' AND bt IN (3,302, 8,304) THEN hc - (home+away)
+					CASE WHEN betteam  = 'h' AND bt IN (1,7) THEN (home+hc) - (away) 
+						WHEN betteam <> 'h' AND bt IN (1,7) THEN (away+hc) - (home) 
+						WHEN betteam  = 'h' AND bt IN (2,12,136,137,138,139,157) THEN (home+away)&1  --Dom & Radar
+						WHEN betteam <> 'h' AND bt IN (2,12,136,137,138,139,157) THEN 1-( (home+away)&1) --Dom & Radar
+						WHEN betteam  = 'h' AND bt IN (3,8) THEN (home+away) - hc 
+						WHEN betteam <> 'h' AND bt IN (3,8) THEN hc - (home+away)
 						--- Correct Score 0:0 --> 5:5 (4,413) and 0:0 --> 4:4 (30,414) ---
 						WHEN betteam <> 'AOS' AND home < 5 AND away < 5 AND hc=home AND hd=away AND bt IN (4,413) THEN 1
 						WHEN betteam <> 'AOS' AND home < 4 AND away < 4 AND hc=home AND hd=away AND bt IN (30,414) THEN 1
@@ -236,8 +230,6 @@ BEGIN
 						SELECT	matchid, betteam,
 								SUM( ( (stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END)) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM( (stake* mpositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) trueodds,
 								SUM( (stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) ) risk,
-								sum(case when b.bettype IN(301,303) AND oddsspread>0 then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOwin,
-								sum(case when b.bettype IN(301,303) AND oddsspread<0 then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOlose,
 								CASE WHEN betteam = 'h' AND liveindicator = 1 THEN (hdp2+liveawayscore)-(hdp1 + livehomescore)
 									 WHEN betteam = 'h' AND liveindicator <> 1 THEN hdp2-hdp1
 									 WHEN betteam <> 'h' AND liveindicator = 1 THEN (hdp1+livehomescore)-(hdp2+liveawayscore) 
@@ -246,14 +238,12 @@ BEGIN
 								0 hd,
 								bettype bt
 						FROM @tmpBettrans b 
-						WHERE bettype IN (1,301,7,303) 
+						WHERE bettype IN (1,7) 
 						GROUP BY betteam, bettype, hdp1, hdp2, liveindicator, livehomescore, liveawayscore,matchid
 					UNION ALL
 						SELECT	matchid, betteam,
 							SUM( (stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM(stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) trueodds,
 							SUM(stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) risk,
-							0 MOwin,
-							0 MOlose,
 							0 hc,
 							0 hd,
 							bettype bt
@@ -264,20 +254,16 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( ( (stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM( (stake * mpositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) trueodds,
 							SUM( (stake * mpositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) risk,
-							sum(case when b.bettype IN(302,304) AND oddsspread>0 then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOwin,
-							sum(case when b.bettype IN(302,304) AND oddsspread<0 then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking)*(oddsspread/100) else 0 end) MOlose,
 							hdp1,
 							0 hd,
 							bettype bt
 						FROM @tmpBettrans b 
-						WHERE bettype IN (3,302,8,304)
+						WHERE bettype IN (3,8)
 						GROUP BY betteam, bettype, hdp1, liveindicator, livehomescore, liveawayscore, matchid
 					UNION ALL
 						SELECT	matchid, betteam,
 							SUM(stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 							SUM(stake * mpositiontaking) risk,
-							0 MOwin,
-							0 MOlose,
 							hdp1,
 							hdp2,
 							bettype bt
@@ -288,8 +274,6 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( stake * mpositiontaking * ( odds-1)) / SUM(stake * mpositiontaking) trueodds,
 							SUM( stake * mpositiontaking) risk,
-							0 MOwin,
-							0 MOlose,
 							0 hc,
 							0 hd,
 							bettype bt
@@ -300,8 +284,6 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 								SUM(stake * mpositiontaking) risk,
-								0 MOwin,
-								0 MOlose,
 								CASE WHEN bettype IN  (159,406,161,407,162,409,179,181,182) THEN cast(right(betteam,1)AS INT) 
 									ELSE cast(left(betteam,1)AS INT) END
 								AS hc,
@@ -317,8 +299,6 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 								SUM(stake * mpositiontaking) risk,
-								0 MOwin,
-								0 MOlose,
 								0 hc,
 								0 hd,
 								b.bettype bt
@@ -329,8 +309,6 @@ BEGIN
 						SELECT	matchid, betteam,
 							SUM( (stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM(stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) trueodds,
 							SUM(stake * mpositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) risk,
-							0 MOwin,
-							0 MOlose,
 							0 hc,
 							0 hd,
 							b.bettype bt
@@ -341,8 +319,6 @@ BEGIN
 						SELECT	matchid, betteam, 
 							SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 							SUM(stake * mpositiontaking) risk,
-							0 MOwin,
-							0 MOlose,
 							0 hc,
 							0 hd,
 							b.bettype bt
@@ -353,8 +329,6 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 								SUM(stake * mpositiontaking ) risk,
-								0 MOwin,
-								0 MOlose,
 								0 hc,
 								0 hd,
 								b.bettype bt
@@ -365,8 +339,6 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 								SUM(stake * mpositiontaking) risk,
-								0 MOwin,
-								0 MOlose,
 								0 hc,
 								0 hd,
 								b.bettype bt
@@ -377,8 +349,6 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 								SUM(stake * mpositiontaking) risk,
-								0 MOwin,
-								0 MOlose,
 								0 hc,
 								0 hd,
 								b.bettype bt
@@ -389,8 +359,6 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * mpositiontaking * (odds-1)) / SUM(stake * mpositiontaking) trueodds,
 								SUM(stake * mpositiontaking) risk,
-								0 MOwin,
-								0 MOlose,
 								CASE WHEN betteam = '1' THEN hdp2-hdp1
 									 ELSE hdp1-hdp2	 
 								END hc,
@@ -403,8 +371,6 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( stake * mpositiontaking * ( odds-1)) / SUM(stake * mpositiontaking) trueodds,
 							SUM( stake * mpositiontaking) risk,
-							0 MOwin,
-							0 MOlose,
 							0 hc,
 							0 hd,
 							bettype bt

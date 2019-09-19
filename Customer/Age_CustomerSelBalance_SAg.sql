@@ -1,7 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalance_SAg]
 	@CustID					INT, -- recommend
 	@UserName				VARCHAR(50) = '' OUTPUT,
@@ -10,13 +7,6 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelBalance_SAg]
 	@Yesterday_CashBalance	MONEY = 0 OUTPUT,  
 	@TotalBalance			MONEY = 0 OUTPUT,
 	@Yesterday_TotalBalance MONEY = 0 OUTPUT,
-	-- Casino, Bingo, PSP
-	@TotalCSTransfer		MONEY = 0 OUTPUT,
-	@TotalCSOutstanding		MONEY = 0 OUTPUT,
-	@TotalBITransfer		MONEY = 0 OUTPUT,
-	@TotalBIOutstanding		MONEY = 0 OUTPUT,
-	@TotalP2PTransfer		MONEY = 0 OUTPUT,
-	@TotalP2POutstanding	MONEY = 0 OUTPUT,
 	-- Outstanding
 	@SuperOutstanding		MONEY = 0 OUTPUT,
 	@TotalOutstanding		MONEY = 0 OUTPUT,
@@ -45,6 +35,7 @@ AS
 
 	Revisions:
 		- 20171020@Percy: Apply core SP [RedmineID: #84690]
+		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 BEGIN
@@ -87,18 +78,6 @@ BEGIN
 		@TotalMAgentClosed    = ISNULL(CASE WHEN roleId = 3 THEN Closed		ELSE @TotalMAgentClosed		END, 0),
 		@TotalMAgentSuspended = ISNULL(CASE WHEN roleId = 3 THEN Suspended	ELSE @TotalMAgentSuspended	END, 0)
 	FROM custStatus
-
-	SELECT 
-		@TotalCSTransfer     = ISNULL(SUM(CASE WHEN bettype = 23001 THEN actual_stake ELSE 0 END),0),
-		@TotalCSOutstanding  = ISNULL(SUM(CASE WHEN bettype = 23002 THEN actual_stake ELSE 0 END),0),
-		@TotalBITransfer     = ISNULL(SUM(CASE WHEN bettype = 23201 THEN actual_stake ELSE 0 END),0),
-		@TotalBIOutstanding  = ISNULL(SUM(CASE WHEN bettype = 23202 THEN actual_stake ELSE 0 END),0),
-		@TotalP2PTransfer    = ISNULL(SUM(CASE WHEN bettype = 23101 THEN actual_stake ELSE 0 END),0),
-		@TotalP2POutstanding = ISNULL(SUM(CASE WHEN bettype = 23102 THEN actual_stake ELSE 0 END),0)
-	FROM dbo.bettrans WITH (NOLOCK)  
-	WHERE srecommend = @CustID
-		AND bettype IN (23001, 23002, 23101, 23102, 23201, 23202)
-		AND ruben = 0
 
 	CREATE TABLE #BalanceInfo
 	(
