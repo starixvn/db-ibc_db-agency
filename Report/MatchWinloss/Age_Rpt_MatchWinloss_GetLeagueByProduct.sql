@@ -239,6 +239,7 @@ BEGIN
 	FROM #tmpLeagues tmp
 		INNER JOIN league l WITH (NOLOCK) ON l.leagueid = tmp.leagueid
 	WHERE tmp.LeagueType = 0
+	ORDER BY sporttype;
 	
 	DROP TABLE #tmpLeagues;
 
