@@ -1,5 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-
 ALTER PROCEDURE [dbo].[Age_MemCommission_SelBettype]  
 	@custID INT = 0 -- default: site MBC
 AS

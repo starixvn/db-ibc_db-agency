@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchSelResultEntered]
 	@IncludeTestData BIT = 1 -- 1: Show All; 0: is NOT show Test  
 AS

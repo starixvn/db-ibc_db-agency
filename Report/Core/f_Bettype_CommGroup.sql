@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
-USE [bodb02]
-GO
-
 ALTER FUNCTION dbo.f_Bettype_CommGroup ()
 RETURNS TABLE
 AS
