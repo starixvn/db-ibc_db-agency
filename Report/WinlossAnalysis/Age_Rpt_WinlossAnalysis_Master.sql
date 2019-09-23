@@ -99,7 +99,7 @@ BEGIN
 				SUM(acomm) AS MAgComm,
 				SUM(swinlost) AS SAgWinloss,
 				SUM(scomm) AS SAgComm,
-				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) AS BetCount
+				COUNT(1) AS BetCount
 		FROM bettrans b WITH(NOLOCK) 
 			INNER JOIN #SportBettype s ON b.bettype = s.bettype
 		WHERE winlostdate BETWEEN @FDate AND @TDate

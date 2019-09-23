@@ -156,7 +156,7 @@ BEGIN
 				,SUM(scomm) ownercomm
 				,SUM(acomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.srecommend = c.CustID
@@ -199,7 +199,7 @@ BEGIN
 				,SUM(acomm) ownercomm 
 				,SUM(comm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(acomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.mrecommend = c.CustID
@@ -242,7 +242,7 @@ BEGIN
 				,SUM(comm) ownercomm
 				,SUM(playercomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(comm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.recommend = c.CustID
@@ -285,7 +285,7 @@ BEGIN
 				,SUM(playercomm) as ownercomm
 				,0 as precomm
 				,SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) +SUM(playercomm) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.custid = c.CustID

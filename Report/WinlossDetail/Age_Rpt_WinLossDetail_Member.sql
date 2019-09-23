@@ -128,7 +128,7 @@ BEGIN
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,
 				SUM(comm - playercomm) AS AgComm,
-				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) AS NoOfTicket
+				COUNT(1) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FDate AND @TDate
