@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_Agent]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,
@@ -19,6 +16,7 @@ AS
 		- 20170213@Paul: Create new [RedmineID: #70629]
 		- 20171020@Percy: Add OthersComm [RedmineID: #84690]
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 BEGIN
@@ -91,15 +89,12 @@ BEGIN
 			ISNULL([1],0) AS Comm1,
 			ISNULL([2],0) AS Comm2,
 			ISNULL([3],0) AS Comm3,
-			ISNULL([4],0) AS CasinoComm,
-			ISNULL([5],0) AS MOComm,
-			ISNULL([6],0) AS ChargeComm,
-			ISNULL([7],0) AS OthersComm
+			ISNULL([4],0) AS CasinoComm
 	FROM #tmp AS p
 		PIVOT
 		(
 			SUM(ma_comm)
-			FOR CommGroup IN ([1],[2],[3],[4],[5],[6],[7])
+			FOR CommGroup IN ([1],[2],[3],[4])
 		) AS pvt
 		INNER JOIN customer c WITH(NOLOCK) On c.custid = pvt.recommend 
 	ORDER BY c.username;

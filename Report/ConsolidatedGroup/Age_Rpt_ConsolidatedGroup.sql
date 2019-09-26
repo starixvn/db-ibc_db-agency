@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@CustID			INT, 
 	@Currency		INT,
@@ -37,6 +34,8 @@ AS
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20170905@Percy: Expand bettype range of OneRnG Casino [RedmineID: #78424]
 		- 20170908@Paul: Change report by Sport to report by Product; Enhance code [RedmineID: #77598]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
 						2: Report by Daily
@@ -45,7 +44,6 @@ AS
 		. @Currency: If @Currency <> 0 then filter this @currency
 					 If @Currency = 0 then show all currency
 */  
-
 
 BEGIN
 	SET NOCOUNT ON
@@ -150,15 +148,15 @@ BEGIN
 			SELECT b.winlostdate, b.srecommend, c.username, c.currency
 				,s.ProductID
 				,4 RoleID
-				,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
+				,SUM(ABS(b.stake)) as TurnOver
 				,SUM(winlost-actual_stake) winlost
 				,SUM(playercomm) playercomm
-				,SUM((case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end)*spositiontaking) ownerturnover
+				,SUM(ABS(b.stake)*spositiontaking) ownerturnover
 				,SUM(swinlost) ownerwinlost
 				,SUM(scomm) ownercomm
 				,SUM(acomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.srecommend = c.CustID
@@ -193,15 +191,15 @@ BEGIN
 			SELECT b.winlostdate, b.mrecommend, c.username, c.currency
 				,s.ProductID
 				,3 RoleID 
-				,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
+				,SUM(ABS(b.stake)) as TurnOver
 				,SUM(winlost-actual_stake) winlost
 				,SUM(playercomm) playercomm
-				,SUM((case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end)*mpositiontaking) ownerturnover
+				,SUM(ABS(b.stake)*mpositiontaking) ownerturnover
 				,SUM(mwinlost) ownerwinlost
 				,SUM(acomm) ownercomm 
 				,SUM(comm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(acomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.mrecommend = c.CustID
@@ -236,15 +234,15 @@ BEGIN
 			SELECT b.winlostdate,  b.recommend, c.username, c.currency
 				,s.ProductID
 				,2 RoleID
-				,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
+				,SUM(ABS(b.stake)) as TurnOver
 				,SUM(winlost-actual_stake) winlost
 				,SUM(playercomm) playercomm
-				,SUM((case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end)*apositiontaking) ownerturnover
+				,SUM(ABS(b.stake)*apositiontaking) ownerturnover
 				,SUM(awinlost) ownerwinlost
 				,SUM(comm) ownercomm
 				,SUM(playercomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(comm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.recommend = c.CustID
@@ -279,15 +277,15 @@ BEGIN
 			SELECT b.winlostdate, b.CustID, c.username, c.currency
 				,s.ProductID
 				,1 RoleID 
-				,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver
+				,SUM(ABS(b.stake)) as TurnOver
 				,0 as winlost
 				,0 as playercomm
-				,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as ownerturnover
+				,SUM(ABS(b.stake)) as ownerturnover
 				,SUM(winlost-actual_stake) ownerwinlost
 				,SUM(playercomm) as ownercomm
 				,0 as precomm
 				,SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) +SUM(playercomm) company
-				,COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE transid END) betcount
+				,COUNT(1) betcount
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.custid = c.CustID

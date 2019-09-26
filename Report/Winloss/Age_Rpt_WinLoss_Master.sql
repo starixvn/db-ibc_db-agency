@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Master]  
 	@CustID 		INT, --srecommend
 	@FromDate 		SMALLDATETIME,
@@ -15,13 +12,13 @@ AS
 	Created:   
 	Task :   
 	DB: DBAGE/bodb02
-	Original SP: Age_Rpt_WinLoss_SAg  
-				Change SP name suffix to match with web function
+	
 	Revisions:  
 		- 20161111@Paul: Microsite for Report - [Redmine: #66991]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 
 	+ Note: Review index=IX_srecommend when modifying this SP   
 */  
@@ -94,11 +91,8 @@ BEGIN
 
 		INSERT INTO #SAgWinLoss(CustID, TurnOver, GrossComm, MAgTotal, SAgWinlost, Comm)
 		SELECT  mrecommend AS CustID,
-				SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN(33,43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver,
-				SUM(CASE
-					WHEN b.bettype = 1000 THEN oddsspread
-					WHEN b.bettype BETWEEN 1401 AND 1499 THEN scomm
-					ELSE CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END END) AS GrossComm,
+				SUM(ABS(b.stake)) AS TurnOver,
+				SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 				SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
 				SUM(swinlost) AS SAgWinlost,
 				ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS Comm

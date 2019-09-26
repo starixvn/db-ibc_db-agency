@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.f_Bettype_CommGroup ()
 RETURNS TABLE
 AS
@@ -25,14 +22,14 @@ AS
 		- 20190612@Percy: Add bettypes of Card Club [RedmineID: #115611]
 		- 20190717@Razor: PHAIO Phase 4a, add 3 new bettypes [RedmineID: #117061]
 		- 20190816@Percy: Add bettypes of PHAIO Phase 4b + Move 206,207,208,209 from Comm3 to Comm1 [RedmineID: #117068]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+
 	- Columns:
 		- CommGroup:
 			1: Comm_1 (Asian HDP, OU, OE)
 			2: Comm_2 (1X2)
 			3: Comm_3 (Other bettypes)
 			4: Casino Comm
-			5: MO Comm
-			6: Charge Comm
 	- isShow: show information on Member Commission Page
 */
 
@@ -109,8 +106,7 @@ FROM (
 	SELECT typeid AS bettype, 4 AS CommGroup
 	FROM bettype WITH(NOLOCK)
 	WHERE
-		typeid IN (71,73)
-		OR typeid BETWEEN 1101 AND 1150
+		typeid IN (71)
 		OR typeid BETWEEN 81 AND 120
 		OR typeid BETWEEN 1501 AND 1599
 		OR typeid BETWEEN 1701 AND 1799
@@ -119,22 +115,6 @@ FROM (
 		OR typeid BETWEEN 4001 AND 7999
 		OR typeid BETWEEN 2501 AND 2699
 		OR typeid BETWEEN 2901 AND 2999
-		OR typeid BETWEEN 1600 AND 1610
-		OR typeid BETWEEN 1401 AND 1499
 		OR typeid BETWEEN 1901 AND 1999
-
-	UNION ALL
-	SELECT bettype, 5 AS CommGroup -- MO_comm
-	FROM (
-		VALUES 
-			(301),(302),(303),(304)
-		)
-	D (bettype)
-
-	UNION ALL
-	SELECT 500 AS bettype, 6 AS CommGroup -- Charge_comm
-
-	UNION ALL
-	SELECT 1004 AS bettype, 7 AS CommGroup -- Others_comm
 ) AS A
 GO

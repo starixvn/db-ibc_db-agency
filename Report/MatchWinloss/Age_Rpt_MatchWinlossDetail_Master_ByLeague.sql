@@ -1,14 +1,10 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_Master_ByLeague] 
 	@CustID			INT,
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
 	@MoveBetsDay	SMALLDATETIME,
 	@leagueIds		VARCHAR(MAX),
-	@league3rdIds	VARCHAR(MAX),
 	@ProductIds		VARCHAR(MAX)
 AS
 
@@ -16,7 +12,6 @@ AS
 	Created: 
 	Task : 
 	DB: DBAGE.bodb02
-	Original: Age_Rpt_MatchWinlossDetail_SAg_ByLeague
 	
 	Revisions:
 		- 20170224@Paul: Create new [RedmineID: #70554]
@@ -26,6 +21,7 @@ AS
 		- 20171020@Percy: Add @league3rdIds params to get data from league3rd table [RedmineID: #84690]
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20181116@Patrick: Revise code to use index correctly on bettrans14 [RedmineId: #104853]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 BEGIN 
@@ -88,7 +84,6 @@ BEGIN
 	---- End get sport bettype ----
 
 	CREATE TABLE #tmpLeague (LeagueId INT)
-	CREATE TABLE #tmpLeague3rd (League3rdId INT, LeagueCode VARCHAR(50))
 
 	--CREATE TABLE #RecommendList (recommend INT);
 		
@@ -429,93 +424,6 @@ BEGIN
 		END
 	END
 
-	IF ISNULL(@league3rdIds, '') <> ''
-	BEGIN
-		INSERT INTO #tmpLeague3rd (league3rdId, LeagueCode)
-		SELECT league3rdId, LeagueCode
-		FROM dbo.League3rd WITH (NOLOCK)
-		WHERE ',' + @league3rdIds + ',' LIKE '%,' + CONVERT(VARCHAR(10), league3rdId) + ',%'
-
-		IF @tdate > @MoveBetsDay
-		BEGIN
-			INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
-			SELECT  0 AS BetGroup,
-					m.match3rdId,
-					m.homeid,
-					m.awayid,
-					b.bettype,
-					0 AS liveindicator,
-					m.league3rdId,
-					SUM(ABS(stake)) AS turnover,
-					SUM(scomm/(1 - tpositiontaking)) AS GrossComm,
-					SUM(winlost - actual_stake) AS MemberWinLoss,
-					SUM(playercomm) AS MemberComm,
-					SUM(awinlost) AS AgWinLoss,
-					SUM(comm - playercomm) AS  AgComm,
-					SUM(mwinlost) AS MAgWinLoss,
-					SUM(acomm - comm) AS  MAgComm,
-					SUM(swinlost) AS SAgWinLoss,
-					SUM(scomm - acomm) AS SAgComm,
-					'' AS race,
-					l.LeagueCode AS matchcode,
-					0 AS IsNeutral,
-					'' AS showtime
-			FROM dbo.bettrans b WITH (NOLOCK)
-				INNER JOIN dbo.Match3rd m WITH (NOLOCK) ON m.match3rdId = b.matchid
-				INNER JOIN #tmpLeague3rd l ON l.league3rdId = m.league3rdId
-				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-			WHERE b.srecommend = @custid
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
-				AND m.eventstatus = 'completed' 
-				AND b.statusID NOT IN (101, 102, 103)
-				AND b.ruben = 1
-				AND s.EventType = 5
-				AND EXISTS (SELECT l.league3rdId FROM #tmpLeague3rd l WHERE l.league3rdId = m.league3rdId)								
-			GROUP BY m.match3rdId, m.homeid, m.awayid, b.bettype, m.league3rdId, l.LeagueCode
-		END
-
-		IF @fdate <= @MoveBetsDay
-		BEGIN
-			INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
-			SELECT  0 AS BetGroup,
-					m.match3rdId,
-					m.homeid,
-					m.awayid,
-					b.bettype,
-					0 AS liveindicator,
-					m.league3rdId,
-					SUM(ABS(stake)) AS turnover,
-					SUM(scomm/(1 - tpositiontaking)) AS GrossComm,
-					SUM(winlost - actual_stake) AS MemberWinLoss,
-					SUM(playercomm) AS MemberComm,
-					SUM(awinlost) AS AgWinLoss,
-					SUM(comm - playercomm) AS  AgComm,
-					SUM(mwinlost) AS MAgWinLoss,
-					SUM(acomm - comm) AS  MAgComm,
-					SUM(swinlost) AS SAgWinLoss,
-					SUM(scomm - acomm) AS SAgComm,
-					'' AS race,
-					l.LeagueCode AS matchcode,
-					0 AS IsNeutral,
-					'' AS showtime
-			FROM dbo.bettrans14 b WITH (NOLOCK)
-				INNER JOIN dbo.Match3rd14 m WITH (NOLOCK) ON m.match3rdId = b.matchid
-				INNER JOIN #tmpLeague3rd l ON l.league3rdId = m.league3rdId
-				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-				--INNER JOIN #RecommendList r ON b.recommend = r.recommend
-			WHERE b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
-				AND b.srecommend = @CustId
-				AND m.eventstatus = 'completed' 
-				AND b.statusID NOT IN (101, 102, 103)
-				AND b.ruben = 1
-				AND s.EventType = 5
-				AND EXISTS (SELECT l.league3rdId FROM #tmpLeague3rd l WHERE l.league3rdId = m.league3rdId)								
-			GROUP BY m.match3rdId, m.homeid, m.awayid, b.bettype, m.league3rdId, l.LeagueCode
-		END
-	END
- 
 	SELECT  BetGroup, 
 			matchid, 
 			homeid, 
@@ -547,7 +455,6 @@ BEGIN
 	DROP TABLE #SAgMatchWLDetails
 	DROP TABLE #SportBettype
 	DROP TABLE #tmpLeague
-	DROP TABLE #tmpLeague3rd
 
 	SET NOCOUNT OFF;
 END

@@ -1,7 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Chart_WinlossAnalysis_Member]
 	@CustID			INT,	
 	@FromDate		SMALLDATETIME,
@@ -21,6 +18,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170728@Paul: Return 0 if that month has no data [RedmineID: #80779]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 BEGIN
@@ -110,7 +108,7 @@ BEGIN
 
 		INSERT INTO #AgencyWinloss(winlossdate, turnover, winloss)
 		SELECT	winlostdate,
-				SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN(33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS turnover,			
+				SUM(ABS(b.stake)) AS turnover,			
 				SUM(awinlost + comm - playercomm) AS winloss			
 		FROM bettrans b WITH(NOLOCK) 
 			INNER JOIN #SportBettype s ON b.bettype = s.bettype

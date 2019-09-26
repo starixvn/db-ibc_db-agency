@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
 	@CustId INT
 AS
@@ -21,6 +18,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports - using DCS [RedmineID: #78339]
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		
 	Param's Explanation:
 
@@ -45,7 +43,7 @@ BEGIN
 
 	UPDATE	@ProductList
 	SET		isShow = 1
-	WHERE	ProductID IN (1,6,2,3,4) ---SB, Casino, Racing, Number Game, Live Casino: always show
+	WHERE	ProductID IN (1,6,3) ---SB, Casino, Number Game: always show
 
 	/*
 	-----1. Virtual Sports
@@ -83,18 +81,6 @@ BEGIN
 		UPDATE @ProductList
 		SET		isShow = 1
 		WHERE	ProductID = 12
-	END 
-
-	-----4. Colossus Bets
-	IF EXISTS (	SELECT	1
-				FROM	dbo.CustInfo C WITH (NOLOCK)
-				INNER JOIN @TmpCustID T 
-						ON T.CustID = C.CustID
-				WHERE	C.HideColossusBet = 0)
-	BEGIN 
-		UPDATE @ProductList
-		SET		isShow = 1
-		WHERE	ProductID = 15
 	END 
 
 	-----------------------------------------------------------
@@ -139,9 +125,9 @@ BEGIN
 		AND T.ProductID IN (21, 22, 24)
 
 	--------------------------------------------
-	SELECT * 
+	SELECT ProductID, ProductName, EndOfSupportDate, isShow
 	FROM @ProductList
+	
 	DROP TABLE #T
-
 END
 GO

@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
@@ -18,8 +15,7 @@ AS
 Created: 
 Task : Smartphone friendly - Win Loss Detail Report
 DB: DBAGE/bodb02
-Original SP: Age_Rpt_WinLossDetail_Ag
-			Change SP name suffix to match with web function
+
 Revisions:
 	- 20161024@Paul: Smartphone Friendly UI for Microsite Report [RedmineID: #61531]
 	- 20170110@Paul: Use new functions to get sum_winloss condition and SportBettypeMatrix [RedmineID: #69515]
@@ -27,6 +23,7 @@ Revisions:
 	- 20170914@Percy: Enhance performance on sum_winloss_old [RedmineID: #83171]
 	- 20180913@Percy: Bullfighting - Add data into TurnoverNoDraw column [RedmineID: #101288]
 	- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
+	- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 BEGIN
@@ -119,22 +116,19 @@ BEGIN
 
 		INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
 		SELECT	CustID,
-				SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype in (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver,
-				SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 
+				SUM(ABS(b.stake)) AS TurnOver,
+				SUM(CASE
 						WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
-						WHEN b.StatusID = 111 AND s.ProductId IN (1,30) THEN 0 -- Sportsbook, Bullfighting
+						WHEN b.StatusID = 111 AND s.ProductId IN (1) THEN 0 -- Sportsbook
 						WHEN s.ProductID = 21 THEN b.oddsspread -- Allbet
 						ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
-				SUM(CASE
-					WHEN b.bettype = 1000 THEN oddsspread
-					WHEN b.bettype BETWEEN 1401 AND 1499 THEN comm
-					ELSE CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END END) AS GrossComm,
+				SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END) AS GrossComm,
 				SUM(winlost - actual_stake) AS MemberWinLost,
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,
 				SUM(comm - playercomm) AS AgComm,
-				COUNT(CASE WHEN b.bettype = 500 THEN NULL ELSE b.transid END) AS NoOfTicket
+				COUNT(1) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FDate AND @TDate

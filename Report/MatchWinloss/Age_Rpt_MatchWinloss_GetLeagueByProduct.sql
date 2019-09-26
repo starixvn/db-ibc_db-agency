@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinloss_GetLeagueByProduct]
 	@custid			INT,
 	@ProductIds		VARCHAR(MAX),
@@ -26,6 +23,7 @@ AS
 		- 20171101@Percy: Enhance Performance on bettrans14 [RedmineID: #86200]
 		- 20180130@Percy: Clean redundant code [RedmineID: #86086]
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
+		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -138,15 +136,6 @@ BEGIN
 			AND o.eventstatus = 'completed'
 			AND tmp.EventType = 3
 			AND l.isTest <= @IsShowAll;
-
-		INSERT INTO #tmpLeagues(leagueid, LeagueType) 
-		SELECT DISTINCT l.League3rdId, 1
-		FROM dbo.Match3rd m WITH(NOLOCK) 
-			INNER JOIN dbo.League3rd l WITH(NOLOCK) ON m.League3rdId = l.League3rdId 
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.match3rdId
-		WHERE m.eventdate BETWEEN @fdate AND @tdate
-			AND m.EventStatus = 'completed'
-			AND tmp.EventType = 5;
 	END
 
 	TRUNCATE TABLE #tmpmatchid
@@ -225,15 +214,6 @@ BEGIN
 			AND o.eventstatus = 'completed'
 			AND tmp.EventType = 3
 			AND l.isTest <= @IsShowAll;
-
-		INSERT INTO #tmpLeagues(leagueid, LeagueType) 
-		SELECT DISTINCT l.League3rdId, 1
-		FROM dbo.Match3rd14 m WITH(NOLOCK) 
-			INNER JOIN dbo.League3rd l WITH(NOLOCK) ON m.League3rdId = l.League3rdId 
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.match3rdId
-		WHERE m.eventdate BETWEEN @fdate AND @tdate
-			AND m.EventStatus = 'completed'
-			AND tmp.EventType = 5;
 	END
 	
 	DROP TABLE #tmpmatchid;
@@ -256,14 +236,8 @@ BEGIN
 	FROM #tmpLeagues tmp
 		INNER JOIN league l WITH (NOLOCK) ON l.leagueid = tmp.leagueid
 	WHERE tmp.LeagueType = 0
-
-	UNION ALL
-	SELECT	DISTINCT l.League3rdId , l.sporttype, tmp.LeagueType, l.LeagueName
-	FROM #tmpLeagues tmp
-		INNER JOIN dbo.League3rd l WITH(NOLOCK) ON tmp.leagueid = l.League3rdId
-	WHERE tmp.LeagueType = 1
 	ORDER BY sporttype;
-
+	
 	DROP TABLE #tmpLeagues;
 
 	SET NOCOUNT OFF;
