@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBOST-bodb_ost" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBOST-bodb_ost" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Ost_Forecast_Sel1X2]
 	@matchid int ,
 	@bettype int,
