@@ -39,7 +39,7 @@ BEGIN
 		AND match.matchid IN (
 			SELECT DISTINCT matchid
 			--FROM bettrans WITH (NOLOCK, INDEX = IX_betrunning_mrecommend)
-			FROM dbo.OST_fn_bettrans_running()
+			FROM dbo.Ost_f_bettrans_running()
 			WHERE statusID IN (0, 1)
 				AND mrecommend = @MAgID
 				AND bettype IN (

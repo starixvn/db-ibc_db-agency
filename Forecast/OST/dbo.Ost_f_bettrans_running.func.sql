@@ -16,15 +16,9 @@ RETURN (
 	
 	WITH CTE_bettype (bettype, IsHT) AS (
 		SELECT bt.typeid
-			, CASE WHEN typenamee like '%1H%' THEN 1 ELSE 0 END IsHT
+			, CASE WHEN typenamee LIKE '%1H%' AND typenamee NOT LIKE '%2H%' THEN 1 ELSE 0 END IsHT
 		FROM bodb02.dbo.bettype bt WITH(NOLOCK) 
 		WHERE bt.typeid < 20000
-		--WHERE bt.typeid IN (
-		--	1, 7, 301, 303, -- HDP
-		--	3, 8, 302, 304, -- OU
-		--	5, 15, 167, -- 1x2
-		--	4, 30, 152, 165, 166, 405, 413, 414, 416 -- Betlist
-		--)
 	)
 	SELECT 
 		------index keys
@@ -33,6 +27,7 @@ RETURN (
 		, b.srecommend
 		, b.mrecommend
 		, b.recommend
+		, b.custid
 		, b.transid
 
 		------forcecase usages
