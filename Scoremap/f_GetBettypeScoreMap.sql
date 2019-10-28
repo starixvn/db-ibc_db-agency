@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DB042-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GetBettypeScoreMap]
 (
 )
@@ -8,7 +8,7 @@ AS
 /*
 	Created by Percy
 	Date: 2017-10-20
-	DB: DBAGE.bodb02
+	DB: DB042.bodb02
 	Task: Get bettypes supported score map function
 
 	Revisions:
