@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_DownlineOutstanding_Agent]
 	@ProductIds	VARCHAR(MAX),
 	@DownlineId INT -- agent

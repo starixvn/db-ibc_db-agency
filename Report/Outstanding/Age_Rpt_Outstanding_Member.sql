@@ -1,7 +1,4 @@
 /*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Member] 
 	@CustID		INT, --recommend
 	@ProductIds	VARCHAR(MAX)
