@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DB042-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GetBettypeScoreMap]
 (
 )
@@ -11,11 +8,12 @@ AS
 /*
 	Created by Percy
 	Date: 2017-10-20
-	DB: DBAGE.bodb02
+	DB: DB042.bodb02
 	Task: Get bettypes supported score map function
 
 	Revisions:
 		- 20171020@Percy: Create new function [RedmineID: #84913]
+		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 RETURN
@@ -24,11 +22,11 @@ RETURN
 	(
 		VALUES 
 		-- Handicap Group
-		(1, '1,7,301,303', 0, 10), (1, '1,7', 1, 10),
+		(1, '1,7', 0, 10), (1, '1,7', 1, 10),
 		-- Odd/Even Group
 		(2, '2,12,136,137,138,139', 0, 20), (2, '2,12,136,137,138,139,157', 1, 20),
 		-- Over/Under Group
-		(3, '3,8,302,304', 0, 30), (3, '3,8', 1, 30),
+		(3, '3,8', 0, 30), (3, '3,8', 1, 30),
 		-- 1x2
 		(5, '5,15', 0, 40), (5, '5,15,167', 1, 40),
 		-- Money line

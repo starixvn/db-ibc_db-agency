@@ -1,7 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ScoreMap_SelMatch]
  	@agentid	INT, -- SMA
  	@leagueid	INT
@@ -10,7 +7,7 @@ AS
 /*
 	Task: Get matchs have bets for Score Map function
 	Date: 20110919@Johnson
-	DB: DBAGE.bodb02	
+	DB: DB042.bodb02	
 	
 	Revisions:
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
@@ -23,7 +20,8 @@ AS
 		- 20160607@Percy: Enhance Performance - Remove WITH RECOMPILE [RedmineID: #58288]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
-		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
+		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 */
 
 BEGIN
@@ -39,9 +37,9 @@ BEGIN
 		typeid IN
 		(
 			-- half-time bettypes
-			7,303,8,304,12,15,21,126,136,138,167,179,181,182,188,191,413,151,410,411,427,453,
+			7,8,12,15,21,126,136,138,167,179,181,182,188,191,413,151,410,411,427,453,
 			 -- full-time bettypes
-			1,301,2,3,302,4,5,6,13,20,24,25,26,27,28,30,121,122,123,131,132,137,139,157,159,161,162,170,414,406,407,409
+			1,2,3,4,5,6,13,20,24,25,26,27,28,30,121,122,123,131,132,137,139,157,159,161,162,170,414,406,407,409
 		)
 
 	IF @roleid = 4
