@@ -1,0 +1,3 @@
+Transfer\Transfer All and Clear Credit\Age_Transfer_All_Ins.sql
+Transfer\Transfer All and Clear Credit\Age_Transfer_All_Ins.sql
+Transfer\dbo.Age_Transfer_InsClearBalance_Ag.sql
