@@ -22,6 +22,7 @@ AS
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20181116@Patrick: Revise code to use index correctly on bettrans14 [RedmineId: #104853]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
 */
 
 BEGIN 
@@ -110,7 +111,7 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) AS turnover,
-					SUM(scomm/(1 - tpositiontaking)) AS GrossComm,
+					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(awinlost) AS AgWinLoss,
@@ -147,7 +148,7 @@ BEGIN
 					0 AS liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) AS turnover,
-					SUM(scomm/(1 - tpositiontaking)) AS GrossComm,
+					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(awinlost) AS AgWinLoss,
@@ -189,7 +190,7 @@ BEGIN
 					0 AS liveindicator,
 					m.leagueid,
 					SUM(CASE WHEN b.liveawayscore = 0 and b.bettype in(33,43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver,
-					ISNULL(SUM(scomm/(1 - tpositiontaking)), 0) AS GrossComm,
+					ISNULL(SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) AS GrossComm,
 					ISNULL(SUM(winlost - actual_stake), 0) AS MemberWinLoss,
 					ISNULL(SUM(playercomm), 0) AS MemberComm,
 					ISNULL(SUM(awinlost), 0) AS AgWinLoss,
@@ -228,7 +229,7 @@ BEGIN
 						0 AS liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) AS turnover,
-						SUM(comm/(1 - tpositiontaking)) AS GrossComm,
+						SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 						SUM(winlost - actual_stake) AS MemberWinLoss,
 						SUM(playercomm) AS MemberComm,
 						SUM(awinlost) AS AgWinLoss,
@@ -270,7 +271,7 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) AS turnover,
-					SUM(scomm/(1 - tpositiontaking)) AS GrossComm,
+					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(awinlost) AS AgWinLoss,
@@ -308,7 +309,7 @@ BEGIN
 					0 AS liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) AS turnover,
-					SUM(scomm/(1 - tpositiontaking)) AS GrossComm,
+					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(awinlost) AS AgWinLoss,
@@ -351,7 +352,7 @@ BEGIN
 					0 AS liveindicator,
 					m.leagueid,
 					SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN(33,43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver,
-					ISNULL(SUM(scomm/(1 - tpositiontaking)), 0) AS GrossComm,
+					ISNULL(SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) AS GrossComm,
 					ISNULL(SUM(winlost - actual_stake), 0) AS MemberWinLoss,
 					ISNULL(SUM(playercomm), 0) AS MemberComm,
 					ISNULL(SUM(awinlost), 0) AS AgWinLoss,
@@ -391,7 +392,7 @@ BEGIN
 						0 AS liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) AS turnover,
-						SUM(comm/(1 - tpositiontaking)) AS GrossComm,
+						SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 						SUM(winlost - actual_stake) AS MemberWinLoss,
 						SUM(playercomm) AS MemberComm,
 						SUM(awinlost) AS AgWinLoss,
