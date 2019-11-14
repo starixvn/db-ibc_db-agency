@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" selecters="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBTXN-bodb02" selecters="" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 (
 	@ProductID	VARCHAR(500) = ''
@@ -7,7 +7,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 	Creator: Paul	
 	Date: 20170110
 	Task: Get sum_winloss condition
-	DB: DBAGE.bodb02, DBEXT.bodb02
+	DB: DBAGE.bodb02, DBTXN.bodb02
 		
 	Revisions:
 		- 20170622@Percy: Add Betradar Virtual Sports [RedmineID: #78339]
