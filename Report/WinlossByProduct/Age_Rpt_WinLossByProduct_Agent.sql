@@ -20,7 +20,7 @@ AS
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
-		- 20191029@Percy: Integrate Spadegaming [RedmineID: #107703]
+		- 20191029@Percy: Integrate Spadegaming [RedmineID: #122353]
 */
 
 BEGIN

@@ -19,7 +19,7 @@ AS
 		- 20180419@Alvin: Combine Macau Games and Pragmatic [RedmineID: #92647]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
-		- 20191029@Percy: Integrate Spadegaming [RedmineID: #107703]
+		- 20191029@Percy: Integrate Spadegaming [RedmineID: #122353]
 */
 
 BEGIN

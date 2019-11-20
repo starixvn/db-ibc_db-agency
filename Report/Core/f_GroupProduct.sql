@@ -15,7 +15,7 @@ AS
 		- 20170622@Percy: Create new [RedmineID: #78339]
 		- 20180418@Razor: Add Pragmatic under Macau Games [RedmineID: #92647]
 		- 20190612@Percy: Add Card Club under Macau Games [RedmineID: #107703]
-		- 20191029@Percy: Add Spadegaming under Macau Games [RedmineID: #107703]
+		- 20191029@Percy: Add Spadegaming under Macau Games [RedmineID: #122353]
 */
 
 RETURN
