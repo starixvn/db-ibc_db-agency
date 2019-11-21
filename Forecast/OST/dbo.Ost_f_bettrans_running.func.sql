@@ -6,7 +6,6 @@ AS
 	Created:20191021@Bobby
 	Task: New Forecast at Agent Site 
 	DB: DBOST.bodb_ost
-	Original:DB042.bodb02.Age_LeagueSelRunning_SAg
 	
 	Revisions: 
 		- 20191021@Bobby: Initialize [Redmine:114231] 
@@ -14,12 +13,6 @@ AS
 */
 RETURN (
 	
-	WITH CTE_bettype (bettype, IsHT) AS (
-		SELECT bt.typeid
-			, CASE WHEN typenamee LIKE '%1H%' AND typenamee NOT LIKE '%2H%' THEN 1 ELSE 0 END IsHT
-		FROM bodb02.dbo.bettype bt WITH(NOLOCK) 
-		WHERE bt.typeid < 20000
-	)
 	SELECT 
 		------index keys
 		b.matchid 
@@ -66,13 +59,12 @@ RETURN (
 		, b.oddsid
 
 	FROM dbo.bettrans b WITH(NOLOCK)
-	INNER JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventstatus = 'running'
-	INNER JOIN dbo.match_remark mr WITH(NOLOCK) ON m.matchid = mr.matchid
-	INNER JOIN CTE_bettype bt WITH(NOLOCK) ON b.bettype = bt.bettype
+	INNER JOIN dbo.match_remark mr WITH(NOLOCK) ON b.matchid = mr.matchid AND mr.calculate = 0 AND mr.calRefund = 0
+	LEFT JOIN [dbo].[f_GetHalfTimeBetType] () bt ON b.bettype = bt.bettype
 	WHERE 1 = CASE 
-		WHEN mr.IsHTCal = 1 AND bt.IsHT = 1 THEN 0
+		WHEN mr.IsHTCal = 1 AND bt.bettype > 0 THEN 0
 		ELSE 1
 	END
-	AND b.statusID NOT IN (101,102)
+	AND b.statusID IN (0,1)
 )
 GO
