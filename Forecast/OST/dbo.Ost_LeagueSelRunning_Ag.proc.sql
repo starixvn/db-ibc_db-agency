@@ -1,6 +1,5 @@
 ﻿/*<info serverAlias="DBOST-bodb_ost" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
-ALTER PROCEDURE [dbo].[Ost_LeagueSelRunning_Ag] 
-	@AgID INT
+ALTER PROCEDURE [dbo].[Ost_LeagueSelRunning_Ag] @AgID INT
 	, @Language NVARCHAR(2) = 'E'
 	, @Bettypes VARCHAR(100) = '0' --0: all, 1:1,3,7,8; 5:5,15 
 AS
@@ -18,28 +17,24 @@ BEGIN
 	SET NOCOUNT ON
 
 	SELECT @Bettypes = CASE @Bettypes
-			WHEN '0'
-				THEN '1,3,7,8,301,302,303,304,5,15,167'
 			WHEN '1'
-				THEN '1,3,7,8,301,302,303,304'
+				THEN '1,3,7,8'
 			WHEN '5'
 				THEN '5,15,167'
-			ELSE '1,3,7,8,301,302,303,304,5,15,167'
+			ELSE '1,3,7,8,5,15,167'
 			END
 
-	SELECT match.leagueid
-		, match.sporttype
-	FROM league WITH (NOLOCK)
-	INNER JOIN match WITH (NOLOCK)
-		ON league.leagueid = match.leagueid
-	--inner join odds as O with (nolock) on match.matchid = O.matchid	
-	WHERE match.eventstatus IN ('running')
-		--and O.oddsstatus = 'running'
-		--and (IsNull(o.liveindicator,0) = 1 or match.kickofftime >= CURRENT_TIMESTAMP)
-		AND match.matchid IN (
+	SELECT m.leagueid
+		, m.sporttype
+	FROM league l WITH (NOLOCK)
+	INNER JOIN match m WITH (NOLOCK)
+		ON l.leagueid = m.leagueid
+	WHERE m.eventstatus IN ('running')
+		AND m.matchid IN (
 			SELECT DISTINCT matchid
-			--FROM bettrans WITH (NOLOCK, INDEX = IX_betrunning_recommend)
-			FROM dbo.Ost_f_bettrans_running()
+			FROM
+				--bettrans WITH (NOLOCK, INDEX = IX_betrunning_recommend)
+				dbo.Ost_f_bettrans_running() AS b
 			WHERE statusID IN (0, 1)
 				AND recommend = @AgID
 				AND bettype IN (
@@ -47,10 +42,10 @@ BEGIN
 					FROM dbo.strSplit_Key(@Bettypes, ',')
 					)
 			)
-	GROUP BY match.leagueid
-		, league.leaguename
-		, match.sporttype
-	ORDER BY league.leaguename
+	GROUP BY m.leagueid
+		, l.leaguename
+		, m.sporttype
+	ORDER BY l.leaguename
 END
 GO
 
