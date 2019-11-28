@@ -1,16 +1,14 @@
 /*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView"  isFunction="1" isNested="1"></info>*/
-USE [bodb02]
-GO
-
 ALTER FUNCTION [dbo].[f_GroupBettype] ()
 RETURNS TABLE
 RETURN
 
 /*
 	Created: 20141016@Sophia
-	Task :	Get grouped bettype for Sporting Solution and BetRadar
+	Task:	Get grouped bettype for Sporting Solution and BetRadar
 	DB:		DBAGE/bodb02, DBEXT/bodb02, DBACC/bodb02
- 	Revisions: 
+ 	
+	Revisions: 
 		- 20150414@Sophia: Support BetRadar
 		- 20151204@Bobby: Grouped 6 bettypes for PH AIO
 		- 20160119@Sophia: PH AIO phase 1.2 [Redmine: #51029]
@@ -19,6 +17,7 @@ RETURN
 		- 20161007@Sophia: PHAIO Phase 2 , add more couple of Parent - Child [Redmine: #65406]
 		- 20170919@Percy: PHAIO Phase 3, add 4 new bettypes 461 - 464 [RedmineID: #83356]
 		- 20190805@Sophia: PHAIO 4B, Bettype 470 -> 497, Change GroupTypeId of 11, 199 [RedmineID: #115231]
+		- 20191118@Percy: BMAIO - Add bet type 1302 (703) [RedmineID: #118622]
 */
 	-------- Grouped bettype for Sporting Solution
 	SELECT 153 AS Bettype, 153 AS GroupTypeId
@@ -58,7 +57,12 @@ RETURN
 	UNION ALL 
 	SELECT 20, 20
 	UNION ALL  
-	SELECT 1301, 20	
+	SELECT 1301, 20
+
+	UNION ALL 
+	SELECT 703, 703
+	UNION ALL  
+	SELECT 1302, 703	
 
 	-------- Grouped bettype for BetRadar
 	UNION ALL 
