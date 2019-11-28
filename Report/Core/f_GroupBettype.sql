@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBTXN-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBPRO-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GroupBettype] ()
 RETURNS TABLE
 RETURN
@@ -6,7 +6,7 @@ RETURN
 /*
 	Created: 20141016@Sophia
 	Task:	Get grouped bettype for Sporting Solution and BetRadar
-	DB:		DBAGE-bodb02,DBACC-bodb02,DBTXN-bodb02
+	DB:		DBAGE-bodb02,DBACC-bodb02,DBPRO-bodb02
  	
 	Revisions: 
 		- 20150414@Sophia: Support BetRadar
