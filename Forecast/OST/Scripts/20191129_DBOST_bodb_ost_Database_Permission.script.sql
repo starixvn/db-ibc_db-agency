@@ -4,8 +4,28 @@ DB: DBOST.bodb_ost
 Task: Deploy UAT - New Alpha forecast [Redmine:114231] 
 */
 
+USE [master]
+GO
+/****** Object:  Login [bodbDownlineNet]    Script Date: 11/22/2019 5:56:20 PM ******/
+CREATE LOGIN [bodbDownlineNet] WITH PASSWORD=N'Password_Here', DEFAULT_DATABASE=[bodb_ost], DEFAULT_LANGUAGE=[us_english], CHECK_EXPIRATION=OFF, CHECK_POLICY=ON
+GO
+
+/****** Object:  Login [bodbDownlineNetView]    Script Date: 11/22/2019 5:56:20 PM ******/
+CREATE LOGIN [bodbDownlineNetView] WITH PASSWORD=N'Password_Here', DEFAULT_DATABASE=[bodb_ost], DEFAULT_LANGUAGE=[us_english], CHECK_EXPIRATION=OFF, CHECK_POLICY=ON
+GO
+
 USE [bodb_ost]
 GO
+CREATE USER [bodbDownlineNet] FOR LOGIN [bodbDownlineNet]
+GO
+EXEC sp_addrolemember N'db_datareader', N'bodbDownlineNet'
+GO
+
+CREATE USER [bodbDownlineNetView] FOR LOGIN [bodbDownlineNetView]
+GO
+EXEC sp_addrolemember N'db_datareader', N'bodbDownlineNet'
+GO
+
 /****** Object:  Synonym [dbo].[league]    Script Date: 11/29/2019 10:38:44 AM ******/
 GRANT SELECT ON [dbo].[league] TO [bodbDownlineNet] AS [dbo]
 GO
