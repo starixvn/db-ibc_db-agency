@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBOST-bodb_ost" executers="" viewers="" isFunction="1"></info>*/
+﻿/*<info serverAlias="DBOST-bodb_ost" selectors="bodbDownlineNet,bodbDownlineNetView" executers="" viewers="" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.Ost_f_bettrans_running()
 RETURNS TABLE
 AS 
