@@ -1,4 +1,4 @@
-/*<info serverAlias="DBOST-bodb_ost" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBOST-bodb_ost" selectors="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[Ost_F_TotalBetsForecast_CalWinLoss]
 (	
 	@bettype			INT
