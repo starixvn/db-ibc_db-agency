@@ -1,4 +1,4 @@
-/*<info serverAlias="DBOST-bodb_ost" selectors="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBOST-bodb_ost" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER FUNCTION [dbo].[Ost_F_TotalBetsForecast_CalWinLoss]
 (	
 	@bettype			INT
@@ -25,7 +25,6 @@ AS
 */       
 RETURN (
 	SELECT
-	--- output result
 		CASE  
 			WHEN mo.Modds >= 0 THEN (ra.Ratio * b.stake)
 			ELSE (ra.Ratio * b.actual_stake)
@@ -34,14 +33,14 @@ RETURN (
 	FROM (
 		VALUES (
 			@bettype
-			, CASE WHEN @bettype IN (1,7) THEN @fValue ELSE 0 END --scorediff
-			, CASE WHEN @bettype IN (3,8) THEN @fValue ELSE 0 END --totalGoals
+			, @FValue
+			, @FValue
 			, @betteam
 			, @hdp2
 			, @hdp1
 			, @stake
 			, @actual_stake
-			, CASE WHEN @odds < 0 THEN 1 ELSE @odds END
+			, @odds
 			, @livehomescore
 			, @liveawayscore
 		)
