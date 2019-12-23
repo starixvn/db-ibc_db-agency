@@ -29,18 +29,18 @@ RETURN (
 			WHEN mo.Modds >= 0 THEN (ra.Ratio * b.stake)
 			ELSE (ra.Ratio * b.actual_stake)
 		END AS Winloss
-	--- bettrans
+	--- bettrans sum
 	FROM (
 		VALUES (
 			@bettype
-			, @FValue
-			, @FValue
+			, CASE WHEN @bettype IN (1,7) THEN @FValue ELSE 0 END --scorediff
+			, CASE WHEN @bettype IN (3,8) THEN @FValue ELSE 0 END --totalGoals
 			, @betteam
 			, @hdp2
 			, @hdp1
 			, @stake
 			, @actual_stake
-			, @odds
+			, CASE WHEN @odds < 0 THEN 1 ELSE @odds END
 			, @livehomescore
 			, @liveawayscore
 		)
