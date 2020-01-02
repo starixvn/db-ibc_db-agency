@@ -29,7 +29,7 @@ RETURN
 		WHERE bt.typeid <> bt.DisplayedTypeId
 			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId = 1)
 	)
-	SELECT t.bettype, t.GroupTypeId
+	SELECT DISTINCT t.bettype, t.GroupTypeId
 	FROM CTE_bettype b
 		CROSS APPLY (
 			SELECT bettype, GroupTypeId
