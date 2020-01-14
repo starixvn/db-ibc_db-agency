@@ -1,0 +1,152 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Age_BetStatistics_IPMatching_Master]
+	@CustId			INT
+	,@WinlostDate	SMALLDATETIME
+	,@MemberCount	INT = 2
+	,@MoveBetsDay	SMALLDATETIME
+	,@PageSize		INT = 0
+	,@PageIndex		INT = 0
+	,@TotalRecords	INT = 0 OUTPUT
+AS
+
+/*
+	Created: 20200114@Percy
+	DB: DBAGE.bodb02
+	Task: Alpha - Bet Statistics - IP Matching - View Masters
+
+	Revisions:
+		- 20200114@Percy:	Initialize SP [RedmineID: #124701]
+*/
+
+BEGIN
+	SET NOCOUNT ON
+
+	DECLARE @RowStart	INT
+			,@RowEnd	INT
+		
+	SELECT	@RowStart	= @PageSize * (@PageIndex - 1) + 1
+			,@RowEnd	= @RowStart + @PageSize - 1
+
+	CREATE TABLE #bettype (bettype SMALLINT, RefTable TINYINT)
+	INSERT INTO #bettype (bettype, RefTable)
+	SELECT DISTINCT bettype, RefTable FROM dbo.SportBettypeMatrix WITH (NOLOCK) WHERE ProductId = 1 AND eventtype = 1
+
+	DECLARE @matchCustInfo TABLE (matchid INT, custid INT)
+
+	CREATE TABLE #BetStatisticsByIP (IP NVARCHAR(15), CustId INT, BetCount INT, MemberTurnover MONEY, MemberWinLoss MONEY, SuperWinLoss MONEY, Company MONEY, PRIMARY KEY (IP, CustId))
+
+	IF @WinlostDate >= @MoveBetsDay
+	BEGIN
+		-- bettrans
+		INSERT INTO @matchCustInfo (matchid, custid)
+		SELECT b.matchid, b.custid
+		FROM dbo.bettrans b WITH (NOLOCK)
+		WHERE b.srecommend = @CustId
+			AND b.winlostdate = @WinlostDate
+			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
+		GROUP BY b.matchid, b.custid
+		
+		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company)
+		SELECT
+			IP				= b.IP
+			,CustId			= b.custid
+			,BetCount		= COUNT(1)
+			,MemberTurnover	= SUM(ABS(b.stake))
+			,MemberWinLoss	= SUM(b.winlost - b.actual_stake + b.playercomm)
+			,SuperWinLoss	= SUM(b.swinlost + b.scomm - b.acomm)
+			,Company		= -SUM(b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm)
+		FROM dbo.bettrans b WITH (NOLOCK)
+			CROSS APPLY @matchCustInfo m
+		WHERE b.matchid = m.matchid AND b.custid = m.custid
+			AND 1 = CASE
+					WHEN b.statusId NOT IN (0, 1) THEN 1
+					ELSE CASE WHEN EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype AND bt.RefTable = 3) THEN 0 ELSE 1 END END
+		GROUP BY
+			b.IP
+			,b.custid
+		OPTION (HASH GROUP)
+
+		-- translog
+		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company)
+		SELECT
+			IP				= t.IP
+			,CustId			= t.custid
+			,BetCount		= 0
+			,MemberTurnover	= 0
+			,MemberWinLoss	= 0
+			,SuperWinLoss	= 0
+			,Company		= 0
+		FROM dbo.translog t WITH (NOLOCK)
+		WHERE t.srecommend = @CustId
+			AND t.winlostdate = @WinlostDate
+			AND t.statusId IN (0, 1)
+			AND EXISTS (SELECT 1 FROM #bettype bt WHERE t.gameId = bt.bettype AND bt.RefTable = 3)
+		GROUP BY
+			t.IP
+			,t.custid
+		OPTION (HASH GROUP)
+	END
+	ELSE
+	BEGIN
+		-- bettrans14
+		INSERT INTO @matchCustInfo (matchid, custid)
+		SELECT b.matchid, b.custid
+		FROM dbo.bettrans14 b WITH (NOLOCK)
+		WHERE b.srecommend = @CustId
+			AND b.winlostdate = @WinlostDate
+			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
+		GROUP BY b.matchid, b.custid
+
+		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company)
+		SELECT
+			IP				= b.IP
+			,CustId			= b.custid
+			,BetCount		= COUNT(1)
+			,MemberTurnover	= SUM(ABS(b.stake))
+			,MemberWinLoss	= SUM(b.winlost - b.actual_stake + b.playercomm)
+			,SuperWinLoss	= SUM(b.swinlost + b.scomm - b.acomm)
+			,Company		= -SUM(b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm)
+		FROM dbo.bettrans14 b WITH (NOLOCK)
+			CROSS APPLY @matchCustInfo m
+		WHERE b.winlostdate = @WinlostDate
+			AND b.matchid = m.matchid AND b.custid = m.custid
+			AND b.statusId IN (0, 1, 111, 112, 113)
+			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
+		GROUP BY
+			b.IP
+			,b.custid
+		OPTION (HASH GROUP)
+	END
+
+	DROP TABLE #bettype
+
+	SELECT IP, MemberCount, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company
+	INTO #Result
+	FROM
+	(
+		SELECT
+			IP				= IP
+			,MemberCount	= COUNT(DISTINCT custid)
+			,BetCount		= SUM(BetCount)
+			,MemberTurnover	= SUM(MemberTurnover)
+			,MemberWinLoss	= SUM(MemberWinLoss)
+			,SuperWinLoss	= SUM(SuperWinLoss)
+			,Company		= SUM(Company)
+		FROM #BetStatisticsByIP
+		GROUP BY IP
+		HAVING COUNT(DISTINCT custid) > @MemberCount
+	) r
+
+	SELECT @TotalRecords = @@ROWCOUNT
+
+	SELECT IP, MemberCount, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company
+	FROM
+	(
+		SELECT IP, MemberCount, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company, ROW_NUMBER() OVER(ORDER BY IP) AS RowNum
+		FROM #Result
+	) r
+	WHERE r.RowNum BETWEEN @RowStart AND @RowEnd
+
+	DROP TABLE #BetStatisticsByIP
+END
+GO
