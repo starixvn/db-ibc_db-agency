@@ -4,9 +4,6 @@ ALTER PROCEDURE [dbo].[Age_BetStatistics_IPMatching_Master]
 	,@WinlostDate	SMALLDATETIME
 	,@MemberCount	INT = 2
 	,@MoveBetsDay	SMALLDATETIME
-	,@PageSize		INT = 0
-	,@PageIndex		INT = 0
-	,@TotalRecords	INT = 0 OUTPUT
 AS
 
 /*
@@ -20,12 +17,6 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
-
-	DECLARE @RowStart	INT
-			,@RowEnd	INT
-		
-	SELECT	@RowStart	= @PageSize * (@PageIndex - 1) + 1
-			,@RowEnd	= @RowStart + @PageSize - 1
 
 	CREATE TABLE #bettype (bettype SMALLINT, RefTable TINYINT)
 	INSERT INTO #bettype (bettype, RefTable)
@@ -58,6 +49,7 @@ BEGIN
 		FROM dbo.bettrans b WITH (NOLOCK)
 			CROSS APPLY @matchCustInfo m
 		WHERE b.matchid = m.matchid AND b.custid = m.custid
+			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
 			AND 1 = CASE
 					WHEN b.statusId NOT IN (0, 1) THEN 1
 					ELSE CASE WHEN EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype AND bt.RefTable = 3) THEN 0 ELSE 1 END END
@@ -110,7 +102,6 @@ BEGIN
 			CROSS APPLY @matchCustInfo m
 		WHERE b.winlostdate = @WinlostDate
 			AND b.matchid = m.matchid AND b.custid = m.custid
-			AND b.statusId IN (0, 1, 111, 112, 113)
 			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
 		GROUP BY
 			b.IP
@@ -121,7 +112,6 @@ BEGIN
 	DROP TABLE #bettype
 
 	SELECT IP, MemberCount, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company
-	INTO #Result
 	FROM
 	(
 		SELECT
@@ -136,16 +126,6 @@ BEGIN
 		GROUP BY IP
 		HAVING COUNT(DISTINCT custid) > @MemberCount
 	) r
-
-	SELECT @TotalRecords = @@ROWCOUNT
-
-	SELECT IP, MemberCount, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company
-	FROM
-	(
-		SELECT IP, MemberCount, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company, ROW_NUMBER() OVER(ORDER BY IP) AS RowNum
-		FROM #Result
-	) r
-	WHERE r.RowNum BETWEEN @RowStart AND @RowEnd
 
 	DROP TABLE #BetStatisticsByIP
 END
