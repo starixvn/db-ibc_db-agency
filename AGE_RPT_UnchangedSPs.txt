@@ -1,5 +1,0 @@
-Transfer\Age_Transfer_CashBalance_Ins.sql
-Transfer\Age_Transfer_Ins_Ag.sql
-Transfer\Age_Transfer_Ins_MAg.sql
-Transfer\Age_Transfer_InsClearBalance_Ag.sql
-Transfer\Age_Transfer_All_Ins.sql
