@@ -1,6 +1,4 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
 
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_Ag] 
 	@FromCustID int, --the customer here
