@@ -19,6 +19,7 @@ AS
 		- 20100413@Kiwi: Get transferoption from CustSuper/CustMaster/CustAgent
 		- 20121128@Elodie: Get an error message from f_Get_MsgNameByMsgID function by language
 		- 20180801@Percy: Output @strTransferOption param [RedmineID: #92142]
+		- 20190131@Elodie: Change time GMT-4 [RedmineID: #127649]
 
 	----------------------------------------------------------------------
 	--	Check Transfer Condition (for master and agent)
@@ -58,7 +59,7 @@ BEGIN
 	END
 
 	IF SUBSTRING(@strTransferOption, 8, 1) = 1 --isWeekly = 1
-		AND SUBSTRING(@strTransferOption, DATEPART(WEEKDAY, DATEADD(HOUR, 12, CURRENT_TIMESTAMP)), 1) = 0
+		AND SUBSTRING(@strTransferOption, CURRENT_TIMESTAMP, 1) = 0
 	BEGIN	
 		SELECT @ErrMsg = CASE @Language 
 							WHEN 'E' THEN 'Sorry, you can only transfer on: ' +
