@@ -1,5 +1,4 @@
-USE [bodb02]
-GO
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 
 ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_Ins]
 	@FromCustID		INT,
@@ -531,8 +530,3 @@ BEGIN
 	DROP TABLE #SportBettype
 END
 GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_CashBalance_Ins] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_CashBalance_Ins] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_CashBalance_Ins] TO [vnteam] AS [dbo]
