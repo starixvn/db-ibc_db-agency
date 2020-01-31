@@ -1,6 +1,4 @@
 ﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
-USE [CustDB]
-GO
 
 ALTER PROCEDURE [dbo].[Age_Transfer_CheckTransferOption]
 	@CustID				INT,
@@ -59,7 +57,7 @@ BEGIN
 	END
 
 	IF SUBSTRING(@strTransferOption, 8, 1) = 1 --isWeekly = 1
-		AND SUBSTRING(@strTransferOption, CURRENT_TIMESTAMP, 1) = 0
+		AND SUBSTRING(@strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 0
 	BEGIN	
 		SELECT @ErrMsg = CASE @Language 
 							WHEN 'E' THEN 'Sorry, you can only transfer on: ' +
