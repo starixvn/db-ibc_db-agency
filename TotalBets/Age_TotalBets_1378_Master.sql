@@ -17,7 +17,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	SELECT
-		m.showtime, 
+		m.showtime,
 		m.leagueID,
 		m.matchcode,
 		b.liveindicator,
@@ -50,12 +50,12 @@ BEGIN
 					AND srecommend = @custid
 					AND statusID IN (0,1)
 			GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
-		INNER JOIN bodb02.dbo.match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
-	WHERE	
-		m.eventstatus = 'running'	
+		INNER JOIN bodb02.dbo.match m  WITH (NOLOCK) ON m.matchid = b.matchid
+	WHERE
+		m.eventstatus = 'running'
 	
 	GROUP BY
-		m.showtime, 
+		m.showtime,
 		m.leagueID,
 		m.matchcode,
 		b.liveindicator,
@@ -65,7 +65,7 @@ BEGIN
 		b.livehomescore,
 		b.liveawayscore,
 		m.isNeutral
-	ORDER BY	
+	ORDER BY
 		b.liveindicator desc,m.matchcode
 END
 GO
