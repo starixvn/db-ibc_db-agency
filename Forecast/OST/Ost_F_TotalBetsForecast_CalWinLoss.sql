@@ -25,16 +25,17 @@ AS
 */       
 RETURN (
 	SELECT
+	--- output result
 		CASE  
 			WHEN mo.Modds >= 0 THEN (ra.Ratio * b.stake)
 			ELSE (ra.Ratio * b.actual_stake)
 		END AS Winloss
-	--- bettrans sum
+	--- bettrans
 	FROM (
 		VALUES (
 			@bettype
-			, CASE WHEN @bettype IN (1,7) THEN @FValue ELSE 0 END --scorediff
-			, CASE WHEN @bettype IN (3,8) THEN @FValue ELSE 0 END --totalGoals
+			, CASE WHEN @bettype IN (1,7) THEN @fValue ELSE 0 END --scorediff
+			, CASE WHEN @bettype IN (3,8) THEN @fValue ELSE 0 END --totalGoals
 			, @betteam
 			, @hdp2
 			, @hdp1
