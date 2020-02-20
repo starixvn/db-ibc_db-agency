@@ -44,9 +44,9 @@ BEGIN
 			,CustId			= b.custid
 			,BetCount		= COUNT(1)
 			,Stake			= SUM(ABS(b.stake))
-			,MemberWinLoss	= SUM(b.winlost - b.actual_stake + b.playercomm)
-			,SuperWinLoss	= SUM(b.swinlost + b.scomm - b.acomm)
-			,Company		= -SUM(b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm)
+			,MemberWinLoss	= SUM(CASE WHEN b.statusID IN (0, 1) THEN 0 ELSE b.winlost - b.actual_stake + b.playercomm END)
+			,SuperWinLoss	= SUM(CASE WHEN b.statusID IN (0, 1) THEN 0 ELSE b.swinlost + b.scomm - b.acomm END)
+			,Company		= -SUM(CASE WHEN b.statusID IN (0, 1) THEN 0 ELSE b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm END)
 		FROM dbo.bettrans b WITH (NOLOCK)
 			CROSS APPLY @matchCustInfo m
 		WHERE b.matchid = m.matchid AND b.custid = m.custid
