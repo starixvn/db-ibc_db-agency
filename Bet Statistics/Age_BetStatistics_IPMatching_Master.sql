@@ -20,13 +20,14 @@ BEGIN
 
 	CREATE TABLE #bettype (bettype SMALLINT, RefTable TINYINT)
 	INSERT INTO #bettype (bettype, RefTable)
-	SELECT DISTINCT bettype, RefTable FROM dbo.SportBettypeMatrix WITH (NOLOCK) WHERE ProductId = 1 AND eventtype = 1
+	SELECT DISTINCT bettype, RefTable FROM dbo.SportBettypeMatrix WITH (NOLOCK) WHERE ProductId = 1 AND eventtype = 1 AND bettype <> 38
 
 	DECLARE @matchCustInfo TABLE (matchid INT, custid INT)
 
-	CREATE TABLE #BetStatisticsByIP (IP NVARCHAR(15), CustId INT, BetCount INT, MemberTurnover MONEY, MemberWinLoss MONEY, SuperWinLoss MONEY, Company MONEY, PRIMARY KEY (IP, CustId))
+	CREATE TABLE #BetStatisticsByIP (IP NVARCHAR(15), CustId INT, BetCount INT, Stake MONEY, MemberWinLoss MONEY, SuperWinLoss MONEY, Company MONEY)
+	CREATE CLUSTERED INDEX CIX_IP ON #BetStatisticsByIP (IP, CustId)
 
-	IF @WinlostDate >= @MoveBetsDay
+	IF @WinlostDate > @MoveBetsDay
 	BEGIN
 		-- bettrans
 		INSERT INTO @matchCustInfo (matchid, custid)
@@ -37,12 +38,12 @@ BEGIN
 			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
 		GROUP BY b.matchid, b.custid
 		
-		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company)
+		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, Stake, MemberWinLoss, SuperWinLoss, Company)
 		SELECT
 			IP				= b.IP
 			,CustId			= b.custid
 			,BetCount		= COUNT(1)
-			,MemberTurnover	= SUM(ABS(b.stake))
+			,Stake			= SUM(ABS(b.stake))
 			,MemberWinLoss	= SUM(b.winlost - b.actual_stake + b.playercomm)
 			,SuperWinLoss	= SUM(b.swinlost + b.scomm - b.acomm)
 			,Company		= -SUM(b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm)
@@ -59,12 +60,12 @@ BEGIN
 		OPTION (HASH GROUP)
 
 		-- translog
-		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company)
+		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, Stake, MemberWinLoss, SuperWinLoss, Company)
 		SELECT
 			IP				= t.IP
 			,CustId			= t.custid
-			,BetCount		= 0
-			,MemberTurnover	= 0
+			,BetCount		= COUNT(1)
+			,Stake			= SUM(ABS(t.stake))
 			,MemberWinLoss	= 0
 			,SuperWinLoss	= 0
 			,Company		= 0
@@ -89,12 +90,12 @@ BEGIN
 			AND EXISTS (SELECT 1 FROM #bettype bt WHERE b.bettype = bt.bettype)
 		GROUP BY b.matchid, b.custid
 
-		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company)
+		INSERT INTO #BetStatisticsByIP (IP, CustId, BetCount, Stake, MemberWinLoss, SuperWinLoss, Company)
 		SELECT
 			IP				= b.IP
 			,CustId			= b.custid
 			,BetCount		= COUNT(1)
-			,MemberTurnover	= SUM(ABS(b.stake))
+			,Stake			= SUM(ABS(b.stake))
 			,MemberWinLoss	= SUM(b.winlost - b.actual_stake + b.playercomm)
 			,SuperWinLoss	= SUM(b.swinlost + b.scomm - b.acomm)
 			,Company		= -SUM(b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm)
@@ -111,21 +112,25 @@ BEGIN
 
 	DROP TABLE #bettype
 
-	SELECT IP, MemberCount, BetCount, MemberTurnover, MemberWinLoss, SuperWinLoss, Company
+	SELECT IP, MemberCount, BetCount, Stake, MemberWinLoss, SuperWinLoss, Company
 	FROM
 	(
 		SELECT
 			IP				= IP
 			,MemberCount	= COUNT(DISTINCT custid)
 			,BetCount		= SUM(BetCount)
-			,MemberTurnover	= SUM(MemberTurnover)
+			,Stake			= SUM(Stake)
 			,MemberWinLoss	= SUM(MemberWinLoss)
 			,SuperWinLoss	= SUM(SuperWinLoss)
 			,Company		= SUM(Company)
 		FROM #BetStatisticsByIP
 		GROUP BY IP
-		HAVING COUNT(DISTINCT custid) > @MemberCount
+		HAVING COUNT(DISTINCT custid) >= @MemberCount
 	) r
+	ORDER BY
+		MemberCount DESC
+		,Stake DESC
+		,IP ASC
 
 	DROP TABLE #BetStatisticsByIP
 END
