@@ -670,6 +670,7 @@ BEGIN
 				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
+				,0 AS GrossComm
 		FROM @AgencyWinloss A
 		GROUP BY custID, username, currency, roleid
 		ORDER BY username
@@ -692,6 +693,7 @@ BEGIN
 				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
+				,0 AS GrossComm
 		FROM @AgencyWinloss A
 		GROUP BY CONVERT(VARCHAR(10), winlostdate, 111)  
 				, custID, username, currency, roleid
@@ -715,6 +717,7 @@ BEGIN
 				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
+				,0 AS GrossComm
 		FROM @AgencyWinloss A
 		GROUP BY ProductID, custID, username, currency, roleid
 		ORDER BY breakdown, username
