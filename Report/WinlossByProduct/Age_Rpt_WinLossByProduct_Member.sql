@@ -19,6 +19,7 @@ AS
 		- 20180419@Alvin: Combine Macau Games and Pragmatic [RedmineID: #92647]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20191029@Percy: Integrate Spadegaming [RedmineID: #122353]
 */
 
 BEGIN
@@ -50,7 +51,7 @@ BEGIN
 	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType, f.EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
-			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (22, 23, 32, 34)
+			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (22, 23, 32, 34, 36)
 		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 	WHERE f.bettype <> 2799; -- Mix parlay of BRVS
 
