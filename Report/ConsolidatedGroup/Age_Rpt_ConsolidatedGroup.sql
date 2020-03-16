@@ -550,8 +550,8 @@ BEGIN
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 
 		UPDATE t
-		SET  t.grosscomm = CASE WHEN t.RoleID = 1 THEN  s.grosscomm 
-		                        ELSE t.playercomm END
+		SET  t.grosscomm = CASE WHEN t.RoleID = 1 THEN  t.playercomm 
+		                        ELSE s.grosscomm END
 		FROM #TmpSum_WinLoss_Old t
 		     CROSS APPLY (
 			     SELECT SUM(s.grosscomm)  grosscomm
