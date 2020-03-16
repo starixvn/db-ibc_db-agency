@@ -326,7 +326,7 @@ BEGIN
 		---Insert tmptable
 		CREATE TABLE #Tmpsum_winloss ( winlostdate Datetime, custid int, recommend INT, mrecommend INT, srecommend INT, 
 		                          username VARCHAR(30), currency TINYINT, RoleID int, 								  
-								  ProductID TINYINT, bettype smallint, BetCount int,
+								  ProductID TINYINT, sprottype smallint,bettype smallint, BetCount int,
 								  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
 								  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money
 								)
@@ -334,13 +334,13 @@ BEGIN
 		INSERT INTO #Tmpsum_winloss
 		( 
 			winlostdate, custid, recommend, mrecommend, srecommend ,username, currency, RoleID, 
-			ProductID, bettype, BetCount,
+			ProductID, sprottype, bettype, BetCount,
 			turnover, playercomm, scomm, acomm, Comm,
 			awinlost, mwinlost, swinlost, winlost, netTurnover, grosscomm
 		)
 		SELECT      b.winlostdate, b.custid, b.recommend, b.mrecommend, b.srecommend,
 		            c.username, c.currency, b.RoleID, 
-					t.ProductID, b.bettype, b.betCount,
+					t.ProductID, b.sporttype ,b.bettype, b.betCount,
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
 					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover,
 					b.grosscomm 
@@ -355,11 +355,17 @@ BEGIN
 		FROM #Tmpsum_winloss t
 		     CROSS APPLY (
 			     SELECT  SUM(s.grosscomm) grosscomm
-				 FROM sum_winloss s
+				 FROM sum_winloss s WITH (NOLOCK)
 				      INNER JOIN #TmpCondSumWL tm ON s.sporttype = tm.sporttype AND s.bettype = tm.bettype
-				 WHERE s.winlostdate = t.winlostdate AND ( (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid =2 ) 
-				 OR(t.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
-			 ) s
+				 WHERE s.winlostdate = t.winlostdate 
+					   AND s.srecommend = t.srecommend
+					   AND t.sprottype = s.sporttype
+					   AND t.bettype = s.bettype
+				       AND ( 
+					        (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
+							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid =2 ) OR
+							(t.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
+						) s
 		
 		IF @isSAg = 1
 		BEGIN
@@ -523,7 +529,7 @@ BEGIN
 
 		---Insert tmptable
 		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int,recommend INT, mrecommend INT, srecommend INT,username VARCHAR(30), currency TINYINT, RoleID int, 
-									  ProductID TINYINT, bettype smallint, BetCount int,
+									  ProductID TINYINT, sprottype smallint,bettype smallint, BetCount int,
 									  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
 									  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money
 									)
@@ -531,12 +537,12 @@ BEGIN
 		INSERT INTO #TmpSum_WinLoss_Old
 		(
 			winlostdate, custid, recommend, mrecommend, srecommend ,username, currency, RoleID, 
-			ProductID, bettype, BetCount,
+			ProductID, sprottype, bettype, BetCount,
 			turnover, playercomm, scomm, acomm, Comm,
 			awinlost, mwinlost, swinlost, winlost, netTurnover, grosscomm
 		)
 		SELECT      b.winlostdate, b.custid, b.recommend, b.mrecommend, b.srecommend ,c.username, c.currency, b.RoleID, 
-					t.ProductID, b.bettype, b.betCount,
+					t.ProductID, b.sporttype, b.bettype, b.betCount,
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
 					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm
 		FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
@@ -550,11 +556,17 @@ BEGIN
 		FROM #TmpSum_WinLoss_Old t
 		     CROSS APPLY (
 			     SELECT SUM(s.grosscomm)  grosscomm
-				 FROM bodb_Summary.dbo.Sum_WinLoss_Old s
+				 FROM bodb_Summary.dbo.Sum_WinLoss_Old s WITH (NOLOCK)
 					INNER JOIN #TmpCondSumWL tm ON s.sporttype = tm.sporttype AND s.bettype = tm.bettype
-				 WHERE s.winlostdate = t.winlostdate AND ( (t.RoleID = 2 AND s.recommend = t.custid) OR (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid =2 ) 
-				 OR(T.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
-			 ) s
+				 WHERE s.winlostdate = t.winlostdate 
+                       AND s.srecommend = t.srecommend
+					   AND s.sporttype = t.sprottype
+					   AND s.bettype = t.bettype
+					   AND ( 
+					         (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
+							 (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid =2) OR
+				             (T.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
+							) s
 	--Super	
 		IF @isSAg = 1
 		BEGIN
