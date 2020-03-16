@@ -36,6 +36,7 @@ AS
 		- 20170908@Paul: Change report by Sport to report by Product; Enhance code [RedmineID: #77598]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200310@Malcolm : Add gross comm column [RedmineID : #129918]
+		- 20200316@Malcolm : fix bug show incorrect grosscomm value on range sum [Redmine : #129918]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -323,7 +324,8 @@ BEGIN
 		END
 
 		---Insert tmptable
-		CREATE TABLE #Tmpsum_winloss ( winlostdate Datetime, custid int, username VARCHAR(30), currency TINYINT, RoleID int, 
+		CREATE TABLE #Tmpsum_winloss ( winlostdate Datetime, custid int, recommend INT, mrecommend INT, srecommend INT, 
+		                          username VARCHAR(30), currency TINYINT, RoleID int, 								  
 								  ProductID TINYINT, bettype smallint, BetCount int,
 								  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
 								  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money
@@ -331,12 +333,13 @@ BEGIN
 
 		INSERT INTO #Tmpsum_winloss
 		( 
-			winlostdate, custid, username, currency, RoleID, 
+			winlostdate, custid, recommend, mrecommend, srecommend ,username, currency, RoleID, 
 			ProductID, bettype, BetCount,
 			turnover, playercomm, scomm, acomm, Comm,
 			awinlost, mwinlost, swinlost, winlost, netTurnover, grosscomm
 		)
-		SELECT      b.winlostdate, b.custid, c.username, c.currency, b.RoleID, 
+		SELECT      b.winlostdate, b.custid, b.recommend, b.mrecommend, b.srecommend,
+		            c.username, c.currency, b.RoleID, 
 					t.ProductID, b.bettype, b.betCount,
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
 					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover,
@@ -346,7 +349,18 @@ BEGIN
 			INNER JOIN #TmpCust c ON b.custid = c.CustID
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 
-		---Super  
+		UPDATE t
+		SET t.grosscomm = CASE WHEN t.RoleID = 1 THEN  t.playercomm
+							   ELSE s.grosscomm END
+		FROM #Tmpsum_winloss t
+		     CROSS APPLY (
+			     SELECT  SUM(s.grosscomm) grosscomm
+				 FROM sum_winloss s
+				      INNER JOIN #TmpCondSumWL tm ON s.sporttype = tm.sporttype AND s.bettype = tm.bettype
+				 WHERE s.winlostdate = t.winlostdate AND ( (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid =2 ) 
+				 OR(t.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
+			 ) s
+		
 		IF @isSAg = 1
 		BEGIN
 			INSERT INTO @AgencyWinloss
@@ -508,7 +522,7 @@ BEGIN
 
 
 		---Insert tmptable
-		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int, username VARCHAR(30), currency TINYINT, RoleID int, 
+		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int,recommend INT, mrecommend INT, srecommend INT,username VARCHAR(30), currency TINYINT, RoleID int, 
 									  ProductID TINYINT, bettype smallint, BetCount int,
 									  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
 									  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money
@@ -516,12 +530,12 @@ BEGIN
 
 		INSERT INTO #TmpSum_WinLoss_Old
 		(
-			winlostdate, custid, username, currency, RoleID, 
+			winlostdate, custid, recommend, mrecommend, srecommend ,username, currency, RoleID, 
 			ProductID, bettype, BetCount,
 			turnover, playercomm, scomm, acomm, Comm,
 			awinlost, mwinlost, swinlost, winlost, netTurnover, grosscomm
 		)
-		SELECT      b.winlostdate, b.custid, c.username, c.currency, b.RoleID, 
+		SELECT      b.winlostdate, b.custid, b.recommend, b.mrecommend, b.srecommend ,c.username, c.currency, b.RoleID, 
 					t.ProductID, b.bettype, b.betCount,
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
 					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm
@@ -530,6 +544,17 @@ BEGIN
 			INNER JOIN #TmpCust c ON b.custid = c.CustID
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 
+		UPDATE t
+		SET  t.grosscomm = CASE WHEN t.RoleID = 1 THEN  s.grosscomm 
+		                        ELSE t.playercomm END
+		FROM #TmpSum_WinLoss_Old t
+		     CROSS APPLY (
+			     SELECT SUM(s.grosscomm)  grosscomm
+				 FROM bodb_Summary.dbo.Sum_WinLoss_Old s
+					INNER JOIN #TmpCondSumWL tm ON s.sporttype = tm.sporttype AND s.bettype = tm.bettype
+				 WHERE s.winlostdate = t.winlostdate AND ( (t.RoleID = 2 AND s.recommend = t.custid) OR (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid =2 ) 
+				 OR(T.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
+			 ) s
 	--Super	
 		IF @isSAg = 1
 		BEGIN
