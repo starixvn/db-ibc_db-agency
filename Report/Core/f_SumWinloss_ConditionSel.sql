@@ -19,6 +19,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20190627@Razor: Add CardClub [RedmineID: #115611]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191029@Percy: Add Spadegaming [RedmineID: #122353]
+		- 20191224@Percy: Add Virtual Games [RedmineID: #124906]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -42,7 +43,8 @@ RETURN
 				(28, 220, 0), -- Keno
 				(32, 248, 0), -- Pragmatic
 				(34, 165, 0), -- Card Club
-				(36, 247, 0) -- Spadegaming
+				(36, 247, 0), -- Spadegaming
+				(38, 245, 0) -- Virtual Games
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
