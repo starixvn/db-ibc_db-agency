@@ -35,6 +35,8 @@ AS
 		- 20170905@Percy: Expand bettype range of OneRnG Casino [RedmineID: #78424]
 		- 20170908@Paul: Change report by Sport to report by Product; Enhance code [RedmineID: #77598]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200310@Malcolm : Add gross comm column [RedmineID : #129918]
+		- 20200316@Malcolm : fix bug show incorrect grosscomm value on range sum [Redmine : #129918]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -67,7 +69,8 @@ BEGIN
 		ownercomm	    MONEY,
 		precomm		    MONEY,
 		company		    MONEY,
-		betcount	    INT
+		betcount	    INT,
+		GrossComm       MONEY
 	)
 
 	CREATE TABLE #TmpCondSumWL (ProductID TINYINT, sporttype SMALLINT, bettype SMALLINT)
@@ -143,7 +146,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate, b.srecommend, c.username, c.currency
 				,s.ProductID
@@ -157,6 +161,7 @@ BEGIN
 				,SUM(acomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 				,COUNT(1) betcount
+				,SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.srecommend = c.CustID
@@ -186,7 +191,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount, 
+				GrossComm
 			)
 			SELECT b.winlostdate, b.mrecommend, c.username, c.currency
 				,s.ProductID
@@ -200,6 +206,7 @@ BEGIN
 				,SUM(comm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(acomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 				,COUNT(1) betcount
+				,SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm / (1 - apositiontaking - mpositiontaking) END)  GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.mrecommend = c.CustID
@@ -229,7 +236,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate,  b.recommend, c.username, c.currency
 				,s.ProductID
@@ -243,6 +251,7 @@ BEGIN
 				,SUM(playercomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(comm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 				,COUNT(1) betcount
+				,SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm / (1 - apositiontaking) END) GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.recommend = c.CustID
@@ -272,7 +281,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate, b.CustID, c.username, c.currency
 				,s.ProductID
@@ -286,6 +296,7 @@ BEGIN
 				,0 as precomm
 				,SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) +SUM(playercomm) company
 				,COUNT(1) betcount
+				,SUM(playercomm) GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.custid = c.CustID
@@ -313,29 +324,48 @@ BEGIN
 		END
 
 		---Insert tmptable
-		CREATE TABLE #Tmpsum_winloss ( winlostdate Datetime, custid int, username VARCHAR(30), currency TINYINT, RoleID int, 
-								  ProductID TINYINT, bettype smallint, BetCount int,
+		CREATE TABLE #Tmpsum_winloss ( winlostdate Datetime, custid int, recommend INT, mrecommend INT, srecommend INT, 
+		                          username VARCHAR(30), currency TINYINT, RoleID int, 								  
+								  ProductID TINYINT, sporttype smallint,bettype smallint, BetCount int,
 								  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
-								  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money
+								  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money
 								)
 
 		INSERT INTO #Tmpsum_winloss
 		( 
-			winlostdate, custid, username, currency, RoleID, 
-			ProductID, bettype, BetCount,
+			winlostdate, custid, recommend, mrecommend, srecommend ,username, currency, RoleID, 
+			ProductID, sporttype, bettype, BetCount,
 			turnover, playercomm, scomm, acomm, Comm,
-			awinlost, mwinlost, swinlost, winlost, netTurnover
+			awinlost, mwinlost, swinlost, winlost, netTurnover, grosscomm
 		)
-		SELECT      b.winlostdate, b.custid, c.username, c.currency, b.RoleID, 
-					t.ProductID, b.bettype, b.betCount,
+		SELECT      b.winlostdate, b.custid, b.recommend, b.mrecommend, b.srecommend,
+		            c.username, c.currency, b.RoleID, 
+					t.ProductID, b.sporttype ,b.bettype, b.betCount,
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
-					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover
+					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover,
+					b.grosscomm 
 		FROM	sum_winloss b WITH(NOLOCK) 		
 			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 			INNER JOIN #TmpCust c ON b.custid = c.CustID
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 
-		---Super  
+		UPDATE t
+		SET t.grosscomm = CASE WHEN t.RoleID = 1 THEN  t.playercomm
+							   ELSE s.grosscomm END
+		FROM #Tmpsum_winloss t
+		     CROSS APPLY (
+			     SELECT  SUM(s.grosscomm) grosscomm
+				 FROM sum_winloss s WITH (NOLOCK)
+				 WHERE s.winlostdate = t.winlostdate 
+					   AND s.srecommend = t.srecommend
+					   AND t.sporttype = s.sporttype
+					   AND t.bettype = s.bettype
+				       AND ( 
+					        (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
+							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid = 2) OR
+							(t.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
+						) s
+		
 		IF @isSAg = 1
 		BEGIN
 			INSERT INTO @AgencyWinloss
@@ -354,7 +384,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -366,6 +397,7 @@ BEGIN
 				,acomm as precomm
 				,awinlost + mwinlost + swinlost + scomm + winlost
 				,betcount
+				,b.grosscomm
 			FROM #Tmpsum_winloss b WITH(NOLOCK) 
 			WHERE b.roleid = 4
 		END 
@@ -389,7 +421,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -401,6 +434,7 @@ BEGIN
 				,comm as precomm
 				,awinlost + mwinlost + acomm + winlost
 				,betcount
+				,b.grosscomm
 			FROM #Tmpsum_winloss b WITH(NOLOCK) 							 
 			WHERE b.roleid = 3
 		END	 
@@ -423,7 +457,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -435,6 +470,7 @@ BEGIN
 				,playercomm as precomm
 				,awinlost + comm + winlost
 				,betcount
+				,b.grosscomm
 			FROM #Tmpsum_winloss b WITH(NOLOCK)  							 
 			WHERE b.roleid = 2
 		END		 
@@ -458,7 +494,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -470,6 +507,7 @@ BEGIN
 				,0 as precomm
 				,winlost + playercomm
 				,betcount
+				,b.grosscomm
 			FROM #Tmpsum_winloss b WITH(NOLOCK) 						 
 			WHERE b.roleid = 1
 		END
@@ -489,28 +527,44 @@ BEGIN
 
 
 		---Insert tmptable
-		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int, username VARCHAR(30), currency TINYINT, RoleID int, 
-									  ProductID TINYINT, bettype smallint, BetCount int,
+		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int,recommend INT, mrecommend INT, srecommend INT,username VARCHAR(30), currency TINYINT, RoleID int, 
+									  ProductID TINYINT, sporttype smallint,bettype smallint, BetCount int,
 									  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
-									  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money
+									  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money
 									)
 
 		INSERT INTO #TmpSum_WinLoss_Old
 		(
-			winlostdate, custid, username, currency, RoleID, 
-			ProductID, bettype, BetCount,
+			winlostdate, custid, recommend, mrecommend, srecommend ,username, currency, RoleID, 
+			ProductID, sporttype, bettype, BetCount,
 			turnover, playercomm, scomm, acomm, Comm,
-			awinlost, mwinlost, swinlost, winlost, netTurnover
+			awinlost, mwinlost, swinlost, winlost, netTurnover, grosscomm
 		)
-		SELECT      b.winlostdate, b.custid, c.username, c.currency, b.RoleID, 
-					t.ProductID, b.bettype, b.betCount,
+		SELECT      b.winlostdate, b.custid, b.recommend, b.mrecommend, b.srecommend ,c.username, c.currency, b.RoleID, 
+					t.ProductID, b.sporttype, b.bettype, b.betCount,
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
-					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover
+					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm
 		FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
 			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
 			INNER JOIN #TmpCust c ON b.custid = c.CustID
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 
+		UPDATE t
+		SET  t.grosscomm = CASE WHEN t.RoleID = 1 THEN  t.playercomm 
+		                        ELSE s.grosscomm END
+		FROM #TmpSum_WinLoss_Old t
+		     CROSS APPLY (
+			     SELECT SUM(s.grosscomm)  grosscomm
+				 FROM bodb_Summary.dbo.Sum_WinLoss_Old s WITH (NOLOCK)
+				 WHERE s.winlostdate = t.winlostdate 
+                       AND s.srecommend = t.srecommend
+					   AND s.sporttype = t.sporttype
+					   AND s.bettype = t.bettype
+					   AND ( 
+					         (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
+							 (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid = 2) OR
+				             (t.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
+							) s
 	--Super	
 		IF @isSAg = 1
 		BEGIN
@@ -530,7 +584,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT b.winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -542,6 +597,7 @@ BEGIN
 				,acomm as precomm
 				,awinlost + mwinlost + swinlost + scomm + winlost
 				,betcount
+				,b.grosscomm
 			FROM	#TmpSum_WinLoss_Old b WITH(NOLOCK) 	   
 			WHERE	b.roleid = 4
 		END
@@ -565,7 +621,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -577,6 +634,7 @@ BEGIN
 				,comm as precomm
 				,awinlost + mwinlost + acomm + winlost
 				,betcount
+				,b.grosscomm
 			FROM	#TmpSum_WinLoss_Old b WITH(NOLOCK) 
 			WHERE	b.roleid = 3
 		END
@@ -599,7 +657,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -611,6 +670,7 @@ BEGIN
 				,playercomm as precomm
 				,awinlost + comm + winlost
 				,betcount
+				,b.grosscomm
 			FROM	#TmpSum_WinLoss_Old b WITH(NOLOCK) 
 			WHERE	b.roleid = 2
 		END 
@@ -633,7 +693,8 @@ BEGIN
 				ownercomm,
 				precomm,
 				company,
-				betcount
+				betcount,
+				GrossComm
 			)
 			SELECT winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
@@ -645,6 +706,7 @@ BEGIN
 				,0 as precomm
 				,winlost + playercomm
 				,betcount
+				,b.grosscomm
 			FROM #TmpSum_WinLoss_Old b WITH(NOLOCK) 
 			WHERE b.roleid = 1
 
@@ -670,6 +732,7 @@ BEGIN
 				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
+				,SUM(GrossComm) AS GrossComm
 		FROM @AgencyWinloss A
 		GROUP BY custID, username, currency, roleid
 		ORDER BY username
@@ -692,6 +755,7 @@ BEGIN
 				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
+				,SUM(GrossComm) AS GrossComm
 		FROM @AgencyWinloss A
 		GROUP BY CONVERT(VARCHAR(10), winlostdate, 111)  
 				, custID, username, currency, roleid
@@ -715,6 +779,7 @@ BEGIN
 				,SUM(ownerwinlost + ownercomm - precomm) AS owner_total
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
+				,SUM(GrossComm) AS GrossComm
 		FROM @AgencyWinloss A
 		GROUP BY ProductID, custID, username, currency, roleid
 		ORDER BY breakdown, username
