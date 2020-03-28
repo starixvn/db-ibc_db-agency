@@ -19,6 +19,7 @@ AS
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200328@Sophia: Add hardcode for Sexy Gamng and SA Gaming [#130809]
 		
 	Param's Explanation:
 
@@ -106,6 +107,18 @@ BEGIN
 		INNER JOIN @TmpCustID c ON c.CustID = cps.CustID
 	GROUP BY t.ProductID
 
+
+	------ ProductID = 41 is setting product of 39 (SA Gaming) and 45 (Sexy Gaming)
+	INSERT INTO #T (ProductId, IsHide, IsSync)
+	SELECT 39 AS ProductId, IsHide, IsSync
+	FROM #T
+	WHERE ProductId = 41 
+	UNION ALL
+	SELECT 45 AS ProductId, IsHide, IsSync
+	FROM #T
+	WHERE ProductId = 41
+
+	
 	-- Check IsHidden only --
 	UPDATE	P
 	SET		isShow = 1
