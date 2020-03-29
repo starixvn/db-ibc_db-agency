@@ -86,7 +86,6 @@ BEGIN
 
 	-----------------------------------------------------------
 	----------------------------DCS---------------------------
-	
 	SELECT t.ProductID,
 	MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden , t.bitmapOrder))) AS IsHide,
 	MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
@@ -95,7 +94,8 @@ BEGIN
 		dbo.CustProductStatus cps  WITH (NOLOCK)  
 		CROSS APPLY
 		(
-			SELECT p.bitmapOrder , c.ProductID
+			SELECT p.bitmapOrder , 
+				CASE WHEN c.sporttype = 211 THEN 21 WHEN c.SportType = 243 THEN 45 WHEN c.SportType = 244 THEN 39 ELSE c.ProductID END AS ProductID 
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
 				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
@@ -107,18 +107,6 @@ BEGIN
 		INNER JOIN @TmpCustID c ON c.CustID = cps.CustID
 	GROUP BY t.ProductID
 
-
-	------ ProductID = 41 is setting product of 39 (SA Gaming) and 45 (Sexy Gaming)
-	INSERT INTO #T (ProductId, IsHide, IsSync)
-	SELECT 39 AS ProductId, IsHide, IsSync
-	FROM #T
-	WHERE ProductId = 41 
-	UNION ALL
-	SELECT 45 AS ProductId, IsHide, IsSync
-	FROM #T
-	WHERE ProductId = 41
-
-	
 	-- Check IsHidden only --
 	UPDATE	P
 	SET		isShow = 1
@@ -143,4 +131,5 @@ BEGIN
 	
 	DROP TABLE #T
 END
-GO
+
+ 
