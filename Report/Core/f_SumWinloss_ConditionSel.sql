@@ -20,6 +20,10 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191029@Percy: Add Spadegaming [RedmineID: #122353]
 		- 20191224@Percy: Add Virtual Games [RedmineID: #124906]
+		- 20200316@Sophia: Add SA Gaming [RedmineID: #128057]
+		- 20200326@Sophia: Add Saba.club [RedmineId: #130781]
+		- 20200326@Sophia: Add Sexy Gaming[RedmineId: #130670]
+		- 20200326@Sophia: Add Indo 4D [RedmineId: #130236]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -44,7 +48,11 @@ RETURN
 				(32, 248, 0), -- Pragmatic
 				(34, 165, 0), -- Card Club
 				(36, 247, 0), -- Spadegaming
-				(38, 245, 0) -- Virtual Games
+				(38, 245, 0), -- Virtual Games
+				(39, 244, 0), -- SA Gaming
+				(42, 200, 0), -- Saba.club
+				(43, 223, 0), -- Indo 4D	
+				(45, 243, 0)  -- Sexy Gaming
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
