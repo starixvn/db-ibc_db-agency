@@ -20,6 +20,7 @@ AS
 		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200328@Sophia: Add hardcode for Sexy Gamng and SA Gaming [#130809]
+		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
 		
 	Param's Explanation:
 
@@ -95,7 +96,11 @@ BEGIN
 		CROSS APPLY
 		(
 			SELECT p.bitmapOrder , 
-				CASE WHEN c.sporttype = 211 THEN 21 WHEN c.SportType = 243 THEN 45 WHEN c.SportType = 244 THEN 39 ELSE c.ProductID END AS ProductID 
+					CASE WHEN c.sporttype = 211 THEN 21 
+						WHEN c.SportType = 243 THEN 45 
+						WHEN c.SportType = 244 THEN 39 
+						WHEN c.SportType = 222 THEN 44  
+						ELSE c.ProductID END AS ProductID 
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
 				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
