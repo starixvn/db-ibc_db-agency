@@ -99,7 +99,10 @@ BEGIN
 					CASE WHEN c.sporttype = 211 THEN 21 
 						WHEN c.SportType = 243 THEN 45 
 						WHEN c.SportType = 244 THEN 39 
-						WHEN c.SportType = 222 THEN 40 
+						
+						WHEN c.SportType = 220 THEN 28 
+						WHEN c.SportType = 222 THEN 40
+						
 						ELSE c.ProductID END AS ProductID 
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
