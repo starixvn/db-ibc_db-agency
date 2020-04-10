@@ -24,6 +24,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20200326@Sophia: Add Saba.club [RedmineId: #130781]
 		- 20200326@Sophia: Add Sexy Gaming[RedmineId: #130670]
 		- 20200326@Sophia: Add Indo 4D [RedmineId: #130236]
+		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -52,7 +53,8 @@ RETURN
 				(39, 244, 0), -- SA Gaming
 				(42, 200, 0), -- Saba.club
 				(43, 223, 0), -- Indo 4D	
-				(45, 243, 0)  -- Sexy Gaming
+				(45, 243, 0),  -- Sexy Gaming
+				(40, 222, 0)  -- Table Games				
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO

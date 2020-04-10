@@ -26,6 +26,7 @@ AS
 		- 20101021@Razor: Add BMAIO [RedmineID: #121631]
 		- 20191226@Percy: Add bettypes of PHAIO Phase 5 [RedmineID: #125126]
 		- 20200329@Sophia: Add Sexy Gaming and SA Gaming [RedmineID: #130670] 
+		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
 
 	- Columns:
 		- CommGroup:
@@ -127,5 +128,7 @@ FROM (
 		OR typeid BETWEEN 1901 AND 1999
 		OR typeid BETWEEN 3001 AND 3099
 		OR typeID BETWEEN 3101 AND 3199
+		OR TypeID BETWEEN 4901 AND 5000
+		
 ) AS A
 GO
