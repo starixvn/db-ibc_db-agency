@@ -55,7 +55,7 @@ RETURN
 				(42, 200, 0), -- Saba.club
 				(43, 223, 0), -- Indo 4D	
 				(45, 243, 0),  -- Sexy Gaming
-				(40, 222, 0)  -- Table Games	
+				(40, 222, 0),  -- Table Games	
 				(47, 241, 0)  -- BBIN
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
