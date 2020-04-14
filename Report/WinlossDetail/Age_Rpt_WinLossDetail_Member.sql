@@ -24,6 +24,7 @@ Revisions:
 	- 20180913@Percy: Bullfighting - Add data into TurnoverNoDraw column [RedmineID: #101288]
 	- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 	- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+	- 20200410@Sophia: Add BBIN, Sexy Gaming, SA Gaming [RedmineId: #131358]
 */
 
 BEGIN
@@ -120,7 +121,7 @@ BEGIN
 				SUM(CASE
 						WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
 						WHEN b.StatusID = 111 AND s.ProductId IN (1) THEN 0 -- Sportsbook
-						WHEN s.ProductID = 21 THEN b.oddsspread -- Allbet
+						WHEN s.ProductID IN (21, 39, 45, 47)  THEN b.oddsspread -- Allbet, SA Gaming, SexyGaming, BBIN
 						ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
 				SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END) AS GrossComm,
