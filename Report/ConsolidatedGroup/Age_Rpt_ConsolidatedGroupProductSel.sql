@@ -101,7 +101,7 @@ BEGIN
 					CASE WHEN c.sporttype = 211 THEN 21  ---Allbet
 						WHEN c.SportType = 243 THEN 45   ---Sexy Gaming
 						WHEN c.SportType = 244 THEN 39 	 ---SA Gaming	
-						WHEN c.SportType = 244 THEN 47   ---BBIN 
+						WHEN c.SportType = 241 THEN 47   ---BBIN 
 						
 						WHEN c.SportType = 220 THEN 28   ---Lottery
 						WHEN c.SportType = 222 THEN 40   ---TableGames
