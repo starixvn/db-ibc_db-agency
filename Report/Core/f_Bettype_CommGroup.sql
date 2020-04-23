@@ -28,7 +28,7 @@ AS
 		- 20200329@Sophia: Add Sexy Gaming and SA Gaming [RedmineID: #130670] 
 		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
 		- 20200410@Sophia: Add BBIN [RedmineId: #131358]
-		- 20200422@Sophia: Add GT Casino [RedmineId: #130693]	
+		- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]	
 
 	- Columns:
 		- CommGroup:
