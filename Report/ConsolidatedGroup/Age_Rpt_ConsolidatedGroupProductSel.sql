@@ -130,7 +130,7 @@ BEGIN
 	       p.ProductName, 
 		   p.EndOfSupportDate, 
 		   p.isShow,
-		   d.OrderNo,
+		   ISNULL(d.OrderNo,0) AS OrderNo,
 		   CASE WHEN d.CasinoType = 1 THEN 53
 		        WHEN d.CasinoType = 2 THEN 41
 				ELSE 0 END AS [Type]

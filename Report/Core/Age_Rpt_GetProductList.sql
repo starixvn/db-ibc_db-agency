@@ -21,7 +21,7 @@ BEGIN
 		CAST(ISNULL(gp.GroupProductId, p.ProductID) AS INT) AS ProductID
 	   ,p.ProductName
 	   ,p.EndOfSupportDate
-	   ,p.OrderNo 
+	   ,ISNULL(p.OrderNo,0) AS OrderNo
 	   ,CASE WHEN p.CasinoType = 1 THEN 53
 	         WHEN p.CasinoType = 2 THEN 41
 			 ELSE 0 END AS [Type]
