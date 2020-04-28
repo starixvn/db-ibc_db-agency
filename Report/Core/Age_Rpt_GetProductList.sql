@@ -20,9 +20,14 @@ BEGIN
 		CAST(ISNULL(gp.GroupProductId, p.ProductID) AS INT) AS ProductID
 	   ,p.ProductName
 	   ,p.EndOfSupportDate
+	   ,p.OrderNo 
+	   ,CASE WHEN p.CasinoType = 1 THEN 53
+	         WHEN p.CasinoType = 2 THEN 41
+			 ELSE 0 END AS [Type]
 	FROM dbo.Products p WITH (NOLOCK)
 		LEFT JOIN dbo.f_GroupProduct() gp ON p.ProductID = gp.ProductId AND gp.ProductId <> gp.GroupProductId
 	WHERE p.GroupType = 0 AND gp.ProductId IS NULL
+	ORDER BY p.OrderNo
 
 	SET NOCOUNT OFF
 END

@@ -19,10 +19,6 @@ AS
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
-		- 20200328@Sophia: Add hardcode for Sexy Gamng and SA Gaming [#130809]
-		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
-		- 20200410@Sophia: Add BBIN [RedmineId: #131358]		 
-		
 		
 	Param's Explanation:
 
@@ -89,6 +85,7 @@ BEGIN
 
 	-----------------------------------------------------------
 	----------------------------DCS---------------------------
+	
 	SELECT t.ProductID,
 	MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden , t.bitmapOrder))) AS IsHide,
 	MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
@@ -97,16 +94,7 @@ BEGIN
 		dbo.CustProductStatus cps  WITH (NOLOCK)  
 		CROSS APPLY
 		(
-			SELECT p.bitmapOrder , 
-					CASE WHEN c.sporttype = 211 THEN 21  ---Allbet
-						WHEN c.SportType = 243 THEN 45   ---Sexy Gaming
-						WHEN c.SportType = 244 THEN 39 	 ---SA Gaming	
-						WHEN c.SportType = 241 THEN 47   ---BBIN 
-						
-						WHEN c.SportType = 220 THEN 28   ---Lottery
-						WHEN c.SportType = 222 THEN 40   ---TableGames
-						
-						ELSE c.ProductID END AS ProductID 
+			SELECT p.bitmapOrder , c.ProductID
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
 				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
@@ -137,10 +125,18 @@ BEGIN
 		AND T.ProductID IN (21, 22, 24)
 
 	--------------------------------------------
-	SELECT ProductID, ProductName, EndOfSupportDate, isShow
-	FROM @ProductList
+	SELECT p.ProductID, 
+	       p.ProductName, 
+		   p.EndOfSupportDate, 
+		   p.isShow,
+		   d.OrderNo,
+		   CASE WHEN d.CasinoType = 1 THEN 53
+		        WHEN d.CasinoType = 2 THEN 41
+				ELSE 0 END AS [Type]
+	FROM @ProductList p
+		INNER JOIN Products d WITH(NOLOCK) ON p.ProductID = d.ProductID
+	ORDER BY d.OrderNo
 	
 	DROP TABLE #T
 END
-
- 
+GO

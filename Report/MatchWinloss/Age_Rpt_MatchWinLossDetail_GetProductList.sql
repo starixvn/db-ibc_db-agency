@@ -16,10 +16,17 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	SELECT ProductId
+	SELECT p.ProductId, 
+	       d.OrderNo,
+		   CASE WHEN d.CasinoType = 1 THEN 53
+		        WHEN d.CasinoType = 2 THEN 41
+				ELSE 0 END AS [Type]
 	FROM (
 		-- Sportbook, Number Game, Virtual Sport + Virtual Sport 2 (group ProductId = 5)
 		VALUES (1), (3), (5)
 	) AS P (ProductId)
+		INNER JOIN dbo.Products d WITH(NOLOCK) on d.ProductID = p.ProductId 
+	ORDER BY d.OrderNo
+
 END
 GO
