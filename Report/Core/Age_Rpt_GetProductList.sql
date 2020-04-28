@@ -11,6 +11,7 @@ AS
 		- 20161129@Paul: Smartphone Friendly UI for Microsite Report - [Redmine: #61531]
 		- 20170508@Paul: Return EndOfSupportDate - [Redmine: #70450]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+		- 20200428@Malcolm : re-order products [Redmine : #132760]
 */
 
 BEGIN

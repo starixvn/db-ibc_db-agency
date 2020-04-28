@@ -19,6 +19,7 @@ AS
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200428@Malcolm : re-order products [Redmine : #132760]
 		
 	Param's Explanation:
 

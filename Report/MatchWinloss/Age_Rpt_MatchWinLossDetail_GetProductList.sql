@@ -11,6 +11,7 @@ AS
 		- 20171020@Percy: Create new SP [RedmineID: #84690]
 		- 20180130@Percy: Remove Racing [RedmineID: #86086]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200428@Malcolm : re-order products [Redmine : #132760]
 */
 
 BEGIN
