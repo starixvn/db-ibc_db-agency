@@ -19,7 +19,11 @@ AS
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20170829@Paul: Return EndOfSupportDate; Change Hard-coded ProductID values to GroupType [RedmineID: #77598]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200328@Sophia: Add hardcode for Sexy Gamng and SA Gaming [#130809]
+		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
+		- 20200410@Sophia: Add BBIN [RedmineId: #131358]	
 		- 20200428@Malcolm : re-order products [Redmine : #132760]
+		
 		
 	Param's Explanation:
 
@@ -86,7 +90,6 @@ BEGIN
 
 	-----------------------------------------------------------
 	----------------------------DCS---------------------------
-	
 	SELECT t.ProductID,
 	MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden , t.bitmapOrder))) AS IsHide,
 	MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
@@ -95,7 +98,16 @@ BEGIN
 		dbo.CustProductStatus cps  WITH (NOLOCK)  
 		CROSS APPLY
 		(
-			SELECT p.bitmapOrder , c.ProductID
+			SELECT p.bitmapOrder , 
+					CASE WHEN c.sporttype = 211 THEN 21  ---Allbet
+						WHEN c.SportType = 243 THEN 45   ---Sexy Gaming
+						WHEN c.SportType = 244 THEN 39 	 ---SA Gaming	
+						WHEN c.SportType = 241 THEN 47   ---BBIN 
+						
+						WHEN c.SportType = 220 THEN 28   ---Lottery
+						WHEN c.SportType = 222 THEN 40   ---TableGames
+						
+						ELSE c.ProductID END AS ProductID 
 			FROM
 				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
 				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
@@ -140,4 +152,5 @@ BEGIN
 	
 	DROP TABLE #T
 END
-GO
+
+ 
