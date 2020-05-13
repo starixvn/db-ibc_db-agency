@@ -33,6 +33,7 @@ BEGIN
 					WHEN ISNULL(ReleasedDate, '') <> '' AND GETDATE() BETWEEN bm.ReleasedDate AND bm.ExpirationDate THEN 1
 					ELSE 0
 				END
+		AND bi.ImageContent IS NOT NULL
 	ORDER BY NEWID()
 
 END
