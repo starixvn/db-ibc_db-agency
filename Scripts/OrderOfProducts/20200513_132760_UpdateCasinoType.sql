@@ -2,7 +2,7 @@ USE bodb02
 GO
 
 /*
-	Created: 20200428@Malcolm
+	Created: 20200513@Malcolm
 	DB: DBPRO.bodb02
 	Task: Update CasinoType [Redmine : #132760]
 */
