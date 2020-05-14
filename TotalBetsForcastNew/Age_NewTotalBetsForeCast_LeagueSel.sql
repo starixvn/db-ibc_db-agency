@@ -13,6 +13,7 @@ ALTER PROCEDURE [dbo].[Age_NewTotalBetsForeCast_LeagueSel] (
 	Revision:
 		- 20151216@Bobby: Initial
 		- 20170816@Percy: Change data type of Sporttype [RedmineID: #73545]
+		- 20200512@Sophia: Change datatype leaguename to nvarchar(500) [Redmine: #134020]
 	
 	Parameter's Explanation:
 			
@@ -24,7 +25,7 @@ BEGIN
 	DECLARE @timeNow	DATETIME
 	SELECT @timeNow		= GETDATE()		
 	
-	CREATE TABLE #league (leagueid	INT, leaguename	NVARCHAR(120))
+	CREATE TABLE #league (leagueid	INT, leaguename	NVARCHAR(500))
 	
 	INSERT INTO #league
 	SELECT l.leagueid
