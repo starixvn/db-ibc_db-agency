@@ -21,7 +21,8 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200328@Sophia: Add hardcode for Sexy Gamng and SA Gaming [#130809]
 		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
-		- 20200410@Sophia: Add BBIN [RedmineId: #131358]		 
+		- 20200410@Sophia: Add BBIN [RedmineId: #131358]	
+		- 20200428@Malcolm : re-order products [Redmine : #132760]
 		
 		
 	Param's Explanation:
@@ -137,8 +138,17 @@ BEGIN
 		AND T.ProductID IN (21, 22, 24)
 
 	--------------------------------------------
-	SELECT ProductID, ProductName, EndOfSupportDate, isShow
-	FROM @ProductList
+	SELECT p.ProductID, 
+	       p.ProductName, 
+		   p.EndOfSupportDate, 
+		   p.isShow,
+		   ISNULL(d.OrderNo,0) AS OrderNo,
+		   CASE WHEN d.CasinoType = 1 THEN 53
+		        WHEN d.CasinoType = 2 THEN 41
+				ELSE 0 END AS [Type]
+	FROM @ProductList p
+		INNER JOIN Products d WITH(NOLOCK) ON p.ProductID = d.ProductID
+	ORDER BY d.OrderNo
 	
 	DROP TABLE #T
 END
