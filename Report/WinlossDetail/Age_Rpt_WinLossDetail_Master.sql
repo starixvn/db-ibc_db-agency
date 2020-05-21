@@ -27,6 +27,7 @@ Revisions:
 	- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 	- 20200410@Sophia: Add BBIN, Sexy Gaming, SA Gaming [RedmineId: #131358]
 	- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]
+	- 20200521@Patrick: Enhance SP due to bot attack [redmind: #134415]
 */
 
 BEGIN
@@ -324,4 +325,5 @@ BEGIN
 
 	SET NOCOUNT OFF;
 END
+
 GO
