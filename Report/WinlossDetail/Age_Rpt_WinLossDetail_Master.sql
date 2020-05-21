@@ -100,15 +100,6 @@ BEGIN
 		BetType	smallint
 	);
 
-	INSERT INTO @SportBettypeMatrix(
-		ProductID,
-		BetType
-	)
-	SELECT	ISNULL(p.GroupProductId, f.ProductID),
-			BetType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
-		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId;
-
 	IF @ToDate >= @BalanceUpDay
 	BEGIN 
 		IF @FromDate <= @MoveBetsDay
@@ -136,7 +127,11 @@ BEGIN
 				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				COUNT(1) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
+			INNER JOIN (
+				SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, BetType
+				FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+					LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+			) s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FDate AND @Tdate
 			AND srecommend = @CID
 			AND b.statusID NOT IN (0, 1, 101, 102, 103) 
