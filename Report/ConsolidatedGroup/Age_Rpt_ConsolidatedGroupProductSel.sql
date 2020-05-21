@@ -23,6 +23,7 @@ AS
 		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
 		- 20200410@Sophia: Add BBIN [RedmineId: #131358]	
 		- 20200428@Malcolm : re-order products [Redmine : #132760]
+		- 20200422@Sophia: Add IBC Live Casino - apply new code for CustProductStatus [RedmineId: #130693]
 		
 		
 	Param's Explanation:
@@ -99,19 +100,11 @@ BEGIN
 		CROSS APPLY
 		(
 			SELECT p.bitmapOrder , 
-					CASE WHEN c.sporttype = 211 THEN 21  ---Allbet
-						WHEN c.SportType = 243 THEN 45   ---Sexy Gaming
-						WHEN c.SportType = 244 THEN 39 	 ---SA Gaming	
-						WHEN c.SportType = 241 THEN 47   ---BBIN 
-						
-						WHEN c.SportType = 220 THEN 28   ---Lottery
-						WHEN c.SportType = 222 THEN 40   ---TableGames
-						
-						ELSE c.ProductID END AS ProductID 
+					RealProductID AS ProductID 
 			FROM
-				(SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
-				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
-				UNION SELECT productid, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13) --FW, BetradarVS, Keno Lottery
+				(SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4) 
+				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11) --NG2
+				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13) --FW, BetradarVS, Keno Lottery
 				)c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
