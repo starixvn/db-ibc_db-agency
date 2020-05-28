@@ -28,6 +28,7 @@ Revisions:
 	- 20200410@Sophia: Add BBIN, Sexy Gaming, SA Gaming [RedmineId: #131358]
 	- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]
 	- 20200521@Patrick: Enhance SP due to bot attack [redmind: #134415]
+	- 20200528@Sophia: Add RNG War [Redmine: #132013]
 */
 
 BEGIN
@@ -113,7 +114,7 @@ BEGIN
 				SUM(CASE
 						WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
 						WHEN b.StatusID = 111 AND s.ProductId IN (1) THEN 0 -- Sportsbook
-						WHEN s.ProductID IN (21, 39, 45, 46, 47)  THEN b.oddsspread -- Allbet, SA Gaming, SexyGaming, IBCBet Live Casino, BBIN
+						WHEN s.ProductID IN (21, 39, 45, 46, 47, 50)  THEN b.oddsspread -- Allbet, SA Gaming, SexyGaming, IBCBet Live Casino, BBIN, RNG war
 						ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw,
 				SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,

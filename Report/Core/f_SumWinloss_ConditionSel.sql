@@ -27,6 +27,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
 		- 20200410@Sophia: Add BBIN [RedmineId: #131358]
 		- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]
+		- 20200528@Sophia: Add RNG War [Redmine: #132013]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -58,7 +59,8 @@ RETURN
 				(45, 243, 0), -- Sexy Gaming
 				(40, 222, 0), -- Table Games	
 				(47, 241, 0), -- BBIN
-				(46, 242, 0)  -- IBCBet Live Casino
+				(46, 242, 0), -- IBCBet Live Casino
+				(50, 224, 0)  -- RNG War
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
