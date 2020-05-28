@@ -13,6 +13,7 @@ AS
 		- 20170508@Paul: Return EndOfSupportDate - [Redmine: #70450]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20200428@Malcolm : re-order products [Redmine : #132760]
+		- 20200528@Malcolm : add Sportsbook 2 for Setting [Redmine : #134917]
 */
 
 BEGIN
@@ -34,6 +35,7 @@ BEGIN
 
 	UNION ALL
 
+	-- add Sportsbook 2 for setting
 	SELECT p.ProductID,
 		   P.ProductName,
 		   P.EndOfSupportDate,
