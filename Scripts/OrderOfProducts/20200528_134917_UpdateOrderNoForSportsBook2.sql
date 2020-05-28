@@ -9,6 +9,6 @@ GO
 */
 
 UPDATE t 
-	SET  t.OrderNo = 15
+	SET  t.OrderNo = 12
 FROM Products t
 WHERE ProductID = 16
