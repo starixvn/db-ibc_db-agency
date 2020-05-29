@@ -15,7 +15,6 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20171020@Percy: get both running and waiting tickets [RedmineID: #84690]
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
-		- 20200521@Sophia: Enhance SP due to bot attack [redmind: #134415]
 */
 
 BEGIN

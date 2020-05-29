@@ -1,5 +1,5 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-ALTER CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
