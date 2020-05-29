@@ -26,7 +26,6 @@ Revisions:
 	- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 	- 20200410@Sophia: Add BBIN, Sexy Gaming, SA Gaming [RedmineId: #131358]
 	- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]
-	- 20200521@Sophia: Enhance SP due to bot attack [redmind: #134415]
 */
 
 BEGIN
@@ -94,7 +93,21 @@ BEGIN
 	    
 	SELECT	@FDate = @FromDate,
 			@TDate = @ToDate, 
-			@CID = @custid;	 
+			@CID = @custid;
+
+	DECLARE @SportBettypeMatrix TABLE(
+		ProductID	tinyint,
+		BetType	smallint
+	);
+
+	INSERT INTO @SportBettypeMatrix(
+		ProductID,
+		BetType
+	)
+	SELECT	ISNULL(p.GroupProductId, f.ProductID),
+			BetType
+	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId;
 
 	IF @ToDate >= @BalanceUpDay
 	BEGIN 
@@ -119,11 +132,7 @@ BEGIN
 				SUM(comm - playercomm) AS AgComm,
 				COUNT(1) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
-			INNER JOIN (
-						SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, BetType
-						FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
-							LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
-						) s ON b.bettype = s.Bettype
+			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND b.statusID NOT IN (101, 102, 103)
 			AND Recommend = @CID

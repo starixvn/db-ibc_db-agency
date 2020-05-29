@@ -128,10 +128,10 @@ BEGIN
 				COUNT(1) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN (
-							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, BetType
-							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
-								LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
-						) s ON b.bettype = s.Bettype
+				SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, BetType
+				FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+					LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+			) s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FDate AND @Tdate
 			AND srecommend = @CID
 			AND b.statusID NOT IN (0, 1, 101, 102, 103) 
