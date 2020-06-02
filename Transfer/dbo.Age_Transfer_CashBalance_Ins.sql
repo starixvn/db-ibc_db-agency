@@ -1,5 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_Ins]
 	@FromCustID		INT,
 	@ToCustID		INT,
@@ -21,6 +20,7 @@ AS
 
 	Revisions:
 		- 20170609@Percy: Create new [RedmineID: #74291]
+		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -119,7 +119,7 @@ BEGIN
 	END
 
 	/***** Calculate Upline Balance, Cash Balance and Outstanding *****/
-	CREATE TABLE #TransferCash (uplineCashBalance MONEY, CashBalance MONEY, Outstanding MONEY)
+	CREATE TABLE #TransferCash (uplineCashBalance MONEY, CashBalance MONEY, Outstanding MONEY, [3rdPendingTransfer] MONEY)
 	CREATE TABLE #recommend (custid INT)
 
 	-- Get bettype --
@@ -130,7 +130,7 @@ BEGIN
 	INSERT INTO #SportBettype (bettype, RefTable)
 	SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-	DECLARE @uplineCashBalance MONEY, @CashBalance MONEY, @Outstanding MONEY
+	DECLARE @uplineCashBalance MONEY, @CashBalance MONEY, @Outstanding MONEY, @3rdPendingTransfer MONEY
 	DECLARE @FromAmountValue DECIMAL(19,4), @ToAmountValue DECIMAL(19,4)
 
 	IF @roleid = 1
@@ -169,11 +169,12 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, [3rdPendingTransfer])
 		SELECT
-			SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
-			SUM(CASE WHEN ruben = 1 AND custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END),
-			SUM(CASE WHEN ruben = 0 AND custid = @custid THEN ABS(actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END),
+			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
+			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 0 AND custid = @custid THEN ABS(actual_stake) ELSE 0 END END),
+			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE recommend = @recommend
 			AND
@@ -240,6 +241,7 @@ BEGIN
 				winlostdate < @yesterday
 				OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
 			)
+			AND bettype NOT IN (21008, 21009)
     END
     ELSE IF @roleid = 3
     BEGIN
@@ -294,6 +296,7 @@ BEGIN
 				winlostdate < @yesterday
 				OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
 			)
+			AND bettype NOT IN (21008, 21009)
     END
 
 	/*
@@ -309,11 +312,12 @@ BEGIN
 	SELECT
 		@uplineCashBalance = SUM(ISNULL(uplineCashBalance, 0)),
 		@CashBalance = SUM(ISNULL(CashBalance, 0)),
-		@Outstanding = SUM(ISNULL(Outstanding, 0))
+		@Outstanding = SUM(ISNULL(Outstanding, 0)),
+		@3rdPendingTransfer = SUM(ISNULL([3rdPendingTransfer], 0))
 	FROM #TransferCash
 
 	SELECT
-		@FromAmountValue = CASE WHEN @CashBalance - @Outstanding > 0 THEN - (@CashBalance - @Outstanding) ELSE 0 END,
+		@FromAmountValue = CASE WHEN @CashBalance - @Outstanding - @3rdPendingTransfer > 0 THEN - (@CashBalance - @Outstanding - @3rdPendingTransfer) ELSE 0 END,
 		@ToAmountValue = CASE WHEN @uplineCashBalance > 0 THEN @uplineCashBalance ELSE 0 END
 
 	IF @Amount = 0 OR -@Amount NOT BETWEEN @FromAmountValue AND @ToAmountValue

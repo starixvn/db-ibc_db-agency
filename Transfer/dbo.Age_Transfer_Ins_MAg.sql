@@ -1,5 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" viewers="" isFunction="0" isNested="0"></info>*/
-
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_MAg]
 	@MasterID int,
 	@ToCustIDs varchar(4000),
@@ -42,6 +41,7 @@ Revisions:
 		1. Re-check [Allow SMA to transfer in 24 hours]: apply general sp Acc_CheckProcessingData [RedmineID: #78487]
 		2. Change way to calculate balance [RedmineID: #74291]
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
+	- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
 
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -179,6 +179,7 @@ BEGIN
 	WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
 		AND ruben = 1
 		AND winlostdate < @yesterday
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY recommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -191,6 +192,7 @@ BEGIN
 		AND ruben = 1
 		AND winlostdate >= @yesterday
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY recommend
 END
 -- YESTERDAY TRANSFER
@@ -230,6 +232,7 @@ BEGIN
 	WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
 		AND ruben = 1
 		AND winlostdate < @yesterday
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY recommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -242,6 +245,7 @@ BEGIN
 		AND ruben = 1
 		AND winlostdate >= @yesterday
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY recommend
 END
 

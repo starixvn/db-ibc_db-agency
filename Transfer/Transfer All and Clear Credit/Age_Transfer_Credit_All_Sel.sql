@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
@@ -17,6 +14,7 @@ AS
 
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
+		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
 */
 
 BEGIN
@@ -179,6 +177,7 @@ BEGIN
 				SUM(mwinlost), SUM(acomm)
 			FROM dbo.bettrans WITH (NOLOCK)
 			WHERE mrecommend = @DownlineCustId
+				AND bettype NOT IN (21008, 21009)
 			GROUP BY
 				winlostdate, bettype, statusId,
 				custId, CASE custid WHEN mrecommend THEN 3 WHEN recommend THEN 2 ELSE 1 END
@@ -299,6 +298,7 @@ BEGIN
 				SUM(awinlost), SUM(comm)
 			FROM dbo.bettrans WITH (NOLOCK)
 			WHERE recommend = @DownlineCustId
+				AND bettype NOT IN (21008, 21009)
 			GROUP BY
 				winlostdate, bettype, statusId,
 				custId, CASE custid WHEN recommend THEN 2 ELSE 1 END

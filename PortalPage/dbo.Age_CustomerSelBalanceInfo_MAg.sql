@@ -1,7 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_MAg]
 	 @custid		INT, -- mrecommend
 	 @MoveBetsDay	SMALLDATETIME -- not use
@@ -15,6 +12,7 @@ AS
 	
 	Revisions:
 		- 20171020@Percy: Apply core balance sp [RedmineID: #84690]
+		- 20200602@Percy: Separate 3rdPendingTransfer to Cash and Balance [RedmineID: #135200]
 */
 
 BEGIN
@@ -38,7 +36,9 @@ BEGIN
 		agentCash		MONEY DEFAULT ((0)), yesterdayAgentCash		MONEY DEFAULT ((0)),
 		memberCash		MONEY DEFAULT ((0)), yesterdayMemberCash	MONEY DEFAULT ((0)),
 		-- winloss
-		todayWinloss	MONEY DEFAULT ((0)), yesterdayWinloss		MONEY DEFAULT ((0))
+		todayWinloss	MONEY DEFAULT ((0)), yesterdayWinloss		MONEY DEFAULT ((0)),
+		-- 3rdPendingTransfer
+		[3rdPendingTransfer] MONEY DEFAULT ((0))
 	)
 	
 	-- cash
@@ -47,7 +47,8 @@ BEGIN
 		superCash,		yesterdaySuperCash,
 		masterCash,		yesterdayMasterCash,
 		agentCash,		yesterdayAgentCash,
-		memberCash,		yesterdayMemberCash
+		memberCash,		yesterdayMemberCash,
+		[3rdPendingTransfer]
 	)
 	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId
 
@@ -67,7 +68,8 @@ BEGIN
 		SUM(todayWinloss)			AS todayWinloss,
 		SUM(yesterdayWinloss)		AS yesterdayWinloss,
 		@givenCredit				AS givenCredit,
-		@memberCredit				AS memberCredit
+		@memberCredit				AS memberCredit,
+		SUM([3rdPendingTransfer])	AS [3rdPendingTransfer]
 	FROM #BalanceInfo
 
 	DROP TABLE #BalanceInfo
