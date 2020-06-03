@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[Age_Transfer_SelMemberInfo_Yesterday_ForDBTrans]
 	@MaxTransDate datetime OUTPUT,
 	@FutureBetCredit money OUTPUT,
 	@AmtTransferred money = 0 OUTPUT,
-	@3rdPendingTransfer money = 0 OUTPUT
+	@PendingTransfer3rd money = 0 OUTPUT
 AS
 /*
 Created: ???
@@ -41,7 +41,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday on db052/bodb02
 		- 20180521@Percy: Add waiting tickets on translog [RedmineID: #95268]
 		- 20181005@Percy: Remove convert date on winlostdate [RedmineID: #101644]
 		- 20190312@Helen: Create version for dbtrans - due to replication latency - [RedmineID: #107963]
-		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		
 */
 BEGIN
@@ -72,19 +72,19 @@ BEGIN
 			 @DisableCasino = ci.DisableCasino,
 			 @GivenCredit = ci.credit,
 			 @CashBalance = isnull(b.CashBalance,0),
-			 @3rdPendingTransfer = isnull(b.[3rdPendingTransfer],0)
+			 @PendingTransfer3rd = isnull(b.PendingTransfer3rd,0)
 		from CUSTDB.dbo.customer with (NOLOCK)  
 			INNER JOIN CUSTDB.dbo.CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
 			LEFT JOIN 
 				(	
-					SELECT custid, SUM(CashBalance) AS CashBalance, SUM([3rdPendingTransfer]) AS [3rdPendingTransfer]
+					SELECT custid, SUM(CashBalance) AS CashBalance, SUM(PendingTransfer3rd) AS PendingTransfer3rd
 					FROM (
 							SELECT custid
 									,isnull(sum(case	when b.bettype in (21008, 21009) then 0
 													when b.bettype < 19001 and b.winlostdate < @today then b.winlost-b.actual_stake+playercomm
 													when b.bettype > 19000 then b.winlost-b.actual_stake +playercomm
 													else 0 end ), 0) as CashBalance
-									,isnull(sum(case when b.bettype in (21008, 21009) then -(b.winlost-b.actual_stake) else 0 end), 0) as [3rdPendingTransfer]
+									,isnull(sum(case when b.bettype in (21008, 21009) then -(b.winlost-b.actual_stake) else 0 end), 0) as PendingTransfer3rd
 							FROM bettrans as b with (NOLOCK) 
 							WHERE custid = @CustID and ruben  =1
 								AND (
@@ -122,15 +122,15 @@ BEGIN
 			 @DisableCasino = ci.DisableCasino,
 			 @GivenCredit = ci.credit,
 			 @CashBalance = isnull(b.CashBalance,0),
-			 @3rdPendingTransfer = isnull(b.[3rdPendingTransfer],0)
+			 @PendingTransfer3rd = isnull(b.PendingTransfer3rd,0)
 		from CUSTDB.dbo.customer with (NOLOCK)  
 			INNER JOIN CUSTDB.dbo.CustInfo as ci with (NOLOCK) on Customer.CustID = ci.CustID  
 			LEFT JOIN 
-				(   SELECT custid, SUM(CashBalance) AS CashBalance, SUM([3rdPendingTransfer]) AS [3rdPendingTransfer]
+				(   SELECT custid, SUM(CashBalance) AS CashBalance, SUM(PendingTransfer3rd) AS PendingTransfer3rd
 					FROM (
 							SELECT custid
 									,isnull(sum(case when b.bettype in (21008, 21009) then 0 else b.winlost-b.actual_stake+playercomm end), 0) as CashBalance 
-									,isnull(sum(case when b.bettype in (21008, 21009) then -(b.winlost-b.actual_stake) else 0 end), 0) as [3rdPendingTransfer]
+									,isnull(sum(case when b.bettype in (21008, 21009) then -(b.winlost-b.actual_stake) else 0 end), 0) as PendingTransfer3rd
 							FROM bettrans as b with (NOLOCK) 
 							WHERE custid = @CustID and ruben  =1
 								AND (

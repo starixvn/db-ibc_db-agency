@@ -16,7 +16,7 @@ ALTER PROCEDURE [Age_Transfer_SelList_SAg]
 	@TotalYesterdayMagentBalance money = 0 OUTPUT,
 	@TotalMAgentCashBalance money = 0 OUTPUT,
 	@TotalYesterday_MAgentCashBalance money = 0 OUTPUT,
-	@Total3rdPendingTransfer money = 0 OUTPUT,
+	@TotalPendingTransfer3rd money = 0 OUTPUT,
 	@TotalPages int=0 OUTPUT
 AS
 --Vinh@20080102: add yesterday balance columns
@@ -43,7 +43,7 @@ Revisions:
 	- 20170620@Percy: Apply new formula yesterday balance [RedmineID: #74291]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 	- 20181005@Percy: Revise indexes [RedmineID: #101644]
-	- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -87,7 +87,7 @@ CREATE TABLE #balance
 	YesterdayBalance money,		
 	TotalBalance money,
 	Outstanding money,
-	[3rdPendingTransfer] money
+	PendingTransfer3rd money
 )
 
 CREATE TABLE #result_balance  
@@ -98,7 +98,7 @@ CREATE TABLE #result_balance
 	YesterdayBalance money,		
 	TotalBalance money,
 	Outstanding money,
-	[3rdPendingTransfer] money
+	PendingTransfer3rd money
 )
 
 CREATE TABLE #credit
@@ -191,7 +191,7 @@ WHERE b.srecommend = @SAgID
 GROUP BY mrecommend
 
 	-- settle ticket
-INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, [3rdPendingTransfer])
+INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
 	mrecommend,
 	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0),
@@ -210,7 +210,7 @@ WHERE b.srecommend = @SAgID
 	AND winlostdate < @yesterday
 GROUP BY mrecommend
 
-INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, [3rdPendingTransfer])
+INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
 	mrecommend,
 	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN mwinlost+acomm-comm ELSE 0 END END), 0),
@@ -231,7 +231,7 @@ WHERE b.srecommend = @SAgID
 GROUP BY mrecommend
 
 	-- sum, balance, transfer ticket
-INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, [3rdPendingTransfer])
+INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
 	mrecommend,
 	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0),
@@ -248,8 +248,8 @@ WHERE b.srecommend = @SAgID
 GROUP BY mrecommend
 /* End Balance Info */
 
-INSERT INTO #result_balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, [3rdPendingTransfer])
-SELECT mrecommend, SUM(YesterdayCashBalance), SUM(TotalCashBalance), SUM(YesterdayBalance), SUM(TotalBalance), SUM(Outstanding), SUM(ISNULL([3rdPendingTransfer], 0))
+INSERT INTO #result_balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
+SELECT mrecommend, SUM(YesterdayCashBalance), SUM(TotalCashBalance), SUM(YesterdayBalance), SUM(TotalBalance), SUM(Outstanding), SUM(ISNULL(PendingTransfer3rd, 0))
 FROM #balance
 GROUP BY mrecommend
 
@@ -324,7 +324,7 @@ BEGIN
 			IsNull(balance.TotalBalance,0) magentBalance, 
 			IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
 			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
-			IsNull(balance.[3rdPendingTransfer],0) [3rdPendingTransfer],
+			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
 			c.lastname
 		FROM #tmp_customer c
@@ -341,7 +341,7 @@ BEGIN
 			@TotalYesterdayMAgentBalance = sum(yesterday_magentBalance),
 			@TotalMAgentCashBalance = sum(magentCashBalance),
 			@TotalYesterday_MAgentCashBalance = sum(yesterday_magentCashBalance),
-			@Total3rdPendingTransfer = sum([3rdPendingTransfer])
+			@TotalPendingTransfer3rd = sum(PendingTransfer3rd)
 	FROM 
 	(
 		SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, c.username) as RowNumber,
@@ -357,7 +357,7 @@ BEGIN
 			IsNull(balance.TotalBalance,0) magentBalance, 
 			IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
 			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
-			IsNull(balance.[3rdPendingTransfer],0) [3rdPendingTransfer]
+			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd
 		FROM #tmp_customer c
 			INNER JOIN #credit credit ON c.custid = credit.mrecommend
 			LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
@@ -382,7 +382,7 @@ BEGIN
 			IsNull(balance.TotalBalance,0) magentBalance, 
 			IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
 			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
-			IsNull(balance.[3rdPendingTransfer],0) [3rdPendingTransfer],
+			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
 			c.lastname
 		FROM #tmp_customer c
@@ -404,7 +404,7 @@ BEGIN
 				@TotalYesterdayMAgentBalance = sum(yesterday_magentBalance),
 				@TotalMAgentCashBalance = sum(magentCashBalance),
 				@TotalYesterday_MAgentCashBalance = sum(yesterday_magentCashBalance),
-				@Total3rdPendingTransfer = sum([3rdPendingTransfer])
+				@TotalPendingTransfer3rd = sum(PendingTransfer3rd)
 		FROM 
 		(
 			SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, c.username) as RowNumber,
@@ -420,7 +420,7 @@ BEGIN
 				IsNull(balance.TotalBalance,0) magentBalance, 
 				IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
 				IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
-				IsNull(balance.[3rdPendingTransfer],0) [3rdPendingTransfer]
+				IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd
 			FROM #tmp_customer c
 				INNER JOIN #credit credit ON c.custid = credit.mrecommend
 				LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend

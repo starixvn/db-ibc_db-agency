@@ -20,7 +20,7 @@ AS
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20181109@Percy: Correct balance member [RedmineID: #104536]
-		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 */
 
 BEGIN

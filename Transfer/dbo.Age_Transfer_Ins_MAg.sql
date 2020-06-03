@@ -41,7 +41,7 @@ Revisions:
 		1. Re-check [Allow SMA to transfer in 24 hours]: apply general sp Acc_CheckProcessingData [RedmineID: #78487]
 		2. Change way to calculate balance [RedmineID: #74291]
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
-	- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 
 Param's Explanation:
 • @AmtTrans: amount of money

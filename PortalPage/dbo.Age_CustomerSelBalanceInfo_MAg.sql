@@ -12,7 +12,7 @@ AS
 	
 	Revisions:
 		- 20171020@Percy: Apply core balance sp [RedmineID: #84690]
-		- 20200602@Percy: Separate 3rdPendingTransfer to Cash and Balance [RedmineID: #135200]
+		- 20200602@Percy: Separate PendingTransfer3rd to Cash and Balance [RedmineID: #135200]
 */
 
 BEGIN
@@ -37,8 +37,8 @@ BEGIN
 		memberCash		MONEY DEFAULT ((0)), yesterdayMemberCash	MONEY DEFAULT ((0)),
 		-- winloss
 		todayWinloss	MONEY DEFAULT ((0)), yesterdayWinloss		MONEY DEFAULT ((0)),
-		-- 3rdPendingTransfer
-		[3rdPendingTransfer] MONEY DEFAULT ((0))
+		-- PendingTransfer3rd
+		PendingTransfer3rd MONEY DEFAULT ((0))
 	)
 	
 	-- cash
@@ -48,7 +48,7 @@ BEGIN
 		masterCash,		yesterdayMasterCash,
 		agentCash,		yesterdayAgentCash,
 		memberCash,		yesterdayMemberCash,
-		[3rdPendingTransfer]
+		PendingTransfer3rd
 	)
 	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId
 
@@ -69,7 +69,7 @@ BEGIN
 		SUM(yesterdayWinloss)		AS yesterdayWinloss,
 		@givenCredit				AS givenCredit,
 		@memberCredit				AS memberCredit,
-		SUM([3rdPendingTransfer])	AS [3rdPendingTransfer]
+		SUM(PendingTransfer3rd)	AS PendingTransfer3rd
 	FROM #BalanceInfo
 
 	DROP TABLE #BalanceInfo

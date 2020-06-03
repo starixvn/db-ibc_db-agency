@@ -20,7 +20,7 @@ AS
 
 	Revisions:
 		- 20170609@Percy: Create new [RedmineID: #74291]
-		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -119,7 +119,7 @@ BEGIN
 	END
 
 	/***** Calculate Upline Balance, Cash Balance and Outstanding *****/
-	CREATE TABLE #TransferCash (uplineCashBalance MONEY, CashBalance MONEY, Outstanding MONEY, [3rdPendingTransfer] MONEY)
+	CREATE TABLE #TransferCash (uplineCashBalance MONEY, CashBalance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY)
 	CREATE TABLE #recommend (custid INT)
 
 	-- Get bettype --
@@ -130,7 +130,7 @@ BEGIN
 	INSERT INTO #SportBettype (bettype, RefTable)
 	SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-	DECLARE @uplineCashBalance MONEY, @CashBalance MONEY, @Outstanding MONEY, @3rdPendingTransfer MONEY
+	DECLARE @uplineCashBalance MONEY, @CashBalance MONEY, @Outstanding MONEY, @PendingTransfer3rd MONEY
 	DECLARE @FromAmountValue DECIMAL(19,4), @ToAmountValue DECIMAL(19,4)
 
 	IF @roleid = 1
@@ -169,7 +169,7 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, [3rdPendingTransfer])
+		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, PendingTransfer3rd)
 		SELECT
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
@@ -313,11 +313,11 @@ BEGIN
 		@uplineCashBalance = SUM(ISNULL(uplineCashBalance, 0)),
 		@CashBalance = SUM(ISNULL(CashBalance, 0)),
 		@Outstanding = SUM(ISNULL(Outstanding, 0)),
-		@3rdPendingTransfer = SUM(ISNULL([3rdPendingTransfer], 0))
+		@PendingTransfer3rd = SUM(ISNULL(PendingTransfer3rd, 0))
 	FROM #TransferCash
 
 	SELECT
-		@FromAmountValue = CASE WHEN @CashBalance - @Outstanding - @3rdPendingTransfer > 0 THEN - (@CashBalance - @Outstanding - @3rdPendingTransfer) ELSE 0 END,
+		@FromAmountValue = CASE WHEN @CashBalance - @Outstanding - @PendingTransfer3rd > 0 THEN - (@CashBalance - @Outstanding - @PendingTransfer3rd) ELSE 0 END,
 		@ToAmountValue = CASE WHEN @uplineCashBalance > 0 THEN @uplineCashBalance ELSE 0 END
 
 	IF @Amount = 0 OR -@Amount NOT BETWEEN @FromAmountValue AND @ToAmountValue

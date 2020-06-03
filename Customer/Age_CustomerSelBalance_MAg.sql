@@ -10,8 +10,8 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelBalance_MAg]
 	-- Outstanding
 	@MasterOutstanding		MONEY = 0 OUTPUT,
 	@TotalOutstanding		MONEY = 0 OUTPUT,
-	-- @3rdPendingTransfer
-	@3rdPendingTransfer		MONEY = 0 OUTPUT,
+	-- @PendingTransfer3rd
+	@PendingTransfer3rd		MONEY = 0 OUTPUT,
 	-- Credit
 	@MasterCredit			MONEY = 0 OUTPUT,
 	@TotalAgentCredit		MONEY = 0 OUTPUT,
@@ -34,7 +34,7 @@ AS
 	Revisions:
 		- 20171020@Percy: Apply core SP [RedmineID: #84690]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
-		- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 */
 
 BEGIN
@@ -79,7 +79,7 @@ BEGIN
 		masterCash	MONEY DEFAULT ((0)), yesterdayMasterCash MONEY DEFAULT ((0)), masterOutstanding MONEY DEFAULT ((0)),
 		agentCash	MONEY DEFAULT ((0)), yesterdayAgentCash	 MONEY DEFAULT ((0)), agentOutstanding  MONEY DEFAULT ((0)),
 		memberCash	MONEY DEFAULT ((0)), yesterdayMemberCash MONEY DEFAULT ((0)), memberOutstanding MONEY DEFAULT ((0)),
-		[3rdPendingTransfer] MONEY DEFAULT ((0))
+		PendingTransfer3rd MONEY DEFAULT ((0))
 	)
 
 	INSERT INTO #BalanceInfo
@@ -88,7 +88,7 @@ BEGIN
 		masterCash, yesterdayMasterCash,
 		agentCash,  yesterdayAgentCash,
 		memberCash, yesterdayMemberCash,
-		[3rdPendingTransfer]
+		PendingTransfer3rd
 	)
 	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId
 
@@ -108,7 +108,7 @@ BEGIN
 		@Yesterday_TotalBalance = SUM(yesterdayMasterCash + yesterdayAgentCash + yesterdayMemberCash),
 		@MasterOutstanding		= SUM(masterOutstanding),
 		@TotalOutstanding		= SUM(memberOutstanding),
-		@3rdPendingTransfer		= SUM([3rdPendingTransfer])
+		@PendingTransfer3rd		= SUM(PendingTransfer3rd)
 	FROM #BalanceInfo
 
 	DROP TABLE #BalanceInfo

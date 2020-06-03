@@ -51,7 +51,7 @@ Revisions:
 	- 20170721@Percy: Enhance performance - Phase 1 [RedmineID: #80367]
 	- 20170808@Percy: Enhance performance - Phase 2 [RedmineID: #81436]
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
-	- 20200602@Percy: Separate 3rdPendingTransfer from Cash and Balance [RedmineID: #135200]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 
 Param's Explanation:
 • @FromCustID: list from custid
@@ -68,7 +68,7 @@ Declare @agentid int, @custid int
 DECLARE @currency int, @actualrate float, @currName nvarchar(10)    
 DECLARE @agUser nvarchar(50), @User nvarchar(50)  
 Declare @RefNo bigint, @ToCustID int, @Amount float, @Recommend1 int, @MRecommend1 int, @Recommend2 int, @MRecommend2 int, @grefno int, @srecommend1 int  
-Declare @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @3rdPendingTransfer MONEY
+Declare @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
 
 EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption   
  @CustID = @FromCustID,  
@@ -120,7 +120,7 @@ END
 						memberBalance money DEFAULT 0,
 						memberOutstanding money DEFAULT 0,
 						memberCredit money DEFAULT 0,
-						member3rdPendingTransfer money DEFAULT 0
+						memberPendingTransfer3rd money DEFAULT 0
 					 ) 
  
  DECLARE @WinlostDate datetime
@@ -137,7 +137,7 @@ CREATE TABLE #SportBettype (bettype INT, RefTable TINYINT)
 INSERT INTO #SportBettype (bettype, RefTable)
 SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-CREATE TABLE #BalanceInfo (CustId INT, Balance MONEY, Outstanding MONEY, [3rdPendingTransfer] MONEY)
+CREATE TABLE #BalanceInfo (CustId INT, Balance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY)
 
 CREATE TABLE #custid (CustId INT)
 
@@ -225,7 +225,7 @@ END
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 	GROUP BY custid
 
-	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, [3rdPendingTransfer])
+	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd)
 	SELECT
 		custid,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
@@ -294,7 +294,7 @@ END
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 	GROUP BY custid
 
-	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, [3rdPendingTransfer])
+	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd)
 	SELECT
 		custid,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
@@ -317,8 +317,8 @@ END
 /* *********** End Calculating balance *********** */
 
 /* Filtering input custids */
- INSERT INTO #Member (custid, memberName, memberBalance, memberOutstanding, memberCredit, member3rdPendingTransfer)
- SELECT b.CustId, '', SUM(Balance), SUM(Outstanding), 0, SUM(ISNULL([3rdPendingTransfer], 0))
+ INSERT INTO #Member (custid, memberName, memberBalance, memberOutstanding, memberCredit, memberPendingTransfer3rd)
+ SELECT b.CustId, '', SUM(Balance), SUM(Outstanding), 0, SUM(ISNULL(PendingTransfer3rd, 0))
  FROM #BalanceInfo b
 	INNER JOIN #custid c ON b.CustId = c.CustId
  GROUP BY b.CustId
@@ -344,7 +344,7 @@ END
  DECLARE @procName VARCHAR(100)
  SELECT  @procName = OBJECT_NAME(@@PROCID)
 
- DECLARE CUR Cursor FOR SELECT custid, memberName, memberBalance, memberOutstanding, memberCredit, member3rdPendingTransfer
+ DECLARE CUR Cursor FOR SELECT custid, memberName, memberBalance, memberOutstanding, memberCredit, memberPendingTransfer3rd
 						FROM #Member  
  
  DECLARE @ErrItems nvarchar(4000)  
@@ -362,7 +362,7 @@ END
   
  OPEN CUR  
    
- FETCH NEXT FROM CUR INTO @custID,@user,@amount, @Outstanding, @credit, @3rdPendingTransfer
+ FETCH NEXT FROM CUR INTO @custID,@user,@amount, @Outstanding, @credit, @PendingTransfer3rd
  WHILE @@FETCH_STATUS = 0  
  BEGIN  
 	SELECT @SkipTransfer = 0
@@ -448,7 +448,7 @@ END
 		SELECT @LogData = 'Transfer from Customer ' + @User + ' to Agent ' + @agUser + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @RefNo)
 		
 		
-		SET @FutureBetCredit = @credit - @outstanding - @3rdPendingTransfer
+		SET @FutureBetCredit = @credit - @outstanding - @PendingTransfer3rd
 		
 		if @FutureBetCredit < 0 
 		Select @LogData = @LogData + '. The agent decided to transfer after the warning so the bet credit of this member turned to negative value (' + convert(varchar(100), @FutureBetCredit, 2) + ') caused by having outstanding balance value ('+ convert(varchar(100), @outstanding, 2) +')  '
@@ -531,7 +531,7 @@ END
 		END CATCH
     END  	  
   
-    FETCH NEXT FROM CUR INTO @custID,@user,@amount,@Outstanding, @credit 
+    FETCH NEXT FROM CUR INTO @custID,@user,@amount,@Outstanding,@credit, @PendingTransfer3rd
  END  
  CLOSE CUR  
  DEALLOCATE CUR  
