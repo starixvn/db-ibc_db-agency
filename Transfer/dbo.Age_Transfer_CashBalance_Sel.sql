@@ -122,7 +122,7 @@ BEGIN
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @uplineId
 			AND b.ruben = 1
@@ -134,7 +134,7 @@ BEGIN
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @uplineId
 			AND b.ruben = 1
@@ -203,7 +203,7 @@ BEGIN
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND recommend = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.mrecommend = @uplineId
 			AND b.ruben = 1
@@ -215,7 +215,7 @@ BEGIN
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND recommend = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.mrecommend = @uplineId
 			AND b.ruben = 1
@@ -297,7 +297,7 @@ BEGIN
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE swinlost+scomm-acomm END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm ELSE 0 END END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND mrecommend = @CustID THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.srecommend = @uplineId
 			AND b.ruben = 1
@@ -309,7 +309,7 @@ BEGIN
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE swinlost+scomm-acomm END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm ELSE 0 END END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND mrecommend = @CustID THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.srecommend = @uplineId
 			AND b.ruben = 1
@@ -322,7 +322,7 @@ BEGIN
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE 0 END END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @CustID THEN winlost-actual_stake ELSE 0 END END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @CustID THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE custid IN (@CustID, @uplineId)
 			AND matchid = 0
