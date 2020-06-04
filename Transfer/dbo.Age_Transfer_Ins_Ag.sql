@@ -1,5 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" viewers="" isFunction="0" isNested="0"></info>*/
-
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_Ag] 
 	@FromCustID int, --the customer here
 	@ToUserName varchar(30), --the agent here
@@ -53,6 +52,7 @@ Revisions:
 		2. Change way to calculate balance [RedmineID: #74291]
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
 	- 20180521@Percy: Correct table name: bettransLC to translog [RedmineID: #95268]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -143,6 +143,7 @@ END
  
  Declare @CustBalance MONEY 
  Declare @CustOutstanding MONEY
+ Declare @PendingTransfer3rd MONEY
  Declare @Credit MONEY 
  Declare @FutureCreditBalance MONEY
  Declare @WinlostDate datetime
@@ -164,7 +165,7 @@ CREATE TABLE #SportBettype (bettype INT, RefTable TINYINT)
 INSERT INTO #SportBettype (bettype, RefTable)
 SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY)
+CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY)
 
  --Total balance including today balance 
  IF (SELECT srecommend FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE custid = @ToCustID AND roleid = 2) IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@SuperIDsTransferTotal, ','))
@@ -212,10 +213,11 @@ CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY)
 		AND b.ruben = 0
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
-	INSERT INTO #BalanceInfo (Balance, Outstanding)
+	INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd)
 	SELECT
-		ISNULL(SUM(winlost-actual_stake+playercomm), 0),
-		0
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
+		0,
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 	FROM dbo.bettrans b WITH(NOLOCK)
 	WHERE b.custid = @custid
 		AND b.ruben = 1
@@ -226,7 +228,8 @@ CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY)
 
 	SELECT
 		@CustBalance = SUM(Balance),
-		@CustOutstanding = -SUM(Outstanding)
+		@CustOutstanding = -SUM(Outstanding),
+		@PendingTransfer3rd = SUM(ISNULL(PendingTransfer3rd, 0))
 	FROM #BalanceInfo
  END 
  --Yesterday Balance  
@@ -275,10 +278,11 @@ CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY)
 		AND b.ruben = 0
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
-	INSERT INTO #BalanceInfo (Balance, Outstanding)
+	INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd)
 	SELECT
-		ISNULL(SUM(winlost-actual_stake+playercomm), 0),
-		0
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
+		0,
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 	FROM dbo.bettrans b WITH(NOLOCK)
 	WHERE b.custid = @custid
 		AND b.ruben = 1
@@ -293,7 +297,8 @@ CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY)
 
 	SELECT
 		@CustBalance = SUM(Balance),
-		@CustOutstanding = -SUM(Outstanding)
+		@CustOutstanding = -SUM(Outstanding),
+		@PendingTransfer3rd = SUM(ISNULL(PendingTransfer3rd, 0))
 	FROM #BalanceInfo
  END 
 
@@ -314,7 +319,7 @@ BEGIN
 END
 
 
-set @FutureCreditBalance = @Credit + @CustBalance + @CustOutstanding - @Amount
+set @FutureCreditBalance = @Credit + @CustBalance + @CustOutstanding - @PendingTransfer3rd - @Amount
 set @FutureCreditBalance = isnull(@FutureCreditBalance,0)
 
 

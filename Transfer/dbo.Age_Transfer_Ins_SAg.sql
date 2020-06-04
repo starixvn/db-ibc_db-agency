@@ -1,7 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_SAg]
 	@SAgID int,
 	@SuperIDsTransferTotal VARCHAR(50)='', 
@@ -48,6 +45,7 @@ Revisions:
 		1. Re-check [Allow SMA to transfer in 24 hours]: apply general sp Acc_CheckProcessingData [RedmineID: #78487]
 		2. Change way to calculate balance [RedmineID: #74291]
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -181,6 +179,7 @@ WHERE c.roleid = 2
 	WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
 		AND ruben = 1
 		AND winlostdate < @yesterday
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY mrecommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -194,6 +193,7 @@ WHERE c.roleid = 2
 		AND ruben = 1
 		AND winlostdate >= @yesterday
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY mrecommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -205,6 +205,7 @@ WHERE c.roleid = 2
 		AND ruben = 1
 		AND matchid = 0
 		AND bettype >= 19999
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY mrecommend
  END
  -- YESTERDAY TRANSFER 
@@ -247,6 +248,7 @@ WHERE c.roleid = 2
 	WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
 		AND ruben = 1
 		AND winlostdate < @yesterday
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY mrecommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -260,6 +262,7 @@ WHERE c.roleid = 2
 		AND ruben = 1
 		AND winlostdate >= @yesterday
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY mrecommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -271,6 +274,7 @@ WHERE c.roleid = 2
 		AND ruben = 1
 		AND matchid = 0
 		AND bettype >= 19999
+		AND bettype NOT IN (21008, 21009)
 	GROUP BY mrecommend
  END
 

@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [Age_Transfer_SelList_SAg]
 	@SAgID int,
 	@PageSize int=500,
@@ -19,6 +16,7 @@ ALTER PROCEDURE [Age_Transfer_SelList_SAg]
 	@TotalYesterdayMagentBalance money = 0 OUTPUT,
 	@TotalMAgentCashBalance money = 0 OUTPUT,
 	@TotalYesterday_MAgentCashBalance money = 0 OUTPUT,
+	@TotalPendingTransfer3rd money = 0 OUTPUT,
 	@TotalPages int=0 OUTPUT
 AS
 --Vinh@20080102: add yesterday balance columns
@@ -45,6 +43,7 @@ Revisions:
 	- 20170620@Percy: Apply new formula yesterday balance [RedmineID: #74291]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 	- 20181005@Percy: Revise indexes [RedmineID: #101644]
+	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -87,7 +86,8 @@ CREATE TABLE #balance
 	TotalCashBalance money,
 	YesterdayBalance money,		
 	TotalBalance money,
-	Outstanding money
+	Outstanding money,
+	PendingTransfer3rd money
 )
 
 CREATE TABLE #result_balance  
@@ -97,7 +97,8 @@ CREATE TABLE #result_balance
 	TotalCashBalance money,
 	YesterdayBalance money,		
 	TotalBalance money,
-	Outstanding money
+	Outstanding money,
+	PendingTransfer3rd money
 )
 
 CREATE TABLE #credit
@@ -190,36 +191,38 @@ WHERE b.srecommend = @SAgID
 GROUP BY mrecommend
 
 	-- settle ticket
-INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
 	mrecommend,
-	ISNULL(SUM(mwinlost+acomm-comm), 0),
-	ISNULL(SUM(mwinlost+acomm-comm), 0),
-	ISNULL(SUM(mwinlost+acomm-comm), 0)
-		+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(mwinlost+acomm-comm), 0)
-		+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	0
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0),
+	0,
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 FROM dbo.bettrans b WITH(NOLOCK)
 WHERE b.srecommend = @SAgID
 	AND ruben = 1
 	AND winlostdate < @yesterday
 GROUP BY mrecommend
 
-INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
 	mrecommend,
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN mwinlost+acomm-comm ELSE 0 END), 0),
-	ISNULL(SUM(mwinlost+acomm-comm), 0),
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN mwinlost+acomm-comm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END), 0),
-	ISNULL(SUM(mwinlost+acomm-comm), 0)
-		+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-		+ ISNULL(SUM(CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	0
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN mwinlost+acomm-comm ELSE 0 END END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN mwinlost+acomm-comm ELSE 0 END END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0),
+	0,
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 FROM dbo.bettrans b WITH(NOLOCK)
 WHERE b.srecommend = @SAgID
 	AND ruben = 1
@@ -228,14 +231,15 @@ WHERE b.srecommend = @SAgID
 GROUP BY mrecommend
 
 	-- sum, balance, transfer ticket
-INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
+INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
 	mrecommend,
-	ISNULL(SUM(winlost-actual_stake), 0),
-	ISNULL(SUM(winlost-actual_stake), 0),
-	ISNULL(SUM(winlost-actual_stake), 0),
-	ISNULL(SUM(winlost-actual_stake), 0),
-	0
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0),
+	0,
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 FROM dbo.bettrans b WITH(NOLOCK)
 WHERE b.srecommend = @SAgID
 	AND bettype >= 19999
@@ -244,8 +248,8 @@ WHERE b.srecommend = @SAgID
 GROUP BY mrecommend
 /* End Balance Info */
 
-INSERT INTO #result_balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
-SELECT mrecommend, SUM(YesterdayCashBalance), SUM(TotalCashBalance), SUM(YesterdayBalance), SUM(TotalBalance), SUM(Outstanding)
+INSERT INTO #result_balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
+SELECT mrecommend, SUM(YesterdayCashBalance), SUM(TotalCashBalance), SUM(YesterdayBalance), SUM(TotalBalance), SUM(Outstanding), SUM(ISNULL(PendingTransfer3rd, 0))
 FROM #balance
 GROUP BY mrecommend
 
@@ -319,7 +323,8 @@ BEGIN
 			IsNull(balance.TotalCashBalance,0) magentCashBalance, 
 			IsNull(balance.TotalBalance,0) magentBalance, 
 			IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
-			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance, 
+			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
+			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
 			c.lastname
 		FROM #tmp_customer c
@@ -335,7 +340,8 @@ BEGIN
 			@TotalMAgentBalance = sum(magentBalance),
 			@TotalYesterdayMAgentBalance = sum(yesterday_magentBalance),
 			@TotalMAgentCashBalance = sum(magentCashBalance),
-			@TotalYesterday_MAgentCashBalance = sum(yesterday_magentCashBalance)
+			@TotalYesterday_MAgentCashBalance = sum(yesterday_magentCashBalance),
+			@TotalPendingTransfer3rd = sum(PendingTransfer3rd)
 	FROM 
 	(
 		SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, c.username) as RowNumber,
@@ -350,7 +356,8 @@ BEGIN
 			IsNull(balance.TotalCashBalance,0) magentCashBalance, 
 			IsNull(balance.TotalBalance,0) magentBalance, 
 			IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
-			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance
+			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
+			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd
 		FROM #tmp_customer c
 			INNER JOIN #credit credit ON c.custid = credit.mrecommend
 			LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
@@ -375,6 +382,7 @@ BEGIN
 			IsNull(balance.TotalBalance,0) magentBalance, 
 			IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
 			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
+			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
 			c.lastname
 		FROM #tmp_customer c
@@ -395,7 +403,8 @@ BEGIN
 				@TotalMAgentBalance = sum(magentBalance),
 				@TotalYesterdayMAgentBalance = sum(yesterday_magentBalance),
 				@TotalMAgentCashBalance = sum(magentCashBalance),
-				@TotalYesterday_MAgentCashBalance = sum(yesterday_magentCashBalance)
+				@TotalYesterday_MAgentCashBalance = sum(yesterday_magentCashBalance),
+				@TotalPendingTransfer3rd = sum(PendingTransfer3rd)
 		FROM 
 		(
 			SELECT ROW_NUMBER() OVER (ORDER BY enabled desc, closed, suspended, c.username) as RowNumber,
@@ -410,7 +419,8 @@ BEGIN
 				IsNull(balance.TotalCashBalance,0) magentCashBalance, 
 				IsNull(balance.TotalBalance,0) magentBalance, 
 				IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
-				IsNull(balance.YesterdayBalance,0) yesterday_magentBalance
+				IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
+				IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd
 			FROM #tmp_customer c
 				INNER JOIN #credit credit ON c.custid = credit.mrecommend
 				LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend

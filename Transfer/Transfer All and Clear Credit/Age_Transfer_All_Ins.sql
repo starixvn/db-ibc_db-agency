@@ -1,5 +1,4 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
-
 ALTER PROCEDURE [dbo].[Age_Transfer_All_Ins]
 	@UserId					INT,
 	@CustId					INT,
@@ -21,6 +20,7 @@ AS
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20181109@Percy: Correct balance member [RedmineID: #104536]
+		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 */
 
 BEGIN
@@ -221,6 +221,7 @@ BEGIN
 				SUM(b.mwinlost), SUM(b.acomm)
 			FROM dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
+			WHERE b.bettype NOT IN (21008, 21009)
 			GROUP BY
 				b.winlostdate, b.bettype, b.statusId,
 				b.custid, b.recommend
