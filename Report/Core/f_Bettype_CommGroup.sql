@@ -30,6 +30,7 @@ AS
 		- 20200410@Sophia: Add BBIN [RedmineId: #131358]
 		- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]	
 		- 20200514@Percy: Add 2 bettypes of E-Sports 3 [RedmineID: #132386]
+		- 20200527@Sophia: Add ION [Redmine: #132325]
 
 	- Columns:
 		- CommGroup:
@@ -135,6 +136,7 @@ FROM (
 		OR TypeID BETWEEN 4901 AND 5000
 		OR TypeID BETWEEN 3300 AND 3399
 		OR TypeID BETWEEN 3201 AND 3299
+		OR TypeID BETWEEN 5601 AND 5699
 		
 ) AS A
 GO
