@@ -15,6 +15,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20171020@Percy: get both running and waiting tickets [RedmineID: #84690]
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
+		- 20200612@Sol: added index to temp table #SportBettype [RedmineId: #134967]
 */
 
 BEGIN
@@ -25,7 +26,7 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT);
+	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, PRIMARY KEY CLUSTERED (RefTable, bettype));
 
 	INSERT INTO #SportBettype (bettype, RefTable)
 	SELECT bettype, RefTable
