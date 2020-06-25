@@ -36,6 +36,7 @@ AS
 		- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #53152]
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 		- 20181213@Razor: Add Sporttype = 164 for NG [RedmineId: #104006]
+		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 	
 	Parameter's Explanation
 		- @custid : Agent's ID	
@@ -368,7 +369,7 @@ BEGIN
 						
 	INSERT INTO #tmpLeagues
 	SELECT DISTINCT r.leagueid
-	FROM VSRaceInfo r WITH(NOLOCK) 
+	FROM VSRaceInfo14 r WITH(NOLOCK) 
 		INNER JOIN league l WITH(NOLOCK) ON r.leagueid = l.leagueid
 		INNER JOIN VSOutright14 o WITH(NOLOCK) ON r.EventID = o.EventID		
 		INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid

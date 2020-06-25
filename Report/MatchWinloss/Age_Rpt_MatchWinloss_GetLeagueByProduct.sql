@@ -24,6 +24,7 @@ AS
 		- 20180130@Percy: Clean redundant code [RedmineID: #86086]
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -206,7 +207,7 @@ BEGIN
 
 		INSERT INTO #tmpLeagues (leagueid, LeagueType)
 		SELECT DISTINCT l.leagueid, 0
-		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
+		FROM dbo.VSRaceInfo14 r WITH (NOLOCK) 
 			INNER JOIN dbo.league l WITH (NOLOCK) ON r.leagueid = l.leagueid
 			INNER JOIN dbo.VSOutright14 o WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid

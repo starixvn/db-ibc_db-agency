@@ -53,6 +53,7 @@ AS
 		- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #62861]
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
+		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -524,7 +525,7 @@ BEGIN
 					FROM 
 						bettrans14 b WITH (NOLOCK, INDEX = IX_mrecommend)
 						INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-						INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+						INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
 						INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 					WHERE 
 						b.mrecommend = @custid
@@ -898,7 +899,7 @@ BEGIN
 				FROM 
 					bettrans14 b WITH (NOLOCK, INDEX = IX_mrecommend)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
 					INNER JOIN @tmpLeague l ON r.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE 
