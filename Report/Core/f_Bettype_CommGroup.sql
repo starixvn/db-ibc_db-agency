@@ -28,8 +28,9 @@ AS
 		- 20200329@Sophia: Add Sexy Gaming and SA Gaming [RedmineID: #130670] 
 		- 20200408@Sophia: Add Table Games [RedmineId: #129438]
 		- 20200410@Sophia: Add BBIN [RedmineId: #131358]
-		- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]	
+		- 20200422@Sophia: Add IBCBet Live Casino [RedmineId: #130693]
 		- 20200514@Percy: Add 2 bettypes of E-Sports 3 [RedmineID: #132386]
+		- 20200518@Percy: Add bettypes of PHAIO 5.1 [RedmineID: #132770]
 		- 20200527@Sophia: Add ION [Redmine: #132325]
 
 	- Columns:
@@ -113,7 +114,8 @@ FROM (
 			(473),(474),(475),(476),(479),(481),(486),(487),(493),(494),(495),(496),
 			(703),(711),
 			(384),(391),(392),(395),(396),(397),(398),(399),
-			(9088)
+			(9088),
+			(376)
 		)
 	C (bettype)
 
