@@ -23,6 +23,7 @@ AS
 		- 20181116@Patrick: Revise code to use index correctly on bettrans14 [RedmineId: #104853]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
+		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 */
 
 BEGIN 
@@ -407,7 +408,7 @@ BEGIN
 						r.EventTime AS showtime
 				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 					--INNER JOIN #RecommendList Re ON Re.recommend = b.recommend
 				WHERE b.statusID NOT IN (101, 102, 103)

@@ -23,6 +23,7 @@ AS
 	
 	Revisions:
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
+		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
     
 */
 
@@ -610,7 +611,7 @@ BEGIN
 			FROM 
 				bettrans14 b WITH (NOLOCK)
 				INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+				INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				INNER JOIN #RecommendList Re ON Re.recommend = b.recommend
 			WHERE 

@@ -21,6 +21,7 @@ AS
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191029@Percy: Integrate Spadegaming [RedmineID: #122353]
+		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 */
 
 BEGIN
@@ -233,7 +234,7 @@ BEGIN
 				FROM dbo.bettrans14 b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype AND s.ProductID = 5 AND s.EventType = 3
 					INNER JOIN dbo.VSOutright14 o WITH(NOLOCK) ON b.oddsid = o.Orid
-					INNER JOIN dbo.VSRaceInfo r WITH(NOLOCK) ON o.EventID = r.EventID
+					INNER JOIN dbo.VSRaceInfo14 r WITH(NOLOCK) ON o.EventID = r.EventID
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
