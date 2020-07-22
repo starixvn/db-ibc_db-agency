@@ -49,6 +49,8 @@ AS
 
 BEGIN
 	SET NOCOUNT ON
+
+	RETURN
 	
 	DECLARE @fdate SMALLDATETIME, @tdate SMALLDATETIME
 	SELECT @fdate = @FromDate, @tdate = @ToDate
