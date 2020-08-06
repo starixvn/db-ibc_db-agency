@@ -1,2 +1,4 @@
-Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master.sql
-Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinlossDetail_SAg.StoredProcedure.sql
+Report\CommbyBettype\Age_MemCommission_SelBettype.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Agent.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Master.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Member.sql
