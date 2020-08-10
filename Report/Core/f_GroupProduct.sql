@@ -16,6 +16,7 @@ AS
 		- 20180418@Razor: Add Pragmatic under Macau Games [RedmineID: #92647]
 		- 20190612@Percy: Add Card Club under Macau Games [RedmineID: #107703]
 		- 20191029@Percy: Add Spadegaming under Macau Games [RedmineID: #122353]
+		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
 */
 
 RETURN
@@ -24,6 +25,7 @@ RETURN
 	UNION ALL
 	SELECT 27, 5
 	
+	/*
 	-- Macau Games: Macau Games, Pragmatic, Card Club, Spadegaming
 	UNION ALL	
 	SELECT 22, 22
@@ -33,4 +35,5 @@ RETURN
 	SELECT 34, 22
 	UNION ALL
 	SELECT 36, 22
+	*/
 GO
