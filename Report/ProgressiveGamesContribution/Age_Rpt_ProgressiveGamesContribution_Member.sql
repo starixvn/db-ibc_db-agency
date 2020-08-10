@@ -66,18 +66,18 @@ BEGIN
 		IF EXISTS (SELECT val FROM strSplit (@ProductIds,',') WHERE val = 32) 
 		INSERT INTO #Contribution (ProductId, BetType, TurnOver, Contribution, ContributionAgent)
 		SELECT
-			sc.ProductId, bb.GameId,
+			32 as ProductId, bb.GameId,
 			SUM(ISNULL(bc.BetStake, 0)),
 			SUM(ISNULL(bc.ContributionStake3rd, 0)),
 			SUM(ISNULL(bc.awinlost, 0))
 		FROM dbo.bettransRNG bc WITH (NOLOCK)
 			INNER JOIN dbo.bettransRNG bb WITH (NOLOCK) ON bc.RefNo2 = bb.TransId
-			CROSS APPLY (SELECT sc.ProductID FROM  @SportBettypeMatrix sc WHERE bc.GameId = sc.ContributionBettype AND sc.ProductID = 32 ) sc
-			CROSS APPLY (SELECT sb.ProductID FROM  @SportBettypeMatrix sb WHERE bb.GameId = sb.bettype AND sb.ProductID = 32 ) sb
 		WHERE bc.recommend = @CustID
 			AND bc.winlostdate BETWEEN @FDate AND @TDate
 			AND bc.statusID IN (111, 112, 113)
-		GROUP BY sc.ProductId, bb.GameId
+			AND EXISTS(SELECT sc.ProductID FROM @SportBettypeMatrix sc WHERE bc.GameId = sc.ContributionBettype AND sc.ProductID = 32 )
+			AND EXISTS(SELECT sb.ProductID FROM @SportBettypeMatrix sb WHERE bb.GameId = sb.bettype AND sb.ProductID = 32 )
+		GROUP BY bb.GameId
 	END
 
 	IF @FromDate <= @MoveBetsDay
