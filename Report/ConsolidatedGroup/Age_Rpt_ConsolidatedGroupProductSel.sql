@@ -129,7 +129,18 @@ BEGIN
 		ON T.ProductID = P.ProductID
 	WHERE T.IsHide = 0 AND T.IsSync = 1
 		AND T.ProductID IN (21, 22, 24)
+		
+	
+	----Check Show product by Site
+	DECLARE @Site VARCHAR(10)
+	
+	SELECT @Site = Site
+	FROM dbo.bodb02.Customer WITH (NOLOCK) 
+	WHERE CustID = @Custid
 
+	EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site
+	
+	
 	--------------------------------------------
 	SELECT p.ProductID, 
 	       p.ProductName, 
