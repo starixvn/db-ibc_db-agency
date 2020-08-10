@@ -64,12 +64,11 @@ BEGIN
 		GROUP BY s.ProductId, s.bettype
 		
 		IF EXISTS (SELECT val FROM strSplit (@ProductIds,',') WHERE val = 32) 
-		INSERT INTO #Contribution (ProductId, BetType, TurnOver, Contribution, ContributionMaster, ContributionAgent)
+		INSERT INTO #Contribution (ProductId, BetType, TurnOver, Contribution, ContributionAgent)
 		SELECT
 			sc.ProductId, bb.GameId,
 			SUM(ISNULL(bc.BetStake, 0)),
 			SUM(ISNULL(bc.ContributionStake3rd, 0)),
-			SUM(ISNULL(bc.mwinlost, 0)),
 			SUM(ISNULL(bc.awinlost, 0))
 		FROM dbo.bettransRNG bc WITH (NOLOCK)
 			INNER JOIN dbo.bettransRNG bb WITH (NOLOCK) ON bc.RefNo2 = bb.TransId
