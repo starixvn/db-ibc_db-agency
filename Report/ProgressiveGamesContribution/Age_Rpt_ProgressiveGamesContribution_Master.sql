@@ -75,8 +75,8 @@ BEGIN
 			SUM(ISNULL(bc.awinlost, 0))
 		FROM dbo.bettransRNG bc WITH (NOLOCK)
 			INNER JOIN dbo.bettransRNG bb WITH (NOLOCK) ON bc.RefNo2 = bb.TransId
-			INNER JOIN @SportBettypeMatrix sc ON bc.GameId = sc.ContributionBettype AND sc.ProductID = 32
-			INNER JOIN @SportBettypeMatrix sb ON bb.GameId = sb.bettype AND sb.ProductID = 32 
+			CROSS APPLY (SELECT sc.ProductID FROM  @SportBettypeMatrix sc WHERE bb.GameId = sc.bettype AND sc.ProductID = 32 ) sc
+			CROSS APPLY (SELECT sb.ProductID FROM  @SportBettypeMatrix sb WHERE bb.GameId = sb.bettype AND sb.ProductID = 32 ) sb
 		WHERE bc.srecommend = @CustID
 			AND bc.winlostdate BETWEEN @FDate AND @TDate
 			AND bc.statusID IN (111, 112, 113)
