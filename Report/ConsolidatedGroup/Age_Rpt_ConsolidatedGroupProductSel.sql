@@ -133,13 +133,19 @@ BEGIN
 	
 	----Check Show product by Site
 	DECLARE @Site VARCHAR(10)
+	DECLARE @CheckPGSoftEnable AS TABLE (ProductID INT, SportType INT, BetType INT)
 	
 	SELECT @Site = Site
 	FROM dbo.bodb02.Customer WITH (NOLOCK) 
 	WHERE CustID = @Custid
-
+	
+	INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
 	EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site
 	
+	UPDATE	P
+	SET		isShow = 1
+	FROM	@ProductList P
+	WHERE 	EXISTS (SELECT 1 FROM @CheckPGSoftEnable T WHERE T.ProductID = P.ProductID)
 	
 	--------------------------------------------
 	SELECT p.ProductID, 
