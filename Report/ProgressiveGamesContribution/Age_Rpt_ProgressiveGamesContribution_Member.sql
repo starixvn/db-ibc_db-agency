@@ -92,7 +92,8 @@ BEGIN
 			SUM(ISNULL(rpt.Contribution, 0)),
 			SUM(ISNULL(rpt.ContributionA, 0))
 		FROM bodb_Summary.dbo.rptProgressiveGamesContribution rpt WITH (NOLOCK)
-			INNER JOIN @SportBettypeMatrix s ON rpt.gameId = s.ContributionBettype
+			INNER JOIN @SportBettypeMatrix s 
+				ON (rpt.gameId = s.ContributionBettype AND s.ProductId = 6) OR (rpt.gameId = s.bettype AND s.ProductId = 32)
 		WHERE rpt.CustId = @CustID
 			AND rpt.winlostdate BETWEEN @FDate AND @TDate
 		GROUP BY s.ProductId, s.bettype
