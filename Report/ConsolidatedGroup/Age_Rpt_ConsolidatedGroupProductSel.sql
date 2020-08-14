@@ -136,7 +136,7 @@ BEGIN
 	DECLARE @CheckPGSoftEnable AS TABLE (ProductID INT, SportType INT, BetType INT)
 	
 	SELECT @Site = Site
-	FROM dbo.bodb02.Customer WITH (NOLOCK) 
+	FROM bodb02.dbo.Customer WITH (NOLOCK) 
 	WHERE CustID = @Custid
 	
 	INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
