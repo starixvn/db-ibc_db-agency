@@ -132,15 +132,15 @@ BEGIN
 		
 	
 	----Check Show product by Site
-	DECLARE @Site VARCHAR(10)
+	DECLARE @Site VARCHAR(10), @Currency INT
 	DECLARE @CheckPGSoftEnable AS TABLE (ProductID INT, SportType INT, BetType INT)
 	
-	SELECT @Site = Site
+	SELECT @Site = Site , @Currency = Currency
 	FROM bodb02.dbo.Customer WITH (NOLOCK) 
 	WHERE CustID = @Custid
 	
 	INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
-	EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site
+	EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site, @Currency
 	
 	UPDATE	P
 	SET		isShow = 1
