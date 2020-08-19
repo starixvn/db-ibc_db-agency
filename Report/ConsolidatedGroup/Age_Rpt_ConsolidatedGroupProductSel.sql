@@ -33,7 +33,7 @@ AS
 BEGIN 
 	SET NOCOUNT ON 
 	
-	DECLARE @TmpCustID TABLE(CustID INT)
+	DECLARE @TmpCustID TABLE(OrderID INT IDENTITY (1,1), CustID INT)
 	DECLARE @ProductList TABLE (ProductID TINYINT, ProductName VARCHAR(50), EndOfSupportDate date, isShow BIT DEFAULT (0))
 
 	INSERT INTO @TmpCustID
@@ -132,16 +132,29 @@ BEGIN
 		
 	
 	----Check Show product by Site
-	DECLARE @Site VARCHAR(10), @Currency INT
+	DECLARE @Site VARCHAR(10), @Currency INT, @CID INT, @ID INT= 1
 	DECLARE @CheckPGSoftEnable AS TABLE (ProductID INT, SportType INT, BetType INT)
+	 
 	
-	SELECT @Site = Site , @Currency = Currency
-	FROM bodb02.dbo.Customer WITH (NOLOCK) 
-	WHERE CustID = @Custid
-	
-	INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
-	EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site, @Currency
-	
+	WHILE EXISTS (SELECT 1 FROM	@TmpCustID WHERE OrderID = @ID)
+	BEGIN 
+		SELECT	@CID = CustID 
+		FROM	@TmpCustID 
+		WHERE	OrderID = @ID
+
+		SELECT @Site = s.Site, @Currency = s.Currency
+		FROM bodb02.dbo.Customer c WITH (NOLOCK) 
+			INNER JOIN bodb02.dbo.Customer s WITH (NOLOCK) 
+				ON s.CustID = c.CustID AND s.RoleID = 4 
+		WHERE c.CustID = @CID
+		 
+		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
+		EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site, @Currency
+
+		SET @ID = @ID + 1
+		
+	END	 
+
 	UPDATE	P
 	SET		isShow = 1
 	FROM	@ProductList P
