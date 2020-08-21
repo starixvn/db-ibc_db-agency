@@ -32,3 +32,6 @@ Report\Outstanding\Age_Rpt_Outstanding_Member.sql
 Report\Winloss\Age_Rpt_WinLoss_Agent.sql
 Report\Winloss\Age_Rpt_WinLoss_Master.sql
 Report\Winloss\Age_Rpt_WinLoss_Member.sql  
+Report\Chatbot\Age_Rpt_SumWinLoss_Agent.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Master.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Member.sql
