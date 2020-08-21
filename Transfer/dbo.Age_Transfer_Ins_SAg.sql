@@ -46,6 +46,8 @@ Revisions:
 		2. Change way to calculate balance [RedmineID: #74291]
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
+	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -65,6 +67,34 @@ SET NOCOUNT ON
 							MAgUser nvarchar(50), 
 							UNIQUE(Amt,custid)
 					 )
+					 
+
+---- #1 CHECK UM TRANSFER FUNCTION
+EXEC dbo.Acc_Transfer_CheckUM  
+	@CustID = @SAgID
+	,@ErrMsg = @ErrMsg OUTPUT 
+	,@ErrCode = @ErrCode OUTPUT
+	 
+IF @ErrCode <> 0  -- Function Transfer is under UM 
+BEGIN
+	RAISERROR(@ErrCode,16,1)
+	RETURN		
+END		
+
+---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
+IF @IsJob = 0
+BEGIN 
+	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @SAgID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN
+		RAISERROR(@ErrCode,16,1)
+		RETURN		
+	END
+END
 
 -- Checking archive data
 DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
