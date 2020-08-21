@@ -71,23 +71,18 @@ EXEC dbo.Acc_Transfer_CheckUM
 	 
 IF @ErrCode <> 0  -- Function Transfer is under UM 
 BEGIN
-	RAISERROR(@ErrCode,16,1)
 	RETURN		
 END		
 
----- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR, IF THIS SP IS CALLED BY JOB THEN NO NEED TO CHECK
-IF @IsJob = 0
-BEGIN 
-	EXEC dbo.Acc_Transfer_CheckRunningByCust  
-		@CustID = @MasterID
+---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @FromCustID
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
 		 
-	IF @ErrCode <> 0  -- the auto transfer job is running this custid
-	BEGIN
-		RAISERROR(@ErrCode,16,1)
-		RETURN		
-	END
+IF @ErrCode <> 0  -- the auto transfer job is running this custid
+BEGIN
+	RETURN		
 END
 
 ----------------------------------------------------------------------

@@ -21,11 +21,35 @@ AS
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20181109@Percy: Correct balance member [RedmineID: #104536]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
+		- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC dbo.Acc_Transfer_CheckUM  
+		@CustID = @FromCustID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @FromCustID
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN		
+		RETURN		
+	END	
+	
 	-- General Info
 	DECLARE @currency INT, @actualrate FLOAT, @currencyName NVARCHAR(10)
 

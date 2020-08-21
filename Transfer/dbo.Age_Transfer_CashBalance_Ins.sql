@@ -21,6 +21,8 @@ AS
 	Revisions:
 		- 20170609@Percy: Create new [RedmineID: #74291]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
+		- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -28,7 +30,30 @@ AS
 */
 
 BEGIN
-	SET NOCOUNT ON
+	SET NOCOUNT ON	
+ 
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC dbo.Acc_Transfer_CheckUM  
+		@CustID = @FromCustID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+	EXEC dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @FromCustID
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN
+		RETURN		
+	END
+	
 
 	-- Check processing data
 	DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
