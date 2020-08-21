@@ -142,10 +142,10 @@ BEGIN
 		FROM	@TmpCustID 
 		WHERE	OrderID = @ID
 
-		SELECT @Site = s.Site, @Currency = s.Currency
+		SELECT @Site = ISNULL(s.Site, c.Site), @Currency = ISNULL(s.Currency, c.Currency)
 		FROM bodb02.dbo.Customer c WITH (NOLOCK) 
-			INNER JOIN bodb02.dbo.Customer s WITH (NOLOCK) 
-				ON s.CustID = c.CustID AND s.RoleID = 4 
+			LEFT JOIN bodb02.dbo.Customer s WITH (NOLOCK) 
+				ON s.CustID = c.CustID AND (s.RoleID = 2 AND c.RoleID = 1)
 		WHERE c.CustID = @CID
 		 
 		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
