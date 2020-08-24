@@ -142,11 +142,13 @@ BEGIN
 		FROM	@TmpCustID 
 		WHERE	OrderID = @ID
 
-		SELECT @Site = ISNULL(s.Site, c.Site), @Currency = ISNULL(s.Currency, c.Currency)
+		SELECT @Site = CASE WHEN m.roleID = 1 THEN up.site ELSE m.site END, @Currency = CASE WHEN m.roleID = 1 THEN up.Currency ELSE m.Currency END  
 		FROM bodb02.dbo.Customer c WITH (NOLOCK) 
-			LEFT JOIN bodb02.dbo.Customer s WITH (NOLOCK) 
-				ON s.CustID = c.CustID AND (s.RoleID = 2 AND c.RoleID = 1)
-		WHERE c.CustID = @CID
+			LEFT JOIN bodb02.dbo.Customer m WITH (NOLOCK) 
+				ON c.CustID = m.CustID  
+			LEFT JOIN bodb02.dbo.Customer up WITH (NOLOCK) 
+				ON up.CustID = m.recommend and up.roleID = 2  
+		WHERE c.CustID = @CID	
 		 
 		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
 		EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site, @Currency
