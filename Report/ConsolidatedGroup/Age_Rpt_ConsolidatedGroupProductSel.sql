@@ -151,7 +151,7 @@ BEGIN
 		WHERE c.CustID = @CID	
 		 
 		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
-		EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site, @Currency
+		EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site = @Site, @Currency = @Currency, @CustID = @CID
 
 		SET @ID = @ID + 1
 		
