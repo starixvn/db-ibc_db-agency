@@ -1,13 +1,7 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet" viewers="vnteam" isFunction="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet" isFunction="0"></info>*/
 USE bodb02
 GO
-
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
+ 
 ALTER PROCEDURE [dbo].[Age_Rpt_SumWinLoss_Member] @CustID INT
 	,@FromDate SMALLDATETIME
 	,@ToDate SMALLDATETIME

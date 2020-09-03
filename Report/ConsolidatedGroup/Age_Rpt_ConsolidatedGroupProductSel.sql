@@ -24,7 +24,7 @@ AS
 		- 20200410@Sophia: Add BBIN [RedmineId: #131358]	
 		- 20200428@Malcolm : re-order products [Redmine : #132760]
 		- 20200422@Sophia: Add IBC Live Casino - apply new code for CustProductStatus [RedmineId: #130693]
-		
+		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
 		
 	Param's Explanation:
 
@@ -33,7 +33,7 @@ AS
 BEGIN 
 	SET NOCOUNT ON 
 	
-	DECLARE @TmpCustID TABLE(CustID INT)
+	DECLARE @TmpCustID TABLE(OrderID INT IDENTITY (1,1), CustID INT)
 	DECLARE @ProductList TABLE (ProductID TINYINT, ProductName VARCHAR(50), EndOfSupportDate date, isShow BIT DEFAULT (0))
 
 	INSERT INTO @TmpCustID
@@ -129,7 +129,39 @@ BEGIN
 		ON T.ProductID = P.ProductID
 	WHERE T.IsHide = 0 AND T.IsSync = 1
 		AND T.ProductID IN (21, 22, 24)
+		
+	
+	----Check Show product by Site
+	DECLARE @Site VARCHAR(10), @Currency INT, @CID INT, @ID INT= 1
+	DECLARE @CheckPGSoftEnable AS TABLE (ProductID INT, SportType INT, BetType INT)
+	 
+	
+	WHILE EXISTS (SELECT 1 FROM	@TmpCustID WHERE OrderID = @ID)
+	BEGIN 
+		SELECT	@CID = CustID 
+		FROM	@TmpCustID 
+		WHERE	OrderID = @ID
 
+		SELECT @Site = CASE WHEN m.roleID = 1 THEN up.site ELSE m.site END, @Currency = CASE WHEN m.roleID = 1 THEN up.Currency ELSE m.Currency END  
+		FROM bodb02.dbo.Customer c WITH (NOLOCK) 
+			LEFT JOIN bodb02.dbo.Customer m WITH (NOLOCK) 
+				ON c.CustID = m.CustID  
+			LEFT JOIN bodb02.dbo.Customer up WITH (NOLOCK) 
+				ON up.CustID = m.recommend and up.roleID = 2  
+		WHERE c.CustID = @CID	
+		 
+		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
+		EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site = @Site, @Currency = @Currency, @CustID = @CID
+
+		SET @ID = @ID + 1
+		
+	END	 
+
+	UPDATE	P
+	SET		isShow = 1
+	FROM	@ProductList P
+	WHERE 	EXISTS (SELECT 1 FROM @CheckPGSoftEnable T WHERE T.ProductID = P.ProductID)
+	
 	--------------------------------------------
 	SELECT p.ProductID, 
 	       p.ProductName, 

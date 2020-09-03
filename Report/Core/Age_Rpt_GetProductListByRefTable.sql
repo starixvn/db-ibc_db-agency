@@ -19,9 +19,11 @@ BEGIN
 
 	DECLARE @SQLString VARCHAR(MAX);
 
-	SET @SQLString = 'SELECT DISTINCT CONVERT(TINYINT, ISNULL(p.GroupProductId, s.ProductID)) AS ProductID, RefTable
+	SET @SQLString = 'SELECT DISTINCT CONVERT(TINYINT, ISNULL(p.GroupProductId, s.ProductID)) AS ProductID, RefTable, pd.OrderNo
 		FROM dbo.SportBettypeMatrix s WITH(NOLOCK) LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductID AND p.ProductId <> p.GroupProductId
-		WHERE s.RefTable IN (' + @RefTable + ') AND p.ProductId IS NULL';
+		INNER JOIN dbo.Products pd WITH (NOLOCK) ON pd.ProductID = ISNULL(p.GroupProductId, s.ProductID)
+		WHERE s.RefTable IN (' + @RefTable + ') AND p.ProductId IS NULL 
+		ORDER BY pd.OrderNo';
 
 	EXEC (@SQLString);
 
