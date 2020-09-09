@@ -1,9 +1,10 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
+CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
 	@ProductIds		VARCHAR(MAX),
+	@ProductDetails NVARCHAR(MAX) = 'All',
 	@BalanceUpDay	SMALLDATETIME,
 	@MoveBetsDay	SMALLDATETIME,
 	@PageSize		INT = 0,
@@ -30,13 +31,21 @@ Revisions:
 	- 20200521@Patrick: Enhance SP due to bot attack [redmind: #134415]
 	- 20200527@Sophia: Add ION [Redmine: #132325]
 	- 20200528@Sophia: Add RNG War [Redmine: #132013]
+	- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
+	
+	Param's Explanation:
+	 @ProductDetails:		
+		<ROOT>
+				<ProductDetail ProductId = "42" Sporttype = "200" Bettype = "0"/>
+				<ProductDetail ProductId = "42" Sporttype = "150" Bettype = "0"/>
+		</ROOT>	
 */
 
 BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE @RowStart	INT,
-			@RowEnd		INT;  
+			@RowEnd		INT
 
 	SELECT	@PageIndex = @PageIndex - 1,
 			@RowStart = @PageSize * @PageIndex + 1,
@@ -64,14 +73,64 @@ BEGIN
 		BetType		INT
 	);
 
-	DECLARE @isTest BIT;
+	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
+	DECLARE @isTest BIT, @__ProductDetails XML;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
+	IF ISNULL(@ProductDetails,'') = ''
+	BEGIN 
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		VALUES(NULL, NULL, NULL)
+	END
+	ELSE IF ISNULL(@ProductDetails,'')  = 'All'
+	BEGIN
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		SELECT 
+			ProductId
+			,Sporttype
+			,Bettype
+		FROM dbo.f_GetProductDetail() f
+	END
+	ELSE 		
+	BEGIN	
+		SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
+
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		SELECT 
+			t.c.value('(@ProductId)[1]', 'SMALLINT') AS ProductID
+			, t.c.value('(@Sporttype)[1]', 'SMALLINT') AS Sporttype
+			, t.c.value('(@Bettype)[1]', 'SMALLINT') AS Bettype
+		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
+	END
+
+	SELECT @ProductIds = STUFF((SELECT ',' + f.val
+								FROM f_StringSplit(@ProductIds,',') f
+								WHERE EXISTS(SELECT 1 FROM @ExistingProductDetails e WHERE f.val = e.ProductId)
+									OR NOT EXISTS(SELECT 1 FROM f_GetProductDetail() g WHERE g.ProductId = f.val)
+								FOR XML PATH('')),1,1,'')
+
 	INSERT INTO #TmpCondSumWL(SportType, BetType) 
-	SELECT SportType, BetType
-	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
+	SELECT f.SportType, f.BetType
+	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
+		LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId
+	WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType)
 
 	-----Get Special Super to hide data of them before specific date 
 	DECLARE @IsHide BIT = 0;
@@ -96,11 +155,6 @@ BEGIN
 	SELECT	@FDate = @FromDate,
 			@TDate = @ToDate, 
 			@CID = @custid;
-
-	DECLARE @SportBettypeMatrix TABLE(
-		ProductID	tinyint,
-		BetType	smallint
-	);
 
 	IF @ToDate >= @BalanceUpDay
 	BEGIN 
@@ -130,14 +184,25 @@ BEGIN
 				COUNT(1) AS NoOfTicket
 		FROM dbo.bettrans b WITH(NOLOCK)
 			INNER JOIN (
-							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, BetType
-							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
-								LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+						SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType
+						FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+							LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+							LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+						WHERE EXISTS(SELECT 1
+									 WHERE e.ProductId IS NULL 
+										OR 
+											(
+												e.Bettype = f.BetType 
+													  OR (
+															e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g)
+													     )
+											)
+									)												
 						) s ON b.bettype = s.Bettype
 		WHERE winlostdate BETWEEN @FDate AND @Tdate
 			AND srecommend = @CID
-			AND b.statusID NOT IN (0, 1, 101, 102, 103) 
-		GROUP BY MRecommend, b.bettype;
+			AND b.statusID IN (111, 112, 113) 
+		GROUP BY MRecommend, b.bettype
 
 		IF @BalanceUpDay < @FromDate
 		BEGIN

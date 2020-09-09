@@ -30,7 +30,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20200527@Sophia: Add ION [Redmine: #132325]
 		- 20200528@Sophia: Add RNG War [Redmine: #132013]
 		- 20200810@Sophia: Add PG Soft[Redmine: #137767]
-		
+		- 20200908@Malcolm : Report Enhancement for Jackpot Product Filter [RedmineID : #139575]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -51,12 +51,14 @@ RETURN
 				(24, 219, 0), --Fishing World
 				(27, 190, 0), --Betradar Virtual Sports
 				(28, 220, 0), -- Keno
-				(32, 248, 0), -- Pragmatic
+				(32, 248, 0), -- PP Normal Bet
+				(32, 248, 4297), -- PP Jackpot Contribution
+				(32, 248, 4298), -- PP Jackpot Prize
 				(34, 165, 0), -- Card Club
 				(36, 247, 0), -- Spadegaming
 				(38, 245, 0), -- Virtual Games
 				(39, 244, 0), -- SA Gaming
-				(42, 200, 0), -- Saba.club
+				(42, 200, 0), -- Saba.club Normal Bets
 				(43, 223, 0), -- Indo 4D	
 				(45, 243, 0), -- Sexy Gaming
 				(40, 222, 0), -- Table Games	
