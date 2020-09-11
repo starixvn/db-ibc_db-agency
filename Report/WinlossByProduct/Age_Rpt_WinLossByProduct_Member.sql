@@ -96,12 +96,6 @@ BEGIN
 		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
 	END
 
-	SELECT @ProductIds = STUFF((SELECT ',' + f.val
-								FROM f_StringSplit(@ProductIds,',') f
-								WHERE EXISTS(SELECT 1 FROM @ExistingProductDetails e WHERE f.val = e.ProductId)
-									OR NOT EXISTS(SELECT 1 FROM f_GetProductDetail() g WHERE g.ProductId = f.val)
-								FOR XML PATH('')),1,1,'')
-
 	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
 	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)
