@@ -194,7 +194,7 @@ BEGIN
 
 	-- Get Agent List
 	BEGIN
-		DECLARE @tblrecommend TABLE (recommend INT, username NVARCHAR(50))
+		DECLARE @tblrecommend TABLE (ID INT IDENTITY (1,1), recommend INT, username NVARCHAR(50))
 
 		IF @RoleId = 4
 		BEGIN
@@ -208,7 +208,34 @@ BEGIN
 			INSERT INTO @tblrecommend (recommend, username)
 			VALUES (@DownlineCustId, @DownlineUsername)
 		END
+		
+		DECLARE @i INT = 1, @recommend INT
+				
+		WHILE 1 = 1
+		BEGIN 		
+			SELECT @recommend = recommend FROM @tblrecommend 
+			WHERE ID = @i
+			
+			IF @@ROWCOUNT = 0  
+			BREAK
+			
+			---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+			EXEC dbo.Acc_Transfer_CheckRunningByCust  
+					@CustID = @recommend
+					,@ErrMsg = @ErrMsg OUTPUT 
+					,@ErrCode = @ErrCode OUTPUT
+					 
+			IF @ErrCode <> 0  -- the auto transfer job is running this custid
+			BEGIN		
+				RETURN		
+			END			
+			
+			SELECT @i = @i +1 
+		END 
 	END
+	
+	
+	
 
 	-- Calculate data
 	BEGIN

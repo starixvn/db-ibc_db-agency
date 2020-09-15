@@ -77,7 +77,28 @@ BEGIN
 	end, @ErrCode = 101		
 	return
 END
-	
+
+---- #1 CHECK UM TRANSFER FUNCTION
+EXEC dbo.Acc_Transfer_CheckUM  
+	@CustID = @ToCustID
+	,@ErrMsg = @ErrMsg OUTPUT 
+	,@ErrCode = @ErrCode OUTPUT
+	 
+IF @ErrCode <> 0  -- Function Transfer is under UM 
+BEGIN
+	RETURN		
+END		
+
+---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+EXEC dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @ToCustID
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+IF @ErrCode <> 0  -- the auto transfer job is running this custid
+BEGIN
+	RETURN		
+END	
 	
 ----------------------------------------------------------------------
 --Check Transfer Condition
@@ -91,7 +112,7 @@ EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
 	@ErrCode = @ErrCode OUTPUT,
 	@Language = @Language
 
-if @ErrCode > 0  return
+if @ErrCode <> 0  return
 
 -- Checking archive data
 DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
@@ -121,28 +142,6 @@ END
 
 Select @AgentID = @ToCustID, @CustID = @FromCustID
   
----- #1 CHECK UM TRANSFER FUNCTION
-EXEC dbo.Acc_Transfer_CheckUM  
-	@CustID = @AgentID
-	,@ErrMsg = @ErrMsg OUTPUT 
-	,@ErrCode = @ErrCode OUTPUT
-	 
-IF @ErrCode <> 0  -- Function Transfer is under UM 
-BEGIN
-	RETURN		
-END		
-
----- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
-EXEC dbo.Acc_Transfer_CheckRunningByCust  
-		@CustID = @AgentID
-		,@ErrMsg = @ErrMsg OUTPUT 
-		,@ErrCode = @ErrCode OUTPUT
-		 
-IF @ErrCode <> 0  -- the auto transfer job is running this custid
-BEGIN
-	RETURN		
-END
-
 
 Declare @today DATETIME
 set @today = cast(datediff(dd,0,getdate()) as datetime)
