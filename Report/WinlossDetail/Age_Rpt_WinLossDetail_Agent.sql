@@ -33,11 +33,11 @@ Revisions:
 	- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
 	
 	Param's Explanation:
-	 @ProductDetails:		
+	@ProductDetails:		
 		<ROOT>
-				<ProductDetail ProductId = "42" Sporttype = "200" Bettype = "0"/>
-				<ProductDetail ProductId = "42" Sporttype = "150" Bettype = "0"/>
-		</ROOT>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "0"/>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "4298"/>
+		</ROOT>	
 */
 
 BEGIN

@@ -38,7 +38,7 @@ BEGIN
 		);
 
 	INSERT INTO #AgentWinLoss
-	EXEC dbo.Age_Rpt_WinLoss_Member @CustId
+	EXEC dbo.Age_Rpt_WinLoss_Member @CustId = @CustId
 		,@FromDate = @FromDate
 		,@ToDate = @ToDate
 		,@ProductIds = @ProductIds

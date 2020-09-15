@@ -36,8 +36,8 @@ Revisions:
 	Param's Explanation:
 	 @ProductDetails:		
 		<ROOT>
-				<ProductDetail ProductId = "42" Sporttype = "200" Bettype = "0"/>
-				<ProductDetail ProductId = "42" Sporttype = "150" Bettype = "0"/>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "0"/>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "4298"/>
 		</ROOT>	
 */
 
