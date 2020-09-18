@@ -5,6 +5,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroup]
 	@FromDate		SMALLDATETIME,  
 	@ToDate			SMALLDATETIME,   
 	@ProductIDs		VARCHAR(MAX),
+	@ProductDetails NVARCHAR(MAX) = 'All',
 	@ReportType		TINYINT = 1,  
 	@BalanceUpDay	SMALLDATETIME,
 	@MoveBetsDay	SMALLDATETIME
@@ -37,6 +38,7 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200310@Malcolm : Add gross comm column [RedmineID : #129918]
 		- 20200316@Malcolm : fix bug show incorrect grosscomm value on range sum [Redmine : #129918]
+		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]	 
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -45,6 +47,11 @@ AS
 					
 		. @Currency: If @Currency <> 0 then filter this @currency
 					 If @Currency = 0 then show all currency
+		. @ProductDetails:		
+			<ROOT>
+					<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "0"/>
+					<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "4298"/>
+			</ROOT>
 */  
 
 BEGIN
@@ -72,14 +79,15 @@ BEGIN
 		betcount	    INT,
 		GrossComm       MONEY
 	)
-
+	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
 	CREATE TABLE #TmpCondSumWL (ProductID TINYINT, sporttype SMALLINT, bettype SMALLINT)
 	CREATE TABLE #TmpCust (CustID INT, RoleID INT, username VARCHAR(30), currency TINYINT)
 
 	DECLARE	@isSAg	INT,
 			@isMAg	INT,
 			@isAg	INT,
-			@isMem	INT
+			@isMem	INT,
+			@__ProductDetails XML;
 
 	DECLARE @GroupID INT 
 	SELECT @GroupID = GRoupID FROM custAccount WITH (NOLOCK) WHERE CustID = @CustID AND IsGroupHeadLine = 1
@@ -110,15 +118,67 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds)
 
+	IF ISNULL(@ProductDetails,'') = ''
+	BEGIN 
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		VALUES(NULL, NULL, NULL)
+	END
+	ELSE IF ISNULL(@ProductDetails,'')  = 'All'
+	BEGIN
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		SELECT 
+			ProductId
+			,Sporttype
+			,Bettype
+		FROM dbo.f_GetProductDetail() f
+	END
+	ELSE 		
+	BEGIN	
+		SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
+
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		SELECT 
+			t.c.value('(@ProductId)[1]', 'SMALLINT') AS ProductID
+			, t.c.value('(@Sporttype)[1]', 'SMALLINT') AS Sporttype
+			, t.c.value('(@Bettype)[1]', 'SMALLINT') AS Bettype
+		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
+	END
+
 	INSERT INTO #SportBettype (ProductID, Bettype)
-	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype
+	SELECT ISNULL(p.GroupProductId, s.ProductID), s.Bettype
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest) s
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId
+		LEFT JOIN @ExistingProductDetails e ON e.ProductId = s.ProductID
+	WHERE EXISTS(SELECT 1
+				 WHERE e.ProductId IS NULL 
+					OR 
+						(
+							e.Bettype = s.BetType 
+							OR (e.Bettype = 0 AND s.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g))
+						)
+				 )
 
 	INSERT INTO #TmpCondSumWL(ProductID, sporttype, bettype)
-	SELECT ISNULL(p.GroupProductId, s.ProductID), SportType, BetType
+	SELECT ISNULL(p.GroupProductId, s.ProductID), s.SportType, s.BetType
 	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) s
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId
+		LEFT JOIN @ExistingProductDetails e ON s.ProductID = e.ProductId
+	WHERE e.ProductId IS NULL OR (e.Bettype = s.BetType)
 		
 	IF @ToDate >= @BalanceUpDay
 	BEGIN
@@ -166,7 +226,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.srecommend = c.CustID
 			WHERE	winlostdate BETWEEN @fdate AND @tdate
-				AND StatusID NOT IN (0,1,101,102,103) 
+				AND StatusID IN (111, 112, 113) 
 				AND c.roleID = 4
 			GROUP BY  b.srecommend, b.winlostdate, s.ProductID, c.username, c.currency
 
@@ -211,7 +271,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.mrecommend = c.CustID
 			WHERE	winlostdate BETWEEN @fdate AND @tdate
-				AND StatusID NOT IN (0,1,101,102,103) 
+				AND StatusID IN (111, 112, 113) 
 				AND c.roleID = 3
 			GROUP BY 
 				b.mrecommend, b.winlostdate, s.ProductID, c.username, c.currency
@@ -256,7 +316,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.recommend = c.CustID
 			WHERE	b.winlostdate BETWEEN @fdate AND @tdate
-				AND b.StatusID NOT IN (0,1,101,102,103) 
+				AND b.StatusID IN (111, 112, 113) 
 				AND c.roleID = 2
 			GROUP BY 
 				b.recommend, b.winlostdate, s.ProductID, c.username, c.currency
@@ -301,7 +361,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.custid = c.CustID
 			WHERE	winlostdate BETWEEN @fdate AND @tdate
-				AND StatusID NOT IN (0,1,101,102,103) 
+				AND StatusID IN (111, 112, 113) 
 				AND roleID = 1
 			GROUP BY 
 				b.CustID, b.winlostdate, s.ProductID, c.username, c.currency

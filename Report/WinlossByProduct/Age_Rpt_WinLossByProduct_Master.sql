@@ -5,7 +5,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Master]
 	@ToDate			SMALLDATETIME,	
 	@BalanceUpDay	SMALLDATETIME,
 	@MoveBetsDay	SMALLDATETIME,
-	@ProductIds		VARCHAR(MAX)
+	@ProductIds		VARCHAR(MAX),
+	@ProductDetails NVARCHAR(MAX) = 'All'
 AS
 
 /*
@@ -23,6 +24,14 @@ AS
 		- 20191029@Percy: Integrate Spadegaming [RedmineID: #122353]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
+		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
+	
+	Param's Explanation:
+	 @ProductDetails:		
+		<ROOT>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "0"/>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "4298"/>
+		</ROOT>	
 */
 
 BEGIN
@@ -41,12 +50,52 @@ BEGIN
 		SAgComm			MONEY, 
 		NumberOfTickets INT
 	);
-
-	DECLARE @isTest BIT = 0;
+	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
+	DECLARE @isTest BIT = 0, @__ProductDetails XML;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
+	IF ISNULL(@ProductDetails,'') = ''
+	BEGIN 
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		VALUES(NULL, NULL, NULL)
+	END
+	ELSE IF ISNULL(@ProductDetails,'')  = 'All'
+	BEGIN
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		SELECT 
+			ProductId
+			,Sporttype
+			,Bettype
+		FROM dbo.f_GetProductDetail() f
+	END
+	ELSE 		
+	BEGIN	
+		SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
+
+		INSERT INTO @ExistingProductDetails
+		(
+			ProductId
+			,Sporttype
+			,Bettype
+		)
+		SELECT 
+			t.c.value('(@ProductId)[1]', 'SMALLINT') AS ProductID
+			, t.c.value('(@Sporttype)[1]', 'SMALLINT') AS Sporttype
+			, t.c.value('(@Bettype)[1]', 'SMALLINT') AS Bettype
+		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
+	END
 
 	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
@@ -56,7 +105,16 @@ BEGIN
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
 			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23)
 		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
-	WHERE f.bettype <> 2799; -- Mix parlay of BRVS
+		LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+	WHERE f.bettype <> 2799 -- Mix parlay of BRVS
+		AND EXISTS(SELECT 1
+				   WHERE e.ProductId IS NULL 
+					OR 
+						(
+							e.Bettype = f.BetType 
+							OR (e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g))
+						)
+				  )
 
 	UPDATE s
 	SET GroupTypeId = f.GroupTypeId
@@ -100,7 +158,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			WHERE winlostdate BETWEEN @FDate AND @TDate
-				AND statusID NOT IN (0, 1, 101, 102, 103)
+				AND statusID IN (111, 112, 113)
 				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
@@ -132,8 +190,7 @@ BEGIN
 					INNER JOIN dbo.VSOutright o WITH(NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN dbo.VSRaceInfo r WITH(NOLOCK) ON o.EventID = r.EventID
 				WHERE winlostdate BETWEEN @FDate AND @TDate
-					AND statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
+					AND statusID IN (111, 112, 113)
 					AND b.srecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
@@ -163,8 +220,7 @@ BEGIN
 				) AS s
 				WHERE b.matchid = 2799 AND b.bettype = 2799
 					AND winlostdate BETWEEN @FDate AND @TDate
-					AND statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
+					AND statusID IN (111, 112, 113)
 					AND b.srecommend = @CustID
 				GROUP BY s.sporttype
 			END
@@ -201,8 +257,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			WHERE winlostdate BETWEEN @FDate AND @TDate
-				AND statusID NOT IN (0, 1, 101, 102, 103)	
-				AND b.ruben = 1			
+				AND statusID IN (111, 112, 113)		
 				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
@@ -234,8 +289,7 @@ BEGIN
 					INNER JOIN dbo.VSOutright14 o WITH(NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN dbo.VSRaceInfo14 r WITH(NOLOCK) ON o.EventID = r.EventID
 				WHERE winlostdate BETWEEN @FDate AND @TDate
-					AND statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
+					AND statusID IN (111, 112, 113)
 					AND b.srecommend = @CustID
 				GROUP BY s.GroupTypeId, r.sporttype
 			END
@@ -265,8 +319,7 @@ BEGIN
 				) AS s
 				WHERE b.matchid = 2799 AND b.bettype = 2799
 					AND winlostdate BETWEEN @FDate AND @TDate
-					AND statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
+					AND statusID IN (111, 112, 113)
 					AND b.srecommend = @CustID
 				GROUP BY s.sporttype
 			END

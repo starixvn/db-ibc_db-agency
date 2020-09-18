@@ -16,6 +16,7 @@ AS
 	
 	Revisions:
 		- 20180912@Alvin: Correct GrossComm column name - [Redmine: #95940]
+		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
 		
 	Parameter's Explaination:
 		
@@ -36,12 +37,12 @@ BEGIN
 		);
 
 	INSERT INTO #MasterWinLoss
-	EXEC dbo.Age_Rpt_WinLoss_Agent @CustId
-		,@FromDate
-		,@ToDate
-		,@ProductIds
-		,@MoveBetsDay
-		,@BalanceUpDay;
+	EXEC dbo.Age_Rpt_WinLoss_Agent @CustId = @CustId
+		,@FromDate = @FromDate
+		,@ToDate = @ToDate
+		,@ProductIds = @ProductIds
+		,@MoveBetsDay = @MoveBetsDay
+		,@BalanceUpDay = @BalanceUpDay;
 
 	IF EXISTS (
 			SELECT 1
