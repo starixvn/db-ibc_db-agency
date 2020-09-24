@@ -35,6 +35,7 @@ BEGIN
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC dbo.Acc_Transfer_CheckUM  
 		@CustID = @FromCustID
+		,@Language = @Language
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
 		 
@@ -46,6 +47,7 @@ BEGIN
 	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
 	EXEC dbo.Acc_Transfer_CheckRunningByCust  
 			@CustID = @FromCustID
+			,@Language = @Language
 			,@ErrMsg = @ErrMsg OUTPUT 
 			,@ErrCode = @ErrCode OUTPUT
 			 

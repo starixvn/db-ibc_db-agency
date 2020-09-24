@@ -66,6 +66,7 @@ SET NOCOUNT ON
 ---- #1 CHECK UM TRANSFER FUNCTION
 EXEC dbo.Acc_Transfer_CheckUM  
 	@CustID = @MasterID
+	,@Language = @Language
 	,@ErrMsg = @ErrMsg OUTPUT 
 	,@ErrCode = @ErrCode OUTPUT
 	 
@@ -77,6 +78,7 @@ END
 ---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
 EXEC dbo.Acc_Transfer_CheckRunningByCust  
 		@CustID = @MasterID
+		,@Language = @Language
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
 		 
