@@ -11,7 +11,7 @@ ALTER FUNCTION [dbo].[f_CheckSPVersion]
 		DBAGE.bodb02, DBEXT.bodb02, DBDWH.bodb02, DBDWH.bodb_dwrs,DBSUM.bodb_Summary
 		DBACC.bodb02, DBACC.bodb_ACC, DBRPT.bodb_Report,
 		DBPRO.bodb02, DBCUST.CUSTDB, DBTXN.bodb02
-	Revision:
+	Revisions:
 		- 20160505@Percy: Remove 2 versions UAT3, UAT4 (for hotfix only)
 	Remark: use function at database local - not link server or link database
 */
