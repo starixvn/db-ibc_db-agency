@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSUM-bodb_Summary" executers="bodbAdminNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBAGE-bodb_Age,DBEXT-bodb02,DBDWH-bodb02,DBDWH-bodb_dwrs,DBEAS-bodb_EAS,DBSUM.bodb_Summary,DBACC-bodb02,DBACC-bodb_ACC,DBRPT-bodb_Report,DBPRO-bodb02,DBCUST-CUSTDB" executers="bodbAdminNet" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_CheckSPVersion]
 (
 	@PROCID INT
@@ -10,7 +10,7 @@ ALTER FUNCTION [dbo].[f_CheckSPVersion]
 	DB:
 		DBAGE.bodb02, DBAGE.bodb_Age, DBEXT.bodb02, DBDWH.bodb02, DBDWH.bodb_dwrs, DBEAS.bodb_EAS, DBSUM.bodb_Summary
 		DBACC.bodb02, DBACC.bodb_ACC, DBRPT.bodb_Report,
-		DBPRO.bodb02
+		DBPRO.bodb02, DBCUST-CUSTDB
 	Revision:
 		- 20160505@Percy: Remove 2 versions UAT3, UAT4 (for hotfix only)
 	Remark: use function at database local - not link server or link database
