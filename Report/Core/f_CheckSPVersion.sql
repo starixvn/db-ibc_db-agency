@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CUSTDB,DBTXN-bodb02" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBCUST-CUSTDB,DBTXN-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_CheckSPVersion]
 (
 	@PROCID INT
