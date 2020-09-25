@@ -13,6 +13,7 @@ ALTER FUNCTION [dbo].[f_CheckSPVersion]
 		DBPRO.bodb02, DBCUST.CUSTDB, DBTXN.bodb02
 	Revisions:
 		- 20160505@Percy: Remove 2 versions UAT3, UAT4 (for hotfix only)
+		
 	Remark: use function at database local - not link server or link database
 */
 RETURNS BIT
