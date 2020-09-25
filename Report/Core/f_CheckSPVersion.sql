@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBDWH-bodb02,DBDWH-bodb_dwrs,DBSUM.bodb_Summary,DBACC-bodb02,DBACC-bodb_ACC,DBRPT-bodb_Report,DBPRO-bodb02,DBCUST-CUSTDB,DBTXN-bodb02" executers="bodbAdminNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBDWH-bodb02,DBDWH-bodb_dwrs,DBSUM.bodb_Summary,DBACC-bodb02,DBACC-bodb_ACC,DBRPT-bodb_Report,DBPRO-bodb02,DBCUST-CUSTDB,DBTXN-bodb02" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_CheckSPVersion]
 (
 	@PROCID INT
