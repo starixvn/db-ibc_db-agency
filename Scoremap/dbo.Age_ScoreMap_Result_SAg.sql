@@ -31,7 +31,7 @@ AS
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 		- 20180802@Helen: Wrongly calculation for bettype correct score half time  - [Redmine:99508]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
-		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8)
+		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -263,8 +263,8 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( ( (stake * spositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM( (stake * spositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) trueodds,
 							SUM( (stake * spositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) risk,
-							0 AS MYO_Won,
-							0 AS MYO_Lose,
+							SUM( (b.stake * b.spositiontaking * CASE WHEN b.oddstype = 6 THEN (CASE WHEN b.oddsspread > 0 THEN (CASE WHEN b.odds < 0 THEN 1 ELSE -b.odds END) ELSE 0 END) ELSE 0 END)) MYO_Won,
+							SUM( (b.stake * b.spositiontaking * CASE WHEN b.oddstype = 6 THEN (CASE WHEN b.oddsspread < 0 THEN (CASE WHEN b.odds < 0 THEN -b.odds ELSE 1 END) ELSE 0 END) ELSE 0 END)) MYO_Lose,
 							hdp1,
 							0 hd,
 							bettype bt

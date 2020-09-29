@@ -17,6 +17,7 @@ AS
 		- 20171020@Percy: Add OthersComm [RedmineID: #84690]
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
 */
 
 BEGIN
@@ -51,7 +52,7 @@ BEGIN
 
 		INSERT INTO #tmp(sa_comm, CommGroup, mrecommend)
 		SELECT  SUM(ISNULL(scomm,0) - ISNULL(acomm,0)) AS sa_comm,
-				CommGroup,
+				CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
 				mrecommend
 		FROM dbo.bettrans b WITH(NOLOCK) 
 			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype
@@ -72,10 +73,10 @@ BEGIN
 
 		INSERT INTO #tmp(sa_comm, CommGroup, mrecommend)
 		SELECT  SUM(ISNULL(scomm,0) - ISNULL(acomm,0)) AS sa_comm,
-				CommGroup,
+				CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
 				mrecommend
 		FROM dbo.bettrans14 b WITH(NOLOCK) 
-			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype
+			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype --AND (b.oddstype = s.oddstype OR s.oddstype= 0)
 		WHERE b.srecommend = @CID
 			AND winlostdate BETWEEN @FromDate AND @TDate
 		GROUP BY
@@ -89,12 +90,13 @@ BEGIN
 			ISNULL([1],0) AS Comm1,
 			ISNULL([2],0) AS Comm2,
 			ISNULL([3],0) AS Comm3,
-			ISNULL([4],0) AS CasinoComm
+			ISNULL([4],0) AS CasinoComm,
+			ISNULL([5],0) AS MyanmarOddsComm
 	FROM #tmp AS p
 		PIVOT
 		(
 			SUM(sa_comm)
-			FOR CommGroup IN ([1],[2],[3],[4])
+			FOR CommGroup IN ([1],[2],[3],[4],[5])
 		) AS pvt
 		INNER JOIN customer c WITH(NOLOCK) on c.custid = pvt.mrecommend 
 	ORDER BY c.username;
