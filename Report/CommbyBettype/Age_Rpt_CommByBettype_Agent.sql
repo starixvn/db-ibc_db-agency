@@ -60,7 +60,7 @@ BEGIN
 			AND ruben = 1 
 			AND winlostdate BETWEEN @FDate AND @ToDate 
 		GROUP BY
-			CommGroup,
+			CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
 			recommend;
 	END
 
@@ -80,7 +80,7 @@ BEGIN
 		WHERE b.mrecommend = @CID
 			AND winlostdate BETWEEN @FromDate AND @TDate
 		GROUP BY
-			CommGroup,
+			CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
 			b.recommend;
 	END
 		
