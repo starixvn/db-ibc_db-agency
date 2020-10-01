@@ -16,6 +16,7 @@ Revisions:
 	- 20150826@Winnie: Myanmar Odds
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+	- 20200929@Malcolm : add Oddstype and oddsspread [RedmineId : #141956]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -26,9 +27,11 @@ BEGIN
 			sum(x.hometotal * 1) 'ht',
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
-			sum((x.awaywin - x.homelose) * 1) 'hl'
+			sum((x.awaywin - x.homelose) * 1) 'hl',
+			oddstype,
+			oddsspread
 		from 
-			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score,
+			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score, oddstype, oddsspread,
 				sum(case when betteam='h' then stake * (b.apositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.apositiontaking) else 0 end) awaytotal,	
 				sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.apositiontaking) else 0 end) homewin,
@@ -40,9 +43,9 @@ BEGIN
 				AND b.bettype = @bettype
 				AND b.recommend = @agentid
 				and b.statusID in (0,1)
-			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore
+			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore, oddstype, oddsspread
 			)x
-		group by -x.hdp + score
+		group by -x.hdp + score, oddstype, oddsspread
 	END
 	else if @roleid = 3
 	BEGIN
@@ -50,9 +53,11 @@ BEGIN
 			sum(x.hometotal * 1) 'ht',
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
-			sum((x.awaywin - x.homelose) * 1) 'hl'
+			sum((x.awaywin - x.homelose) * 1) 'hl',
+			oddstype,
+			oddsspread
 		from 
-			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score,
+			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score, oddstype, oddsspread,
 				sum(case when betteam='h' then stake * (b.mpositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.mpositiontaking) else 0 end) awaytotal,
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) homewin,
@@ -65,9 +70,9 @@ BEGIN
 				AND b.bettype = @bettype
 				AND b.mrecommend = @agentid
 				and b.statusID in (0,1)
-			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore
+			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore, oddstype, oddsspread
 			)x
-		group by -x.hdp + score
+		group by -x.hdp + score, oddstype, oddsspread
 	END
 	else if @roleid = 4
 	BEGIN
@@ -75,9 +80,11 @@ BEGIN
 			sum(x.hometotal * 1) 'ht',
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
-			sum((x.awaywin - x.homelose) * 1) 'hl'
+			sum((x.awaywin - x.homelose) * 1) 'hl',
+			oddstype, 
+			oddsspread
 		from
-			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score,
+			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score, oddstype, oddsspread,
 				sum(case when betteam='h' then stake * (b.spositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.spositiontaking) else 0 end) awaytotal,	
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) homewin,
@@ -89,9 +96,9 @@ BEGIN
 				AND b.bettype = @bettype
 				AND b.srecommend = @agentid
 				and b.statusID in (0,1)
-			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore
+			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore, oddstype, oddsspread
 			)x
-		group by -x.hdp + score
+		group by -x.hdp + score, oddstype, oddsspread
 	END
 END
 GO
