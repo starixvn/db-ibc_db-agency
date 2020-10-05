@@ -54,6 +54,8 @@ Revisions:
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
+	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
+	
 
 Param's Explanation:
 • @FromCustID: list from custid
@@ -71,6 +73,8 @@ DECLARE @currency int, @actualrate float, @currName nvarchar(10)
 DECLARE @agUser nvarchar(50), @User nvarchar(50)  
 Declare @RefNo bigint, @ToCustID int, @Amount float, @Recommend1 int, @MRecommend1 int, @Recommend2 int, @MRecommend2 int, @grefno int, @srecommend1 int  
 Declare @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
+
+select @IP = dbo.f_ConvertIPv6ToDummy(@IP)
 
 EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption   
  @CustID = @FromCustID,  
