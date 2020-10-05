@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel161_MAg]
 	@custid INT,
 	@Language varchar(2) = 'E'
@@ -7,7 +7,7 @@ AS
 /*
 Created: 20100908@Kiwi
 Task : Retrieve Total Bet values for Number Game
-DB: DB042.bodb02
+DB: DBBOF.bodb02
 
 Revisions:
 	- 20110729@Sophia: Add bettype 88,89,90
@@ -15,6 +15,7 @@ Revisions:
 	- 20120627@Sophia: Add new bettype = 90 for NumberGroup
     - 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 	- 20200221@Malcolm : Add bettyep 91, remove bettype 87,88 [Redmine : #128220]
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
     
 Param's Explanation:
 • @custid: Master Agent ID

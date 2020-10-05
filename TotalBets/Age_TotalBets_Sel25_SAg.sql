@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel25_SAg]
 	@custid int,
 	@Language varchar(2) = 'E'
@@ -6,12 +6,13 @@ AS
 
 /*
 Task: Retrieve Total Bet values for Odd/Even, 1st Odd/Even, FT.1X2 and 1st 1X2.
-DB: DB042.bodb02
+DB: DBBOF.bodb02
 Revisions:
 	- 20090216@Kiwi: Remove status in ('running', 'waiting') to avoid Key Lookup while using Index named _MS_Sys_38_52_42.
 	- 20120626@Sophia: Add new bettype 123 for Draw/No Draw
 	- 20150408@Cody: Apply bet radar bettype (157, 167) [Remine: #32734]
-	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 	
+	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516] 	
 */
 BEGIN
 	SET NOCOUNT ON 

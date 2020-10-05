@@ -1,4 +1,4 @@
-/*<info serverAlias="DB042-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBBOF-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GetBettypeScoreMap]
 (
 )
@@ -8,12 +8,13 @@ AS
 /*
 	Created by Percy
 	Date: 2017-10-20
-	DB: DB042.bodb02
+	DB: DBBOF.bodb02
 	Task: Get bettypes supported score map function
 
 	Revisions:
 		- 20171020@Percy: Create new function [RedmineID: #84913]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 
 RETURN

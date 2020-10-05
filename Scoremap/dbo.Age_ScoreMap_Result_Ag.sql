@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_Ag]
  	@recommend		INT, 	
  	@matchids		VARCHAR(4000) = '',
@@ -32,6 +32,7 @@ AS
 		- 20180802@Helen: Wrongly calculation for bettype correct score half time  - [Redmine:99508]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 

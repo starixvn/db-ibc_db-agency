@@ -1,4 +1,4 @@
-/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView"isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView"isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_TotalBets_Bullfighting_Agent]
 	@CustID INT --mrecommend
 AS
@@ -6,11 +6,12 @@ AS
 /*
 	Created: 
 	Task: 
-	DB: DB042-bodb02
+	DB: DBBOF-bodb02
 	Original: 
 	Revisions:
 		- 20171024@Paul: Create new [RedmineID: #84690]
 		- 20180522@Paul: Get matches with EventStatus <> 'completed' [RedmineID: #95524]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 
 */
 

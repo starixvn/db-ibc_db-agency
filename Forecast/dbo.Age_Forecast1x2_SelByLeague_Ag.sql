@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_Forecast1x2_SelByLeague_Ag]
 	@leagueid int,
 	@custid int
@@ -6,13 +6,14 @@ AS
 
 /*
 Task: Forecast for 1x2 bettype according to league.
-DB: DBAGE.bodb02
+DB: DBBOF.bodb02
 Revisions: 
 	- 20090213@Kiwi: Remove inner join customer table because we retrieve data directly from bettrans table.
 	-- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 	- 20110520@Johnson: change the type of variables @Bettype1x2, @BettypeHT1x2 to int
 	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+	20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 	Sample: exec Age_Forecast1x2_SelByLeague_Ag 1,1
 */
 BEGIN

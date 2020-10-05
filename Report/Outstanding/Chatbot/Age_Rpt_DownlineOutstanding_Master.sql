@@ -1,4 +1,4 @@
-/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_DownlineOutstanding_Master]
     @ProductIds VARCHAR(MAX),
     @DownlineId INT -- master
@@ -7,11 +7,12 @@ AS
 /*  
 	Created: Kan
 	Task : Report Outstanding
-	DB: DB042.bodb02
+	DB: DBBOF.bodb02
    
 	Revisions:  
 		- 20181102@Kan: Create new [RedmineId: #103467]
 		- 20181108@Paul: Add more code [RedmineId: #103467]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 
 BEGIN

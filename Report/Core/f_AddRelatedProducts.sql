@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DB042-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_AddRelatedProducts]
 (
 	@ProductIds VARCHAR(MAX) = ''
@@ -9,12 +9,13 @@ AS
 /*
 	Created by Percy
 	Date: 2017-06-23
-	DB: DBAGE.bodb02, DBACC.bodb02, DB042.bodb02
+	DB: DBAGE.bodb02, DBACC.bodb02, DBBOF.bodb02
 	Task: Add related products
 
 	Revisions:
 		- 20170623@Percy: Create new [RedmineID: #78339]
 		- 20171101@Percy: Enhance Performance [RedmineID: #86200]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]		
 */
 
 BEGIN

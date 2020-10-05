@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel201_Ag]
     @CustID     int,
     @Language   varchar(2) = 'E'
@@ -6,12 +6,13 @@ AS
 /*
 Created: 20090306@AnhPham
 Task : Total bets for financial bettype of member
-DB: DB042.bodb02
+DB: DBBOF.bodb02
 
 Param's Explanation:
 • @CustID: agentID
 
 Revisions:
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 	
 */
 SET NOCOUNT ON

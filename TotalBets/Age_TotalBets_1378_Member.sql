@@ -1,16 +1,17 @@
-/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_TotalBets_1378_Member]
 	@CustId INT
 AS
 
 /*
 	Created: 20180617@Percy
-	DB: DB042.bodb02
+	DB: DBBOF.bodb02
 	Task: Alpha - Total Bets - Agent view
 
 	Revisions:
 		- 20180617@Percy: Initilize SP [RedmineID: #97037]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 
 BEGIN

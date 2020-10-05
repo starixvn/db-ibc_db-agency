@@ -1,4 +1,4 @@
-/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Member] 
 	@CustID		INT, --recommend
 	@ProductIds	VARCHAR(MAX)
@@ -7,7 +7,7 @@ AS
 /*
 	Created: Paul
 	Task : Report Outstanding
-	DB: DB042.bodb02
+	DB: DBBOF.bodb02
 	Original: Age_Rpt_Outstanding_Ag
 	
 	Revisions:
@@ -16,6 +16,7 @@ AS
 		- 20171020@Percy: get both running and waiting tickets [RedmineID: #84690]
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 		- 20200612@Sol: added index to temp table #SportBettype [RedmineId: #134967]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 
 BEGIN

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DB042-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GroupProduct]
 (
 )
@@ -8,7 +8,7 @@ AS
 /*
 	Created by Percy
 	Date: 2017-06-22
-	DB: DBAGE.bodb02, DBACC.bodb02, DB042.bodb02
+	DB: DBAGE.bodb02, DBACC.bodb02, DBBOF.bodb02
 	Task: Get parent product
 	
 	Revisions:
@@ -17,6 +17,7 @@ AS
 		- 20190612@Percy: Add Card Club under Macau Games [RedmineID: #107703]
 		- 20191029@Percy: Add Spadegaming under Macau Games [RedmineID: #122353]
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 
 RETURN

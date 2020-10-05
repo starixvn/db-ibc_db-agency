@@ -1,11 +1,11 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_LeagueSelRunning_MAg]
 	@MAgID int,	
 	@Bettypes varchar(100) = '0'--0: all, 1:1,3,7,8; 5:5,15 
 AS
 /*
 Task: Select running Leagues for 1,3,5,7,8, and 15 bet types
-DB: DB042.bodb02
+DB: DBBOF.bodb02
 
 Revisions: 
 	- 20090213@Kiwi: Use ruben = 0 instead of status in ('running','waiting').
@@ -15,6 +15,7 @@ Revisions:
 	- 20150826@Winnie: Myanmar Odds
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 BEGIN
 	SET NOCOUNT ON

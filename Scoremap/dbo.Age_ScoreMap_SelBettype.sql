@@ -1,11 +1,11 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ScoreMap_SelBettype]
 AS
 
 /*
 	Task: Get bet types for Score Map function  
 	Date: 20110919@Johnson  
-	DB: DB042.bodb02
+	DB: DBBOF.bodb02
 	
 	Revisions:  
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
@@ -17,6 +17,7 @@ AS
 		- 20160509@Percy: Add 2 bettype Correct Score (AOS) [RedmineID: #48785]
 		- 20160722@Percy: Support parent-child bettype [RedmineID: #53152]
 		- 20171020@Percy: Apply core function [RedmineID: #84913]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 
 	Parameter's Explanations:
 		EvenType: 0 DeadBall 1 LiveBall
