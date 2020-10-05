@@ -1,4 +1,4 @@
-/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView"isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_TotalBets_Bullfighting_Agent]
 	@CustID INT --mrecommend
 AS
