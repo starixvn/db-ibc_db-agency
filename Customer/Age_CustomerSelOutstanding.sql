@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -9,7 +9,7 @@ AS
 /*
     Created by Percy
     Date: 2017-10-20
-    DB: DB042.bodb02
+    DB: DBBOF.bodb02
     Task: Core SP - Get Outstanding by CustId
     Original: Acc_CustomerSelOutstanding
 
@@ -18,6 +18,8 @@ AS
         - 20170108@Sophia: Enhance SP due to high CPU [Redmine: #89029]
         - 20180416@Sophia: Enhance performance high CPU for WC2018 [Redmine: #93100]
         - 20180731@Patrick: indexes revolution [RedmineId: #98757]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+
 */
 
 BEGIN
