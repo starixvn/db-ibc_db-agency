@@ -21,11 +21,37 @@ AS
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20181109@Percy: Correct balance member [RedmineID: #104536]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
+		- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
+	---- #1 CHECK UM TRANSFER FUNCTION
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+		@CustID = @CustID
+		,@Language = @Language
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+	IF @ErrCode <> 0  -- Function Transfer is under UM 
+	BEGIN
+		RETURN		
+	END		
+
+	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
+			@CustID = @CustID
+			,@Language = @Language
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN		
+		RETURN		
+	END	
+	
 	-- General Info
 	DECLARE @currency INT, @actualrate FLOAT, @currencyName NVARCHAR(10)
 
@@ -170,7 +196,7 @@ BEGIN
 
 	-- Get Agent List
 	BEGIN
-		DECLARE @tblrecommend TABLE (recommend INT, username NVARCHAR(50))
+		DECLARE @tblrecommend TABLE (ID INT IDENTITY (1,1), recommend INT, username NVARCHAR(50))
 
 		IF @RoleId = 4
 		BEGIN
@@ -184,7 +210,35 @@ BEGIN
 			INSERT INTO @tblrecommend (recommend, username)
 			VALUES (@DownlineCustId, @DownlineUsername)
 		END
+		
+		DECLARE @i INT = 1, @recommend INT
+				
+		WHILE 1 = 1
+		BEGIN 		
+			SELECT @recommend = recommend FROM @tblrecommend 
+			WHERE ID = @i
+			
+			IF @@ROWCOUNT = 0  
+			BREAK
+			
+			---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+			EXEC DBCUST.CustDB.dbo.Acc_Transfer_CheckRunningByCust  
+					@CustID = @recommend
+					,@Language = @Language
+					,@ErrMsg = @ErrMsg OUTPUT 
+					,@ErrCode = @ErrCode OUTPUT
+					 
+			IF @ErrCode <> 0  -- the auto transfer job is running this custid
+			BEGIN		
+				RETURN		
+			END			
+			
+			SELECT @i = @i +1 
+		END 
 	END
+	
+	
+	
 
 	-- Calculate data
 	BEGIN

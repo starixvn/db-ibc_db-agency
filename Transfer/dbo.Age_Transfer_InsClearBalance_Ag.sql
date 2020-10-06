@@ -52,6 +52,8 @@ Revisions:
 	- 20170808@Percy: Enhance performance - Phase 2 [RedmineID: #81436]
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
+	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 
 Param's Explanation:
 • @FromCustID: list from custid
@@ -107,7 +109,34 @@ END
 	 return  
  END  
   
- Select @AgentID = @FromCustID  
+SELECT @AgentID = @FromCustID  
+ 
+---- #1 CHECK UM TRANSFER FUNCTION
+EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+	@CustID = @AgentID
+	,@Language = @Language
+	,@ErrMsg = @ErrMsg OUTPUT 
+	,@ErrCode = @ErrCode OUTPUT
+	 
+IF @ErrCode <> 0  -- Function Transfer is under UM 
+BEGIN	
+	RETURN		
+END		
+
+---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @AgentID
+		,@Language = @Language
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+IF @ErrCode <> 0  -- the auto transfer job is running this custid
+BEGIN
+	RETURN		
+END
+
+
+
  SELECT @currency = ci.currency, @actualrate = e.actualrate, @currName = e.currency, @agUser = ci.username, 
         @Recommend1 = ci.recommend, @MRecommend1 = ci.mrecommend, @srecommend1 = ci.srecommend  
  FROM CustDB.dbo.custinfo ci (nolock) 

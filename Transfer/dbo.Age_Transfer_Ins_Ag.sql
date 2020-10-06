@@ -53,6 +53,8 @@ Revisions:
 	- 20170831@Percy: Add SP Name into log [RedmineID: #80978]
 	- 20180521@Percy: Correct table name: bettransLC to translog [RedmineID: #95268]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
+	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -76,6 +78,30 @@ BEGIN
 	return
 END
 
+---- #1 CHECK UM TRANSFER FUNCTION
+EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
+	@CustID = @ToCustID
+	,@Language = @Language
+	,@ErrMsg = @ErrMsg OUTPUT 
+	,@ErrCode = @ErrCode OUTPUT
+	 
+IF @ErrCode <> 0  -- Function Transfer is under UM 
+BEGIN
+	RETURN		
+END		
+
+---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
+EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
+		@CustID = @ToCustID
+		,@Language = @Language
+		,@ErrMsg = @ErrMsg OUTPUT 
+		,@ErrCode = @ErrCode OUTPUT
+		 
+IF @ErrCode <> 0  -- the auto transfer job is running this custid
+BEGIN
+	RETURN		
+END	
+	
 ----------------------------------------------------------------------
 --Check Transfer Condition
 --1		2		3		4		5		6		7		8
@@ -88,7 +114,7 @@ EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
 	@ErrCode = @ErrCode OUTPUT,
 	@Language = @Language
 
-if @ErrCode > 0  return
+if @ErrCode <> 0  return
 
 -- Checking archive data
 DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
@@ -116,7 +142,8 @@ BEGIN
 	return
 END
 
- Select @AgentID = @ToCustID, @CustID = @FromCustID
+Select @AgentID = @ToCustID, @CustID = @FromCustID
+  
 
 Declare @today DATETIME
 set @today = cast(datediff(dd,0,getdate()) as datetime)
