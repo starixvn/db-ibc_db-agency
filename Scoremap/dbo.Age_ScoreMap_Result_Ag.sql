@@ -112,7 +112,7 @@ BEGIN
 		SELECT matchid, home, away,
 				ISNULL(-SUM(CASE
 							WHEN r<=-0.5 AND bt IN (1,3,7,8) THEN risk
-							WHEN r<0 AND bt IN (1,3,7,8,25) THEN 0.5 * (risk + MYO_Won + MYO_Lose)
+							WHEN r<0 AND bt IN (1,3,7,8,25) THEN 0.5 * (risk - (MYO_Won + MYO_Lose))
 							ELSE 0
 						END) 
 						+ SUM(CASE WHEN r = 0 AND bt IN (1,3,7,8) THEN (MYO_Won + MYO_Lose) ELSE 0 END)
