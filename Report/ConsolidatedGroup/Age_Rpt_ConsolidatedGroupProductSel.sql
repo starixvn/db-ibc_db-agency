@@ -25,6 +25,7 @@ AS
 		- 20200428@Malcolm : re-order products [Redmine : #132760]
 		- 20200422@Sophia: Add IBC Live Casino - apply new code for CustProductStatus [RedmineId: #130693]
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
+		- 20200918@Malcolm: Add Joker [redmine: #131609]
 		
 	Param's Explanation:
 
@@ -151,7 +152,7 @@ BEGIN
 		WHERE c.CustID = @CID	
 		 
 		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
-		EXEC dbo.Acc_CustSetting_CheckPGSoftEnable @Site = @Site, @Currency = @Currency, @CustID = @CID
+		EXEC dbo.Acc_CustSetting_CheckMacauEnable @Site = @Site, @Currency = @Currency, @CustID = @CID
 
 		SET @ID = @ID + 1
 		
