@@ -112,13 +112,13 @@ BEGIN
 		SELECT matchid, home , away,
 				ISNULL(-SUM(CASE
 							WHEN r<=-0.5 AND bt IN (1,3,7,8) THEN risk
-							WHEN r<0 AND bt IN (1,3,7,8) THEN 0.5 * (risk - (MYO_Won + MYO_Lose))
+							WHEN r<0 AND bt IN (1,3,7,8) THEN 0.5 * (risk))
 							ELSE 0
 						END)  
 						+ SUM(CASE WHEN r = 0 AND bt IN (1,3,7,8) THEN (MYO_Won + MYO_Lose) ELSE 0 END)
 						+SUM(CASE
 							WHEN r>=0.5 AND bt IN (1,3,7,8) THEN  risk * trueodds
-							WHEN r>0 AND bt IN (1,3,7,8) THEN 0.5 * (risk * trueodds + MYO_Won + MYO_Lose)
+							WHEN r>0 AND bt IN (1,3,7,8) THEN 0.5 * (risk * trueodds)
 							ELSE 0
 						END),0)
 					+/*once bt = 1,3,7,8 will calculate equation above ,the other way will calculate below*/
@@ -236,8 +236,8 @@ BEGIN
 						SELECT	matchid, betteam,
 								SUM( ( (stake * spositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END)) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM( (stake* spositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) trueodds,
 								SUM( (stake * spositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) ) risk,
-								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.spositiontaking else 0 end) AS MYO_Won,
-								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.spositiontaking  else 0 end) AS MYO_Lose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.spositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.spositiontaking/100  else 0 end) AS MYO_Lose,
 								CASE WHEN betteam = 'h' AND liveindicator = 1 THEN (hdp2+liveawayscore)-(hdp1 + livehomescore)
 									 WHEN betteam = 'h' AND liveindicator <> 1 THEN hdp2-hdp1
 									 WHEN betteam <> 'h' AND liveindicator = 1 THEN (hdp1+livehomescore)-(hdp2+liveawayscore) 
@@ -264,8 +264,8 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( ( (stake * spositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM( (stake * spositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) trueodds,
 							SUM( (stake * spositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) risk,
-							sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.spositiontaking else 0 end) AS MYO_Won,
-							sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.spositiontaking  else 0 end) AS MYO_Lose,
+							sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.spositiontaking/100 else 0 end) AS MYO_Won,
+							sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.spositiontaking/100  else 0 end) AS MYO_Lose,
 							hdp1,
 							0 hd,
 							bettype bt
