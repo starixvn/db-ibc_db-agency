@@ -40,32 +40,32 @@ BEGIN
 		R.liveindicator, isnull(M.LiveHomeScore, 0) as LiveHomeScore, isnull(M.LiveAwayScore, 0) as LiveAwayScore,M.ShowTime,M.MatchCode,
 
 		sum(case when R.bettype = 1--= @BettypeHDP 
-		and R.FOffset = -1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_M1_HDP,
+		and R.FOffset = -1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_M1_HDP,
 		sum(case when R.bettype = 1--= @BettypeHDP 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_0_HDP,
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_HDP,
 		sum(case when R.bettype = 1--= @BettypeHDP 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_1_HDP,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_HDP,
 
 		sum(case when R.bettype = 3-- = @BettypeOU 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_0_OU,
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_OU,
 		sum(case when R.bettype = 3-- = @BettypeOU 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_1_OU,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_OU,
 		sum(case when R.bettype = 3-- = @BettypeOU 
-		and R.FOffset = 2 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_2_OU,
+		and R.FOffset = 2 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_2_OU,
 
 		sum(case when R.bettype = 7--= @BettypeHTHDP 
-		and R.FOffset = -1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_M1_HTHDP,
+		and R.FOffset = -1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_M1_HTHDP,
 		sum(case when R.bettype = 7--= @BettypeHTHDP 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_0_HTHDP,
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_HTHDP,
 		sum(case when R.bettype = 7--= @BettypeHTHDP 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_1_HTHDP,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_HTHDP,
 
 		sum(case when R.bettype = 8--= @BettypeHTOU 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_0_HTOU, 	
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_HTOU, 	
 		sum(case when R.bettype = 8--= @BettypeHTOU 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_1_HTOU,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_HTOU,
 		sum(case when R.bettype = 8--= @BettypeHTOU 
-		and R.FOffset = 2 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose else (MYO_Won + MYO_Lose) end else 0 end)  as WinLost_2_HTOU,
+		and R.FOffset = 2 then case R.WinLostStatus when 1 then (R.AwayLose)/2  when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_2_HTOU,
 		
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 	from 	

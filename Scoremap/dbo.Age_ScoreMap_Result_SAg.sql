@@ -111,16 +111,16 @@ BEGIN
 	
 		SELECT matchid, home , away,
 				ISNULL(-SUM(CASE
-							WHEN r<=-0.5 AND bt IN (1,3,7,8) THEN risk
-							WHEN r<0 AND bt IN (1,3,7,8) THEN 0.5 * risk
+							WHEN r<=-0.5 AND bt IN (1,3,7,8) THEN 1
+							WHEN r<0 AND bt IN (1,3,7,8) THEN 1+(r*2)
 							ELSE 0
-						END)  
+						END * risk) 
 						+ SUM(CASE WHEN r = 0 AND bt IN (1,3,7,8) THEN (MYO_Won + MYO_Lose) ELSE 0 END)
 						+SUM(CASE
-							WHEN r>=0.5 AND bt IN (1,3,7,8) THEN  risk * trueodds
-							WHEN r>0 AND bt IN (1,3,7,8) THEN 0.5 * (risk * trueodds)
+							WHEN r>=0.5 AND bt IN (1,3,7,8) THEN 1
+							WHEN r>0 AND bt IN (1,3,7,8) THEN 1-(r*2)
 							ELSE 0
-						END),0)
+						END * risk * trueodds),0)
 					+/*once bt = 1,3,7,8 will calculate equation above ,the other way will calculate below*/
 						ISNULL(-SUM(CASE
 							WHEN r=0 AND bt IN (2,4,5,6,12,13,15,24,26,27,28,30,123,126,151,145,146,131,132,136,137,138,139
