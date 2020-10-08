@@ -89,7 +89,7 @@ BEGIN
 						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset > 0.25 then 2
 						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset = -0.25 then 3
 						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset < -0.25 then 4
-						when F.VScoreHDP + BaseOffset + ForecastOffset.offset - F.Offset =0 then 6
+						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset =0 then 6
 						else 5
 					end
 				end as WinlostStatus,
