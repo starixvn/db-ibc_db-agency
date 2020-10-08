@@ -28,6 +28,8 @@ BEGIN
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
+			sum(MYO_Won) AS MYO_Won,
+			sum(MYO_Lose) AS MYO_Lose,
 			oddstype,
 			oddsspread
 		from 
@@ -37,7 +39,9 @@ BEGIN
 				sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.apositiontaking) else 0 end) homewin,
 				sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.apositiontaking) else 0 end) awaywin,
 				sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) homelose,
-				sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) awaylose
+				sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) awaylose,
+				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.apositiontaking/100 else 0 end) AS MYO_Won,
+				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.apositiontaking/100  else 0 end) AS MYO_Lose
 			from bettrans b WITH(NOLOCK) 
 			where  matchid = @matchid
 				AND b.bettype = @bettype
@@ -54,6 +58,8 @@ BEGIN
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
+			sum(MYO_Won) AS MYO_Won,
+			sum(MYO_Lose) AS MYO_Lose,
 			oddstype,
 			oddsspread
 		from 
@@ -63,7 +69,9 @@ BEGIN
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) homewin,
 				sum(case when betteam='a'  then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) awaywin,
 				sum(case when betteam='h'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) homelose,
-				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) awaylose
+				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) awaylose,
+				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose
 
 			from bettrans b with(nolock) inner join customer c with (nolock) on b.custid = c.custid
 			where matchid = @matchid
@@ -81,6 +89,8 @@ BEGIN
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
+			sum(MYO_Won) AS MYO_Won,
+			sum(MYO_Lose) AS MYO_Lose,
 			oddstype, 
 			oddsspread
 		from
@@ -90,7 +100,9 @@ BEGIN
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) homewin,
 				sum(case when betteam='a'  then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) awaywin,
 				sum(case when betteam='h'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) homelose,
-				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) awaylose
+				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) awaylose,
+				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.spositiontaking/100 else 0 end) AS MYO_Won,
+				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.spositiontaking/100  else 0 end) AS MYO_Lose
 			from bettrans b with(nolock) 
 			where matchid = @matchid
 				AND b.bettype = @bettype
