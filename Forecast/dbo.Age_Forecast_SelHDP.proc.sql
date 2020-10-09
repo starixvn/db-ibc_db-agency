@@ -16,7 +16,7 @@ Revisions:
 	- 20150826@Winnie: Myanmar Odds
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20190918@Percy: Remove inactive products [RedmineID: #118699]
-	- 20200929@Malcolm : add Oddstype and oddsspread [RedmineId : #141956]
+	- 20200929@Malcolm : add Myanmar Odds [RedmineId : #141956]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -28,12 +28,9 @@ BEGIN
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
-			sum(MYO_Won) AS MYO_Won,
-			sum(MYO_Lose) AS MYO_Lose,
-			oddstype,
-			oddsspread
+			sum(MYO_Won + MYO_Lose ) AS MYO
 		from 
-			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score, oddstype, oddsspread,
+			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score,
 				sum(case when betteam='h' then stake * (b.apositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.apositiontaking) else 0 end) awaytotal,	
 				sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.apositiontaking) else 0 end) homewin,
@@ -41,15 +38,15 @@ BEGIN
 				sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) homelose,
 				sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) awaylose,
 				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.apositiontaking/100 else 0 end) AS MYO_Won,
-				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.apositiontaking/100  else 0 end) AS MYO_Lose
+				sum(case when oddstype= 6 and oddsspread < 0 then oddsspread * stake * b.apositiontaking/100  else 0 end) AS MYO_Lose
 			from bettrans b WITH(NOLOCK) 
 			where  matchid = @matchid
 				AND b.bettype = @bettype
 				AND b.recommend = @agentid
 				and b.statusID in (0,1)
-			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore, oddstype, oddsspread
+			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore
 			)x
-		group by -x.hdp + score, oddstype, oddsspread
+		group by -x.hdp + score
 	END
 	else if @roleid = 3
 	BEGIN
@@ -58,12 +55,9 @@ BEGIN
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
-			sum(MYO_Won) AS MYO_Won,
-			sum(MYO_Lose) AS MYO_Lose,
-			oddstype,
-			oddsspread
+			sum(MYO_Won + MYO_Lose ) AS MYO
 		from 
-			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score, oddstype, oddsspread,
+			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score,
 				sum(case when betteam='h' then stake * (b.mpositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.mpositiontaking) else 0 end) awaytotal,
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) homewin,
@@ -71,16 +65,16 @@ BEGIN
 				sum(case when betteam='h'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) homelose,
 				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) awaylose,
 				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
-				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose
+				sum(case when oddstype= 6 and oddsspread < 0 then oddsspread * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose
 
 			from bettrans b with(nolock) inner join customer c with (nolock) on b.custid = c.custid
 			where matchid = @matchid
 				AND b.bettype = @bettype
 				AND b.mrecommend = @agentid
 				and b.statusID in (0,1)
-			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore, oddstype, oddsspread
+			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore
 			)x
-		group by -x.hdp + score, oddstype, oddsspread
+		group by -x.hdp + score
 	END
 	else if @roleid = 4
 	BEGIN
@@ -89,12 +83,9 @@ BEGIN
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
-			sum(MYO_Won) AS MYO_Won,
-			sum(MYO_Lose) AS MYO_Lose,
-			oddstype, 
-			oddsspread
+			sum(MYO_Won + MYO_Lose ) AS MYO
 		from
-			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score, oddstype, oddsspread,
+			(select b.currency, hdp2 - hdp1 hdp, livehomescore - liveawayscore score,
 				sum(case when betteam='h' then stake * (b.spositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.spositiontaking) else 0 end) awaytotal,	
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) homewin,
@@ -102,15 +93,15 @@ BEGIN
 				sum(case when betteam='h'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) homelose,
 				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) awaylose,
 				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.spositiontaking/100 else 0 end) AS MYO_Won,
-				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.spositiontaking/100  else 0 end) AS MYO_Lose
+				sum(case when oddstype= 6 and oddsspread < 0 then oddsspread * stake * b.spositiontaking/100  else 0 end) AS MYO_Lose
 			from bettrans b with(nolock) 
 			where matchid = @matchid
 				AND b.bettype = @bettype
 				AND b.srecommend = @agentid
 				and b.statusID in (0,1)
-			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore, oddstype, oddsspread
+			group by b.currency, hdp2 - hdp1, livehomescore - liveawayscore
 			)x
-		group by -x.hdp + score, oddstype, oddsspread
+		group by -x.hdp + score
 	END
 END
 GO

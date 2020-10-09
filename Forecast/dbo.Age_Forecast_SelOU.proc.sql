@@ -16,22 +16,21 @@ Revisions:
 	- 20150825@Winnie: Myanmar Odds
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20190918@Percy: Remove inactive products [RedmineID: #118699]
-	- 20200929@Malcolm : add Oddstype and oddsspread [RedmineId : #141956]
+	- 20200929@Malcolm : add Myanmar Odds [RedmineId : #141956]
 */
 BEGIN
 	SET NOCOUNT ON
 	
 	if @roleid = 2 
 	BEGIN
-		select x.liveindicator, x.status, x.score +  x.hdp offset, oddstype, oddsspread,
+		select x.liveindicator, x.status, x.score +  x.hdp offset,
 			sum(x.hometotal * 1) 'ht',
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin- x.awaylose) * 1) 'al',
 			sum((x.awaywin- x.homelose) * 1) 'hl',
-			sum(MYO_Won) AS MYO_Won,
-			sum(MYO_Lose) AS MYO_Lose
+			sum(MYO_Won + MYO_Lose ) AS MYO
 		from 
-			(select liveindicator,  status, b.currency, hdp1 hdp, 0 score, oddstype, oddsspread,
+			(select liveindicator,  status, b.currency, hdp1 hdp, 0 score,
 				sum(case when betteam='h' then stake * (b.apositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.apositiontaking) else 0 end) awaytotal,	
 				sum(case when betteam='h' then (case when odds < 0 then 1 else odds end) * stake * (b.apositiontaking) else 0 end) homewin,
@@ -39,27 +38,26 @@ BEGIN
 				sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) homelose,
 				sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.apositiontaking) else 0 end) awaylose,
 				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.apositiontaking/100 else 0 end) AS MYO_Won,
-				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.apositiontaking/100  else 0 end) AS MYO_Lose
+				sum(case when oddstype= 6 and oddsspread < 0 then oddsspread * stake * b.apositiontaking/100  else 0 end) AS MYO_Lose
 			from bettrans b with(nolock) 
 			where matchid = @matchid
 				AND b.bettype = @bettype
 				AND b.recommend = @agentid
 				and b.statusID in (0,1)
-			group by liveindicator, status, b.currency, hdp1, livehomescore + liveawayscore, oddstype, oddsspread
+			group by liveindicator, status, b.currency, hdp1, livehomescore + liveawayscore
 			)x 
-		group by x.status, liveindicator, x.score + x.hdp ,oddstype, oddsspread
+		group by x.status, liveindicator, x.score + x.hdp
 	END
 	else if @roleid = 3
 	BEGIN
-		select x.liveindicator, x.status, x.score +  x.hdp offset, oddstype, oddsspread, 
+		select x.liveindicator, x.status, x.score +  x.hdp offset,
 			sum(x.hometotal * 1) 'ht',
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
-			sum(MYO_Won) AS MYO_Won,
-			sum(MYO_Lose) AS MYO_Lose
+			sum(MYO_Won + MYO_Lose ) AS MYO
 		from 
-			(select liveindicator,  status, b.currency, hdp1 hdp, 0 score ,oddstype, oddsspread,
+			(select liveindicator,  status, b.currency, hdp1 hdp, 0 score,
 				sum(case when betteam='h' then stake * (b.mpositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.mpositiontaking) else 0 end) awaytotal,	
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) homewin,
@@ -67,27 +65,26 @@ BEGIN
 				sum(case when betteam='h'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) homelose,
 				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) awaylose,
 				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
-				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose
+				sum(case when oddstype= 6 and oddsspread < 0 then oddsspread * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose
 			from bettrans b with(nolock) 
 			where matchid = @matchid
 				AND b.bettype = @bettype
 				AND b.mrecommend = @agentid
 				and b.statusID in (0,1)
-			group by liveindicator, status, b.currency, hdp1, livehomescore + liveawayscore, oddstype, oddsspread
+			group by liveindicator, status, b.currency, hdp1, livehomescore + liveawayscore
 			)x 
-		group by x.status, liveindicator, x.score + x.hdp, oddstype, oddsspread
+		group by x.status, liveindicator, x.score + x.hdp
 	END
 	else if @roleid = 4
 	BEGIN
-		select x.liveindicator, x.status, x.score +  x.hdp offset, oddstype, oddsspread,
+		select x.liveindicator, x.status, x.score +  x.hdp offset,
 			sum(x.hometotal * 1) 'ht',
 			sum(x.awaytotal * 1) 'at',
 			sum((x.homewin - x.awaylose) * 1) 'al',
 			sum((x.awaywin - x.homelose) * 1) 'hl',
-			sum(MYO_Won) AS MYO_Won,
-			sum(MYO_Lose) AS MYO_Lose
+			sum(MYO_Won + MYO_Lose ) AS MYO
 		from 
-			(select liveindicator,  status, b.currency, hdp1 hdp, 0 score,oddstype, oddsspread,
+			(select liveindicator,  status, b.currency, hdp1 hdp, 0 score,
 				sum(case when betteam='h' then stake * (b.spositiontaking) else 0 end) hometotal,
 				sum(case when betteam='a' then stake * (b.spositiontaking) else 0 end) awaytotal,	
 				sum(case when betteam='h'  then (case when odds < 0 then 1 else odds end) * stake * (b.spositiontaking) else 0 end) homewin,
@@ -95,15 +92,15 @@ BEGIN
 				sum(case when betteam='h'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) homelose,
 				sum(case when betteam='a'  then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.spositiontaking) else 0 end) awaylose,
 				sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.spositiontaking/100 else 0 end) AS MYO_Won,
-				sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.spositiontaking/100  else 0 end) AS MYO_Lose
+				sum(case when oddstype= 6 and oddsspread < 0 then oddsspread * stake * b.spositiontaking/100 else 0 end) AS MYO_Lose
 			from bettrans b with(nolock) 
 			where matchid = @matchid
 				AND b.bettype = @bettype
 				AND b.srecommend = @agentid
 				AND b.statusID IN (0,1)
-			group by liveindicator, status, b.currency, hdp1, livehomescore + liveawayscore, oddstype, oddsspread
+			group by liveindicator, status, b.currency, hdp1, livehomescore + liveawayscore
 			)x 
-		group by x.status, liveindicator, x.score + x.hdp, oddstype, oddsspread
+		group by x.status, liveindicator, x.score + x.hdp
 	END
 END
 GO
