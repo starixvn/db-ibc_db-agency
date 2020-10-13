@@ -48,6 +48,7 @@ Revisions:
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
+	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -60,6 +61,7 @@ Param's Explanation:
 
 SET NOCOUNT ON
 	
+select @IP = dbo.f_ConvertIPv6ToDummy(@IP)	
 ---------------------------
 --declare @ErrMsg varchar(200)
  CREATE TABLE #Master (		custID	int PRIMARY KEY, 

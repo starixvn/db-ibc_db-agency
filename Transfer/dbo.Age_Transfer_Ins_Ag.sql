@@ -55,6 +55,7 @@ Revisions:
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
+	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -66,6 +67,8 @@ Param's Explanation:
 Declare @RefNo bigint, @ToCustID int, @MRecommend1 int, @agentid int, @custid int, @grefno int, @srecommend int
 DECLARE @currency int, @actualrate float, @currName nvarchar(10) , @User nvarchar(50)
 DECLARE @agUser nvarchar(50), @ABSamount MONEY
+
+select @IP = dbo.f_ConvertIPv6ToDummy(@IP)
 
 Select @ToCustID = null
 select @ToCustID = CustID FROM CustDB.dbo.customer with (NOLOCK) where username = @ToUserName
