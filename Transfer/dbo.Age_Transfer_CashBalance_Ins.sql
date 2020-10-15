@@ -3,8 +3,7 @@ ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_Ins]
 	@FromCustID		INT,
 	@ToCustID		INT,
 	@SubAccID		INT = 0,
-	@Amount			FLOAT = 0,
-	
+	@Amount			FLOAT = 0,	
 	@Creator INT,
 	@IP NVARCHAR(15) = '',
 	@Language VARCHAR(2) = 'E',
@@ -24,6 +23,7 @@ AS
 		- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 		- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
+		- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -385,7 +385,7 @@ BEGIN
 
 	IF @Amount > 0
 	BEGIN
-		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername
+		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 			
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -422,7 +422,7 @@ BEGIN
 			END
 		END
 
-		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername
+		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -460,7 +460,7 @@ BEGIN
 	END
 	ELSE IF @Amount < 0
 	BEGIN
-		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername
+		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 
 		INSERT INTO bettrans 
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -481,7 +481,7 @@ BEGIN
 			RETURN
 		END
 		
-		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername
+		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 			
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
