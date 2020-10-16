@@ -32,6 +32,8 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20200810@Sophia: Add PG Soft[Redmine: #137767]
 		- 20200908@Malcolm : Report Enhancement for Jackpot Product Filter [RedmineID : #139575]
 		- 20200918@Malcolm: Add Joker [redmine: #131609]
+		- 20200915@Malcolm: Add WM Live Casino [redmine: #131584]
+
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -68,7 +70,9 @@ RETURN
 				(50, 224, 0), -- RNG War
 				(52, 225, 0), -- ION
 				(55, 232, 0),  -- PG Soft
-				(56, 234, 0)  -- Joker
+				(56, 234, 0),  -- Joker
+				(51, 233, 0)  -- WM
+
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
