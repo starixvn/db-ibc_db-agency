@@ -20,3 +20,4 @@ Report\Winloss\Age_Rpt_WinLoss_Member.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Agent.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Master.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Member.sql
+Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroupProductSel.sql
