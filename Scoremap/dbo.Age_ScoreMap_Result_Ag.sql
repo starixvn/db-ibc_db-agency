@@ -31,6 +31,7 @@ AS
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 		- 20180802@Helen: Wrongly calculation for bettype correct score half time  - [Redmine:99508]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
@@ -71,7 +72,8 @@ BEGIN
 		livehomescore SMALLINT,
 		liveawayscore SMALLINT,
 		apositiontaking SMALLMONEY,
-		oddsspread MONEY
+		oddsspread MONEY,
+		oddstype TINYINT
 	)
 	
 	-- get member tickets INTO temp TABLE	
@@ -97,7 +99,8 @@ BEGIN
 		livehomescore,
 		liveawayscore,
 		apositiontaking,
-		oddsspread
+		oddsspread,
+		oddstype
 	FROM bettrans b WITH (NOLOCK)			
 		INNER JOIN bettype_tmp bt ON bt.bettype = b.bettype AND bt.liveindicator = b.liveindicator
 	WHERE b.matchid IN (SELECT val FROM strSplit(@matchids , ','))
@@ -112,6 +115,7 @@ BEGIN
 							WHEN r<0 AND bt IN (1,3,7,8,25) THEN 1+(r*2)
 							ELSE 0
 						END * risk) 
+						+ SUM(CASE WHEN r = 0 AND bt IN (1,3,7,8) THEN (MYO_Won + MYO_Lose) ELSE 0 END)
 						+SUM(CASE
 							WHEN r>=0.5 AND bt IN (1,3,7,8) THEN 1
 							WHEN r>0 AND bt IN (1,3,7,8) THEN 1-(r*2)
@@ -148,6 +152,8 @@ BEGIN
 					matchid, home, away,
 					r.risk,
 					r.trueodds,
+					r.MYO_Won,
+					r.MYO_Lose,
 					CASE WHEN betteam  = 'h' AND bt IN (1,7) THEN (home+hc) - (away) 
 						WHEN betteam <> 'h' AND bt IN (1,7) THEN (away+hc) - (home) 						
 						WHEN betteam  = 'h' AND bt IN (2,12,136,137,138,139,157) THEN (home+away)&1  --Dom & Radar
@@ -232,6 +238,8 @@ BEGIN
 						SELECT	matchid, betteam,
 								SUM( ( (stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END)) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM( (stake* apositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) trueodds,
 								SUM( (stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) ) risk,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.apositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.apositiontaking/100  else 0 end) AS MYO_Lose,
 								CASE WHEN betteam = 'h' AND liveindicator = 1 THEN (hdp2+liveawayscore)-(hdp1 + livehomescore)
 									 WHEN betteam = 'h' AND liveindicator <> 1 THEN hdp2-hdp1
 									 WHEN betteam <> 'h' AND liveindicator = 1 THEN (hdp1+livehomescore)-(hdp2+liveawayscore) 
@@ -246,6 +254,8 @@ BEGIN
 						SELECT	matchid, betteam,
 							SUM( (stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM(stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) trueodds,
 							SUM(stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) risk,
+							0 AS MYO_Won,
+							0 AS MYO_Lose,
 							0 hc,
 							0 hd,
 							bettype bt
@@ -256,6 +266,8 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( ( (stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM( (stake * apositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) trueodds,
 							SUM( (stake * apositiontaking *CASE WHEN odds<0 THEN -odds ELSE 1 END) ) risk,
+							sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.apositiontaking/100 else 0 end) AS MYO_Won,
+							sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.apositiontaking/100  else 0 end) AS MYO_Lose,
 							hdp1,
 							0 hd,
 							bettype bt
@@ -266,6 +278,8 @@ BEGIN
 						SELECT	matchid, betteam,
 							SUM(stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 							SUM(stake * apositiontaking) risk,
+							0 AS MYO_Won,
+							0 AS MYO_Lose,
 							hdp1,
 							hdp2,
 							bettype bt
@@ -276,6 +290,8 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( stake * apositiontaking * ( odds-1)) / SUM(stake * apositiontaking) trueodds,
 							SUM( stake * apositiontaking) risk,
+							0 AS MYO_Won,
+							0 AS MYO_Lose,
 							0 hc,
 							0 hd,
 							bettype bt
@@ -286,6 +302,8 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 								SUM(stake * apositiontaking) risk,
+								0 AS MYO_Won,
+								0 AS MYO_Lose,
 								CASE WHEN bettype IN  (159,406,161,407,162,409,179,181,182) THEN cast(right(betteam,1)AS INT) 
 									ELSE cast(left(betteam,1)AS INT) END
 								AS hc,
@@ -301,6 +319,8 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 								SUM(stake * apositiontaking) risk,
+								0 AS MYO_Won,
+								0 AS MYO_Lose,
 								0 hc,
 								0 hd,
 								13 bt
@@ -311,6 +331,8 @@ BEGIN
 						SELECT	matchid, betteam,
 							SUM( (stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END ) * CASE WHEN odds <0 THEN 1/-CAST(odds AS FLOAT) ELSE odds END ) / SUM(stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) trueodds,
 							SUM(stake * apositiontaking * CASE WHEN odds<0 THEN -odds ELSE 1 END) risk,
+							0 AS MYO_Won,
+							0 AS MYO_Lose,
 							0 hc,
 							0 hd,
 							bettype bt
@@ -321,6 +343,8 @@ BEGIN
 						SELECT	matchid, betteam, 
 							SUM( stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 							SUM(stake * apositiontaking) risk,
+							0 AS MYO_Won,
+							0 AS MYO_Lose,
 							0 hc,
 							0 hd,
 							24 bt
@@ -331,6 +355,8 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 								SUM(stake * apositiontaking ) risk,
+								0 AS MYO_Won,
+								0 AS MYO_Lose,
 								0 hc,
 								0 hd,
 								bettype bt
@@ -341,6 +367,8 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 								SUM(stake * apositiontaking) risk,
+								0 AS MYO_Won,
+								0 AS MYO_Lose,
 								0 hc,
 								0 hd,
 								b.bettype bt
@@ -351,6 +379,8 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 								SUM(stake * apositiontaking) risk,
+								0 AS MYO_Won,
+								0 AS MYO_Lose,
 								0 hc,
 								0 hd,
 								27 bt
@@ -361,6 +391,8 @@ BEGIN
 						SELECT	matchid, betteam, 
 								SUM( stake * apositiontaking * (odds-1)) / SUM(stake * apositiontaking) trueodds,
 								SUM(stake * apositiontaking) risk,
+								0 AS MYO_Won,
+								0 AS MYO_Lose,
 								CASE WHEN betteam = '1' THEN hdp2-hdp1
 									 ELSE hdp1-hdp2	 
 								END hc,
@@ -373,6 +405,8 @@ BEGIN
 						SELECT	matchid , betteam,
 							SUM( stake * apositiontaking * ( odds-1)) / SUM(stake * apositiontaking) trueodds,
 							SUM( stake * apositiontaking) risk,
+							0 AS MYO_Won,
+							0 AS MYO_Lose,
 							0 hc,
 							0 hd,
 							bettype bt

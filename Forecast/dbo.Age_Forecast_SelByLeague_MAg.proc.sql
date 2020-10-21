@@ -20,6 +20,7 @@ AS
 		- 20181226@Percy: Add table OddsES for E-Sports [RedmineID: #106994]
 		- 20190415@Percy: Get livehomescore/liveawayscore data from match table instead of odds table [RedmineID: #113303]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
 
 	Supported bettypes: 1,3,7,8,301,302,303,304
 
@@ -39,38 +40,38 @@ BEGIN
 		R.liveindicator, isnull(M.LiveHomeScore, 0) as livehomescore, isnull(M.LiveAwayScore, 0) as liveawayscore,M.ShowTime,M.MatchCode,
 
 		sum(case when R.bettype = 1--= @BettypeHDP 
-		and R.FOffset = -1 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end else 0 end)  as WinLost_M1_HDP,
+		and R.FOffset = -1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_M1_HDP,
 		sum(case when R.bettype = 1--= @BettypeHDP 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end else 0 end)  as WinLost_0_HDP,
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then(R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_HDP,
 		sum(case when R.bettype = 1--= @BettypeHDP 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end else 0 end)  as WinLost_1_HDP,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_HDP,
 
 		sum(case when R.bettype = 3--= @BettypeOU 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end end)  as WinLost_0_OU,
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_OU,
 		sum(case when R.bettype = 3--= @BettypeOU 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end end)  as WinLost_1_OU,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_OU,
 		sum(case when R.bettype = 3--= @BettypeOU 
-		and R.FOffset = 2 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end end)  as WinLost_2_OU,
+		and R.FOffset = 2 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_2_OU,
 
 		sum(case when R.bettype = 7--= @BettypeHTHDP 
-		and R.FOffset = -1 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end else 0 end)  as WinLost_M1_HTHDP,
+		and R.FOffset = -1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_M1_HTHDP,
 		sum(case when R.bettype = 7--= @BettypeHTHDP 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end else 0 end)  as WinLost_0_HTHDP,
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_HTHDP,
 		sum(case when R.bettype = 7--= @BettypeHTHDP 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end else 0 end)  as WinLost_1_HTHDP,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_HTHDP,
 
 		sum(case when R.bettype = 8--= @BettypeHTOU 
-		and R.FOffset = 0 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end end)  as WinLost_0_HTOU,
+		and R.FOffset = 0 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_0_HTOU,
 		sum(case when R.bettype = 8--= @BettypeHTOU 
-		and R.FOffset = 1 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end end)  as WinLost_1_HTOU,
+		and R.FOffset = 1 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_1_HTOU,
 		sum(case when R.bettype = 8--= @BettypeHTOU 
-		and R.FOffset = 2 then case R.WinLostStatus when 1 then R.AwayLose/2 when 2 then R.AwayLose when 3 then R.HomeLose/2 when 4 then R.HomeLose else 0 end end)  as WinLost_2_HTOU,
+		and R.FOffset = 2 then case R.WinLostStatus when 1 then (R.AwayLose)/2 when 2 then R.AwayLose when 3 then (R.HomeLose)/2 when 4 then R.HomeLose when 6 then (MYO_Won + MYO_Lose) else 0 end else 0 end)  as WinLost_2_HTOU,
 		isnull(m.isNeutral, CONVERT(BIT,0)) as IsNeutral
 	from 	
 		(
 			Select 
 				1 as ForecastID, F.bettype, liveindicator, '' as status, F.offset, 
-				homelose, awaylose,
+				homelose, awaylose, MYO_Won, MYO_Lose,
 				BaseOffset + ForecastOffset.offset as BaseOffset, 
 				case when F.BetType IN (1,7) THEN--in (@BetTypeHDP,@BetTypeHTHDP) then
 					case 
@@ -87,7 +88,7 @@ BEGIN
 						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset > 0.25 then 2
 						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset = -0.25 then 3
 						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset < -0.25 then 4
-						when F.VScoreHDP + BaseOffset + ForecastOffset.offset - F.Offset =0 then 6
+						when F.VScoreOU + BaseOffset + ForecastOffset.offset - F.Offset =0 then 6
 						else 5
 					end
 				end as WinlostStatus,
@@ -98,6 +99,8 @@ BEGIN
 						-x.hdp + score AS offset,
 						sum((x.homewin - x.awaylose) ) as AwayLose,
 						sum((x.awaywin - x.homelose) ) as HomeLose,
+						sum(MYO_Won) AS MYO_Won,
+						sum(MYO_Lose) AS MYO_Lose,
 						@BaseOffsetHDP AS BaseOffset,
 						MatchID,
 						VScoreHDP,
@@ -111,6 +114,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
 								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
@@ -134,6 +139,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100 else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(O.livehomescore, 0) - isnull(O.liveawayscore, 0) as VScoreHDP,
 								isnull(O.livehomescore, 0) + isnull(O.liveawayscore, 0) as VScoreOU
@@ -159,6 +166,8 @@ BEGIN
 						x.hdp + score AS offset, 
 						sum((x.homewin - x.awaylose)) as AwayLose,
 						sum((x.awaywin - x.homelose)) as HomeLose,
+						sum(MYO_Won) AS MYO_Won,
+						sum(MYO_Lose) AS MYO_Lose,
 						@BaseOffsetOU AS BaseOffset,
 						MatchID,
 						VScoreHDP,
@@ -173,6 +182,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
 								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
@@ -197,6 +208,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100 else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
 								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
@@ -222,6 +235,8 @@ BEGIN
 						-x.hdp + score AS offset, 
 						sum((x.homewin - x.awaylose) ) as AwayLose,
 						sum((x.awaywin - x.homelose) ) as HomeLose,
+						sum(MYO_Won) AS MYO_Won,
+						sum(MYO_Lose) AS MYO_Lose,
 						@BaseOffsetHTHDP AS BaseOffset,
 						MatchID,
 						VScoreHDP,
@@ -235,6 +250,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
 								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
@@ -258,6 +275,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100  else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
 								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
@@ -284,6 +303,8 @@ BEGIN
 						x.hdp + score AS offset, 
 						sum((x.homewin - x.awaylose)) as AwayLose,
 						sum((x.awaywin - x.homelose)) as HomeLose,
+						sum(MYO_Won) AS MYO_Won,
+						sum(MYO_Lose) AS MYO_Lose,
 						@BaseOffsetHTOU AS BaseOffset,
 						MatchID,
 						VScoreHDP,
@@ -298,6 +319,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100 else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(m.livehomescore, 0) - isnull(m.liveawayscore, 0) as VScoreHDP,
 								isnull(m.livehomescore, 0) + isnull(m.liveawayscore, 0) as VScoreOU
@@ -321,6 +344,8 @@ BEGIN
 								sum(case when betteam='a' then (case when odds < 0 then 1 else odds end) * stake * (b.mpositiontaking) else 0 end) AS awaywin,
 								sum(case when betteam='h' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS homelose,
 								sum(case when betteam='a' then (case when odds < 0 then abs(odds) else 1 end)  * stake * (b.mpositiontaking) else 0 end) AS awaylose,
+								sum(case when oddstype= 6 and oddsspread > 0 then oddsspread * stake * odds * b.mpositiontaking/100 else 0 end) AS MYO_Won,
+								sum(case when oddstype= 6 and oddsspread < 0  then oddsspread  * stake * b.mpositiontaking/100 else 0 end) AS MYO_Lose,
 								M.MatchID,
 								isnull(o.livehomescore, 0) - isnull(o.liveawayscore, 0) as VScoreHDP,
 								isnull(o.livehomescore, 0) + isnull(o.liveawayscore, 0) as VScoreOU
