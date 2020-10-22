@@ -56,6 +56,7 @@ Revisions:
 	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
+	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -67,6 +68,7 @@ Param's Explanation:
 Declare @RefNo bigint, @ToCustID int, @MRecommend1 int, @agentid int, @custid int, @grefno int, @srecommend int
 DECLARE @currency int, @actualrate float, @currName nvarchar(10) , @User nvarchar(50)
 DECLARE @agUser nvarchar(50), @ABSamount MONEY
+DECLARE @SubAccName VARCHAR(30) = ''
 
 select @IP = dbo.f_ConvertIPv6ToDummy(@IP)
 
@@ -197,6 +199,12 @@ SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', 
 
 CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY)
 
+if @SubAccID > 0 
+begin	
+	SELECT @SubAccName = username 
+	FROM DBCUST.CustDB.dbo.custSub WITH(NOLOCK) 
+	WHERE SubAccID = @SubAccID
+end
  --Total balance including today balance 
  IF (SELECT srecommend FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE custid = @ToCustID AND roleid = 2) IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@SuperIDsTransferTotal, ','))
  BEGIN 
@@ -390,8 +398,8 @@ COMMIT TRANSACTION
 			status, ruben, winlostdate, currency, actualrate, currencyName,recommend, mrecommend, srecommend, 
 			scomm, swinlost,ip,statusID)
 		VALUES 
-		   (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User, @amount, 0, 
-			'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend, 
+		   (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			@amount, 0, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend, 
 			0, 0,@ip,131)
 		if @@Error <> 0
 		BEGIN
@@ -420,8 +428,8 @@ COMMIT TRANSACTION
 		   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 			scomm, swinlost,ip,statusID)
-		VALUES (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agUser, 0, @amount,
-			'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @agentid, @MRecommend1, @srecommend, 
+		VALUES (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			0, @amount, 'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @agentid, @MRecommend1, @srecommend, 
 			0, 0,@ip,131)
 		if @@Error <> 0
 		BEGIN
@@ -447,8 +455,8 @@ COMMIT TRANSACTION
 		   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 			scomm, swinlost,ip,statusID)
-		VALUES (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User, 0, abs(@amount),
-			'Completed', 1, @WinlostDate, @currency, @actualrate,@currName, @agentid, @MRecommend1, @srecommend, 
+		VALUES (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			0, abs(@amount), 'Completed', 1, @WinlostDate, @currency, @actualrate,@currName, @agentid, @MRecommend1, @srecommend, 
 			0, 0,@ip,131)
 		if @@Error <> 0
 		BEGIN
@@ -464,8 +472,8 @@ COMMIT TRANSACTION
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 			scomm, swinlost,ip,statusID)
 		VALUES 
-		   (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agUser, abs(@amount), 0,
-			'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend, 
+		   (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			abs(@amount), 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend, 
 			0, 0,@ip,131)
 		if @@Error <> 0
 		BEGIN
@@ -500,13 +508,7 @@ Select @ErrMsg = ''
 
 
 if @SubAccID > 0 
-begin
-	DECLARE @SubAccName VARCHAR(30) = ''
-	
-	SELECT @SubAccName = username 
-	FROM DBCUST.CustDB.dbo.custSub WITH(NOLOCK) 
-	WHERE SubAccID = @SubAccID
-	
+begin	
 	SET @LogData = 'SubAccount:' +  coalesce(@SubAccName,space(1)) + ' - ' + @LogData
 end
 ---------------------------

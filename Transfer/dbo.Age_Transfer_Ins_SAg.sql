@@ -49,6 +49,7 @@ Revisions:
 	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
+	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -403,8 +404,8 @@ WHERE c.roleid = 2
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate,currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
-			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @MagUser, @amount, 0, 
-				'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
+			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END,
+				@amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 103
@@ -414,8 +415,8 @@ WHERE c.roleid = 2
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
-			VALUES (0, @creator, @Magentid, @MAgUser, @transcode, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @saUser, 0, @amount,
-				'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131)
+			VALUES (0, @creator, @Magentid, @MAgUser, @transcode, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @saUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				@amount, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 104
@@ -434,8 +435,8 @@ WHERE c.roleid = 2
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
-			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @MagUser, 0, abs(@amount),
-				'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
+			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				abs(@amount),'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 105
@@ -445,8 +446,8 @@ WHERE c.roleid = 2
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency,actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
-			VALUES (0, @creator, @Magentid, @MAgUser, @transcode, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @saUser, abs(@amount), 0,
-				'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131)
+			VALUES (0, @creator, @Magentid, @MAgUser, @transcode, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @saUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				abs(@amount), 0,'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 106

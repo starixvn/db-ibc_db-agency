@@ -55,6 +55,7 @@ Revisions:
 	- 20200821@Sophia: prevent duplicated transfer [Redmine: #137141]
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
+	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	
 
 Param's Explanation:
@@ -442,8 +443,8 @@ END
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 			 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)  
 		VALUES 
-		    (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User, @amount, 0,   
-			 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
+		    (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			 @amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
@@ -465,8 +466,8 @@ END
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 			 status, ruben, winlostdate, currency, actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)  
 		VALUES 
-		    (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agUser, 0, @amount,  
-			 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
+		    (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+		     0, @amount, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
@@ -493,8 +494,8 @@ END
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 			 status, ruben, winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)  
 		VALUES 
-		    (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User, 0, abs(@amount),  
-			 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
+		    (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			 0, abs(@amount), 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
@@ -505,8 +506,8 @@ END
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 			 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)  
 		VALUES 
-		    (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agUser, abs(@amount), 0,  
-			 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
+		    (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			 abs(@amount), 0, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
