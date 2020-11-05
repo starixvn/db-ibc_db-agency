@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,Dot_Member,Dot_Bonus" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_ConvertIPv6ToDummy]
 (
 	@IP nvarchar(15)=''
