@@ -34,6 +34,7 @@ AS
 		- 20200527@Sophia: Add ION [Redmine: #132325]
 		- 20200709@Sophia: Add BAIO [Redmine: #137318]
 		- 20201013@Percy: Add Time Machine OU bettype (228) [RedmineID: #141998]
+		- 20200915@Malcolm : Add WM Live Casino [Redmine : #131584]
 
 	- Columns:
 		- CommGroup:
@@ -143,6 +144,7 @@ FROM (
 		OR TypeID BETWEEN 3300 AND 3399
 		OR TypeID BETWEEN 3201 AND 3299
 		OR TypeID BETWEEN 5601 AND 5699
+		OR typeid BETWEEN 3401 AND 3499
 		
 ) AS A
 GO
