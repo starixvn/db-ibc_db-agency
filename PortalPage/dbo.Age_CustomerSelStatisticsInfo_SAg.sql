@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 USE [bodb02]
 GO
 
@@ -9,12 +9,13 @@ AS
 /*
 	Created by Percy
 	Date: 2017-10-20
-	DB: DBAGE.bodb02
+	DB: DBBOF.bodb02
 	Task: Home page - Super Statictis Info 
 	
 	Revisions:
 		- 20171020@Percy: Apply core sp [RedmineID: #84690]
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
+		- 20201113@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 
 BEGIN
