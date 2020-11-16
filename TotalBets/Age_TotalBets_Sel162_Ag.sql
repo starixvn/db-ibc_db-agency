@@ -9,14 +9,13 @@ Task : Retrieve Total Bet values for Live Casino
 DB: DB042.bodb02
 
 Revisions:
-	
+	    
 Param's Explanation:
 • @custid: Agent ID
 */
 
 
 SET NOCOUNT ON
-
 
 SELECT  m.bettype, 
 		m.showtime,

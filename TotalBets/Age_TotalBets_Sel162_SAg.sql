@@ -9,7 +9,7 @@ Task : Retrieve Total Bet values for Live Casino
 DB: DB042.bodb02
 
 Revisions:
-	
+	    
 Param's Explanation:
 • @custid: Super Agent ID
 */
