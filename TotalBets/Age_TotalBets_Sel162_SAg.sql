@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+﻿﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel162_SAg]
 	@custid INT,
 	@Language varchar(2) = 'E'
@@ -6,10 +6,9 @@ AS
 /*
 Created:  20120116@Sophia
 Task : Retrieve Total Bet values for Live Casino
-DB: DBBOF.bodb02
+DB: DB042.bodb02
 
 Revisions:
-	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 	    
 Param's Explanation:
 • @custid: Super Agent ID
