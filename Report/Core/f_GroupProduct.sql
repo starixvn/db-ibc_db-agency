@@ -25,6 +25,9 @@ RETURN
 	SELECT 5 AS ProductId, 5 AS GroupProductId
 	UNION ALL
 	SELECT 27, 5
+	UNION ALL
+	SELECT 49, 5
+
 	
 	/*
 	-- Macau Games: Macau Games, Pragmatic, Card Club, Spadegaming
