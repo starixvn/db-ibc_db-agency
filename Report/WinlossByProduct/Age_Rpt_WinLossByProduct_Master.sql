@@ -26,6 +26,7 @@ AS
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
 		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
 		- 20201202@Malcolm: Separate Bet Types - MMR Odds [RedmineId : #146159]
+		- 20201124@Malcolm: Show sport type name for Virtual Sports 3 [redmine: #131375]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -142,7 +143,7 @@ BEGIN
 			SELECT  s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
-						WHEN 5 THEN m.sporttype
+						WHEN 5 THEN ISNULL(m.sporttype, b.matchid)
 						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END AS SportType,
@@ -165,7 +166,7 @@ BEGIN
 				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
-						WHEN 5 THEN m.sporttype
+						WHEN 5 THEN ISNULL(m.sporttype, b.matchid)
 						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END,
@@ -245,7 +246,7 @@ BEGIN
 			SELECT  s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
-						WHEN 5 THEN m.sporttype
+						WHEN 5 THEN ISNULL(m.sporttype, b.matchid)
 						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END AS SportType,
@@ -268,7 +269,7 @@ BEGIN
 				AND b.srecommend = @CustID
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
-						WHEN 5 THEN m.sporttype
+						WHEN 5 THEN ISNULL(m.sporttype, b.matchid)
 						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END,

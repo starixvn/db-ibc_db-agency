@@ -2,9 +2,6 @@ Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroup.sql
 Report\WinlossAnalysis\Age_Rpt_WinlossAnalysis_Agent.sql
 Report\WinlossAnalysis\Age_Rpt_WinlossAnalysis_Master.sql
 Report\WinlossAnalysis\Age_Rpt_WinlossAnalysis_Member.sql
-Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Agent.sql
-Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Master.sql
-Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Member.sql
 Report\WinlossDetail\Age_Rpt_WinLossDetail_Agent.sql
 Report\WinlossDetail\Age_Rpt_WinLossDetail_Master.sql
 Report\WinlossDetail\Age_Rpt_WinLossDetail_Member.sql
@@ -31,3 +28,6 @@ Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master_ByLeague.sql
 Report\Core\f_AddRelatedProducts.sql
 Report\Core\Age_Rpt_GetProductListByRefTable.sql
 Report\Core\Age_Rpt_GetProductList.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Agent.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Member.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Master.sql
