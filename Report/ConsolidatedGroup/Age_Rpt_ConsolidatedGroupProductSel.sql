@@ -1,7 +1,7 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
 	@CustId INT
-	,@IsTest BIT = 0
+	,@SettingStatus BIT = 0
 AS
 /*
 	Created: Sophia
@@ -27,7 +27,7 @@ AS
 		- 20200422@Sophia: Add IBC Live Casino - apply new code for CustProductStatus [RedmineId: #130693]
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
 		- 20200918@Malcolm: Add Joker [redmine: #131609]
-		- 20201009@Malcolm: Add @IsTest param for this Sp [redmine: #143077]
+		- 20201009@Malcolm: Add @SettingStatus param for this Sp [redmine: #143077]
 		
 	Param's Explanation:
 
@@ -105,9 +105,9 @@ BEGIN
 			SELECT p.bitmapOrder , 
 					RealProductID AS ProductID 
 			FROM
-				(SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4, @IsTest) 
-				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11, @IsTest) --NG2
-				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13, @IsTest) --FW, BetradarVS, Keno Lottery
+				(SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4, @SettingStatus) 
+				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11, @SettingStatus) --NG2
+				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13, @SettingStatus) --FW, BetradarVS, Keno Lottery
 				)c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
@@ -154,7 +154,7 @@ BEGIN
 		WHERE c.CustID = @CID	
 		 
 		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
-		EXEC dbo.Acc_CustSetting_CheckMacauEnable @Site = @Site, @Currency = @Currency, @CustID = @CID, @SettingStatus = @IsTest
+		EXEC dbo.Acc_CustSetting_CheckMacauEnable @Site = @Site, @Currency = @Currency, @CustID = @CID, @SettingStatus = @SettingStatus
 
 		SET @ID = @ID + 1
 		
