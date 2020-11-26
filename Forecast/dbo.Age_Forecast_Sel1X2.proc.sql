@@ -161,11 +161,5 @@ BEGIN
 			)x 
 	END
 END	
-GO
-GRANT EXEC ON Age_Forecast_Sel1X2 TO [bodbDownlineNet]
-GO
-GRANT EXEC ON Age_Forecast_Sel1X2 TO [bodbDownlineNetView]
-GO
-
 
 

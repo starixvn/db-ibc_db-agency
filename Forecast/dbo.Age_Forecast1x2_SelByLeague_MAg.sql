@@ -67,11 +67,3 @@ BEGIN
 
 END
 
-GO
-GRANT EXEC ON Age_Forecast1x2_SelByLeague_MAg TO [bodbDownlineNet]
-GO
-GRANT EXEC ON Age_Forecast1x2_SelByLeague_MAg TO [bodbDownlineNetView]
-GO
-
-
-
