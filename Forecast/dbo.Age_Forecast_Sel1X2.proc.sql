@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_Forecast_Sel1X2]
 	@matchid int ,
 	@bettype int,
@@ -8,7 +8,7 @@ AS
 
 /*
 Task: Forecast for 1x2 bettype
-DB: DB052.bodb02
+DB: DBBOF.bodb02
 Revisions:
 	- 20090213@Kiwi: + Remove INNER JOIN customer tbl because bettrans tbl has recommend,mrecommend,srecommend fields.
 					 + At Super level (@roleid = 4): remove b.status in ('running','waiting') to use correct Index named _MS_Sys_38_52_42.
@@ -19,6 +19,7 @@ Revisions:
 	-- 20110523@Amy: re-arrange bettype
 	- 20150410@Tom: Modify Forecast function to support new 60 bet types [Feature #32738]
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -160,11 +161,5 @@ BEGIN
 			)x 
 	END
 END	
-GO
-GRANT EXEC ON Age_Forecast_Sel1X2 TO [bodbDownlineNet]
-GO
-GRANT EXEC ON Age_Forecast_Sel1X2 TO [bodbDownlineNetView]
-GO
-
 
 

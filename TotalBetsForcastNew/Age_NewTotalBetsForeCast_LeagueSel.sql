@@ -1,4 +1,4 @@
-/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_NewTotalBetsForeCast_LeagueSel] (
 	@sporttype SMALLINT = 1
 	,@IsLive BIT = 1
@@ -8,12 +8,13 @@ ALTER PROCEDURE [dbo].[Age_NewTotalBetsForeCast_LeagueSel] (
 /*	
 	Created: 20151216@Bobby
 	Task: Alpha site - New total bets AND forecast events filtering
-	DB: DBAGE/BODB02
+	DB: DBBOF/BODB02
 	
 	Revision:
 		- 20151216@Bobby: Initial
 		- 20170816@Percy: Change data type of Sporttype [RedmineID: #73545]
 		- 20200512@Sophia: Change datatype leaguename to nvarchar(500) [Redmine: #134020]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 	
 	Parameter's Explanation:
 			

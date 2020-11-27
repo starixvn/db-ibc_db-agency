@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ScoreMap_SelMatch]
  	@agentid	INT, -- SMA
  	@leagueid	INT
@@ -7,7 +7,7 @@ AS
 /*
 	Task: Get matchs have bets for Score Map function
 	Date: 20110919@Johnson
-	DB: DB042.bodb02	
+	DB: DBBOF.bodb02	
 	
 	Revisions:
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
@@ -22,6 +22,7 @@ AS
 		- 20171020@Percy: PHAIO 3 - Add bettype 453 [RedmineID: #84913]
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 
 BEGIN

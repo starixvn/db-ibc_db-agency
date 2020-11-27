@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Forecast_SelOU]
 	@matchid int,
 	@agentid int = null,
@@ -7,7 +7,7 @@ ALTER PROCEDURE [dbo].[Age_Forecast_SelOU]
 AS
 /*
 Task: Forcast for OU bettypes.
-DB: DB042/bodb02
+DB: DBBOF/bodb02
 
 Revisions: 
 	- 20090213@Kiwi: + Remove inner join customer and exchange tables because we retrieve data directly from bettrans table.
@@ -17,6 +17,7 @@ Revisions:
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 	- 20200929@Malcolm : add Myanmar Odds [RedmineId : #141956]
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 BEGIN
 	SET NOCOUNT ON

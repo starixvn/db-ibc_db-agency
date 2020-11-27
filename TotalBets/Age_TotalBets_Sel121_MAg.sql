@@ -1,4 +1,4 @@
-/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel121_MAg]
 	@custid int,
 	@Language varchar(2) = 'E'
@@ -7,11 +7,12 @@ AS
 /*
 Created: 20120628@Sophia
 Task : Retrieve Total bets for bettype 25: Draw No Bet, 121: Home No Bet, 122: Away No Bet
-DB: DB042.bodb02
+DB: DBBOF.bodb02
 
 Revisions:
 	- 20121003@Dan: update betteam for 121,122 bettype
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 Param's Explanation:
 • @CustID: Master AgentID
 */

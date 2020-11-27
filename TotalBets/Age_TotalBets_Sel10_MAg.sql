@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel10_MAg]
 	@custid int,
 	@Language varchar(2) = 'E'
@@ -7,13 +7,14 @@ AS
 /*
 Created: 20090122@Thien
 Task : Retrieve Total Bet values for bettype 10
-DB: DB042.bodb02
+DB: DBBOF.bodb02
 
 Revisions:
     - 20060222: remove refno 
     - 20090217@HanhVu: change the formula of totalwinlost value (member's won - member's lose)
     -- 20100527@Henry: Change to use StatusID instead of Status in WHERE statement
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 	
 Param's Explanation:
 • @custid: Master Agent ID

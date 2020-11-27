@@ -1,10 +1,10 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/	
 ALTER PROCEDURE [dbo].[Age_TotalBets_Sel6_MAg]
 	@custid int,
 	@Language varchar(2) = 'E'
 AS
 /*
-DB: DB042.bodb02
+DB: DBBOF.bodb02
 Revisions:
 	- 02/22/2006: remove refno
 	- 03/10/2006: remove odds depend
@@ -14,6 +14,7 @@ Revisions:
 	- 20140416@Dom: Add First Half Total Goal (1H Total Goal) (126)
 	- 20140814@Dom:  [Redmine: #19661] Offering 11 new bettypes - Include 7&Over, 4&over
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
+	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 */
 BEGIN
 	SET NOCOUNT ON

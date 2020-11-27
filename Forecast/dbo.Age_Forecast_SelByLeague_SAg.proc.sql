@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Forecast_SelByLeague_SAg]
 	@BaseOffsetHDP int,
 	@BaseOffsetOU int,
@@ -10,7 +10,7 @@ ALTER PROCEDURE [dbo].[Age_Forecast_SelByLeague_SAg]
 AS
 /*
 	Created:
-	DB: DB042.bodb02
+	DB: DBBOF.bodb02
 	WARNING: TAKE A DEEP BREATH BEFORE READING THIS SP
 	
 	Revisions:
@@ -21,6 +21,7 @@ AS
 		- 20190415@Percy: Get livehomescore/liveawayscore data from match table instead of odds table [RedmineID: #113303]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 
 	Supported bettypes: 1,3,7,8,301,302,303,304
 	

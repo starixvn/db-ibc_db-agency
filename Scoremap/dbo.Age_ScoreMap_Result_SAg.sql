@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DB042-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ScoreMap_Result_SAg]
  	@srecommend		INT, 	
  	@matchids		VARCHAR(4000) = '',
@@ -12,7 +12,7 @@ AS
 /*
 	Task: Forecast this Super's winloss based on match's score preset
 	Date: 20110919@Johnson
-	DB: DBAGE.bodb02	
+	DB: DBBOF.bodb02	
 	
 	Revisions:
 		- 20120626@Sophia: Add new bettype 121, 122, 123 for Home no bet, Away no bet, Draw/No Draw
@@ -32,6 +32,7 @@ AS
 		- 20180802@Helen: Wrongly calculation for bettype correct score half time  - [Redmine:99508]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		
 	Parameter's Explanations:
 		@bettypes_live : live ball bet types 
