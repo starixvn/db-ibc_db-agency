@@ -21,9 +21,6 @@ Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroupProductSel.sql
 Report\Outstanding\Chatbot\Age_Rpt_DownlineOutstanding_Member.sql
 Report\Outstanding\Chatbot\Age_Rpt_DownlineOutstanding_Agent.sql
 Report\Outstanding\Chatbot\Age_Rpt_DownlineOutstanding_Master.sql 
-Report\MatchWinloss\Age_Rpt_MatchWinLossDetail_Member.sql
-Report\MatchWinloss\Age_Rpt_MatchWinLossDetail_Agent.sql
-Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master_All.sql
 Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master_ByLeague.sql
 Report\Core\f_AddRelatedProducts.sql
 Report\Core\Age_Rpt_GetProductListByRefTable.sql
@@ -31,3 +28,4 @@ Report\Core\Age_Rpt_GetProductList.sql
 Report\Chatbot\Age_Rpt_SumWinLoss_Agent.sql
 Report\Chatbot\Age_Rpt_SumWinLoss_Member.sql
 Report\Chatbot\Age_Rpt_SumWinLoss_Master.sql
+Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master.sql
