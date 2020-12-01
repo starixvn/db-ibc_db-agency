@@ -140,7 +140,7 @@ BEGIN
 					ISNULL(m.showtime, '') as showtime
 			FROM bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE b.mrecommend = @custid
 				AND b.bettype NOT IN (9,29,10)
@@ -355,7 +355,7 @@ BEGIN
 					isnull(m.showtime, '') as showtime
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
@@ -581,7 +581,7 @@ BEGIN
 					INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid 
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-					LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
+					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
 				WHERE b.mrecommend = @custid
 					AND b.bettype < 19001 
 					AND b.bettype NOT IN (9,29,10)
@@ -729,7 +729,7 @@ BEGIN
 					INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
-					LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
+					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1

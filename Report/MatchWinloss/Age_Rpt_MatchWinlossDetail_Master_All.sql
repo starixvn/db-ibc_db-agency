@@ -381,7 +381,7 @@ BEGIN
 					ISNULL(m.showtime, '') AS showtime
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				--INNER JOIN #RecommendList R ON R.recommend = b.recommend			
 			WHERE b.winlostdate >= @fdate
