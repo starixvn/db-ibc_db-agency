@@ -36,6 +36,7 @@ AS
 		- 20201013@Percy: Add Time Machine OU bettype (228) [RedmineID: #141998]
 		- 20200915@Malcolm : Add WM Live Casino [Redmine : #131584]
 		- 20201201@Malcolm : Add Gold Diamond Gaming [Redmine : #144110]
+		- 20201201@Malcolm : Separate the bettype range (4001 -> 7999) into bettype ranges of multiple game [RedmineId : #131375]
 
 	- Columns:
 		- CommGroup:
@@ -135,7 +136,13 @@ FROM (
 		OR typeid BETWEEN 1701 AND 1799
 		OR typeid BETWEEN 2101 AND 2399
 		OR typeid BETWEEN 2401 AND 2499
-		OR typeid BETWEEN 4001 AND 7999
+		OR typeid BETWEEN 4001 AND 4100 -- Macau Games
+		OR typeid BETWEEN 4101 AND 4300 -- PP
+		OR typeid BETWEEN 4301 AND 4600 -- SG
+		OR typeid BETWEEN 5500 AND 5599 -- RNG War
+		OR typeid BETWEEN 5601 AND 5699 -- ION
+		OR typeid BETWEEN 6001 AND 6300 -- PG Soft
+		OR typeid BETWEEN 6401 AND 6700 -- Joker
 		OR typeid BETWEEN 2501 AND 2699
 		OR typeid BETWEEN 2901 AND 2999
 		OR typeid BETWEEN 1901 AND 1999
