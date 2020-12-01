@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBTXN-bodb02" selecters="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBTXN-bodb02,DBACC-bodb02" selecters="" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 (
 	@ProductID	VARCHAR(500) = ''
@@ -33,6 +33,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20200908@Malcolm : Report Enhancement for Jackpot Product Filter [RedmineID : #139575]
 		- 20200918@Malcolm: Add Joker [redmine: #131609]
 		- 20200915@Malcolm: Add WM Live Casino [redmine: #131584]
+		- 20201201@Malcolm : Add Gold Diamond Gaming [Redmine : #144110]
 
 	Paramters Explanation:
  		@ProductID: list of products
@@ -71,7 +72,8 @@ RETURN
 				(52, 225, 0), -- ION
 				(55, 232, 0),  -- PG Soft
 				(56, 234, 0),  -- Joker
-				(51, 233, 0)  -- WM
+				(51, 233, 0),  -- WM
+				(59, 236, 0)   -- GDG
 
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
