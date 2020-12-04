@@ -2,9 +2,6 @@ Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroup.sql
 Report\WinlossAnalysis\Age_Rpt_WinlossAnalysis_Agent.sql
 Report\WinlossAnalysis\Age_Rpt_WinlossAnalysis_Master.sql
 Report\WinlossAnalysis\Age_Rpt_WinlossAnalysis_Member.sql
-Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Agent.sql
-Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Master.sql
-Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Member.sql
 Report\Charting\Age_Chart_WinlossAnalysis_Agent.sql
 Report\Charting\Age_Chart_WinlossAnalysis_Master.sql
 Report\Charting\Age_Chart_WinlossAnalysis_Member.sql
