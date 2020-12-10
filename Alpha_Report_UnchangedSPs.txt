@@ -15,5 +15,8 @@ Report\CommbyBettype\Age_Rpt_CommByBettype_Agent.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Master.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Member.sql
 Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroupProductSel.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Agent.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Master.sql
+Report\Chatbot\Age_Rpt_SumWinLoss_Member.sql
 
 
