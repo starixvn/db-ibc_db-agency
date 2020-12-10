@@ -35,6 +35,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20200915@Malcolm: Add WM Live Casino [redmine: #131584]
 		- 20201201@Malcolm : Add Gold Diamond Gaming [Redmine : #144110]
 		- 20201124@Malcolm: Add Virtual Sports 3 [redmine: #131375]
+		- 20201210@Malcolm: Add Big Gaming [RedmineId : #142459]
 
 	Paramters Explanation:
  		@ProductID: list of products
@@ -71,11 +72,12 @@ RETURN
 				(46, 242, 0), -- IBCBet Live Casino
 				(50, 224, 0), -- RNG War
 				(52, 225, 0), -- ION
-				(55, 232, 0),  -- PG Soft
-				(56, 234, 0),  -- Joker
-				(51, 233, 0),  -- WM
-				(59, 236, 0),   -- GDG
-				(49, 231, 0)  -- Virtual Sports 3
+				(55, 232, 0), -- PG Soft
+				(56, 234, 0), -- Joker
+				(51, 233, 0), -- WM
+				(59, 236, 0), -- GDG
+				(49, 231, 0), -- Virtual Sports 3
+				(57, 239, 0) -- BG
 
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'

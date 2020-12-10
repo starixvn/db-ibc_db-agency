@@ -34,9 +34,10 @@ AS
 		- 20200527@Sophia: Add ION [Redmine: #132325]
 		- 20200709@Sophia: Add BAIO [Redmine: #137318]
 		- 20201013@Percy: Add Time Machine OU bettype (228) [RedmineID: #141998]
-		- 20200915@Malcolm : Add WM Live Casino [Redmine : #131584]
+		- 20200915@Malcolm: Add WM Live Casino [Redmine : #131584]
 		- 20201201@Malcolm : Add Gold Diamond Gaming [Redmine : #144110]
 		- 20201201@Malcolm : Separate the bettype range (4001 -> 7999) into bettype ranges of multiple game [RedmineId : #131375]
+		- 20201210@Malcolm: Add Big Gaming [RedmineId : #142459]
 
 	- Columns:
 		- CommGroup:
@@ -154,6 +155,7 @@ FROM (
 		OR TypeID BETWEEN 5601 AND 5699
 		OR typeid BETWEEN 3401 AND 3499 --WM
 		OR typeid BETWEEN 5701 AND 5799 --GDG
+		OR typeid BETWEEN 3501 AND 3599 --BG
 		
 ) AS A
 
