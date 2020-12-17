@@ -74,7 +74,7 @@ RETURN
 				(55, 232, 0),  -- PG Soft
 				(56, 234, 0),  -- Joker
 				(51, 233, 0),  -- WM
-				(59, 236, 0)   -- GDG
+				(59, 236, 0),   -- GDG
 				(49, 231, 0)  -- Virtual Sports 3
 
 		) d(ProductID, SportType, BetType)
