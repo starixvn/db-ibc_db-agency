@@ -25,6 +25,7 @@ AS
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
 		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
+		- 20201202@Malcolm: Separate Bet Types - MMR Odds [RedmineId : #146159]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -48,7 +49,8 @@ BEGIN
 		MAgTotal		MONEY, 
 		SAgWinloss		MONEY, 
 		SAgComm			MONEY, 
-		NumberOfTickets INT
+		NumberOfTickets INT,
+		IsMMR			BIT
 	);
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
 	DECLARE @isTest BIT = 0, @__ProductDetails XML;
@@ -136,7 +138,7 @@ BEGIN
 				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 			END
 
-			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
 			SELECT  s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
@@ -148,6 +150,7 @@ BEGIN
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
 					END AS liveindicator,
+					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END AS IsMMR,
 					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm / (1 - tpositiontaking) END) AS GrossComm,
 					SUM(ABS(stake)) AS Turnover,
 					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
@@ -168,17 +171,19 @@ BEGIN
 					END,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
-						ELSE 0 END;
+						ELSE 0 END,
+					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
 
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
 			BEGIN
-				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
 				SELECT
 					5 AS ProductID,
 					s.GroupTypeId,
 					r.sporttype,
 					0 AS liveindicator,
+					0 AS IsMMR,
 					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE ISNULL(scomm / (1 - tpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(acomm, 0)) AS MAgTotal,
@@ -198,12 +203,13 @@ BEGIN
 			-- Mix parlay of BRVS
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5)
 			BEGIN
-				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
 				SELECT
 					5 AS ProductId,
 					2799 AS bettype,
 					s.sporttype,
 					0 AS liveindicator,
+					0 AS IsMMR,
 					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE ISNULL(scomm / (1 - tpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(acomm, 0)) AS MAgTotal,
@@ -235,7 +241,7 @@ BEGIN
 				SET @TDate = @MoveBetsDay;
 			END
 
-			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
 			SELECT  s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
@@ -247,6 +253,7 @@ BEGIN
 						WHEN 3 THEN b.liveindicator
 						ELSE 0
 					END AS liveindicator,
+					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END AS IsMMR,
 					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm / (1 - tpositiontaking) END) AS GrossComm,
 					SUM(ABS(stake)) AS Turnover,
 					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
@@ -267,17 +274,19 @@ BEGIN
 					END,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
-						ELSE 0 END;
+						ELSE 0 END,
+					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
 
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
 			BEGIN
-				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
 				SELECT
 					5 AS ProductID,
 					s.GroupTypeId,
 					r.sporttype,
 					0 AS liveindicator,
+					0 AS IsMMR,
 					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE ISNULL(scomm / (1 - tpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(acomm, 0)) AS MAgTotal,
@@ -297,12 +306,13 @@ BEGIN
 			-- Mix parlay of BRVS
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5)
 			BEGIN
-				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+				INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
 				SELECT
 					5 AS ProductId,
 					2799 AS bettype,
 					s.sporttype,
 					0 AS liveindicator,
+					0 AS IsMMR,
 					SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE ISNULL(scomm / (1 - tpositiontaking), 0) END) AS GrossComm,
 					SUM(ABS(ISNULL(stake, 0))) AS TurnOver,
 					SUM(ISNULL(winlost, 0) - ISNULL(actual_stake, 0) + ISNULL(mwinlost, 0) + ISNULL(awinlost, 0) + ISNULL(acomm, 0)) AS MAgTotal,
@@ -330,6 +340,7 @@ BEGIN
 			t.ProductID,
 			t.SportType,
 			liveindicator,
+			IsMMR,
 			SUM(GrossComm) AS GrossComm,
 			SUM(TurnOver) AS Turnover,	
 			SUM(MAgTotal) AS MAgTotal,
@@ -337,8 +348,8 @@ BEGIN
 			SUM(SAgComm) AS SAgComm,
 			SUM(NumberOfTickets) AS NumberOfTickets
 	FROM #SAgWinLoss t
-	GROUP BY t.bettype, t.ProductID, t.SportType, liveindicator
-	ORDER BY t.bettype, t.ProductID, t.SportType, liveindicator;
+	GROUP BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR
+	ORDER BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR;
 
 	SET NOCOUNT OFF;
 END
