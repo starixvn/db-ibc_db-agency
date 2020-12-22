@@ -23,6 +23,7 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
+		- 20201201@Malcolm : Support Lead Gaming [RedminedId : #131375]
 */
 
 BEGIN
@@ -282,8 +283,8 @@ BEGIN
 						b.bettype,
 						0 AS liveindicator,
 						0 AS leagueid,
-						ISNULL(SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) AS turnover,
-						ISNULL(SUM(scomm/(1 - tpositiontaking)), 0) AS GrossComm,
+						ISNULL(SUM(ABS(stake)), 0) AS turnover,
+						ISNULL(SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) AS GrossComm,
 						ISNULL(SUM(winlost - actual_stake), 0) AS MemberWinLoss,
 						ISNULL(SUM(playercomm), 0) AS MemberComm,
 						ISNULL(SUM(awinlost), 0) AS AgWinLoss,
@@ -297,8 +298,10 @@ BEGIN
 						CONVERT(BIT,0) AS IsNeutral,
 						'' AS showtime
 				FROM bettrans b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.srecommend = @custid
-					AND b.bettype IN (2799)
+					AND s.ProductID = 5
+					AND s.EventType = 0
 					AND b.winlostdate >= @fromdate
 					AND b.winlostdate <= @todate
 					AND b.ruben = 1
@@ -378,7 +381,7 @@ BEGIN
 					ISNULL(m.showtime, '') AS showtime
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				--INNER JOIN #RecommendList R ON R.recommend = b.recommend			
 			WHERE b.winlostdate >= @fdate
@@ -534,8 +537,10 @@ BEGIN
 						CONVERT(BIT,0) AS IsNeutral,
 						'' AS showtime
 				FROM bettrans14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.srecommend = @custid
-					AND b.bettype IN (2799)
+					AND s.ProductID = 5
+					AND s.EventType = 0
 					AND b.winlostdate >= @fromdate
 					AND b.winlostdate <= @todate
 					AND b.ruben = 1

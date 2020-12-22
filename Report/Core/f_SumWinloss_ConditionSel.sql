@@ -34,6 +34,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20200918@Malcolm: Add Joker [redmine: #131609]
 		- 20200915@Malcolm: Add WM Live Casino [redmine: #131584]
 		- 20201201@Malcolm : Add Gold Diamond Gaming [Redmine : #144110]
+		- 20201124@Malcolm: Add Virtual Sports 3 [redmine: #131375]
 
 	Paramters Explanation:
  		@ProductID: list of products
@@ -73,7 +74,8 @@ RETURN
 				(55, 232, 0),  -- PG Soft
 				(56, 234, 0),  -- Joker
 				(51, 233, 0),  -- WM
-				(59, 236, 0)   -- GDG
+				(59, 236, 0),   -- GDG
+				(49, 231, 0)  -- Virtual Sports 3
 
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'

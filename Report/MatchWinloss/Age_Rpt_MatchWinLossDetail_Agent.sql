@@ -27,6 +27,7 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
+		- 20201201@Malcolm : Support Lead Gaming [RedminedId : #131375]
 */
 
 BEGIN
@@ -139,7 +140,7 @@ BEGIN
 					ISNULL(m.showtime, '') as showtime
 			FROM bettrans b WITH (NOLOCK)
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE b.mrecommend = @custid
 				AND b.bettype NOT IN (9,29,10)
@@ -249,8 +250,10 @@ BEGIN
 						CONVERT(BIT,0) as IsNeutral,
 						'' as showtime
 					FROM bettrans b WITH (NOLOCK)
+						INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 					WHERE b.mrecommend = @custid
-						AND b.bettype IN (2799)
+						AND s.ProductID = 5
+						AND s.EventType = 0
 						AND b.winlostdate >= @fromdate
 						AND b.winlostdate <= @todate
 						AND b.ruben = 1
@@ -352,7 +355,7 @@ BEGIN
 					isnull(m.showtime, '') as showtime
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
-				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 			WHERE b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
@@ -460,8 +463,10 @@ BEGIN
 						CONVERT(BIT,0) as IsNeutral,
 						'' as showtime
 					FROM bettrans14 b WITH (NOLOCK)
+						INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 					WHERE b.mrecommend = @custid
-						AND b.bettype IN (2799)
+						AND s.ProductID = 5
+						AND s.EventType = 0
 						AND b.winlostdate >= @fromdate
 						AND b.winlostdate <= @todate
 						AND b.ruben = 1
@@ -576,7 +581,7 @@ BEGIN
 					INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid 	
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid 
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-					LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
+					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype	
 				WHERE b.mrecommend = @custid
 					AND b.bettype < 19001 
 					AND b.bettype NOT IN (9,29,10)
@@ -724,7 +729,7 @@ BEGIN
 					INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid 	
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
-					LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
+					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype			
 				WHERE b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
