@@ -27,7 +27,7 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
-		- 20201201@Malcolm : Support Lead Gaming [RedminedId : #131375]
+		- 20201201@Malcolm : Support Leap Gaming [RedminedId : #131375]
 */
 
 BEGIN
@@ -848,4 +848,5 @@ BEGIN
 
 	SET NOCOUNT OFF;
 END
+
 GO

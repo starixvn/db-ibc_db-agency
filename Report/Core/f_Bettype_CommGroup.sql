@@ -156,4 +156,5 @@ FROM (
 		OR typeid BETWEEN 5701 AND 5799 --GDG
 		
 ) AS A
+
 GO
