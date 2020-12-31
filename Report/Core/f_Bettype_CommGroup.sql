@@ -36,7 +36,6 @@ AS
 		- 20201013@Percy: Add Time Machine OU bettype (228) [RedmineID: #141998]
 		- 20200915@Malcolm: Add WM Live Casino [Redmine : #131584]
 		- 20201201@Malcolm : Add Gold Diamond Gaming [Redmine : #144110]
-		- 20201201@Malcolm : Separate the bettype range (4001 -> 7999) into bettype ranges of multiple game [RedmineId : #131375]
 		- 20201210@Malcolm: Add Big Gaming [RedmineId : #142459]
 
 	- Columns:
