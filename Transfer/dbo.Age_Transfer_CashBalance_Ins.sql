@@ -24,6 +24,7 @@ AS
 		- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 		- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 		- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
+		- 20201228@Danny: Capture total cash before transfering [Redmine: #146038]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -386,15 +387,18 @@ BEGIN
 	IF @Amount > 0
 	BEGIN
 		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
-			
+		
+		DECLARE @TotalCashFrom MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCashFrom OUTPUT
+
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost, ip, statusID)
+			scomm, swinlost, ip, statusID, balance)
 		VALUES 
 			(0, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, @Amount, 0, 
 			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131)
+			0, 0, @ip, 131, @TotalCashFrom)
 			
 		IF @@ERROR <> 0
 		BEGIN
@@ -424,14 +428,17 @@ BEGIN
 
 		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 
+		DECLARE @TotalCashTo MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCashTo OUTPUT
+
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend,
-			scomm, swinlost, ip, statusID)
+			scomm, swinlost, ip, statusID, balance)
 		VALUES 
 			(0, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, @Amount,
 			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131)
+			0, 0, @ip, 131,@TotalCashTo)
 
 				
 		IF @@ERROR <> 0
@@ -462,14 +469,17 @@ BEGIN
 	BEGIN
 		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 
+		DECLARE @TotalCashFromNev MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCashFromNev OUTPUT
+
 		INSERT INTO bettrans 
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost, ip, statusID)
+			scomm, swinlost, ip, statusID, balance)
 		VALUES 
 			(0, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, ABS(@Amount),
 			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131)
+			0, 0, @ip, 131, @TotalCashFromNev)
 				
 		IF @@ERROR <> 0
 		BEGIN
@@ -482,15 +492,18 @@ BEGIN
 		END
 		
 		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
-			
+		
+		DECLARE @TotalCashToNev MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCashToNev OUTPUT
+
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost, ip, statusID)
+			scomm, swinlost, ip, statusID, balance)
 		VALUES 
 			(0, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, ABS(@Amount), 0,
 			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131)
+			0, 0, @ip, 131,@TotalCashToNev)
 				
 		IF @@ERROR <> 0
 		BEGIN

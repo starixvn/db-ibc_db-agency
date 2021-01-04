@@ -46,6 +46,7 @@ Revisions:
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
+	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -374,14 +375,17 @@ select * from #Agent
 		IF @amount > 0
 		BEGIN
 			
+			DECLARE @TotalCashMaster MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @masterid, @TotalCash  = @TotalCashMaster OUTPUT
+
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID)
+				scomm, swinlost,ip,statusID, balance)
 			VALUES 
 			   (0, @creator, @masterid, @maUser, @RefNo, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				@amount, 0, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
-				0, 0,@ip,131)
+				0, 0,@ip,131, @TotalCashMaster)
 			if @@Error <> 0
 			BEGIN								
 				select @ErrCode = 102
@@ -389,13 +393,17 @@ select * from #Agent
 				DELETE FROM bettrans where refno = @RefNo and matchid = 0
 				return
 			END
+
+			DECLARE @TotalCashAgent MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCashAgent OUTPUT
+
 			INSERT INTO bettrans
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)
+				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance)
 			VALUES 
 			   (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @maUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				0, @amount, 'Completed', 1, @WinlostDate, @currency, @actualrate,@currName, @agentid, @masterid, @srecommend, 
-				0, 0,@ip,131)
+				0, 0,@ip,131, @TotalCashAgent)
 			if @@Error <> 0
 			BEGIN						
 				select @ErrCode = 103
@@ -411,6 +419,9 @@ select * from #Agent
 		ELSE if @amount<0
 		BEGIN
 			--SET @amount = abs(@amount)
+
+			DECLARE @TotalCashMasterNev MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @masterid, @TotalCash  = @TotalCashMasterNev OUTPUT
 		
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -427,14 +438,18 @@ select * from #Agent
 				DELETE FROM bettrans where refno = @RefNo and matchid = 0
 				return
 			END
+
+			DECLARE @TotalCashAgentNev MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCashAgentNev OUTPUT
+
 			INSERT INTO bettrans
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID)
+				scomm, swinlost,ip,statusID, balance)
 			VALUES 
 			   (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @maUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				abs(@amount), 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @masterid, @srecommend, 
-				0, 0,@ip,131)
+				0, 0,@ip,131, @TotalCashAgentNev)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 104

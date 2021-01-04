@@ -57,6 +57,7 @@ Revisions:
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
+	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -393,14 +394,18 @@ COMMIT TRANSACTION
 					end
 	IF @amount > 0
 	BEGIN
+		
+		DECLARE @TotalCashAgent MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCashAgent OUTPUT
+
 		INSERT INTO bettrans 
 		   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName,recommend, mrecommend, srecommend, 
-			scomm, swinlost,ip,statusID)
+			scomm, swinlost,ip,statusID, balance)
 		VALUES 
 		   (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 			@amount, 0, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend, 
-			0, 0,@ip,131)
+			0, 0,@ip,131, @TotalCashAgent)
 		if @@Error <> 0
 		BEGIN
 			select @ErrCode = 104
@@ -423,14 +428,17 @@ COMMIT TRANSACTION
 			
 			return
 		END
-						
+		
+		DECLARE @TotalCashCust MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCashCust OUTPUT
+
 		INSERT INTO bettrans
 		   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost,ip,statusID)
+			scomm, swinlost,ip,statusID, balance)
 		VALUES (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 			0, @amount, 'Completed', 1, @WinlostDate, @currency,@actualrate,@currName, @agentid, @MRecommend1, @srecommend, 
-			0, 0,@ip,131)
+			0, 0,@ip,131, @TotalCashCust)
 		if @@Error <> 0
 		BEGIN
 			select @ErrCode = 105			
@@ -450,14 +458,17 @@ COMMIT TRANSACTION
 	ELSE IF @amount <0 
 	BEGIN
 		--SET @amount = abs(@amount)
-	
+		
+		DECLARE @TotalCashAgentNev MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCashAgentNev OUTPUT
+
 		INSERT INTO bettrans 
 		   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost,ip,statusID)
+			scomm, swinlost,ip,statusID, balance)
 		VALUES (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 			0, abs(@amount), 'Completed', 1, @WinlostDate, @currency, @actualrate,@currName, @agentid, @MRecommend1, @srecommend, 
-			0, 0,@ip,131)
+			0, 0,@ip,131, @TotalCashAgentNev)
 		if @@Error <> 0
 		BEGIN
 			select @ErrCode = 106
@@ -467,14 +478,18 @@ COMMIT TRANSACTION
 			
 			RETURN
 		END		
+
+		DECLARE @TotalCashCustNev MONEY 
+		EXEC Acc_CustomerSelTotalCash @custid = @custid, @TotalCash  = @TotalCashCustNev OUTPUT
+
 		INSERT INTO bettrans
 		   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost,ip,statusID)
+			scomm, swinlost,ip,statusID, balance)
 		VALUES 
 		   (0, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 			abs(@amount), 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend, 
-			0, 0,@ip,131)
+			0, 0,@ip,131, @TotalCashCustNev)
 		if @@Error <> 0
 		BEGIN
 			select @ErrCode = 107

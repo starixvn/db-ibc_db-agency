@@ -50,6 +50,7 @@ Revisions:
 	- 20200821@Sophia: Check UM Transfer Function [Redmine: #136992]
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
+	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -401,22 +402,29 @@ WHERE c.roleid = 2
 		IF @amount >0
 		BEGIN
 			
+			DECLARE @TotalCashSuper MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @SAgID, @TotalCash  = @TotalCashSuper OUTPUT
+
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate,currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
+				status, ruben, winlostdate, currency, actualrate,currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance)
 			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END,
-				@amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
+				@amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131, @TotalCashSuper)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 103
 				ROLLBACK TRANSACTION
 				return
 			END
+
+			DECLARE @TotalCashMaster MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @Magentid, @TotalCash  = @TotalCashMaster OUTPUT
+
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
+				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance)
 			VALUES (0, @creator, @Magentid, @MAgUser, @transcode, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @saUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-				@amount, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131)
+				@amount, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131, @TotalCashMaster)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 104
@@ -431,23 +439,30 @@ WHERE c.roleid = 2
 		ELSE if @amount<0
 		BEGIN
 			--SET @amount = abs(@amount)
+
+			DECLARE @TotalCashSuperNev MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @SAgID, @TotalCash  = @TotalCashSuperNev OUTPUT
 		
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
+				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance)
 			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-				abs(@amount),'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
+				abs(@amount),'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131, @TotalCashSuperNev)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 105
 				ROLLBACK TRANSACTION
 				return
 			END
+
+			DECLARE @TotalCashMasterNev MONEY 
+			EXEC Acc_CustomerSelTotalCash @custid = @Magentid, @TotalCash  = @TotalCashMasterNev OUTPUT
+
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency,actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
+				status, ruben, winlostdate, currency,actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance)
 			VALUES (0, @creator, @Magentid, @MAgUser, @transcode, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @saUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-				abs(@amount), 0,'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131)
+				abs(@amount), 0,'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131, @TotalCashMasterNev)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 106
