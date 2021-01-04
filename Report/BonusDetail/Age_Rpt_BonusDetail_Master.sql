@@ -1,7 +1,7 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Rpt_BonusDetail_Master]
 	@MasterId		INT,
-	@Username		VARCHAR(30), --recommend
+	@Username		VARCHAR(30),
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
 	@StatusId		TINYINT,
@@ -111,7 +111,10 @@ BEGIN
 	FROM #Result
 	ORDER BY ID ASC
 
+	DROP TABLE #Result
+
 	SET NOCOUNT OFF;
+
 END
 
 GO
