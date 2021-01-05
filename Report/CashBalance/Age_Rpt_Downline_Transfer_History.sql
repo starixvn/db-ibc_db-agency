@@ -1,5 +1,5 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[Age_Rpt_Downline_Transfer_History]  
+ALTER PROCEDURE [dbo].[Age_Rpt_Downline_Transfer_History]  
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,
@@ -70,12 +70,15 @@ BEGIN
   
 	IF @ToDate >= @BalanceUpDay
 	BEGIN
+		SET @FDate = @FromDate
+		SET @TDate = @ToDate
+		
 		IF @FromDate <= @BalanceUpDay
 		BEGIN
 			SET @FDate =  @BalanceUpDay
 		END
 
-		SET @TDate = @ToDate
+		
 
 		INSERT INTO #UplineTrans (Refno)
 		SELECT	refno AS RefNo	
@@ -140,7 +143,7 @@ BEGIN
 	FROM #DownlineTransferHistory d
 	INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
 	LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
-	WHERE c.username LIKE '%' + @Username + '%'
+	--WHERE c.username LIKE '%' + @Username + '%'
 
 
 	DROP TABLE #UplineTrans
