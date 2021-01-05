@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_Downline_Transfer_History]  
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
