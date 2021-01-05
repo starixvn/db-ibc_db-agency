@@ -1,5 +1,5 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_Rpt_Downline_Transfer_History]  
+CREATE PROCEDURE [dbo].[Age_Rpt_Downline_Transfer_History]  
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,
@@ -53,7 +53,7 @@ BEGIN
 		SELECT CustID FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 1 and recommend = @CustID
 	END
 
-	CREATE TABLE #UplineTrans (Refno BIGINT, Winlostdate smalldatetime)
+	CREATE TABLE #UplineTrans (Refno BIGINT)
 
 	CREATE TABLE #DownlineTransferHistory(
 		RefNo			BIGINT,
@@ -85,7 +85,7 @@ BEGIN
 			AND bettype > 20000;
 
 
-		INSERT INTO #DownlineTransferHistory(RefNo, CustID, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
+		INSERT INTO #DownlineTransferHistory(RefNo, CustID, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
 		SELECT  refno AS RefNo,
 				CustID,
 				TransDate,
