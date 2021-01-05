@@ -128,10 +128,10 @@ BEGIN
 				CASE WHEN credit  > 0 THEN 1 ELSE 0 END,
 				(credit + debit) TransferAmt,
 				ISNULL(balance,0) as OldBalance,
-				ISNULL(balance,0) + credit - debit)  AS NewBalance,
+				(ISNULL(balance,0) + credit - debit)  AS NewBalance,
 				transdesc as TransDesc
 		FROM DBARC.bodb_archive.dbo.transfer_bk b WITH (NOLOCK)  
-		WHERE custid = @CustID 
+		WHERE custid in (SELECT d.CustID FROM #DownLineList d) 
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
 	END  
