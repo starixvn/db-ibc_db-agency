@@ -142,6 +142,12 @@ BEGIN
 	LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
 	WHERE c.username LIKE '%' + @Username + '%'
 
+
+	DROP TABLE #UplineTrans
+	DROP TABLE #MBU
+	DROP TABLE #DownlineTransferHistory
+	DROP TABLE #DownLineList
+
 	SET NOCOUNT OFF;
 END
 
