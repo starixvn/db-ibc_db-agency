@@ -15,6 +15,7 @@ Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroupProductSel.sql
 Report\Chatbot\Age_Rpt_SumWinLoss_Agent.sql
 Report\Chatbot\Age_Rpt_SumWinLoss_Master.sql
 Report\Chatbot\Age_Rpt_SumWinLoss_Member.sql
-
+Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master.sql
+Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinlossDetail_SAg.StoredProcedure.sql
 
 

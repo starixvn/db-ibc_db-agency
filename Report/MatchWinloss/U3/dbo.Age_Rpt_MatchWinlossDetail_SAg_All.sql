@@ -24,6 +24,7 @@ AS
 	Revisions:
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
+		- 20201229@Malcolm : Support Happy 5 Linked Games [RedminedId : #146542]
     
 */
 
@@ -173,6 +174,48 @@ BEGIN
 				AND s.ProductID = 3													
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
+			
+			INSERT INTO #SAgMatchWLDetails 
+				SELECT
+					4 as BetGroup,
+					0 as matchid,
+					0 as homeid,
+					0 as awayid,
+					b.bettype,
+					0 as liveindicator,
+					0 as leagueid,
+					isnull(SUM(ABS(stake)), 0) as turnover,
+					isnull(SUM(scomm/(1 - tpositiontaking)), 0) as GrossComm,
+					isnull(SUM(winlost - actual_stake), 0) as MemberWinLost,
+					isnull(SUM(playercomm), 0) as MemberComm,
+					isnull(SUM(Winlost - actual_stake + playercomm), 0) as MemberTotal,
+					isnull(SUM(awinlost), 0) as AgentWinLost,
+					isnull(SUM(comm - playercomm), 0) AS  AgentComm,
+					isnull(SUM(awinlost + comm - playercomm), 0) AS AgentTotal,
+					isnull(SUM(mwinlost), 0) as MasterWinLost,
+					isnull(SUM(acomm - comm), 0) AS  MasterComm,
+					isnull(SUM(mwinlost + acomm - comm), 0) AS MasterTotal,
+					isnull(SUM(swinlost), 0) as SAgWinLost,
+					isnull(SUM(scomm - acomm), 0) AS  SAgComm,
+					isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0)-isnull(SUM(acomm),0) as SAgTotal,
+					isnull(SUM(scomm), 0) as CompanyComm,
+					-(isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost-actual_stake), 0))  as CompanyTotal,	
+					'' as race,
+					'' as matchcode,
+					CONVERT(BIT,0) as IsNeutral,
+					'' as showtime
+				FROM bettrans b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				WHERE 
+					b.srecommend = @custid
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
+					AND b.ruben = 1
+					AND b.statusID NOT IN (101, 102, 103) 
+					AND s.ProductID = 3 
+					AND s.EventType <> 1
+				GROUP BY b.bettype	
+				HAVING ISNULL(COUNT(transid), 0) > 0
 		END 
 			
 		--- Not number Game not group by liveindicator	
@@ -426,6 +469,52 @@ BEGIN
 				AND s.ProductID = 3				
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
+
+
+			INSERT INTO #SAgMatchWLDetails 
+			SELECT
+				4 as BetGroup,
+				0 as matchid,
+				0 as homeid,
+				0 as awayid,
+				b.bettype,
+				0 as liveindicator,
+				0 as leagueid,
+				isnull(SUM(ABS(stake)), 0) as turnover,
+				isnull(SUM(scomm/(1 - tpositiontaking)), 0) as GrossComm,
+				isnull(SUM(winlost - actual_stake), 0) as MemberWinLost,
+				isnull(SUM(playercomm), 0) as MemberComm,
+				isnull(SUM(Winlost - actual_stake + playercomm), 0) as MemberTotal,
+				isnull(SUM(awinlost), 0) as AgentWinLost,
+				isnull(SUM(comm - playercomm), 0) AS  AgentComm,
+				isnull(SUM(awinlost + comm - playercomm), 0) AS AgentTotal,
+				isnull(SUM(mwinlost), 0) as MasterWinLost,
+				isnull(SUM(acomm - comm), 0) AS  MasterComm,
+				isnull(SUM(mwinlost + acomm - comm), 0) AS MasterTotal,
+				isnull(SUM(swinlost), 0) as SAgWinLost,
+				isnull(SUM(scomm - acomm), 0) AS  SAgComm,
+				isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0) as SAgTotal,
+				isnull(SUM(scomm), 0) as CompanyComm,
+				-(isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost-actual_stake), 0))  as CompanyTotal,
+				'' as race,	
+				'' as matchcode,
+				CONVERT(BIT, 0) as IsNeutral,
+				'' as showtime
+			FROM
+				bettrans14 b WITH (NOLOCK)
+				INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				INNER JOIN #RecommendList R ON R.recommend = b.recommend
+			WHERE 
+				b.winlostdate >= @fdate
+				AND b.winlostdate <= @tdate
+				AND b.ruben = 1
+				AND b.statusID NOT IN (101, 102, 103)
+				AND s.ProductID = 3
+				AND s.EventType <> 1
+				
+			GROUP BY b.bettype		
+			HAVING ISNULL(COUNT(transid),0) > 0
+
 			END 
 		
 		--- Not number Game not group by liveindicator
