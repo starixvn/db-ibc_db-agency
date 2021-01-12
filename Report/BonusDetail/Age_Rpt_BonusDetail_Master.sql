@@ -1,9 +1,9 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_BonusDetail_Master]
 	@MasterId		INT,
 	@Username		VARCHAR(30) ='',
-	@FromDate		SMALLDATETIME,
-	@ToDate			SMALLDATETIME,
+	@FromDate		DATETIME,
+	@ToDate			DATETIME,
 	@StatusId		TINYINT= NULL,
 	@IsComplained	BIT= NULL,
 	@PageSize		INT = 0,
@@ -12,12 +12,20 @@ ALTER PROCEDURE [dbo].[Age_Rpt_BonusDetail_Master]
 AS
 
 /*
-Created: 
+Created: 20210104@Malcolm
 Task : Set up Bonus feature for IBCIndo
-DB: DBTXN/bodb02
+DB: DBACC/bodb02
 
 Revisions:
 	- 20210104@Malcolm: Set up Bonus feature for IBCIndo [RedmineID: #147430]
+Param's Explanation :
+	@StatusId = NULL : All
+			  = 0    : Pending
+			  = 1	 : Cancelled
+			  = 2    : Completed
+	@IsComplained =  NULL : ALL
+				  =  0	  : Received or SMA haven't confirmed Payment yet
+				  =  1    : Not received
 
 */
 
@@ -29,7 +37,7 @@ BEGIN
 
 	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
 
-	SELECT @Username = ISNULL(@Username, ''), @ToDate = @ToDate + CONVERT(TIME, '23:59:59')
+	SELECT @Username = ISNULL(@Username, '')
 
 	CREATE TABLE #Result 
 	(
@@ -62,7 +70,7 @@ BEGIN
 		,CreationDate
 	)
 	SELECT 
-		b.TransId
+		b.BonusTransId
 		,b.CustID
 		,c.Username
 		,b.Recommend
@@ -74,11 +82,11 @@ BEGIN
 		,b.IsComplained
 		,CONVERT(DATE, b.CreatedDate)
 	FROM dbo.BonusTrans b WITH(NOLOCK)
-		INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid = b.CustID
-		INNER JOIN CustDB.dbo.Customer Ag WITH(NOLOCK) ON Ag.custid = b.Recommend
+		INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid = b.CustID
+		INNER JOIN dbo.Customer Ag WITH(NOLOCK) ON Ag.custid = b.Recommend
 	WHERE (@Username = '' OR c.username LIKE @Username + '%')
 		AND b.CreatedDate >= @FromDate
-		AND b.CreatedDate <= @ToDate
+		AND b.CreatedDate < (@ToDate + 1)
 		AND (@StatusId IS NULL OR b.StatusId = @StatusId)
 		AND (@IsComplained IS NULL OR b.IsComplained = @IsComplained)
 		AND b.Mrecommend = @MasterId
@@ -87,7 +95,7 @@ BEGIN
 		SET r.ID = r.NewRowNumber
 	FROM 
 	(
-		SELECT ID, ROW_NUMBER() OVER(ORDER BY CreationDate DESC, AgentName, CASE WHEN IsComplained IS NULL THEN 0.5 ELSE CONVERT(INT, IsComplained) END DESC, StatusId ASC, TransId DESC) NewRowNumber
+		SELECT ID, ROW_NUMBER() OVER(ORDER BY CreationDate DESC, AgentName, CASE WHEN PaymentDate IS NULL THEN 0.5 ELSE CONVERT(INT, IsComplained) END DESC, StatusId ASC, TransId DESC) NewRowNumber
 		FROM #Result r
 	) r
 
