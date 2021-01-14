@@ -56,6 +56,7 @@ AS
 		- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #62861]
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
+		- 20201229@Malcolm : Support Happy 5 Linked Games [RedminedId : #146542]
 */
 
 SET NOCOUNT ON
@@ -223,6 +224,46 @@ BEGIN
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
+		-- NG
+		IF @showNG = 1 
+		BEGIN
+			INSERT INTO #AgMatchWLDetails
+				SELECT 
+					4 as BetGroup,
+					0 as matchid,
+					0 as homeid,
+					0 as awayid,
+					b.bettype,
+					0 as liveindicator,
+					0 as leagueid,
+					SUM(ABS(b.stake)) as turnover,
+					SUM(b.comm/(1 - b.apositiontaking)) as GrossComm,
+					SUM(b.winlost - b.actual_stake) as MemberWinLost,
+					SUM(b.playercomm) as MemberComm,
+					SUM(b.Winlost - b.actual_stake + b.playercomm) as MemberTotal,
+					SUM(b.awinlost) as AgentWinLost,
+					SUM(b.comm - b.playercomm) AS  AgentComm,
+					SUM(b.awinlost + b.comm - b.playercomm) AS AgentTotal,
+					SUM(b.comm) as CompanyComm,
+					-SUM(b.winlost - b.actual_stake + b.awinlost + b.comm) as CompanyTotal,
+					'' as race,		
+					'' as matchcode,
+					CONVERT(BIT,0) as IsNeutral,
+					'' as showtime
+				FROM bettrans b WITH (NOLOCK)	
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+					
+				WHERE 
+					b.recommend = @custid
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
+					AND b.ruben = 1
+					AND b.statusID NOT IN (101, 102, 103)
+					AND s.ProductID = 3
+					AND s.EventType <> 1
+				GROUP BY b.bettype	
+				HAVING ISNULL(COUNT(transid),0) > 0
+		END
 		-- MixParlay
 		IF @showSB = 1 
 		BEGIN
@@ -427,7 +468,45 @@ BEGIN
 			GROUP BY 
 				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
-			
+		-- NG
+		IF @showNG = 1
+		BEGIN
+			INSERT INTO #AgMatchWLDetails
+				SELECT
+					4 as BetGroup,
+					0 as matchid,
+					0 as homeid,
+					0 as awayid,
+					b.bettype,
+					0 as liveindicator,
+					0 as leagueid,
+					SUM(ABS(stake)) as turnover,
+					SUM(comm/(1 - apositiontaking)) as GrossComm,
+					SUM(winlost - actual_stake) as MemberWinLost,
+					SUM(playercomm) as MemberComm,
+					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
+					SUM(awinlost) as AgentWinLost,
+					SUM(comm - playercomm) AS  AgentComm,
+					SUM(awinlost + comm - playercomm) AS AgentTotal,
+					SUM(comm) as CompanyComm,
+					-SUM(winlost - actual_stake + awinlost + comm) as CompanyTotal,
+					'' as race,				
+					'' as matchcode,
+					CONVERT(BIT,0) as IsNeutral,
+					'' as showtime
+				FROM bettrans14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				WHERE 
+					b.recommend = @custid
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
+					AND b.ruben = 1
+					AND b.statusID NOT IN (101, 102, 103)
+					AND s.ProductID = 3
+					AND s.EventType <> 1
+				GROUP BY b.bettype	
+				HAVING ISNULL(COUNT(transid), 0) > 0	
+		END
 		-- Mix parlay (14)
 		IF @showSB = 1
 		BEGIN

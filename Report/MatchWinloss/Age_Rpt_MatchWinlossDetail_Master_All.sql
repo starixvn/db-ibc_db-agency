@@ -24,6 +24,7 @@ AS
 		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20201201@Malcolm : Support Leap Gaming [RedminedId : #131375]
+		- 20201229@Malcolm : Support Happy 5 Linked Games [RedminedId : #146542]
 */
 
 BEGIN
@@ -31,10 +32,12 @@ BEGIN
 
 	-- for Parlay
 	DECLARE @showSB	BIT,
-			@showVS	BIT;
+			@showVS	BIT,
+			@showNG BIT
 
 	SELECT	@showSB = CASE WHEN PATINDEX('%,1,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
-			@showVS = CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END;
+			@showVS = CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
+			@showNG = CASE WHEN PATINDEX('%,3,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END;
 
 	---- To avoid parametter sniffing
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
@@ -162,7 +165,44 @@ BEGIN
 				AND s.EventType <> 3 --- exclude VS HR					
 			GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
-					
+			--Number game
+			IF @showNG = 1
+			BEGIN
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
+				SELECT  4 AS BetGroup,
+						0 AS matchid,
+						0 AS homeid,
+						0 AS awayid,
+						b.bettype,
+						0 AS liveindicator,
+						0 AS leagueid,
+						ISNULL(SUM(ABS(stake)), 0) AS turnover,
+						ISNULL(SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) AS GrossComm,
+						ISNULL(SUM(winlost - actual_stake), 0) AS MemberWinLoss,
+						ISNULL(SUM(playercomm), 0) AS MemberComm,
+						ISNULL(SUM(awinlost), 0) AS AgWinLoss,
+						ISNULL(SUM(comm - playercomm), 0) AS  AgComm,
+						ISNULL(SUM(mwinlost), 0) AS MAgWinLoss,
+						ISNULL(SUM(acomm - comm), 0) AS  MAgComm,
+						ISNULL(SUM(swinlost), 0) AS SAgWinLoss,
+						ISNULL(SUM(scomm - acomm), 0) AS  SAgComm,
+						'' AS race,
+						'' AS matchcode,
+						CONVERT(BIT,0) AS IsNeutral,
+						'' AS showtime
+				FROM bettrans b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				WHERE b.srecommend = @custid
+					AND b.winlostdate >= @fromdate
+					AND b.winlostdate <= @todate
+					AND b.ruben = 1
+					AND b.statusID NOT IN (101, 102, 103) 
+					AND s.ProductID = 3
+					AND s.EventType <> 1
+				GROUP BY b.bettype	
+				HAVING ISNULL(COUNT(transid), 0) > 0;
+			END
+
 			-- Mix Parlay
 			IF @showSB = 1
 			BEGIN
@@ -398,6 +438,43 @@ BEGIN
 			GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
 
+			-- Number Game
+			IF @showNG = 1
+			BEGIN
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime) 
+				SELECT  4 AS BetGroup,
+						0 AS matchid,
+						0 AS homeid,
+						0 AS awayid,
+						b.bettype,
+						0 AS liveindicator,
+						0 AS leagueid,
+						ISNULL(SUM(ABS(stake)), 0) AS turnover,
+						ISNULL(SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) AS GrossComm,
+						ISNULL(SUM(winlost - actual_stake), 0) AS MemberWinLoss,
+						ISNULL(SUM(playercomm), 0) AS MemberComm,
+						ISNULL(SUM(awinlost), 0) AS AgWinLoss,
+						ISNULL(SUM(comm - playercomm), 0) AS  AgComm,
+						ISNULL(SUM(mwinlost), 0) AS MAgWinLoss,
+						ISNULL(SUM(acomm - comm), 0) AS  MAgComm,
+						ISNULL(SUM(swinlost), 0) AS SAgWinLoss,
+						ISNULL(SUM(scomm - acomm), 0) AS  SAgComm,
+						'' AS race,	
+						'' AS matchcode,
+						CONVERT(BIT, 0) AS IsNeutral,
+						'' AS showtime
+				FROM bettrans14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				WHERE b.srecommend = @CustId
+					AND b.winlostdate >= @fdate
+					AND b.winlostdate <= @tdate
+					AND b.ruben = 1
+					AND b.statusID NOT IN (101, 102, 103)
+					AND s.ProductID = 3
+					AND s.EventType <> 1
+				GROUP BY b.bettype		
+				HAVING ISNULL(COUNT(transid),0) > 0;
+			END
 			-- Mix parlay(14)
 			IF @showSB = 1 
 			BEGIN
