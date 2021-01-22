@@ -81,7 +81,7 @@ BEGIN
 		AND b.CreatedDate >= @FromDate
 		AND b.CreatedDate < (@ToDate + 1)
 		AND (@StatusId IS NULL OR b.StatusId = @StatusId)
-		AND (@IsComplained IS NULL OR b.IsComplained = @IsComplained)
+		AND (@IsComplained IS NULL OR b.IsComplained = @IsComplained AND (b.PaymentDate IS NOT NULL OR @IsComplained = 1))
 		AND b.Recommend = @AgentId
 	
 	UPDATE r
