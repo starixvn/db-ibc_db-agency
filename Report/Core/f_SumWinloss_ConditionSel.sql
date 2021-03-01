@@ -40,6 +40,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20210203@Malcolm: Add Saba Promotion [redmine: #149952]
 		- 20210302@Malcolm: Add Sports Lottery [redmine: #147362]
 		- 20210310@Malcolm: Add Pragmatic Live Casino [RedmineId : #133717]
+		- 20210301@Malcolm: Add Habanero [RedmineId : #145457]
 
 	Paramters Explanation:
  		@ProductID: list of products
@@ -85,7 +86,8 @@ RETURN
 				(60, 237, 0), -- MaxGame
 				(37, 246, 0), -- Saba Promotion
 				(63, 169, 0), -- Sports Lottery
-				(65, 170, 0)--PP Live Casino
+				(65, 170, 0),-- PP Live Casino
+				(61, 238, 0)--Habanero
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
