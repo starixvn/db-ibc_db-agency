@@ -1,5 +1,5 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_Rpt_Downline_Transfer_History]  
+ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel]  
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,
