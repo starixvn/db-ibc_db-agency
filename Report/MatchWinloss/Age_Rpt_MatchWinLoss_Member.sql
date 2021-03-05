@@ -1,18 +1,4 @@
-USE [bodb02]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_MatchWinLoss_Member]    Script Date: 1/20/2017 9:20:47 AM ******/
-DROP PROCEDURE [dbo].[Age_Rpt_MatchWinLoss_Member]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_Rpt_MatchWinLoss_Member]    Script Date: 1/20/2017 9:20:47 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Rpt_MatchWinLoss_Member]
 	@CustID		INT,
 	@FromDate	DATETIME,
@@ -26,6 +12,7 @@ AS
 	Original: Age_Rpt_MatchWinLoss_Ag
 	Revisions:
 		- 20161219@Paul: Create new [RedmineID: #70554]
+		- 20210305@Malcolm: Gather child matchs into a match (for cricket product)  - [RedminedId : #148454]
 
 */
 
@@ -46,6 +33,8 @@ BEGIN
 	
 	CREATE TABLE #bettrans(
 		matchid INT,
+		ParentID INT,
+		ChildMatchType TINYINT,
 		homeid INT,
 		awayid INT,
 		bettype SMALLINT,
@@ -59,8 +48,10 @@ BEGIN
 		awinlost MONEY
 	);
 
-	INSERT INTO #bettrans(matchid, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
+	INSERT INTO #bettrans(matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
 	SELECT	m.matchid,
+			m.ParentID,
+			m.ChildMatchType,
 			m.homeid,
 			m.awayid,
 			b.bettype,
@@ -82,6 +73,8 @@ BEGIN
 	
 	CREATE TABLE #bettrans14(
 		matchid INT,
+		ParentID INT,
+		ChildMatchType TINYINT,
 		homeid INT,
 		awayid INT,
 		bettype SMALLINT,
@@ -95,8 +88,10 @@ BEGIN
 		awinlost MONEY
 	);
 
-	INSERT INTO #bettrans14(matchid, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
+	INSERT INTO #bettrans14(matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
 	SELECT	m.matchid,
+			m.ParentID,
+			m.ChildMatchType,
 			m.homeid,
 			m.awayid,
 			b.bettype,
@@ -129,7 +124,7 @@ BEGIN
 			PositionTaking
 	FROM
 	(
-		SELECT	b.matchid,
+		SELECT	MAX(b.matchid) AS matchid,
 				b.homeid,
 				b.awayid,
 				b.bettype,
@@ -147,11 +142,11 @@ BEGIN
 			WHERE s.ProductID = 3
 				AND b.bettype = s.Bettype
 		)
-		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
+		GROUP BY CASE WHEN b.ChildMatchType = 200 THEN b.ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
 
 		UNION ALL --- Not Number Game not Group By liveindicator
 
-		SELECT	b.matchid,
+		SELECT	MAX(b.matchid) AS matchid,
 				b.homeid,
 				b.awayid,
 				s.GroupTypeId AS bettype,
@@ -166,11 +161,11 @@ BEGIN
 			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		WHERE s.ProductID <> 3
 			AND s.EventType NOT IN (2, 3)
-		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
+		GROUP BY CASE WHEN b.ChildMatchType = 200 THEN b.ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
 				
 		UNION ALL
 
-		SELECT	b.matchid,
+		SELECT	MAX(b.matchid) AS matchid,
 				b.homeid,
 				b.awayid,
 				b.bettype,
@@ -188,11 +183,11 @@ BEGIN
 				WHERE s.ProductID = 3
 					AND b.bettype = s.Bettype
 			)
-		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
+		GROUP BY CASE WHEN ChildMatchType = 200 THEN ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
 
 		UNION ALL --- Not Number Game not Group By liveindicator
 
-		SELECT	b.matchid,
+		SELECT	MAX(b.matchid) AS matchid,
 				b.homeid,
 				b.awayid,
 				s.GroupTypeId AS bettype,
@@ -207,7 +202,7 @@ BEGIN
 			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		WHERE s.ProductID <> 3
 			AND s.EventType NOT IN (2, 3)
-		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
+		GROUP BY CASE WHEN b.ChildMatchType = 200 THEN b.ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
 	) x
 	ORDER BY x.showtime;
 
