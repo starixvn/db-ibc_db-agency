@@ -30,6 +30,7 @@ AS
 		- 20201201@Malcolm : Support Leap Gaming [RedminedId : #131375]
 		- 20201229@Malcolm : Support Happy 5 Linked Games [RedminedId : #146542]
 		- 20210107@Sol: Report Match Win Loss Detail - correct agent comm - [RedminedId : #148324]
+		- 20210305@Malcolm: Gather child matchs into a match (for cricket product)  - [RedminedId : #148454]
 */
 
 BEGIN
@@ -47,6 +48,8 @@ BEGIN
 	CREATE TABLE #MAgMatchWLDetails (
 		BetGroup		INT,
 		matchid			INT,
+		ParentID		INT,
+		ChildMatchType	TINYINT,
 		homeid			INT,
 		awayid			INT,
 		bettype			SMALLINT,
@@ -87,9 +90,12 @@ BEGIN
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
-			INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
-			SELECT  0 as BetGroup,
+			INSERT INTO #MAgMatchWLDetails (BetGroup, matchid, ParentID,ChildMatchType,homeid, awayid, bettype, liveindicator, leagueid, turnover,GrossComm,MemberWinLoss, MemberComm, AgWinLoss,AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+			SELECT 
+					0 as BetGroup,
 					m.matchid,
+					m.ParentID,
+					m.ChildMatchType,
 					m.homeid,
 					m.awayid,
 					b.bettype,
@@ -120,11 +126,13 @@ BEGIN
 				AND isnull(m.betstatus, '') <> 'refund'
 				AND s.ProductID = 3				
 			GROUP BY 
-				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral,b.liveindicator
+				m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral,b.liveindicator
 				
 			UNION ALL --- Not number Game not group by liveindicator
 			SELECT  0 as BetGroup,
 					m.matchid,
+					m.ParentID,
+					m.ChildMatchType,
 					m.homeid,
 					m.awayid,
 					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
@@ -157,15 +165,17 @@ BEGIN
 				AND s.ProductID NOT IN (3, 30)
 				AND s.EventType NOT IN (3, 5)
 			GROUP BY 
-				m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
+				m.matchid, m.ParentID, m.ChildMatchType ,m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END 
 
 			--Number game
 			IF @ShowNG = 1
 			BEGIN		    
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  4 as BetGroup,
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -199,9 +209,11 @@ BEGIN
 			-- MixParlay
 			IF @showSB = 1 
 			BEGIN
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 as BetGroup,
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -233,9 +245,11 @@ BEGIN
 			-- Virtual HR
 			IF @showVS = 1 
 			BEGIN
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
 						'' matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -269,9 +283,11 @@ BEGIN
 				GROUP BY 
 					r.LeagueID, r.EventTime, r.eventID, b.bettype
 
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 as BetGroup,
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -303,9 +319,11 @@ BEGIN
 			END
 		
 			-- Outright
-			INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+			INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 			SELECT  (case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 					0 as matchid,
+					0 as ParentID,
+					0 as ChildMatchType,
 					0 as homeid,
 					0 as awayid,
 					b.bettype,
@@ -338,9 +356,11 @@ BEGIN
 
 		IF @Fromdate <= @MoveBetsDay
 		BEGIN	
-			INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime) 	
+			INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime) 	
 			SELECT  0 as BetGroup,
 					m.matchid,
+					m.ParentID,
+					m.ChildMatchType,
 					m.homeid,
 					m.awayid,
 					b.bettype,
@@ -371,11 +391,13 @@ BEGIN
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID = 3				
 			GROUP BY 
-				m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
+				m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
 			
 			UNION ALL --- Not number Game not group by liveindicator
 			SELECT  0 as BetGroup,
 					m.matchid,
+					m.ParentID,
+					m.ChildMatchType,
 					m.homeid,
 					m.awayid,
 					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
@@ -407,15 +429,17 @@ BEGIN
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID NOT IN (3, 30)
 				AND s.EventType NOT IN (3, 5)
-			GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
+			GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 			-- Number Game
 			IF @ShowNG = 1
 			BEGIN
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime) 	
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime) 	
 				SELECT  4 as BetGroup,
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -448,9 +472,11 @@ BEGIN
 			-- mix parlay (14)	
 			IF @showSB = 1
 			BEGIN
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime) 	
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime) 	
 				SELECT  3 as BetGroup,
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -482,10 +508,12 @@ BEGIN
 			-- Virtual HR
 			IF @showVS = 1 
 			BEGIN
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
 						'' matchid,
 						0 as homeid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as awayid,
 						b.bettype,
 						0 as liveindicator,
@@ -517,9 +545,11 @@ BEGIN
 					AND s.EventType = 3
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype
 
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 as BetGroup,
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -551,9 +581,11 @@ BEGIN
 			END
 		
 			-- outright (14)
-			INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+			INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 			SELECT  (case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 					0 as matchid,
+					0 as ParentID,
+					0 as ChildMatchType,
 					0 as homeid,
 					0 as awayid,
 					b.bettype,
@@ -597,9 +629,11 @@ BEGIN
 	
 			IF @Todate > @MoveBetsDay
 			BEGIN
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
 						m.matchid,
+						m.ParentID,
+						m.ChildMatchType,
 						m.homeid,
 						m.awayid,
 						b.bettype,
@@ -630,11 +664,13 @@ BEGIN
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus, '') <> 'refund'
 					AND s.ProductID = 3
-				GROUP BY m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
+				GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
 				
 				UNION ALL --- Not number Game not group by liveindicator
 				SELECT  0 as BetGroup,
 						m.matchid,
+						m.ParentID,
+						m.ChildMatchType,
 						m.homeid,
 						m.awayid,
 						CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,	
@@ -668,13 +704,15 @@ BEGIN
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID NOT IN (3, 30)
 					AND s.EventType NOT IN (3, 5)
-				GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
+				GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 		
 				-- Virtual HR		
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
 						'' matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -709,9 +747,11 @@ BEGIN
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype
 			
 				-- Outright
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  (case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -745,9 +785,11 @@ BEGIN
 			
 			IF @Fromdate <= @MoveBetsDay
 			BEGIN
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
 						m.matchid,
+						m.ParentID,
+						m.ChildMatchType,
 						m.homeid,
 						m.awayid,
 						b.bettype,
@@ -778,11 +820,13 @@ BEGIN
 					AND m.eventstatus = 'completed'  
 					AND isnull(m.betstatus,'') <> 'refund'  
 					AND s.ProductID = 3
-				GROUP BY m.matchid, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
+				GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, b.bettype, m.leagueid, m.matchcode, m.isNeutral, b.liveindicator
 				
 				UNION ALL --- Not number Game not group by liveindicator
 				SELECT  0 as BetGroup,
 						m.matchid,
+						m.ParentID,
+						m.ChildMatchType,
 						m.homeid,
 						m.awayid,
 						CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
@@ -816,14 +860,16 @@ BEGIN
 					AND isnull(m.betstatus,'') <> 'refund' 
 					AND s.ProductID <> 3
 					AND s.EventType <> 3
-				GROUP BY m.matchid, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
+				GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END 
 			
 				-- Virtual HR		
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
 						'' matchid,
 						0 as homeid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as awayid,
 						b.bettype,
 						0 as liveindicator,
@@ -857,9 +903,11 @@ BEGIN
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype
 			
 				-- outright (14)
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  (case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 						0 as matchid,
+						0 as ParentID,
+						0 as ChildMatchType,
 						0 as homeid,
 						0 as awayid,
 						b.bettype,
@@ -894,7 +942,7 @@ BEGIN
 	END
 
 	SELECT	BetGroup, 
-			matchid, 
+			MAX(matchid) AS matchid, 
 			homeid, 
 			awayid, 
 			bettype, 
@@ -914,9 +962,9 @@ BEGIN
 			showtime,
 			CASE WHEN matchid < 1000000000 THEN 0 ELSE 1 END AS LeagueType -- 0: league, 1: League3rd
 	FROM #MAgMatchWLDetails	
-	GROUP BY BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode,isNeutral, showtime,
+	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode,isNeutral, showtime,
 		CASE WHEN matchid < 1000000000 THEN 0 ELSE 1 END
-	ORDER BY betgroup, matchid, leagueid, race, bettype, liveindicator, matchcode
+	ORDER BY betgroup, MAX(matchid), leagueid, race, bettype, liveindicator, matchcode
 
 	DROP TABLE #MAgMatchWLDetails
 	DROP TABLE #SportBettype
