@@ -682,7 +682,7 @@ BEGIN
 					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
 		
 				-- get data on table outright
-				INSERT INTO #AgMatchWLDetails(BetGroup, matchid, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
 				SELECT  (case b.bettype when 10 then 2 else 1 end) as BetGroup,		
 						0 as matchid,
 						0 as ParentID,
@@ -908,7 +908,7 @@ BEGIN
 	END
 
 	SELECT  BetGroup, 
-			MAX(matchid), 
+			MAX(matchid) AS matchid, 
 			homeid, 
 			awayid, 
 			bettype, 

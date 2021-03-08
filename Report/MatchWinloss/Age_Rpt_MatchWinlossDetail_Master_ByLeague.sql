@@ -446,7 +446,7 @@ BEGIN
 	END
 
 	SELECT  BetGroup, 
-			MAX(matchid), 
+			MAX(matchid) AS matchid, 
 			homeid, 
 			awayid, 
 			bettype, 

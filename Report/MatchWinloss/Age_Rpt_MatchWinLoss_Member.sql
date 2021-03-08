@@ -213,13 +213,4 @@ END
 
 GO
 
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_Member] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_Member] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinLoss_Member] TO [vnteam] AS [dbo]
-GO
-
 
