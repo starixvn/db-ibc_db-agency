@@ -25,7 +25,7 @@ AS
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20201201@Malcolm : Support Leap Gaming [RedminedId : #131375]
 		- 20201229@Malcolm : Support Happy 5 Linked Games [RedminedId : #146542]
-		- 20210305@Malcolm: Gather child matchs into a match (for cricket product)  - [RedminedId : #148454]
+		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
 */
 
 BEGIN

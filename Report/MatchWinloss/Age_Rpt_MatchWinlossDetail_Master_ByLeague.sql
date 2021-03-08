@@ -24,7 +24,7 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
-		- 20210305@Malcolm: Gather child matchs into a match (for cricket product)  - [RedminedId : #148454]
+		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
 */
 
 BEGIN 

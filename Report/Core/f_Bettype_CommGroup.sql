@@ -38,7 +38,7 @@ AS
 		- 20201201@Malcolm : Add Gold Diamond Gaming [Redmine : #144110]
 		- 20201201@Malcolm : Separate the bettype range (4001 -> 7999) into bettype ranges of multiple game [RedmineId : #131375]
 		- 20201210@Malcolm: Add Big Gaming [RedmineId : #142459]
-		- 20210305@Malcolm: add new bettype for cricket product  - [RedminedId : #148454]
+		- 20210305@Malcolm: add new bettype for cricket AIO  - [RedminedId : #148454]
 
 	- Columns:
 		- CommGroup:

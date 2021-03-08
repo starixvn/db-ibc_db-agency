@@ -12,7 +12,7 @@ AS
 	Original: Age_Rpt_MatchWinLoss_Ag
 	Revisions:
 		- 20161219@Paul: Create new [RedmineID: #70554]
-		- 20210305@Malcolm: Gather child matchs into a match (for cricket product)  - [RedminedId : #148454]
+		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
 
 */
 
