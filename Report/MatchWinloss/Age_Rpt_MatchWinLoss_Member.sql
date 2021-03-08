@@ -111,7 +111,7 @@ BEGIN
 		AND m.eventstatus = 'completed'
 		AND ISNULL(m.betstatus, '') <> 'refund';
 
-	SELECT	matchid,
+	SELECT	CASE WHEN x.ChildMatchType = 200 THEN x.ParentID ELSE x.matchid END AS matchid,
 			homeid,
 			awayid,
 			bettype,
@@ -119,12 +119,14 @@ BEGIN
 			ISNULL(isNeutral, CONVERT(BIT, 0)) AS isNeutral,
 			matchcode,
 			showtime,
-			GrossComm,
-			Comm,
-			PositionTaking
+			SUM(GrossComm) AS GrossComm,
+			SUM(Comm) AS Comm,
+			SUM(PositionTaking) AS PositionTaking
 	FROM
 	(
-		SELECT	MAX(b.matchid) AS matchid,
+		SELECT	b.matchid,
+				b.ParentID,
+				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				b.bettype,
@@ -132,9 +134,9 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
-				SUM(comm - playercomm) AS Comm,
-				SUM(awinlost) AS PositionTaking
+				b.comm/(1 - b.apositiontaking) AS GrossComm,
+				comm - playercomm AS Comm,
+				awinlost AS PositionTaking
 		FROM #bettrans b WITH (NOLOCK)
 		WHERE EXISTS (
 			SELECT 1
@@ -142,11 +144,12 @@ BEGIN
 			WHERE s.ProductID = 3
 				AND b.bettype = s.Bettype
 		)
-		GROUP BY CASE WHEN b.ChildMatchType = 200 THEN b.ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
 
 		UNION ALL --- Not Number Game not Group By liveindicator
 
-		SELECT	MAX(b.matchid) AS matchid,
+		SELECT	b.matchid,
+				b.ParentID,
+				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				s.GroupTypeId AS bettype,
@@ -154,18 +157,19 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
-				SUM(b.comm - b.playercomm) AS Comm,
-				SUM(b.awinlost) AS PositionTaking
+				b.comm/(1 - b.apositiontaking) AS GrossComm,
+				b.comm - b.playercomm AS Comm,
+				b.awinlost AS PositionTaking
 		FROM #bettrans b WITH (NOLOCK)
 			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		WHERE s.ProductID <> 3
 			AND s.EventType NOT IN (2, 3)
-		GROUP BY CASE WHEN b.ChildMatchType = 200 THEN b.ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
 				
 		UNION ALL
 
-		SELECT	MAX(b.matchid) AS matchid,
+		SELECT	b.matchid,
+				b.ParentID,
+				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				b.bettype,
@@ -173,9 +177,9 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
-				SUM(comm - playercomm) AS Comm,
-				SUM(awinlost) AS PositionTaking
+				b.comm/(1 - b.apositiontaking) AS GrossComm,
+				comm - playercomm AS Comm,
+				awinlost AS PositionTaking
 		FROM #bettrans14 b WITH (NOLOCK)
 		WHERE EXISTS (
 				SELECT 1
@@ -183,11 +187,12 @@ BEGIN
 				WHERE s.ProductID = 3
 					AND b.bettype = s.Bettype
 			)
-		GROUP BY CASE WHEN ChildMatchType = 200 THEN ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
 
 		UNION ALL --- Not Number Game not Group By liveindicator
 
-		SELECT	MAX(b.matchid) AS matchid,
+		SELECT	b.matchid,
+				b.ParentID,
+				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				s.GroupTypeId AS bettype,
@@ -195,15 +200,15 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
-				SUM(b.comm - b.playercomm) AS Comm,
-				SUM(b.awinlost) AS PositionTaking		
+				b.comm/(1 - b.apositiontaking) AS GrossComm,
+				b.comm - b.playercomm AS Comm,
+				b.awinlost AS PositionTaking		
 		FROM #bettrans14 b WITH (NOLOCK)	
 			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		WHERE s.ProductID <> 3
 			AND s.EventType NOT IN (2, 3)
-		GROUP BY CASE WHEN b.ChildMatchType = 200 THEN b.ParentID ELSE b.matchid END, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
-	) x
+	) x (matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, GrossComm, Comm, PositionTaking)
+	GROUP BY CASE WHEN x.ChildMatchType = 200 THEN x.ParentID ELSE x.matchid END, x.homeid, x.awayid, x.matchcode, x.bettype, x.isNeutral, x.liveindicator, x.showtime
 	ORDER BY x.showtime;
 
 	DROP TABLE #SportBettype;

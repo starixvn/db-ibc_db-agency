@@ -12,3 +12,4 @@ Report\WinlossAnalysis\Age_Rpt_WinlossAnalysis_Member.sql
 Report\WinlossDetail\Age_Rpt_WinLossDetail_Agent.sql
 Report\WinlossDetail\Age_Rpt_WinLossDetail_Master.sql
 Report\WinlossDetail\Age_Rpt_WinLossDetail_Member.sql
+

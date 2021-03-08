@@ -446,7 +446,7 @@ BEGIN
 	END
 
 	SELECT  BetGroup, 
-			MAX(matchid) AS matchid, 
+			CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END AS matchid, 
 			homeid, 
 			awayid, 
 			bettype, 
@@ -470,7 +470,7 @@ BEGIN
 	FROM #SAgMatchWLDetails
 	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode, isNeutral, showtime,
 		CASE WHEN matchid < 1000000000 THEN 0 ELSE 1 END
-	ORDER BY betgroup, MAX(matchid), leagueid, race, bettype, liveindicator, matchcode;
+	ORDER BY betgroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, leagueid, race, bettype, liveindicator, matchcode;
 
 	--DROP TABLE #RecommendList
 	DROP TABLE #SAgMatchWLDetails
