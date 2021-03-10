@@ -494,7 +494,7 @@ BEGIN
 		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 		
 		DECLARE @TotalCashToNev MONEY 
-		EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCashToNev OUTPUT
+		EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCashToNev OUTPUT
 
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
