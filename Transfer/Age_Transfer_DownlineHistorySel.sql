@@ -3,7 +3,10 @@ ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel]
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,
-	@Username		VARCHAR(50) = ''
+	@Username		VARCHAR(50) = '',
+	@PageSize		INT = 0,
+	@PageIndex		INT = 0,
+	@TotalRecords	INT = 0 OUTPUT
 AS  
 
 /*  
@@ -20,6 +23,13 @@ BEGIN
 
 	DECLARE @movebetsday	DATETIME
 	DECLARE @balanceUpday	DATETIME 
+
+	DECLARE @RowStart	INT,
+			@RowEnd		INT;
+		
+	SELECT	@PageIndex = @PageIndex - 1,
+			@RowStart = @PageSize * @PageIndex + 1,
+			@RowEnd = @RowStart + @PageSize - 1;
 
 	create table #MBU (
 	balanceUpday	DATETIME ,
@@ -138,13 +148,41 @@ BEGIN
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
 	END  
-  
-	SELECT c.username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
-	FROM #DownlineTransferHistory d
-	INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
-	LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
-	WHERE c.username LIKE '%' + @Username + '%'
+	
+	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
+	BEGIN
+		SELECT c.username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
+		FROM #DownlineTransferHistory d
+		INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
+		LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
+		WHERE c.username LIKE '%' + @Username + '%'
+		ORDER BY TransDate
 
+		RETURN
+	END
+
+	IF @TotalRecords = 0  
+	BEGIN  
+		SELECT @TotalRecords = count(1)
+		FROM (
+			SELECT c.username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
+			FROM #DownlineTransferHistory d
+			INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
+			LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
+			WHERE c.username LIKE '%' + @Username + '%'
+			ORDER BY TransDate
+		) tmp; 
+	END
+
+	SELECT wl.*
+	FROM (
+		SELECT c.username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc , ROW_NUMBER() OVER (ORDER BY TransDate) AS RowNum
+		FROM #DownlineTransferHistory d
+		INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
+		LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
+		WHERE c.username LIKE '%' + @Username + '%'
+	) wl
+	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
 	DROP TABLE #UplineTrans
 	DROP TABLE #MBU
