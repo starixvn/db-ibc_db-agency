@@ -43,24 +43,24 @@ BEGIN
 
 	SELECT  @roleID = roleid  FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
 
-	CREATE TABLE #DownLineList (CustID INT)
+	CREATE TABLE #DownLineList (CustID INT, username NVARCHAR(100))
 
 	IF @roleID = 4 
 	BEGIN
-		INSERT INTO #DownLineList(CustID)
-		SELECT CustID FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 3 and srecommend = @CustID
+		INSERT INTO #DownLineList(CustID, username)
+		SELECT CustID,username  FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 3 and srecommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	IF @roleID = 3 
 	BEGIN
-		INSERT INTO #DownLineList(CustID)
-		SELECT CustID FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 2 and mrecommend = @CustID
+		INSERT INTO #DownLineList(CustID, username)
+		SELECT CustID, username FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 2 and mrecommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	IF @roleID = 2 
 	BEGIN
-		INSERT INTO #DownLineList(CustID)
-		SELECT CustID FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 1 and recommend = @CustID
+		INSERT INTO #DownLineList(CustID, username)
+		SELECT CustID, username FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 1 and recommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	CREATE TABLE #UplineTrans (Refno BIGINT)
@@ -68,12 +68,24 @@ BEGIN
 	CREATE TABLE #DownlineTransferHistory(
 		RefNo			BIGINT,
 		CustID			INT,
+		username		NVARCHAR(100),
 		TransDate		DATETIME,
 		TransferType	TINYINT,
 		TransferAmt		MONEY,
 		OldBalance		MONEY,
 		NewBalance		MONEY,
 		TransDesc		NVARCHAR(1000)
+	);
+
+	CREATE TABLE #result(
+		username		NVARCHAR(100),
+		TransDate		DATETIME,
+		TransferType	TINYINT,
+		TransferAmt		MONEY,
+		OldBalance		MONEY,
+		NewBalance		MONEY,
+		TransDesc		NVARCHAR(1000),
+		rn				INT
 	);
 
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
@@ -98,9 +110,10 @@ BEGIN
 			AND bettype > 20000;
 
 
-		INSERT INTO #DownlineTransferHistory(RefNo, CustID, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
+		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
 		SELECT  refno AS RefNo,
 				CustID,
+				d.username,
 				TransDate,
 				CASE WHEN winlost - actual_stake > 0 THEN 1 ELSE 0 END,
 				ABS(winlost - actual_stake) TransferAmt,
@@ -108,9 +121,8 @@ BEGIN
 				(balance + winlost - actual_stake)  AS NewBalance,
 				transdesc as TransDesc
 		FROM dbo.bettrans b WITH (NOLOCK)  
-		WHERE b.custid in (SELECT d.CustID FROM #DownLineList d) 
-			AND  winlostdate BETWEEN @FDate AND @TDate
-			AND bettype > 20000;
+		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
+		WHERE  winlostdate BETWEEN @FDate AND @TDate AND bettype > 20000;
    
 		
 	END  
@@ -134,9 +146,10 @@ BEGIN
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
 
-		INSERT INTO #DownlineTransferHistory(RefNo, CustID, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
+		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
 		SELECT  refno AS RefNo,
 				custID	CustID,
+				d.username,
 				TransDate,
 				CASE WHEN credit  > 0 THEN 1 ELSE 0 END,
 				(credit + debit) TransferAmt,
@@ -144,18 +157,22 @@ BEGIN
 				(ISNULL(balance,0) + credit - debit)  AS NewBalance,
 				transdesc as TransDesc
 		FROM DBARC.bodb_archive.dbo.transfer_bk b WITH (NOLOCK)  
-		WHERE custid in (SELECT d.CustID FROM #DownLineList d) 
-			AND  winlostdate BETWEEN @FDate AND @TDate
+		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
+		WHERE  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
 	END  
 	
+
+	INSERT INTO #result(username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, rn)
+	SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc , ROW_NUMBER() OVER (ORDER BY TransDate) AS rn
+	FROM #DownlineTransferHistory d
+	INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
+
+
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT c.username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
-		FROM #DownlineTransferHistory d
-		INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
-		LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
-		WHERE c.username LIKE '%' + @Username + '%'
+		SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
+		FROM #result
 		ORDER BY TransDate
 
 		RETURN
@@ -163,30 +180,18 @@ BEGIN
 
 	IF @TotalRecords = 0  
 	BEGIN  
-		SELECT @TotalRecords = count(1)
-		FROM (
-			SELECT c.username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
-			FROM #DownlineTransferHistory d
-			INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
-			LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
-			WHERE c.username LIKE '%' + @Username + '%'
-		) tmp; 
+		SELECT @TotalRecords = count(1) FROM #result 
 	END
 
-	SELECT wl.*
-	FROM (
-		SELECT c.username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc , ROW_NUMBER() OVER (ORDER BY TransDate) AS RowNum
-		FROM #DownlineTransferHistory d
-		INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
-		LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
-		WHERE c.username LIKE '%' + @Username + '%'
-	) wl
-	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+	SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
+	FROM #result
+	WHERE rn BETWEEN @RowStart AND @RowEnd;
 
 	DROP TABLE #UplineTrans
 	DROP TABLE #MBU
 	DROP TABLE #DownlineTransferHistory
 	DROP TABLE #DownLineList
+	DROP TABLE #result
 
 	SET NOCOUNT OFF;
 END
