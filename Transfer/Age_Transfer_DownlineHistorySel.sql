@@ -170,7 +170,6 @@ BEGIN
 			INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
 			LEFT JOIN dbo.custInfo  c WITH(NOLOCK) ON c.custid = d.CustID
 			WHERE c.username LIKE '%' + @Username + '%'
-			ORDER BY TransDate
 		) tmp; 
 	END
 
