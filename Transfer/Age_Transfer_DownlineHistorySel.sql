@@ -74,7 +74,8 @@ BEGIN
 		TransferAmt		MONEY,
 		OldBalance		MONEY,
 		NewBalance		MONEY,
-		TransDesc		NVARCHAR(1000)
+		TransDesc		NVARCHAR(1000),
+		creator			INT
 	);
 
 	CREATE TABLE #result(
@@ -110,7 +111,7 @@ BEGIN
 			AND bettype > 20000;
 
 
-		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
+		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, creator)
 		SELECT  refno AS RefNo,
 				CustID,
 				d.username,
@@ -119,7 +120,8 @@ BEGIN
 				ABS(winlost - actual_stake) TransferAmt,
 				balance as OldBalance,
 				(balance + winlost - actual_stake)  AS NewBalance,
-				transdesc as TransDesc
+				transdesc as TransDesc,
+				creator
 		FROM dbo.bettrans b WITH (NOLOCK)  
 		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
 		WHERE  winlostdate BETWEEN @FDate AND @TDate AND bettype > 20000;
@@ -146,7 +148,7 @@ BEGIN
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
 
-		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc)
+		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, creator)
 		SELECT  refno AS RefNo,
 				custID	CustID,
 				d.username,
@@ -155,7 +157,8 @@ BEGIN
 				(credit + debit) TransferAmt,
 				ISNULL(balance,0) as OldBalance,
 				(ISNULL(balance,0) + credit - debit)  AS NewBalance,
-				transdesc as TransDesc
+				transdesc as TransDesc.
+				creator
 		FROM DBARC.bodb_archive.dbo.transfer_bk b WITH (NOLOCK)  
 		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
 		WHERE  winlostdate BETWEEN @FDate AND @TDate
@@ -164,9 +167,10 @@ BEGIN
 	
 
 	INSERT INTO #result(username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, rn)
-	SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc , ROW_NUMBER() OVER (ORDER BY TransDate) AS rn
+	SELECT d.username, d.TransDate, d.TransferType, d.TransferAmt, d.OldBalance, d.NewBalance, CASE WHEN c.roleid > @roleID THEN NULL ELSE d.TransDesc END TransDesc , ROW_NUMBER() OVER (ORDER BY d.TransDate) AS rn
 	FROM #DownlineTransferHistory d
 	INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
+	LEFT JOIN dbo.custInfo c ON d.creator = c.custid 
 
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
