@@ -178,7 +178,7 @@ BEGIN
 		RETURN
 	END
 
-	IF @TotalRecords = 0  
+	IF (@TotalRecords = 0 OR   @TotalRecords IS NULL)
 	BEGIN  
 		SELECT @TotalRecords = count(1) FROM #result 
 	END
