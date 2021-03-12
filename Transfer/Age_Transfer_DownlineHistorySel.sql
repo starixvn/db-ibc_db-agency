@@ -157,7 +157,7 @@ BEGIN
 				(credit + debit) TransferAmt,
 				ISNULL(balance,0) as OldBalance,
 				(ISNULL(balance,0) + credit - debit)  AS NewBalance,
-				transdesc as TransDesc.
+				transdesc as TransDesc,
 				creator
 		FROM DBARC.bodb_archive.dbo.transfer_bk b WITH (NOLOCK)  
 		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
