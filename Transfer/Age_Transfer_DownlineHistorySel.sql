@@ -118,8 +118,8 @@ BEGIN
 				TransDate,
 				CASE WHEN winlost - actual_stake > 0 THEN 1 ELSE 0 END,
 				ABS(winlost - actual_stake) TransferAmt,
-				balance as OldBalance,
-				(balance + winlost - actual_stake)  AS NewBalance,
+				ISNULL(balance,0) as OldBalance,
+				ISNULL((balance + winlost - actual_stake),0)  AS NewBalance,
 				transdesc as TransDesc,
 				creator
 		FROM dbo.bettrans b WITH (NOLOCK)  
@@ -156,7 +156,7 @@ BEGIN
 				CASE WHEN credit  > 0 THEN 1 ELSE 0 END,
 				(credit + debit) TransferAmt,
 				ISNULL(balance,0) as OldBalance,
-				(ISNULL(balance,0) + credit - debit)  AS NewBalance,
+				ISNULL((balance + credit - debit),0)  AS NewBalance,
 				transdesc as TransDesc,
 				creator
 		FROM DBARC.bodb_archive.dbo.transfer_bk b WITH (NOLOCK)  
