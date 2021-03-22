@@ -167,7 +167,7 @@ BEGIN
 	
 
 	INSERT INTO #result(username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, rn)
-	SELECT d.username, d.TransDate, d.TransferType, d.TransferAmt, d.OldBalance, d.NewBalance, CASE WHEN c.roleid > @roleID THEN NULL ELSE d.TransDesc END TransDesc , ROW_NUMBER() OVER (ORDER BY d.TransDate) AS rn
+	SELECT d.username, d.TransDate, d.TransferType, d.TransferAmt, d.OldBalance, d.NewBalance, CASE WHEN c.roleid > @roleID THEN 'The transfer was done by upline' ELSE d.TransDesc END TransDesc , ROW_NUMBER() OVER (ORDER BY d.TransDate) AS rn
 	FROM #DownlineTransferHistory d
 	INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
 	LEFT JOIN dbo.custInfo c ON d.creator = c.custid 
