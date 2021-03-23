@@ -402,14 +402,11 @@ WHERE c.roleid = 2
 		IF @amount >0
 		BEGIN
 			
-			DECLARE @TotalCashSuper MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @SAgID, @TotalCash  = @TotalCashSuper OUTPUT
-
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate,currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance)
+				status, ruben, winlostdate, currency, actualrate,currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
 			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END,
-				@amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131, @TotalCashSuper)
+				@amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 103
@@ -440,14 +437,12 @@ WHERE c.roleid = 2
 		BEGIN
 			--SET @amount = abs(@amount)
 
-			DECLARE @TotalCashSuperNev MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @SAgID, @TotalCash  = @TotalCashSuperNev OUTPUT
-		
+	
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance)
+				status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID)
 			VALUES (0, @creator, @SAgID, @SAUser, @transcode, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-				abs(@amount),'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131, @TotalCashSuperNev)
+				abs(@amount),'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN
 				select @ErrCode = 105

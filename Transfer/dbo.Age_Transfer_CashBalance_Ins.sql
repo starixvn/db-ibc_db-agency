@@ -388,17 +388,14 @@ BEGIN
 	BEGIN
 		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 		
-		DECLARE @TotalCashFrom MONEY 
-		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCashFrom OUTPUT
-
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost, ip, statusID, balance)
+			scomm, swinlost, ip, statusID)
 		VALUES 
 			(0, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, @Amount, 0, 
 			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131, @TotalCashFrom)
+			0, 0, @ip, 131)
 			
 		IF @@ERROR <> 0
 		BEGIN
@@ -469,17 +466,15 @@ BEGIN
 	BEGIN
 		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 
-		DECLARE @TotalCashFromNev MONEY 
-		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCashFromNev OUTPUT
-
+		
 		INSERT INTO bettrans 
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 			status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-			scomm, swinlost, ip, statusID, balance)
+			scomm, swinlost, ip, statusID)
 		VALUES 
 			(0, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, ABS(@Amount),
 			'Completed', 1, @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131, @TotalCashFromNev)
+			0, 0, @ip, 131)
 				
 		IF @@ERROR <> 0
 		BEGIN

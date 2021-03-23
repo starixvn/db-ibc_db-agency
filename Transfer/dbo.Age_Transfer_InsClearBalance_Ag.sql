@@ -440,15 +440,13 @@ END
    
 	IF (@amount > 0 and @SkipTransfer = 0)  
     BEGIN  
-		DECLARE @TotalCash MONEY 
-		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCash OUTPUT
-
+		
 		INSERT INTO bettrans   
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
-			 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance)  
+			 status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)  
 		VALUES 
 		    (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-			 @amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131, @TotalCash)  
+			 @amount, 0, 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
@@ -497,16 +495,13 @@ END
 	ELSE IF(@amount<0 and @SkipTransfer = 0)  
     BEGIN  
 
-		DECLARE @TotalCash2 MONEY 
-		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCash2 OUTPUT
-
 		--SET @amount = abs(@amount)      
 		INSERT INTO bettrans   
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
-			 status, ruben, winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance)  
+			 status, ruben, winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID)  
 		VALUES 
 		    (0, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-			 0, abs(@amount), 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131, @TotalCash2)  
+			 0, abs(@amount), 'Completed', 1,@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131)  
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback

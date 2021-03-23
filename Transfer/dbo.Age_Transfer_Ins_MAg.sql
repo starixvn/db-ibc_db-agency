@@ -375,17 +375,14 @@ select * from #Agent
 		IF @amount > 0
 		BEGIN
 			
-			DECLARE @TotalCashMaster MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterid, @TotalCash  = @TotalCashMaster OUTPUT
-
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID, balance)
+				scomm, swinlost,ip,statusID)
 			VALUES 
 			   (0, @creator, @masterid, @maUser, @RefNo, CURRENT_TIMESTAMP, 21003, 'From Customer ::: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				@amount, 0, 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
-				0, 0,@ip,131, @TotalCashMaster)
+				0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN								
 				select @ErrCode = 102
@@ -420,17 +417,14 @@ select * from #Agent
 		BEGIN
 			--SET @amount = abs(@amount)
 
-			DECLARE @TotalCashMasterNev MONEY 
-			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterid, @TotalCash  = @TotalCashMasterNev OUTPUT
-		
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID, balance)
+				scomm, swinlost,ip,statusID)
 			VALUES 
 			   (0, @creator, @masterid, @maUser, @RefNo, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				0, abs(@amount), 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
-				0, 0,@ip,131, @TotalCashMasterNev)
+				0, 0,@ip,131)
 			if @@Error <> 0
 			BEGIN						
 				select @ErrCode = 107

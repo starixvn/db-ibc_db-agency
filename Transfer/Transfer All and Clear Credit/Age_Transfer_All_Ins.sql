@@ -568,12 +568,10 @@ BEGIN
 			ELSE IF @memberBalance > 0
 			BEGIN
 				-- for agent
-				DECLARE @TotalCashAg MONEY 
-				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAg OUTPUT
-
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+			
+				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 				VALUES (0, @UserID, @agentId, @agentName, @refno, @Now, 21004, 'From Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						@memberBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashAg)
+						@memberBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131)
 
 				IF @@ERROR <> 0
 				BEGIN
@@ -683,13 +681,9 @@ BEGIN
 			ELSE IF @memberBalance < 0
 			BEGIN
 				-- for agent
-
-				DECLARE @TotalCashAgNev MONEY 
-				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgNev OUTPUT
-
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 				VALUES (0, @UserID, @agentId, @agentName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						ABS(@memberBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashAgNev)
+						ABS(@memberBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131)
 
 				IF @@ERROR <> 0
 				BEGIN
@@ -839,13 +833,9 @@ BEGIN
 			IF @agentBalance > 0
 			BEGIN
 				-- for master
-
-				DECLARE @TotalCashMAg MONEY 
-				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAg OUTPUT
-
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						@agentBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMAg)
+						@agentBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131)
 
 				IF @@ERROR <> 0
 				BEGIN
@@ -919,13 +909,9 @@ BEGIN
 			ELSE IF @agentBalance < 0
 			BEGIN
 				-- for master
-
-				DECLARE @TotalCashMAgNev MONEY 
-				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgNev OUTPUT
-
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
+				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
 				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						ABS(@agentBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMAgNev)
+						ABS(@agentBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131)
 
 				IF @@ERROR <> 0
 				BEGIN
@@ -1037,12 +1023,9 @@ BEGIN
 			IF @masterBalance > 0
 			BEGIN
 				-- for super
-				DECLARE @TotalCashSAg MONEY 
-				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @superId, @TotalCash  = @TotalCashSAg OUTPUT
-
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
+				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
 				VALUES (0, @UserID, @superId, @superName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						@masterBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131, @TotalCashSAg)
+						@masterBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131)
 
 				IF @@ERROR <> 0
 				BEGIN
@@ -1116,12 +1099,9 @@ BEGIN
 			ELSE IF @masterBalance < 0
 			BEGIN
 				-- for super
-				DECLARE @TotalCashSAgNev MONEY 
-				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @superId, @TotalCash  = @TotalCashSAgNev OUTPUT
-
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
+				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
 				VALUES (0, @UserID, @superId, @superName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						ABS(@masterBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131, @TotalCashSAgNev)
+						ABS(@masterBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131)
 
 				IF @@ERROR <> 0
 				BEGIN
