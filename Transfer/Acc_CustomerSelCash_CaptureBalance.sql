@@ -16,6 +16,7 @@ AS
 	Param's Explaination:
 		- @CustId: custid
 		
+	Note: get balance real time => this balance is approximately 
 	
 */
 
