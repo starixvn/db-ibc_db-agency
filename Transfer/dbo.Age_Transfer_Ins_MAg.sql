@@ -426,11 +426,11 @@ select * from #Agent
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 				status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-				scomm, swinlost,ip,statusID)
+				scomm, swinlost,ip,statusID, balance)
 			VALUES 
 			   (0, @creator, @masterid, @maUser, @RefNo, CURRENT_TIMESTAMP, 21003, 'To Customer ::: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				0, abs(@amount), 'Completed', 1, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
-				0, 0,@ip,131)
+				0, 0,@ip,131, @TotalCashMasterNev)
 			if @@Error <> 0
 			BEGIN						
 				select @ErrCode = 107
