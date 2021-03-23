@@ -569,7 +569,7 @@ BEGIN
 			BEGIN
 				-- for agent
 				DECLARE @TotalCashAg MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @agentId, @TotalCash  = @TotalCashAg OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAg OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @agentId, @agentName, @refno, @Now, 21004, 'From Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
@@ -608,7 +608,7 @@ BEGIN
 
 				-- for member
 				DECLARE @TotalCashMem MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @memberId, @TotalCash  = @TotalCashMem OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @memberId, @TotalCash  = @TotalCashMem OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @memberId, @memberName, @refno, @Now, 21004, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
@@ -685,7 +685,7 @@ BEGIN
 				-- for agent
 
 				DECLARE @TotalCashAgNev MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @agentId, @TotalCash  = @TotalCashAgNev OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgNev OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @agentId, @agentName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
@@ -707,7 +707,7 @@ BEGIN
 
 				-- for member
 				DECLARE @TotalCashMemNev MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @memberId, @TotalCash  = @TotalCashMemNev OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @memberId, @TotalCash  = @TotalCashMemNev OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @memberId, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
@@ -841,7 +841,7 @@ BEGIN
 				-- for master
 
 				DECLARE @TotalCashMAg MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @masterId, @TotalCash  = @TotalCashMAg OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAg OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
@@ -863,7 +863,7 @@ BEGIN
 				-- for agent
 
 				DECLARE @TotalCashAgPov MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @agentId, @TotalCash  = @TotalCashAgPov OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgPov OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @agentId, @agentName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
@@ -921,7 +921,7 @@ BEGIN
 				-- for master
 
 				DECLARE @TotalCashMAgNev MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @masterId, @TotalCash  = @TotalCashMAgNev OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgNev OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
@@ -943,7 +943,7 @@ BEGIN
 
 				-- for agent
 				DECLARE @TotalCashAgNegative MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @agentId, @TotalCash  = @TotalCashAgNegative OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgNegative OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
 				VALUES (0, @UserID, @agentId, @agentName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
@@ -1038,7 +1038,7 @@ BEGIN
 			BEGIN
 				-- for super
 				DECLARE @TotalCashSAg MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @superId, @TotalCash  = @TotalCashSAg OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @superId, @TotalCash  = @TotalCashSAg OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
 				VALUES (0, @UserID, @superId, @superName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
@@ -1060,7 +1060,7 @@ BEGIN
 
 				-- for master
 				DECLARE @TotalCashMAgPov MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @masterId, @TotalCash  = @TotalCashMAgPov OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgPov OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
 				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
@@ -1117,7 +1117,7 @@ BEGIN
 			BEGIN
 				-- for super
 				DECLARE @TotalCashSAgNev MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @superId, @TotalCash  = @TotalCashSAgNev OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @superId, @TotalCash  = @TotalCashSAgNev OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
 				VALUES (0, @UserID, @superId, @superName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
@@ -1139,7 +1139,7 @@ BEGIN
 
 				-- for master
 				DECLARE @TotalCashMAgNegative MONEY 
-				EXEC Acc_CustomerSelTotalCash @custid = @masterId, @TotalCash  = @TotalCashMAgNegative OUTPUT
+				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgNegative OUTPUT
 
 				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
 				VALUES (0, @UserID, @masterId, @masterName, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 

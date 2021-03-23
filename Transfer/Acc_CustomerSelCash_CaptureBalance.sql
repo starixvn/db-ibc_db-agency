@@ -1,5 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_CustomerSelTotalCash]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelCash_CaptureBalance]
 	@CustId INT,
 	@TotalCash MONEY = 0 OUTPUT
 AS
@@ -15,6 +15,8 @@ AS
 	
 	Param's Explaination:
 		- @CustId: custid
+		
+	
 */
 
 BEGIN

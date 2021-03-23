@@ -389,7 +389,7 @@ BEGIN
 		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 		
 		DECLARE @TotalCashFrom MONEY 
-		EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCashFrom OUTPUT
+		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCashFrom OUTPUT
 
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -429,7 +429,7 @@ BEGIN
 		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 
 		DECLARE @TotalCashTo MONEY 
-		EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCashTo OUTPUT
+		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCashTo OUTPUT
 
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -470,7 +470,7 @@ BEGIN
 		SELECT @transdesc = 'Cash Balance To ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @ToUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 
 		DECLARE @TotalCashFromNev MONEY 
-		EXEC Acc_CustomerSelTotalCash @custid = @FromCustID, @TotalCash  = @TotalCashFromNev OUTPUT
+		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @FromCustID, @TotalCash  = @TotalCashFromNev OUTPUT
 
 		INSERT INTO bettrans 
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -494,7 +494,7 @@ BEGIN
 		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 		
 		DECLARE @TotalCashToNev MONEY 
-		EXEC Acc_CustomerSelTotalCash @custid = @ToCustID, @TotalCash  = @TotalCashToNev OUTPUT
+		EXEC Acc_CustomerSelCash_CaptureBalance @custid = @ToCustID, @TotalCash  = @TotalCashToNev OUTPUT
 
 		INSERT INTO bettrans
 			(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 

@@ -376,7 +376,7 @@ select * from #Agent
 		BEGIN
 			
 			DECLARE @TotalCashMaster MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @masterid, @TotalCash  = @TotalCashMaster OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterid, @TotalCash  = @TotalCashMaster OUTPUT
 
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -395,7 +395,7 @@ select * from #Agent
 			END
 
 			DECLARE @TotalCashAgent MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCashAgent OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCashAgent OUTPUT
 
 			INSERT INTO bettrans
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -421,7 +421,7 @@ select * from #Agent
 			--SET @amount = abs(@amount)
 
 			DECLARE @TotalCashMasterNev MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @masterid, @TotalCash  = @TotalCashMasterNev OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterid, @TotalCash  = @TotalCashMasterNev OUTPUT
 		
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -440,7 +440,7 @@ select * from #Agent
 			END
 
 			DECLARE @TotalCashAgentNev MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @agentid, @TotalCash  = @TotalCashAgentNev OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCashAgentNev OUTPUT
 
 			INSERT INTO bettrans
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 

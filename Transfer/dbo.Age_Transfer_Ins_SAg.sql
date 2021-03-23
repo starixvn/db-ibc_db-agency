@@ -403,7 +403,7 @@ WHERE c.roleid = 2
 		BEGIN
 			
 			DECLARE @TotalCashSuper MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @SAgID, @TotalCash  = @TotalCashSuper OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @SAgID, @TotalCash  = @TotalCashSuper OUTPUT
 
 			INSERT INTO bettrans 
 			   (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -418,7 +418,7 @@ WHERE c.roleid = 2
 			END
 
 			DECLARE @TotalCashMaster MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @Magentid, @TotalCash  = @TotalCashMaster OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @Magentid, @TotalCash  = @TotalCashMaster OUTPUT
 
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -441,7 +441,7 @@ WHERE c.roleid = 2
 			--SET @amount = abs(@amount)
 
 			DECLARE @TotalCashSuperNev MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @SAgID, @TotalCash  = @TotalCashSuperNev OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @SAgID, @TotalCash  = @TotalCashSuperNev OUTPUT
 		
 			INSERT INTO bettrans 
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -456,7 +456,7 @@ WHERE c.roleid = 2
 			END
 
 			DECLARE @TotalCashMasterNev MONEY 
-			EXEC Acc_CustomerSelTotalCash @custid = @Magentid, @TotalCash  = @TotalCashMasterNev OUTPUT
+			EXEC Acc_CustomerSelCash_CaptureBalance @custid = @Magentid, @TotalCash  = @TotalCashMasterNev OUTPUT
 
 			INSERT INTO bettrans
 				(matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
