@@ -1,4 +1,18 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+USE [bodb02]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_MatchWinLoss_Member]    Script Date: 1/20/2017 9:20:47 AM ******/
+DROP PROCEDURE [dbo].[Age_Rpt_MatchWinLoss_Member]
+GO
+
+/****** Object:  StoredProcedure [dbo].[Age_Rpt_MatchWinLoss_Member]    Script Date: 1/20/2017 9:20:47 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
 CREATE PROCEDURE [dbo].[Age_Rpt_MatchWinLoss_Member]
 	@CustID		INT,
 	@FromDate	DATETIME,
@@ -12,7 +26,6 @@ AS
 	Original: Age_Rpt_MatchWinLoss_Ag
 	Revisions:
 		- 20161219@Paul: Create new [RedmineID: #70554]
-		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
 
 */
 
@@ -33,8 +46,6 @@ BEGIN
 	
 	CREATE TABLE #bettrans(
 		matchid INT,
-		ParentID INT,
-		ChildMatchType TINYINT,
 		homeid INT,
 		awayid INT,
 		bettype SMALLINT,
@@ -48,10 +59,8 @@ BEGIN
 		awinlost MONEY
 	);
 
-	INSERT INTO #bettrans(matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
+	INSERT INTO #bettrans(matchid, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
 	SELECT	m.matchid,
-			m.ParentID,
-			m.ChildMatchType,
 			m.homeid,
 			m.awayid,
 			b.bettype,
@@ -73,8 +82,6 @@ BEGIN
 	
 	CREATE TABLE #bettrans14(
 		matchid INT,
-		ParentID INT,
-		ChildMatchType TINYINT,
 		homeid INT,
 		awayid INT,
 		bettype SMALLINT,
@@ -88,10 +95,8 @@ BEGIN
 		awinlost MONEY
 	);
 
-	INSERT INTO #bettrans14(matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
+	INSERT INTO #bettrans14(matchid, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, comm, apositiontaking, playercomm, awinlost)
 	SELECT	m.matchid,
-			m.ParentID,
-			m.ChildMatchType,
 			m.homeid,
 			m.awayid,
 			b.bettype,
@@ -111,7 +116,7 @@ BEGIN
 		AND m.eventstatus = 'completed'
 		AND ISNULL(m.betstatus, '') <> 'refund';
 
-	SELECT	CASE WHEN x.ChildMatchType = 200 THEN x.ParentID ELSE x.matchid END AS matchid,
+	SELECT	matchid,
 			homeid,
 			awayid,
 			bettype,
@@ -119,14 +124,12 @@ BEGIN
 			ISNULL(isNeutral, CONVERT(BIT, 0)) AS isNeutral,
 			matchcode,
 			showtime,
-			SUM(GrossComm) AS GrossComm,
-			SUM(Comm) AS Comm,
-			SUM(PositionTaking) AS PositionTaking
+			GrossComm,
+			Comm,
+			PositionTaking
 	FROM
 	(
 		SELECT	b.matchid,
-				b.ParentID,
-				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				b.bettype,
@@ -134,9 +137,9 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				b.comm/(1 - b.apositiontaking) AS GrossComm,
-				comm - playercomm AS Comm,
-				awinlost AS PositionTaking
+				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
+				SUM(comm - playercomm) AS Comm,
+				SUM(awinlost) AS PositionTaking
 		FROM #bettrans b WITH (NOLOCK)
 		WHERE EXISTS (
 			SELECT 1
@@ -144,12 +147,11 @@ BEGIN
 			WHERE s.ProductID = 3
 				AND b.bettype = s.Bettype
 		)
+		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
 
 		UNION ALL --- Not Number Game not Group By liveindicator
 
 		SELECT	b.matchid,
-				b.ParentID,
-				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				s.GroupTypeId AS bettype,
@@ -157,19 +159,18 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				b.comm/(1 - b.apositiontaking) AS GrossComm,
-				b.comm - b.playercomm AS Comm,
-				b.awinlost AS PositionTaking
+				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
+				SUM(b.comm - b.playercomm) AS Comm,
+				SUM(b.awinlost) AS PositionTaking
 		FROM #bettrans b WITH (NOLOCK)
 			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		WHERE s.ProductID <> 3
 			AND s.EventType NOT IN (2, 3)
+		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
 				
 		UNION ALL
 
 		SELECT	b.matchid,
-				b.ParentID,
-				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				b.bettype,
@@ -177,9 +178,9 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				b.comm/(1 - b.apositiontaking) AS GrossComm,
-				comm - playercomm AS Comm,
-				awinlost AS PositionTaking
+				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
+				SUM(comm - playercomm) AS Comm,
+				SUM(awinlost) AS PositionTaking
 		FROM #bettrans14 b WITH (NOLOCK)
 		WHERE EXISTS (
 				SELECT 1
@@ -187,12 +188,11 @@ BEGIN
 				WHERE s.ProductID = 3
 					AND b.bettype = s.Bettype
 			)
+		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, b.bettype, b.isNeutral, b.liveindicator, b.showtime
 
 		UNION ALL --- Not Number Game not Group By liveindicator
 
 		SELECT	b.matchid,
-				b.ParentID,
-				b.ChildMatchType,
 				b.homeid,
 				b.awayid,
 				s.GroupTypeId AS bettype,
@@ -200,15 +200,15 @@ BEGIN
 				b.isNeutral,
 				b.matchcode,
 				b.showtime,
-				b.comm/(1 - b.apositiontaking) AS GrossComm,
-				b.comm - b.playercomm AS Comm,
-				b.awinlost AS PositionTaking		
+				SUM(b.comm/(1 - b.apositiontaking)) AS GrossComm,
+				SUM(b.comm - b.playercomm) AS Comm,
+				SUM(b.awinlost) AS PositionTaking		
 		FROM #bettrans14 b WITH (NOLOCK)	
 			INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 		WHERE s.ProductID <> 3
 			AND s.EventType NOT IN (2, 3)
-	) x (matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, isNeutral, matchcode, showtime, GrossComm, Comm, PositionTaking)
-	GROUP BY CASE WHEN x.ChildMatchType = 200 THEN x.ParentID ELSE x.matchid END, x.homeid, x.awayid, x.matchcode, x.bettype, x.isNeutral, x.liveindicator, x.showtime
+		GROUP BY b.matchid, b.homeid, b.awayid, b.matchcode, s.GroupTypeId, b.isNeutral, b.showtime
+	) x
 	ORDER BY x.showtime;
 
 	DROP TABLE #SportBettype;
@@ -216,6 +216,15 @@ BEGIN
 	SET NOCOUNT OFF;
 END
 
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_Member] TO [bodbDownlineNet] AS [dbo]
+GO
+
+GRANT EXECUTE ON [dbo].[Age_Rpt_MatchWinLoss_Member] TO [bodbDownlineNetView] AS [dbo]
+GO
+
+GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_MatchWinLoss_Member] TO [vnteam] AS [dbo]
 GO
 
 
