@@ -99,7 +99,7 @@ BEGIN
 					OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 				)
 
-			SELECT @TotalCash = SUM(TotalCash) 
+			SELECT @TotalCash = SUM(ISNULL(TotalCash,0)) 
 			FROM @tblTotalCash
 
 		END 
@@ -130,7 +130,7 @@ BEGIN
 				AND b.ruben = 1
 				AND (b.winlostdate < @yesterday OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype))
 
-			SELECT @TotalCash = SUM(TotalCash) 
+			SELECT @TotalCash = SUM(ISNULL(TotalCash,0)) 
 			FROM @tblTotalCash
 
 		END
@@ -179,7 +179,7 @@ BEGIN
 				AND b.bettype >= 19999 
 				AND b.bettype NOT IN (21008, 21009)
 
-			SELECT @TotalCash = SUM(TotalCash) 
+			SELECT @TotalCash = SUM(ISNULL(TotalCash,0)) 
 			FROM @tblTotalCash
 
 		END
@@ -228,8 +228,9 @@ BEGIN
 				AND b.bettype >= 19999
 				AND b.bettype NOT IN (21008, 21009)
 
-			SELECT @TotalCash = SUM(TotalCash)
+			SELECT @TotalCash = SUM(ISNULL(TotalCash,0))
 			FROM @tblTotalCash
+
 
 		END
 		DROP TABLE #recommend
