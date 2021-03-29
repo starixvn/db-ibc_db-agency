@@ -1,4 +1,4 @@
-/*<info serverAlias="DBARC-bodb_Archive" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel]  
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
@@ -12,7 +12,7 @@ AS
 /*  
 	Created:   
 	Task :   
-	DB: DBARC-bodb_Archive
+	DB: DBACC-bodb02
 	
 	Revisions:  
 		- 20201228@Danny: Transfer To Downline History Report  [Redmine: #146038]
@@ -41,26 +41,26 @@ SET NOCOUNT ON;
 	
 	DECLARE @roleID TINYINT
 
-	SELECT  @roleID = roleid  FROM bodb02.dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
+	SELECT  @roleID = roleid  FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
 
 	CREATE TABLE #DownLineList (CustID INT, username NVARCHAR(100))
 
 	IF @roleID = 4 
 	BEGIN
 		INSERT INTO #DownLineList(CustID, username)
-		SELECT CustID,username  FROM bodb02.dbo.custInfo WITH(NOLOCK) WHERE roleid = 3 and srecommend = @CustID AND username LIKE '%' + @Username + '%'
+		SELECT CustID,username  FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 3 and srecommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	IF @roleID = 3 
 	BEGIN
 		INSERT INTO #DownLineList(CustID, username)
-		SELECT CustID, username FROM bodb02.dbo.custInfo WITH(NOLOCK) WHERE roleid = 2 and mrecommend = @CustID AND username LIKE '%' + @Username + '%'
+		SELECT CustID, username FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 2 and mrecommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	IF @roleID = 2 
 	BEGIN
 		INSERT INTO #DownLineList(CustID, username)
-		SELECT CustID, username FROM bodb02.dbo.custInfo WITH(NOLOCK) WHERE roleid = 1 and recommend = @CustID AND username LIKE '%' + @Username + '%'
+		SELECT CustID, username FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 1 and recommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	CREATE TABLE #UplineTrans (Refno BIGINT)
@@ -103,7 +103,7 @@ SET NOCOUNT ON;
 
 		INSERT INTO #UplineTrans (Refno)
 		SELECT	refno AS RefNo	
-		FROM	bodb02.dbo.bettrans b WITH (NOLOCK)  
+		FROM	dbo.bettrans b WITH (NOLOCK)  
 		WHERE custid = @CustID 
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
@@ -120,7 +120,7 @@ SET NOCOUNT ON;
 				ISNULL((balance + winlost - actual_stake),0)  AS NewBalance,
 				transdesc as TransDesc,
 				creator
-		FROM bodb02.dbo.bettrans b WITH (NOLOCK)  
+		FROM dbo.bettrans b WITH (NOLOCK)  
 		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
 		WHERE  winlostdate BETWEEN @FDate AND @TDate AND bettype > 20000;
    
@@ -141,7 +141,7 @@ SET NOCOUNT ON;
 
 		INSERT INTO #UplineTrans (Refno)
 		SELECT	refno AS RefNo	
-		FROM	dbo.transfer_bk b WITH (NOLOCK)  
+		FROM	bodb_Archive.dbo.transfer_bk b WITH (NOLOCK)  
 		WHERE custid = @CustID 
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
@@ -179,7 +179,7 @@ SET NOCOUNT ON;
 				ISNULL((balance + credit - debit),0)  AS NewBalance,
 				transdesc as TransDesc,
 				creator
-		FROM  dbo.transfer_bk b WITH (NOLOCK)  
+		FROM  bodb_Archive.dbo.transfer_bk b WITH (NOLOCK)  
 		CROSS APPLY (SELECT  d.username FROM #DownLineWinlost d WHERE  d.Winlostdate = b.winlostdate AND  d.CustID = b.custid) d
 		WHERE bettype > 20000;
 
@@ -191,7 +191,7 @@ SET NOCOUNT ON;
 	SELECT d.username, d.TransDate, d.TransferType, d.TransferAmt, d.OldBalance, d.NewBalance, CASE WHEN c.roleid > @roleID THEN 'The transfer was done by upline' ELSE d.TransDesc END TransDesc , ROW_NUMBER() OVER (ORDER BY d.TransDate) AS rn
 	FROM #DownlineTransferHistory d
 	INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
-	LEFT JOIN bodb02.dbo.custInfo c ON d.creator = c.custid 
+	LEFT JOIN dbo.custInfo c ON d.creator = c.custid 
 
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
