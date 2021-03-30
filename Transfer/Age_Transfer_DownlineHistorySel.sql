@@ -163,7 +163,7 @@ SET NOCOUNT ON;
 
 		CREATE TABLE #DownLineWinlost (Winlostdate SMALLDATETIME, custID INT, username NVARCHAR(100))
 		INSERT INTO #DownLineWinlost (Winlostdate, custID, username)
-		SELECT a.winlostdate, b.CustID, b.CustID
+		SELECT a.winlostdate, b.CustID, b.username
 		FROM @winlostdateTable a CROSS JOIN #DownLineList b 
 
 		CREATE CLUSTERED INDEX cix_#DownLineWinlost ON #DownLineWinlost(Winlostdate, CustID)
