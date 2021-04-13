@@ -39,6 +39,7 @@ AS
 		- 20201201@Malcolm : Separate the bettype range (4001 -> 7999) into bettype ranges of multiple game [RedmineId : #131375]
 		- 20201210@Malcolm: Add Big Gaming [RedmineId : #142459]
 		- 20210305@Malcolm: add new bettype for cricket AIO  - [RedminedId : #148454]
+		- 20210310@Malcolm: Add Pragmatic Live Casino [RedmineId : #133717]
 
 	- Columns:
 		- CommGroup:
@@ -167,6 +168,7 @@ FROM (
 		OR typeid BETWEEN 3401 AND 3499 --WM
 		OR typeid BETWEEN 5701 AND 5799 --GDG
 		OR typeid BETWEEN 3501 AND 3599 --BG
+		OR typeId BETWEEN 3701 AND 3799 --Pragmatic Live Casino 
 		
 ) AS A
 

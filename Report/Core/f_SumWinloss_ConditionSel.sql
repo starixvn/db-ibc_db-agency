@@ -85,7 +85,7 @@ RETURN
 				(60, 237, 0), -- MaxGame
 				(37, 246, 0), -- Saba Promotion
 				(63, 169, 0), -- Sports Lottery
-				(65, 170, 0)
+				(65, 170, 0)--PP Live Casino
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
