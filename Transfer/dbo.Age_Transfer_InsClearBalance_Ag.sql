@@ -59,6 +59,9 @@ Revisions:
 	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210726@Evan: Transfer all pages work incorrect with disabled account [RedmineID: #158813]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	
+
 Param's Explanation:
 • @FromCustID: list from custid
 • @ToCustIDs: list to custid
@@ -142,6 +145,14 @@ BEGIN
 END
 
 
+-- get move bet date
+DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
  SELECT @currency = ci.currency, @actualrate = e.actualrate, @currName = e.currency, @agUser = ci.username, 
         @Recommend1 = ci.recommend, @MRecommend1 = ci.mrecommend, @srecommend1 = ci.srecommend  
@@ -273,6 +284,10 @@ END
 			b.winlostdate < @yesterday
 			OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 		)
+		AND 1 = CASE 
+					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+				ELSE 1 END
 	GROUP BY custid
  END 
  --Yesterday Balance  
@@ -346,6 +361,10 @@ END
 				AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 			)
 		)
+		AND 1 = CASE 
+					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+				ELSE 1 END
 	GROUP BY custid
  END
 

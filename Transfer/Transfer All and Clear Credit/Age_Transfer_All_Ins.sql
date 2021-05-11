@@ -26,6 +26,7 @@ AS
 		- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 		- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 		- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -68,6 +69,15 @@ BEGIN
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
 	DECLARE @DownlineCustId INT, @DownlineRoleId TINYINT, @DownlineCredit MONEY
+
+	-- get move bet date
+	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	IF @RoleId = 4
 		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)
@@ -280,7 +290,12 @@ BEGIN
 				SUM(b.mwinlost), SUM(b.acomm)
 			FROM dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-			WHERE b.bettype NOT IN (21008, 21009)
+			WHERE 
+				b.bettype NOT IN (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY
 				b.winlostdate, b.bettype, b.statusId,
 				b.custid, b.recommend

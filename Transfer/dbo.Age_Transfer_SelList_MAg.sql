@@ -44,6 +44,7 @@ Revisions:
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210723@Evan: Replace parameter @enabled,@suspended,@closed with @CustStatus
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 
 Param's Explanation:
 • @CustID: MAgentID
@@ -108,6 +109,15 @@ CREATE TABLE #credit
 	agentCredit money,
 	agentUsedCredit money
 )
+
+-- get move bet date
+DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 INSERT INTO #credit
 SELECT c.recommend,
@@ -202,6 +212,10 @@ FROM dbo.bettrans b WITH(NOLOCK)
 WHERE b.mrecommend = @masterid
 	AND ruben = 1
 	AND winlostdate < @yesterday
+	AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 GROUP BY recommend
 
 INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
@@ -220,6 +234,10 @@ WHERE b.mrecommend = @masterid
 	AND ruben = 1
 	AND winlostdate >= @yesterday
 	AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable IN (1,2))
+	AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 GROUP BY recommend
 /* End Balance Info */
 

@@ -58,6 +58,7 @@ Revisions:
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -190,6 +191,15 @@ END
 DECLARE @yesterday SMALLDATETIME
 SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
 
+-- get move bet date
+DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
 -- Get bettype --
 DECLARE @isTest BIT = 0
 SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
@@ -264,6 +274,10 @@ end
 			b.winlostdate < @yesterday
 			OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 		)
+		AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 
 	SELECT
 		@CustBalance = SUM(Balance),
@@ -333,6 +347,10 @@ end
 				AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 			)
 		)
+		AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 
 	SELECT
 		@CustBalance = SUM(Balance),

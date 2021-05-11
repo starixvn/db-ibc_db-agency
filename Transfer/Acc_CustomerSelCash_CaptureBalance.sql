@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20201222@Danny: Get Balance Information of Customer by CustID [RedmineID: #146038]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	
 	Param's Explaination:
 		- @CustId: custid
@@ -30,6 +31,14 @@ BEGIN
 				AND VName 		= 'isCaptureBalance'
 			)
 	BEGIN
+
+		DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+		EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+		SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 		DECLARE @yesterday SMALLDATETIME, @today SMALLDATETIME
 		SELECT @today =   CAST(CURRENT_TIMESTAMP AS DATE)
@@ -98,6 +107,11 @@ BEGIN
 					b.winlostdate < @yesterday
 					OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
 				)
+				AND 
+				1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 
 			SELECT @TotalCash = SUM(ISNULL(TotalCash,0)) 
 			FROM @tblTotalCash
@@ -129,6 +143,11 @@ BEGIN
 				AND b.bettype NOT IN (21008, 21009)
 				AND b.ruben = 1
 				AND (b.winlostdate < @yesterday OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype))
+				AND 
+				1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 
 			SELECT @TotalCash = SUM(ISNULL(TotalCash,0)) 
 			FROM @tblTotalCash
@@ -169,6 +188,10 @@ BEGIN
 			INNER JOIN  dbo.bettrans b WITH(NOLOCK, INDEX = IX_recommend) ON r.CustId = b.recommend
 			WHERE b.bettype NOT IN (21008, 21009)
 				AND b.ruben = 1
+				AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		
 			-- sum, balance, transfer tickets of this master
 			INSERT INTO @tblTotalCash (TotalCash)
@@ -218,6 +241,10 @@ BEGIN
 			INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX = IX_recommend) ON r.CustId = b.recommend
 			WHERE  b.bettype NOT IN (21008, 21009)
 				AND b.ruben = 1
+				AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 
 			-- sum, balance, transfer tickets of this super
 			INSERT INTO @tblTotalCash (TotalCash)

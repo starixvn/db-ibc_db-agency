@@ -49,6 +49,7 @@ Revisions:
 	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210723@Evan: Transfer all pages work incorrect with disabled account [RedmineID: #158813]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -126,7 +127,16 @@ BEGIN
 	
 	RETURN
 END
- 
+
+-- get move bet date
+DECLARE @balanceUpDay DATE, @moveBetsDay DATE
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
  DECLARE @WinlostDate datetime
  SELECT  @WinlostDate = convert(varchar(10), CURRENT_TIMESTAMP, 120)
  
@@ -214,6 +224,10 @@ BEGIN
 		AND ruben = 1
 		AND winlostdate < @yesterday
 		AND bettype NOT IN (21008, 21009)
+		AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 	GROUP BY recommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -227,6 +241,10 @@ BEGIN
 		AND winlostdate >= @yesterday
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 		AND bettype NOT IN (21008, 21009)
+		AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 	GROUP BY recommend
 END
 -- YESTERDAY TRANSFER
@@ -267,6 +285,10 @@ BEGIN
 		AND ruben = 1
 		AND winlostdate < @yesterday
 		AND bettype NOT IN (21008, 21009)
+		AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 	GROUP BY recommend
 
 	INSERT INTO #BalanceInfo (CustId, Balance)
@@ -280,6 +302,10 @@ BEGIN
 		AND winlostdate >= @yesterday
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 		AND bettype NOT IN (21008, 21009)
+		AND 1 = CASE 
+			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+		ELSE 1 END
 	GROUP BY recommend
 END
 
