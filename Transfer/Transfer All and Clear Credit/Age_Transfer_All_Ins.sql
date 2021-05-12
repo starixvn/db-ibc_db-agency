@@ -300,6 +300,44 @@ BEGIN
 				b.winlostdate, b.bettype, b.statusId,
 				b.custid, b.recommend
 
+			----check move bet date again to make sure it is not changed
+			DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
+			EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+			IF (@IsDiff = 1)
+			BEGIN
+
+				DELETE FROM #tempData
+
+				-- bettrans
+				INSERT INTO #tempData
+				(
+					winlostdate, bettype, statusId,
+					custid, recommend,
+					winlost, actual_stake, playercomm,
+					awinlost, comm,
+					mwinlost, acomm
+				)
+				SELECT
+					b.winlostdate, b.bettype, b.statusId,
+					b.custid, b.recommend,
+					SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
+					SUM(b.awinlost), SUM(b.comm),
+					SUM(b.mwinlost), SUM(b.acomm)
+				FROM dbo.bettrans b WITH (NOLOCK)
+					INNER JOIN @tblrecommend r ON b.recommend = r.recommend
+				WHERE 
+					b.bettype NOT IN (21008, 21009)
+					AND 1 = CASE 
+								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+							ELSE 1 END
+				GROUP BY
+					b.winlostdate, b.bettype, b.statusId,
+					b.custid, b.recommend
+
+			END
+
 			-- Master Balance
 			IF @RoleId = 4
 			BEGIN

@@ -194,6 +194,7 @@ SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
 -- get move bet date
 DECLARE @balanceUpDay DATE, @moveBetsDay DATE
 DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
 
 INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 EXEC bodb02.dbo.Age_SelBalanceUpDay
@@ -208,7 +209,7 @@ CREATE TABLE #SportBettype (bettype INT, RefTable TINYINT)
 INSERT INTO #SportBettype (bettype, RefTable)
 SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY)
+CREATE TABLE #BalanceInfo (Balance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY, TableName VARCHAR(50))
 
 if @SubAccID > 0 
 begin	
@@ -262,11 +263,12 @@ end
 		AND b.ruben = 0
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
-	INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd)
+	INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd, TableName)
 	SELECT
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
 		0,
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0),
+		'tblBettrans'
 	FROM dbo.bettrans b WITH(NOLOCK)
 	WHERE b.custid = @custid
 		AND b.ruben = 1
@@ -278,6 +280,33 @@ end
 			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
 		ELSE 1 END
+
+	----check move bet date again to make sure it is not changed
+	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+	IF (@IsDiff = 1)
+	BEGIN
+
+		DELETE FROM #BalanceInfo WHERE TableName = 'tblBettrans'
+
+		INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd, TableName)
+		SELECT
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
+			0,
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0),
+			'tblBettrans'
+		FROM dbo.bettrans b WITH(NOLOCK)
+		WHERE b.custid = @custid
+			AND b.ruben = 1
+			AND (
+				b.winlostdate < @yesterday
+				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+			)
+			AND 1 = CASE 
+				WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+				WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+			ELSE 1 END
+	END
 
 	SELECT
 		@CustBalance = SUM(Balance),
@@ -331,11 +360,12 @@ end
 		AND b.ruben = 0
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
-	INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd)
+	INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd, TableName)
 	SELECT
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
 		0,
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0),
+		'tblBettrans'
 	FROM dbo.bettrans b WITH(NOLOCK)
 	WHERE b.custid = @custid
 		AND b.ruben = 1
@@ -351,6 +381,38 @@ end
 			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
 		ELSE 1 END
+
+	----check move bet date again to make sure it is not changed
+	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+	IF (@IsDiff = 1)
+	BEGIN
+
+		DELETE FROM #BalanceInfo WHERE TableName = 'tblBettrans'
+
+		INSERT INTO #BalanceInfo (Balance, Outstanding, PendingTransfer3rd, TableName)
+		SELECT
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
+			0,
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0),
+			'tblBettrans'
+		FROM dbo.bettrans b WITH(NOLOCK)
+		WHERE b.custid = @custid
+			AND b.ruben = 1
+			AND (
+				b.winlostdate < @yesterday
+				OR b.bettype > 20000
+				OR (
+					winlostdate = @yesterday
+					AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+				)
+			)
+			AND 1 = CASE 
+				WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+				WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+			ELSE 1 END
+
+	END
 
 	SELECT
 		@CustBalance = SUM(Balance),

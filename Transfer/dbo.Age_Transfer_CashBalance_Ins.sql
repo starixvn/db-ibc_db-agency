@@ -151,7 +151,7 @@ BEGIN
 	END
 
 	/***** Calculate Upline Balance, Cash Balance and Outstanding *****/
-	CREATE TABLE #TransferCash (uplineCashBalance MONEY, CashBalance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY)
+	CREATE TABLE #TransferCash (uplineCashBalance MONEY, CashBalance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY, TableName VARCHAR(50))
 	CREATE TABLE #recommend (custid INT)
 
 	-- Get bettype --
@@ -168,6 +168,7 @@ BEGIN
 	-- get move bet date
 	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+	DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
 
 	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 	EXEC bodb02.dbo.Age_SelBalanceUpDay
@@ -210,12 +211,13 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, PendingTransfer3rd)
+		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, PendingTransfer3rd, TableName)
 		SELECT
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 0 AND custid = @custid THEN ABS(actual_stake) ELSE 0 END END),
-			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
+			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END),
+			'tblBettrans'
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE recommend = @recommend
 			AND
@@ -232,6 +234,40 @@ BEGIN
 						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
 					ELSE 1 END
+
+		----check move bet date again to make sure it is not changed
+		EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+		IF (@IsDiff = 1)
+		BEGIN
+
+			DELETE FROM #TransferCash WHERE TableName = 'tblBettrans'
+
+			-- bettrans
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, PendingTransfer3rd, TableName)
+			SELECT
+				SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END),
+				SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 1 AND custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
+				SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN ruben = 0 AND custid = @custid THEN ABS(actual_stake) ELSE 0 END END),
+				SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END),
+				'tblBettrans'
+			FROM dbo.bettrans WITH(NOLOCK)
+			WHERE recommend = @recommend
+				AND
+				(
+					ruben <> 0
+					OR (ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0))
+				)
+				AND
+				(
+					winlostdate < @yesterday
+					OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
+				)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+						ELSE 1 END
+		END
     END
     ELSE IF @roleid = 2
     BEGIN
@@ -269,11 +305,12 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
 		SELECT
 			SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),
 			SUM(CASE WHEN ruben = 1 AND recommend = @recommend THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
-			SUM(CASE WHEN ruben = 0 AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END)
+			SUM(CASE WHEN ruben = 0 AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END),
+			'tblBettrans'
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE mrecommend = @mrecommend
 			AND
@@ -291,6 +328,39 @@ BEGIN
 						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
 					ELSE 1 END
+
+		----check move bet date again to make sure it is not changed
+		EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+		IF (@IsDiff = 1)
+		BEGIN
+
+			DELETE FROM #TransferCash WHERE TableName = 'tblBettrans'
+
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
+			SELECT
+				SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),
+				SUM(CASE WHEN ruben = 1 AND recommend = @recommend THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
+				SUM(CASE WHEN ruben = 0 AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END),
+				'tblBettrans'
+			FROM dbo.bettrans WITH(NOLOCK)
+			WHERE mrecommend = @mrecommend
+				AND
+				(
+					ruben <> 0
+					OR (ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0))
+				)
+				AND
+				(
+					winlostdate < @yesterday
+					OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
+				)
+				AND bettype NOT IN (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+						ELSE 1 END
+		END
     END
     ELSE IF @roleid = 3
     BEGIN
@@ -328,11 +398,12 @@ BEGIN
 			AND statusID IN (0,1)
 
 		-- bettrans
-		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
 		SELECT
 			SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END ELSE 0 END),
 			SUM(CASE WHEN ruben = 1 AND mrecommend = @mrecommend THEN CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),
-			SUM(CASE WHEN ruben = 0 AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
+			SUM(CASE WHEN ruben = 0 AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END),
+			'tblBettrans'
 		FROM dbo.bettrans WITH(NOLOCK)
 		WHERE srecommend = @srecommend
 			AND
@@ -350,6 +421,40 @@ BEGIN
 						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
 						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
 					ELSE 1 END
+
+		----check move bet date again to make sure it is not changed
+		EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+		IF (@IsDiff = 1)
+		BEGIN
+
+			DELETE FROM #TransferCash WHERE TableName = 'tblBettrans'
+
+			-- bettrans
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
+			SELECT
+				SUM(CASE WHEN ruben = 1 THEN CASE WHEN custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END ELSE 0 END),
+				SUM(CASE WHEN ruben = 1 AND mrecommend = @mrecommend THEN CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),
+				SUM(CASE WHEN ruben = 0 AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END),
+				'tblBettrans'
+			FROM dbo.bettrans WITH(NOLOCK)
+			WHERE srecommend = @srecommend
+				AND
+				(
+					ruben <> 0
+					OR (ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0))
+				)
+				AND
+				(
+					winlostdate < @yesterday
+					OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
+				)
+				AND bettype NOT IN (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+						ELSE 1 END
+		END
     END
 
 	/*
