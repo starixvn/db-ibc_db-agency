@@ -29,8 +29,8 @@ BEGIN
 	DECLARE @DownlineCustId INT, @DownlineRoleId TINYINT
 
 	-- get move bet date
-	DECLARE @balanceUpDay DATE, @moveBetsDay DATE
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+	DECLARE @balanceUpDay DATETIME, @moveBetsDay DATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATETIME, MoveBetsDay DATETIME)
 
 	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 	EXEC bodb02.dbo.Age_SelBalanceUpDay

@@ -32,8 +32,9 @@ BEGIN
 			)
 	BEGIN
 
-		DECLARE @balanceUpDay DATE, @moveBetsDay DATE
-		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
+		DECLARE @balanceUpDay DATETIME, @moveBetsDay DATETIME
+		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATETIME, MoveBetsDay DATETIME)
+		DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATETIME = NULL
 
 		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 		EXEC bodb02.dbo.Age_SelBalanceUpDay
@@ -76,8 +77,6 @@ BEGIN
 		DECLARE @tblTotalCash TABLE (TableName VARCHAR(100), TotalCash MONEY)
 
 		CREATE TABLE #recommend (CustId INT)	
-
-		DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
 
 		IF @roleid = 1
 		BEGIN

@@ -101,9 +101,9 @@ BEGIN
 END
 
 -- get move bet date
-DECLARE @balanceUpDay DATE, @moveBetsDay DATE
-DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATE, MoveBetsDay DATE)
-DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATE = NULL
+DECLARE @balanceUpDay DATETIME, @moveBetsDay DATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATETIME, MoveBetsDay DATETIME)
+DECLARE @IsDiff BIT = 0, @NewMoveBetDate DATETIME = NULL
 
 INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 EXEC bodb02.dbo.Age_SelBalanceUpDay
