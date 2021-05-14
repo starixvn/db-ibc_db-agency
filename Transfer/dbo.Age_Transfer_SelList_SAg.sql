@@ -70,8 +70,8 @@ SELECT  @today     = CONVERT(DATE, GETDATE())
 SELECT	@yesterday = DATEADD(DD, -1, @today)
 
 -- get move bet date
-DECLARE @balanceUpDay DATETIME, @moveBetsDay DATETIME
-DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay DATETIME, MoveBetsDay DATETIME)
+DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
 INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 EXEC bodb02.dbo.Age_SelBalanceUpDay
