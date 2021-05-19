@@ -42,6 +42,7 @@ Revisions:
 	- 20180630@Sophia: WC2018 enhance code with high CPU [Redmine: #97612]
 	- 20180720@Paul: Enhance code, split into 3 smaller SPs: DBTXN.bodb02.Age_CustomerSelCreditBalNetPosition_Ag, DBCUST.CustDB.Age_CustomerSelCreditBalClosedReason_Ag [Redmine: #97678]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 
 Param's Explanation:
 
@@ -68,6 +69,15 @@ BEGIN
 
 	DECLARE @RowCount INT, @RowStart INT, @RowEnd INT
 	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	CREATE TABLE #tmp_customer
 	(
@@ -206,6 +216,11 @@ BEGIN
 						ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate < @yesterday THEN winlost - actual_stake + playercomm ELSE 0 END), 0) balanceBeforeYesterday
 					FROM  (SELECT TOP (@PageSize) CustID FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) c
 						INNER JOIN bettrans b WITH (NOLOCK) ON c.CustID = b.CustID
+					WHERE 
+						1 = CASE 
+								WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+								WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+							ELSE 1 END
 					GROUP BY b.custid,b.matchID, Bettype
 				) a
 			LEFT JOIN #SportBettype  s ON s.bettype = a.bettype AND s.RefTable <> 0 
@@ -262,6 +277,10 @@ BEGIN
 		FROM   bettrans WITH (NOLOCK)
 		WHERE  recommend = @CustID AND statusID > 1 AND bettype IN (SELECT bettype FROM #SportBettype WHERE RefTable IN(0,3))
 			AND winlostdate = @today
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY custid
 		UNION ALL
 		SELECT custid, SUM(winlost-actual_stake+playercomm) AS balance

@@ -17,6 +17,7 @@ AS
 		20180413@Sophia: Enhance performance for WC2018 (HighCPU)[Redmine: #93100]
 		20181003@Patrick: Index revolution [RedmineID: #101405]
 		20181105@Paul: Enhance perf [RedmineID: #103443]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -24,6 +25,15 @@ BEGIN
 
 	DECLARE @yesterday SMALLDATETIME
 	SELECT  @yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	-- Get bettype --
 	DECLARE @isTest BIT = 0
@@ -62,6 +72,10 @@ BEGIN
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 		) x
     END
     ELSE IF @roleid = 2
@@ -90,6 +104,10 @@ BEGIN
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 		) x		
     END
     ELSE IF @roleid = 3
@@ -118,6 +136,10 @@ BEGIN
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 		) x
 			
     END
@@ -147,6 +169,10 @@ BEGIN
 				AND b.statusID NOT IN (0, 1)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 		) x
 
     END
