@@ -51,6 +51,7 @@ Revisions:
 	- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
+	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -143,20 +144,28 @@ BEGIN
 	INSERT INTO #mrecommend (CustId)
 	SELECT custid
 	FROM CustDB.dbo.custInfo c WITH(NOLOCK)
+		CROSS APPLY  
+		(
+			SELECT 
+				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+			FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
+			WHERE cs.CustID = c.custid
+		) AS cs
 	WHERE srecommend = @SAgID AND c.roleid = 3
-		AND	c.closed = case @CustStatus
+		AND	cs.IsClosed = case @CustStatus
 							when 'Open' then 0 
 							when 'Close' then 1 
 							when 'Suspend' then 0
-							else c.closed
+							else cs.IsClosed
 							end
-		AND isnull(c.reject,0) = case when c.closed = 0 then case @CustStatus
-															when 'Suspend' then 1 
-															when 'Open' then 0	
-															else isnull(c.reject,0)
+		AND cs.IsSuspended = case when cs.IsClosed = 0 then case @CustStatus
+																when 'Suspend' then 1 
+																when 'Open' then 0	
+																else cs.IsSuspended
 															end  
-								else isnull(c.reject,0)
-								end
+								else cs.IsSuspended
+							end
 END
 ELSE
 BEGIN
