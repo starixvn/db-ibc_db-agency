@@ -106,8 +106,8 @@ BEGIN
 		)
 		SELECT ROW_NUMBER() OVER (
 				ORDER BY ci.enabled DESC
-					,ci.closed
-					,isnull(ci.reject, 0)
+					,cs.IsClosed
+					,cs.IsSuspended
 					,ci.username
 				) AS RowNumber
 			,ci.custid
@@ -155,8 +155,8 @@ BEGIN
 		)
 		SELECT ROW_NUMBER() OVER (
 				ORDER BY ci.enabled DESC
-					,ci.closed
-					,isnull(ci.reject, 0)
+					,cs.IsClosed
+					,cs.IsSuspended
 					,ci.username
 				) AS RowNumber
 			,ci.custid

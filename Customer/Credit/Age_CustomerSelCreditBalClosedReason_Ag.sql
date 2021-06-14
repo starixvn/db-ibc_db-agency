@@ -65,7 +65,7 @@ BEGIN
 					END
 		) a
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
-			AND a.Locked = 1
+			AND a.IsClosed = 1
 	ELSE
 		SELECT TOP (@PageSize) custid, ISNULL(ClosedReason, 0) AS ClosedReason, a.Locked
 		FROM (

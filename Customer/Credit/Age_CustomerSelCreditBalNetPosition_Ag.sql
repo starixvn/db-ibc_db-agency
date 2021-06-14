@@ -111,7 +111,7 @@ BEGIN
 		tc.Locked
 	FROM dbo.BalNetPosition NP WITH (NOLOCK)
 		INNER JOIN #tmp_customer TC ON NP.custid = TC.custid
-	GROUP BY TC.custid
+	GROUP BY TC.custid, tc.Locked
 
 	DROP TABLE #tmp_customer
 
