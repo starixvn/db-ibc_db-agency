@@ -9,6 +9,7 @@ AS
   
 	Revisions:
 		- 20200819@Malcolm: Initialize Sps - [Redmine: #139575]	
+		- 20200908@Malcolm : Report Enhancement for Jackpot Product Filter [RedmineID : #139575]
 		- 20210609@Malcolm: Add AE Sexy - [Redmine: #156239]	
 		
 */

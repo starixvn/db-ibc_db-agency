@@ -16,4 +16,6 @@ Report\Chatbot\Age_Rpt_SumWinLoss_Master.sql
 Report\Chatbot\Age_Rpt_SumWinLoss_Member.sql
 Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroupProductSel.sql
 Report\Core\Age_Rpt_GetProductDetail.sql
-
+Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Agent.sql
+Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Master.sql
+Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Member.sql
