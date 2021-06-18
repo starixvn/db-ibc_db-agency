@@ -23,6 +23,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelMessages]
 		- 20161130@Paul: return vietnamese content [RedmineID #66535]
 		- 20170428@Percy: sort by top level message [RedmineID: #75763]
 		- 20190719@Andy: return content_zhcn to support for cn88 new simplify Chinese [RedmineID: #117259]
+		- 20210618@Patrick: Revise SP
 */
 AS
 BEGIN
@@ -39,9 +40,9 @@ BEGIN
 	UNION ALL
 	SELECT @TargetID
 
-	CREATE TABLE #Msg (MessageId INT)
-	INSERT INTO #Msg (MessageId)
-	SELECT TOP (@totalMessage) m.MessageId
+	CREATE TABLE #Msg (MessageId INT, targetId int)
+	INSERT INTO #Msg (MessageId, targetId)
+	SELECT TOP (@totalMessage) m.MessageId, t.TargetID
 	FROM dbo.Msg m WITH(NOLOCK)
 		INNER JOIN dbo.MsgTarget mt with (NOLOCK) ON m.MessageId = mt.MessageId
 		INNER JOIN #targetTable t ON mt.TargetID = t.TargetID
@@ -55,10 +56,9 @@ BEGIN
 	SELECT DISTINCT TOP (@totalMessage) m.MessageId, m.Content_en, m.Content_cs, m.Content_ch,
 			m.Content_jp, m.Content_th, m.Content_it, m.Content_ko,	m.Content_es, m.Content_vn, m.Content_zhcn,
 			m.PostTime, m.MsgType, m.IsSticky, m.LastUpdateTime, mt.bettransid, mt.isRead, m.TopLevel
-	FROM dbo.Msg m WITH(NOLOCK)
-		INNER JOIN dbo.MsgTarget mt with (NOLOCK) ON m.MessageId = mt.MessageId
-		INNER JOIN #targetTable t ON mt.TargetID = t.TargetID
-		INNER JOIN #Msg tmp ON m.MessageId = tmp.MessageId
+	FROM #Msg tmp
+		INNER JOIN dbo.MsgTarget mt with (NOLOCK) ON tmp.MessageId = mt.MessageId and tmp.targetId = mt.TargetId
+		INNER JOIN dbo.Msg m WITH(NOLOCK) ON m.MessageId = mt.MessageId
 	ORDER BY m.TopLevel ASC, m.Posttime	DESC
 
 	DROP TABLE #targetTable
