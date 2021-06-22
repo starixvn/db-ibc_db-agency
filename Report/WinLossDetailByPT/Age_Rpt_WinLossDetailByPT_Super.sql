@@ -151,7 +151,7 @@ BEGIN
 				SUM(swinlost), -- SAgWinLost  
 				SUM(scomm - acomm), -- SAgComm   
 				SUM(swinlost + scomm - acomm), -- SAgTotal  
-				-(SUM(swinlost)+ SUM(mwinlost) +SUM(awinlost) + SUM(winlost)  + SUM(scomm)) -- Company                    
+				-(SUM(swinlost)+ SUM(mwinlost) +SUM(awinlost) + SUM(winlost-actual_stake)  + SUM(scomm)) -- Company                    
 		FROM	dbo.bettrans b WITH (NOLOCK)    
 				INNER JOIN (
 							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, 
