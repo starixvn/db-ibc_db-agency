@@ -49,7 +49,7 @@ BEGIN
 		VALUES ( NULL, NULL, NULL )
 	END    
 	ELSE IF ISNULL(@ProductDetails,'')  = 'All'    
-	BEGIN    
+	BEGIN   
 		INSERT INTO @ExistingProductDetails    
 			( 
 				ProductId ,   
@@ -134,9 +134,10 @@ BEGIN
 				SUM(CASE
 						WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
 						WHEN b.StatusID = 111 AND s.ProductId IN (1) THEN 0 -- Sportsbook
-						WHEN s.ProductID IN (21, 39, 45, 46, 47, 51, 52, 57, 59, 65)  THEN b.oddsspread -- Allbet, SA Gaming, SexyGaming, IBCBet Live Casino, BBIN, WM, ION, GDG, BG, PPL
+						WHEN s.IsUsingOddsSpread = 1 THEN CASE WHEN cont.ContributionBettype IS NULL THEN b.oddsspread ELSE 0 END-- LC and RNG
 						ELSE ABS(b.stake) 
-					END) AS TurnoverNoDraw,
+					END
+					) AS TurnoverNoDraw,
 				SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1-tpositiontaking) END), -- GrossComm 
 				SUM(winlost - actual_stake), -- MemberWinLost	
 				SUM(playercomm), -- PlayerComm		
@@ -152,18 +153,29 @@ BEGIN
 				SUM(swinlost + scomm - acomm), -- SAgTotal  
 				-(SUM(swinlost)+ SUM(mwinlost) +SUM(awinlost) + SUM(winlost)  + SUM(scomm)) -- Company                    
 		FROM	dbo.bettrans b WITH (NOLOCK)    
-				INNER JOIN ( SELECT ISNULL(p.GroupProductId, f.ProductID) AS ProductID,
-									f.BetType
+				INNER JOIN (
+							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, 
+									CASE 
+										WHEN f.RefTable IN (1, 2) OR ISNULL(p.GroupProductId, f.ProductID) = 47 THEN 1 
+										ELSE 0 
+									END AS IsUsingOddsSpread
 							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f    
 							LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId    
 							LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID     
-							WHERE EXISTS (	SELECT 1    
+							WHERE EXISTS (	SELECT	1    
 											WHERE	e.ProductId IS NULL     
 													OR  (	e.Bettype = f.BetType     
 															OR ( e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g))    
 														)
 										 )                
-							) s ON b.bettype = s.Bettype    
+							) s ON b.bettype = s.Bettype
+				OUTER APPLY 
+							(
+							SELECT f.Bettype AS ContributionBettype
+							FROM dbo.f_BettypePrizeGroup() f
+							WHERE f.BettypeGroup = 'Contribution'
+								AND f.Bettype = b.bettype
+							) cont
 		WHERE	b.winlostdate BETWEEN @FDate AND @Tdate    
 				AND b.srecommend = @CID   
 				AND b.statusID IN (111, 112, 113)     
