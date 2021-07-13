@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20171020@Percy: Apply core balance sp [RedmineID: #84690]
 		- 20200602@Percy: Separate PendingTransfer3rd to Cash and Balance [RedmineID: #135200]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -50,14 +51,14 @@ BEGIN
 		memberCash,		yesterdayMemberCash,
 		PendingTransfer3rd
 	)
-	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId
+	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCash @CustId = @CustId
 
 	-- winloss
 	INSERT INTO #BalanceInfo
 	(
 		todayWinloss,	yesterdayWinloss
 	)
-	EXEC dbo.Acc_CustomerSelWinLoss @CustId = @CustId
+	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelWinLoss @CustId = @CustId
 
 	SELECT
 		@username					AS username,

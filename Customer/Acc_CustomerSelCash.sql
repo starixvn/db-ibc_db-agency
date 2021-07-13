@@ -1,5 +1,5 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_CustomerSelCash_UAT1]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelCash]
 	@CustId INT
 AS
 
@@ -39,8 +39,13 @@ BEGIN
 	SELECT @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @__custId
 
 	-- get move bet date
-	DECLARE @moveBetsDay SMALLDATETIME
-	EXEC DBAGE.bodb02.dbo.Age_SelBalanceUpDay_Wrapper @MovebetDay = @moveBetsDay OUTPUT
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 	
 	-- Get Balance Information --
 	CREATE TABLE #BalanceInfo

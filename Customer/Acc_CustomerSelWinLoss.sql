@@ -24,8 +24,13 @@ BEGIN
 	SELECT  @yesterday = CONVERT(DATE, DATEADD(DAY, -1, GETDATE()))
 
 	-- get move bet date
-	DECLARE @moveBetsDay SMALLDATETIME
-	EXEC DBAGE.bodb02.dbo.Age_SelBalanceUpDay_Wrapper @MovebetDay = @moveBetsDay OUTPUT
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	-- Get bettype --
 	DECLARE @isTest BIT = 0

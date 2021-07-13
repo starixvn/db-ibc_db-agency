@@ -1,9 +1,3 @@
-PortalPage\dbo.Age_CustomerSelBalanceInfo_SAg.sql
-PortalPage\dbo.Age_CustomerSelBalanceInfo_MAg.sql
-PortalPage\dbo.Age_CustomerSelBalanceInfo_Ag.sql
 Customer\Age_CustomerSelBalance_Ag.sql
 Customer\Age_CustomerSelBalance_MAg.sql
 Customer\Age_CustomerSelBalance_SAg.sql
-PortalPage\dbo.Age_CustomerSelBalanceInfo_Ag.sql
-PortalPage\dbo.Age_CustomerSelBalanceInfo_MAg.sql
-PortalPage\dbo.Age_CustomerSelBalanceInfo_SAg.sql
