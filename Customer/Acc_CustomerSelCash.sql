@@ -1,5 +1,5 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
-ALTER PROCEDURE [dbo].[Acc_CustomerSelCash]
+ALTER PROCEDURE [dbo].[Acc_CustomerSelCash_UAT1]
 	@CustId INT
 AS
 
@@ -40,7 +40,7 @@ BEGIN
 
 	-- get move bet date
 	DECLARE @moveBetsDay SMALLDATETIME
-	EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @MoveBetsDay OUTPUT
+	EXEC DBAGE.bodb02.dbo.Age_SelBalanceUpDay_Wrapper @MovebetDay = @moveBetsDay OUTPUT
 	
 	-- Get Balance Information --
 	CREATE TABLE #BalanceInfo
