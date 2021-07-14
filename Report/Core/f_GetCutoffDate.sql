@@ -1,5 +1,5 @@
 /*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBTXN-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="1" isNested="1"></info>*/
-CREATE FUNCTION [dbo].f_GetCutoffDate()
+CREATE FUNCTION [dbo].f_GetCutOffDate()
 RETURNS TABLE
 AS
 
@@ -18,7 +18,7 @@ RETURN
 
 	SELECT CutoffDate, TypeName
 	FROM (
-		VALUES ('2021-07-27', 'NetTO')
+		VALUES ('2021-07-13', 'NetTO')
 	) AS t (CutoffDate, TypeName)
 	
 GO

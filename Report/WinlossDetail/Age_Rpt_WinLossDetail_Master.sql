@@ -58,7 +58,7 @@ BEGIN
 			@RowEnd = @RowStart + @PageSize - 1;
 
 	SELECT @cutoffDate = CutoffDate
-	FROM dbo.f_GetCutoffDate() f
+	FROM dbo.f_GetCutOffDate() f
 	WHERE f.TypeName = 'NetTO'
 
 	CREATE TABLE #SAgWinLossDetails
