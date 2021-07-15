@@ -42,6 +42,15 @@ BEGIN
 		PendingTransfer3rd MONEY DEFAULT ((0))
 	)
 	
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
 	-- cash
 	INSERT INTO #BalanceInfo
 	(
@@ -51,14 +60,14 @@ BEGIN
 		memberCash,		yesterdayMemberCash,
 		PendingTransfer3rd
 	)
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelCash @CustId = @CustId
+	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId, @MoveBetDay = @moveBetDay
 
 	-- winloss
 	INSERT INTO #BalanceInfo
 	(
 		todayWinloss,	yesterdayWinloss
 	)
-	EXEC DBAGE.bodb02.dbo.Acc_CustomerSelWinLoss @CustId = @CustId
+	EXEC dbo.Acc_CustomerSelWinLoss @CustId = @CustId, @MoveBetDay = @moveBetDay
 
 	SELECT
 		@username					AS username,

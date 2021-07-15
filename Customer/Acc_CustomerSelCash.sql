@@ -1,6 +1,7 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelCash]
-	@CustId INT
+	@CustId INT,
+	@MoveBetDay SMALLDATETIME = NULL
 AS
 
 /*
@@ -42,10 +43,17 @@ BEGIN
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	IF (@MoveBetDay IS NULL)
+	BEGIN
+		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+		EXEC bodb02.dbo.Age_SelBalanceUpDay
 
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+		SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	END
+	ELSE
+	BEGIN
+		SELECT @moveBetsDay = @MoveBetDay
+	END
 	
 	-- Get Balance Information --
 	CREATE TABLE #BalanceInfo
