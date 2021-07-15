@@ -45,6 +45,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20210427@Malcolm: Add VGaming [RedmineId : #153938]
 		- 20210518@Malcolm: Add AdvantPlay Mini [redmine: #155131]
 		- 20210512@Malcolm: Add AdvantPlay Product [redmine: #154256]
+		- 20210609@Malcolm: Add AE Sexy - [Redmine: #156239]	
 
 	Paramters Explanation:
  		@ProductID: list of products
@@ -75,7 +76,8 @@ RETURN
 				(39, 244, 0), -- SA Gaming
 				(42, 200, 0), -- Saba.club Normal Bets
 				(43, 223, 0), -- Indo 4D	
-				(45, 243, 0), -- Sexy Gaming
+				(45, 243, 0), -- AE Sexy Normal Bets
+				(45, 243, 3150), -- AE Sexy Lucky Draw
 				(40, 222, 0), -- Table Games	
 				(47, 241, 0), -- BBIN
 				(46, 242, 0), -- IBCBet Live Casino
