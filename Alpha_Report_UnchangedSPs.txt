@@ -1,3 +1,0 @@
-Customer\Age_CustomerSelBalance_Ag.sql
-Customer\Age_CustomerSelBalance_MAg.sql
-Customer\Age_CustomerSelBalance_SAg.sql
