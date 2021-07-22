@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_CustomerSelStatisticsInfo_Ag]
 	 @custid INT
 AS
@@ -16,6 +13,7 @@ AS
 		- 20171020@Percy: Apply core sp [RedmineID: #84690]
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 		- 20201113@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 */
 
 BEGIN
@@ -31,10 +29,18 @@ BEGIN
 
 	-- all downline's status
 	SELECT
-		@Total_memberActive    = ISNULL(SUM(CASE WHEN Closed = 0 AND ISNULL(reject, 0) = 0 THEN 1 ELSE 0 END), 0),
-		@Total_memberClosed    = ISNULL(SUM(CASE WHEN Closed = 1 THEN 1 ELSE 0 END), 0),
-		@Total_memberSuspended = ISNULL(SUM(CASE WHEN ISNULL(reject, 0) = 1 AND Closed = 0 THEN 1 ELSE 0 END), 0)
-	FROM dbo.custInfo WITH (NOLOCK)
+		@Total_memberActive    = ISNULL(SUM(CASE WHEN cs.IsClosed = 0 AND cs.IsSuspended = 0 THEN 1 ELSE 0 END), 0),
+		@Total_memberClosed    = ISNULL(SUM(CASE WHEN cs.IsClosed = 1 THEN 1 ELSE 0 END), 0),
+		@Total_memberSuspended = ISNULL(SUM(CASE WHEN cs.IsSuspended = 1 AND cs.IsClosed = 0 THEN 1 ELSE 0 END), 0)
+	FROM dbo.custInfo ci WITH (NOLOCK)
+		CROSS APPLY  
+		(
+			SELECT 
+				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+				,CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+			FROM dbo.CustProductStatus WITH(NOLOCK)
+			WHERE CustID = ci.custid
+		) AS cs
 	WHERE recommend = @CustId
 		AND roleid = 1
 

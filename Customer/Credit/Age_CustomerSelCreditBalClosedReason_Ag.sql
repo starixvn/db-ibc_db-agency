@@ -1,15 +1,4 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [CustDB]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Age_CustomerSelCreditBalClosedReason_Ag]    Script Date: 7/23/2018 8:54:38 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalClosedReason_Ag]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -26,6 +15,7 @@ AS
 
 	Revisions:
 		- 20180720@Paul: Create new, splitted from DBAGE.bodb02.Age_CustomerSelCreditBalanceList_Ag [Redmine: #97678]
+		- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 
 */
 BEGIN
@@ -37,76 +27,88 @@ BEGIN
 	SET @Username = ISNULL(@Username, '')
 
 	IF @Username = ''
-		SELECT TOP (@PageSize) custid, ISNULL(ClosedReason, 0) AS ClosedReason
+		SELECT TOP (@PageSize) custid, ISNULL(ClosedReason, 0) AS ClosedReason, a.Locked
 		FROM (
 			SELECT	ROW_NUMBER() OVER (
 					ORDER BY ci.enabled DESC
-						,ci.closed
-						,isnull(ci.reject, 0)
+						,cs.IsClosed
+						,cs.IsSuspended
 						,ci.username
 					) AS RowNumber,
 					ci.custid,
 					m.ClosedReason,
-					ci.closed
+					cs.IsClosed,
+					cs.Locked
 			FROM dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
-				JOIN dbo.CustLoginInfo_Member m WITH(NOLOCK) ON m.CustID = ci.custid
+				INNER JOIN dbo.CustLoginInfo_Member m WITH(NOLOCK) ON m.CustID = ci.custid
+				CROSS APPLY  
+				(
+					SELECT 
+						CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+						, ISNULL(Locked, 0) AS Locked
+					FROM dbo.CustProductStatus cs WITH(NOLOCK)
+					WHERE cs.CustID = ci.custid
+				) AS cs
 			WHERE ci.roleid = 1 AND ci.recommend = @CustID
 				AND enabled = CASE 
 						WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
 						ELSE coalesce(@enabled, enabled)
 					END
-				AND isnull(ci.closed, 0) = CASE 
+				AND isnull(cs.IsClosed, 0) = CASE 
 						WHEN @suspended = 1 THEN 0
-						ELSE coalesce(@closed, isnull(ci.closed, 0))
+						ELSE coalesce(@closed, isnull(cs.IsClosed, 0))
 					END
-				AND isnull(ci.reject, 0) = CASE 
+				AND isnull(cs.IsSuspended, 0) = CASE 
 						WHEN @Closed = 0 THEN 0
-						ELSE coalesce(@suspended, isnull(ci.reject, 0))
+						ELSE coalesce(@suspended, isnull(cs.IsSuspended, 0))
 					END
 		) a
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
-			AND closed = 1
+			AND a.IsClosed = 1
 	ELSE
-		SELECT TOP (@PageSize) custid, ISNULL(ClosedReason, 0) AS ClosedReason
+		SELECT TOP (@PageSize) custid, ISNULL(ClosedReason, 0) AS ClosedReason, a.Locked
 		FROM (
 			SELECT ROW_NUMBER() OVER (
 					ORDER BY ci.enabled DESC
-						,ci.closed
-						,isnull(ci.reject, 0)
+						,cs.IsClosed
+						,cs.IsSuspended
 						,ci.username
 					) AS RowNumber,
 					ci.custid,
 					m.ClosedReason,
-					ci.closed
+					cs.IsClosed,
+					cs.Locked
 			FROM dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
-				JOIN dbo.CustLoginInfo_Member m WITH(NOLOCK) ON m.CustID = ci.custid
+				INNER JOIN dbo.CustLoginInfo_Member m WITH(NOLOCK) ON m.CustID = ci.custid
+				CROSS APPLY  
+				(
+					SELECT 
+						CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+						, ISNULL(Locked, 0) AS Locked
+					FROM dbo.CustProductStatus cs WITH(NOLOCK)
+					WHERE cs.CustID = ci.custid
+				) AS cs
 			WHERE ci.roleid = 1 AND ci.recommend = @CustID
 				AND ci.username LIKE '%' + @Username + '%'
 				AND enabled = CASE 
 						WHEN coalesce(@Closed, @Suspended) IS NOT NULL THEN 1
 						ELSE coalesce(@enabled, enabled)
 					END
-				AND isnull(ci.closed, 0) = CASE 
+				AND isnull(cs.IsClosed, 0) = CASE 
 						WHEN @suspended = 1 THEN 0
-						ELSE coalesce(@closed, isnull(ci.closed, 0))
+						ELSE coalesce(@closed, isnull(cs.IsClosed, 0))
 					END
-				AND isnull(ci.reject, 0) = CASE 
+				AND isnull(cs.IsSuspended, 0) = CASE 
 						WHEN @Closed = 0 THEN 0
-						ELSE coalesce(@suspended, isnull(ci.reject, 0))
+						ELSE coalesce(@suspended, isnull(cs.IsSuspended, 0))
 					END
 		) a
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
-			AND closed = 1
+			AND a.IsClosed = 1
 
 	SET NOCOUNT OFF
 END
 
 GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalClosedReason_Ag] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalClosedReason_Ag] TO [bodbDownlineNetView] AS [dbo]
-GO
-
-

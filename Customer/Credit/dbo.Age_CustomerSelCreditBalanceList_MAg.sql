@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -42,6 +39,7 @@ Revisions:
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 	- 20171020@Percy: Add waiting tickets on translog [RedmineID: #84690]
 	- 20180802@Paul: Enhance code, split into 2 smaller SPs: DBCUST.CustDB.Age_CustomerSelCreditBalClosedReason_MAg [Redmine: #97678]
+	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	
 Param's Explanation:
 • @CustID: MAgentID
@@ -78,7 +76,8 @@ BEGIN
 		[lastname]		NVARCHAR(50) NULL,
 		[credit]		MONEY NULL,
 		[lastlogged]	SMALLDATETIME NULL,
-		[usedCredit]	MONEY NULL
+		[usedCredit]	MONEY NULL,
+		Locked			TINYINT
 	)
 
 	CREATE TABLE #balance  
@@ -189,37 +188,85 @@ BEGIN
 	SET @Username = ISNULL(@Username, '')
 	--Filter user
 	IF @Username = ''
-		INSERT INTO #tmp_customer 
+		INSERT INTO #tmp_customer
+		(
+			[custid],
+			[enabled],
+			[username],
+			[iplogin],
+			[closed],
+			[suspended],
+			[firstname],
+			[lastname],
+			[credit],
+			[lastlogged],
+			[usedCredit],
+			Locked
+		)
 		SELECT	c.custid,
 				ci.enabled,
 				c.username,
 				c.iplogin,
-				ci.closed,
-				ISNULL(ci.reject, 0) AS suspended,
+				cs.IsClosed,
+				cs.IsSuspended,
 				c.firstname,
 				c.lastname,
 				ci.credit,
 				c.lastlogged,
-				(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = ci.custid) AS usedCredit
-		FROM	CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo)
+				(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = ci.custid) AS usedCredit,
+				cs.Locked
+		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo)
 			INNER JOIN Customer AS c (nolock) ON ci.custid = c.custid
+			CROSS APPLY  
+			(
+				SELECT 
+					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+					, ISNULL(Locked, 0) AS Locked
+				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				WHERE cs.CustID = ci.custid
+			) AS cs
 		WHERE	ci.roleid = 2
 			AND ci.mrecommend=@CustID 
 			AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-			and	isnull(ci.closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
-			and isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end
+			and	isnull(cs.IsClosed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(cs.IsClosed, 0)) end
+			and isnull(cs.IsSuspended,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(cs.IsSuspended, 0))end
 	ELSE
-		INSERT INTO #tmp_customer 
+		INSERT INTO #tmp_customer
+		(
+			[custid],
+			[enabled],
+			[username],
+			[iplogin],
+			[closed],
+			[suspended],
+			[firstname],
+			[lastname],
+			[credit],
+			[lastlogged],
+			[usedCredit],
+			Locked
+		)
 		SELECT 
-			c.custid, ci.enabled, c.username, c.iplogin, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
-			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = ci.custid) AS usedCredit
+			c.custid, ci.enabled, c.username, c.iplogin, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
+			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 1 AND recommend = ci.custid) AS usedCredit, cs.Locked
 		FROM
-			CustInfo as ci with (NOLOCK,index=ix_custinfo) inner join Customer c (nolock) on ci.custid = c.custid
+			CustInfo as ci with (NOLOCK,index=ix_custinfo) 
+			inner join Customer c (nolock) on ci.custid = c.custid
+			CROSS APPLY  
+			(
+				SELECT 
+					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+					, ISNULL(Locked, 0) AS Locked
+				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				WHERE cs.CustID = ci.custid
+			) AS cs
 		WHERE 
 			ci.roleid=2 and ci.mrecommend=@CustID and ci.username like '%' + @Username + '%' 
 			AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-			and	isnull(ci.closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(ci.closed, 0)) end
-			and isnull(ci.reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(ci.reject, 0))end
+			and	isnull(cs.IsClosed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(cs.IsClosed, 0)) end
+			and isnull(cs.IsSuspended,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(cs.IsSuspended, 0))end
 
 	IF @TotalItems = 0
 	BEGIN
@@ -242,7 +289,8 @@ BEGIN
 			isnull(balance.balance,0) - isnull(today_balance.balance,0) yesterday_balance,
 			isnull(c.credit,0) - isnull(c.usedCredit,0) betCredit,
 			isnull(c.credit,0) credit,		
-			CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged
+			CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged,
+			c.Locked
 		FROM #tmp_customer c
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid 
 			LEFT JOIN #today_balance AS today_balance on c.custid = today_balance.custid 
@@ -255,10 +303,4 @@ BEGIN
 	drop table #tmp_customer
 	DROP TABLE #SportBettype
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_MAg] TO [bodbDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_CustomerSelCreditBalanceList_MAg] TO [bodbDownlineNetView] AS [dbo]
 GO

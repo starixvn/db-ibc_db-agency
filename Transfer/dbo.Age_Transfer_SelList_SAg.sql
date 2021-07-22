@@ -44,6 +44,7 @@ Revisions:
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
 	- 20181005@Percy: Revise indexes [RedmineID: #101644]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -77,6 +78,7 @@ CREATE TABLE #tmp_customer
 	[suspended] bit,
 	[firstname] nvarchar(50) null,
 	[lastname] nvarchar(50) null,
+	Locked TINYINT
 )
 
 CREATE TABLE #balance  
@@ -256,24 +258,64 @@ GROUP BY mrecommend
 SET @Username = isnull(@Username, '')
 --Filter user
 IF @Username = ''
-	INSERT INTO #tmp_customer 
+	INSERT INTO #tmp_customer
+	(
+		[custid],
+		[enabled],
+		[username],
+		[closed],
+		[suspended],
+		[firstname],
+		[lastname],
+		Locked
+	) 
 	SELECT 
-		c.custid, ci.enabled, c.username, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname
-	FROM CustInfo ci with (NOLOCK) INNER JOIN Customer c (nolock) on ci.custid = c.custid 
+		c.custid, ci.enabled, c.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
+	FROM CustInfo ci with (NOLOCK) 
+		INNER JOIN Customer c (nolock) on ci.custid = c.custid 
+		CROSS APPLY  
+		(
+			SELECT 
+				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+				, Locked
+			FROM dbo.CustProductStatus cs WITH(NOLOCK)
+			WHERE cs.CustID = ci.custid
+		) AS cs
 	WHERE c.roleid=3 AND c.srecommend=@SAgID
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-		AND isnull(closed,0) = CASE WHEN @Suspended = 1 THEN 0 ELSE coalesce(@closed, isnull(closed, 0)) END
-		AND isnull(reject,0) = CASE WHEN @Closed = 0 THEN 0 ELSE coalesce(@Suspended, isnull(reject, 0)) END
+		AND isnull(cs.IsClosed,0) = CASE WHEN @Suspended = 1 THEN 0 ELSE coalesce(@closed, isnull(cs.IsClosed, 0)) END
+		AND isnull(cs.IsSuspended,0) = CASE WHEN @Closed = 0 THEN 0 ELSE coalesce(@Suspended, isnull(cs.IsSuspended, 0)) END
 ELSE
 	INSERT INTO #tmp_customer 
+	(
+		[custid],
+		[enabled],
+		[username],
+		[closed],
+		[suspended],
+		[firstname],
+		[lastname],
+		Locked
+	)
 	SELECT 
-		c.custid, ci.enabled, c.username, ci.closed, isnull(ci.reject,0) as suspended, c.firstname, c.lastname
-	FROM CustInfo ci with (NOLOCK) INNER JOIN Customer c (nolock) on ci.custid = c.custid 
+		c.custid, ci.enabled, c.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
+	FROM CustInfo ci with (NOLOCK) 
+		INNER JOIN Customer c (nolock) on ci.custid = c.custid 
+		CROSS APPLY  
+		(
+			SELECT 
+				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+				, Locked
+			FROM dbo.CustProductStatus cs WITH(NOLOCK)
+			WHERE cs.CustID = ci.custid
+		) AS cs
 	WHERE 
 		c.roleid=3 AND c.srecommend=@SAgID and c.username like '%' + @Username + '%'  
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-		AND isnull(closed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(closed, 0)) end
-		AND isnull(reject,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(reject, 0))end
+		AND isnull(cs.IsClosed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(cs.IsClosed, 0)) end
+		AND isnull(cs.IsSuspended,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(cs.IsSuspended, 0))end
 
 --Calc total pages
 IF @TotalPages = 0
@@ -326,7 +368,8 @@ BEGIN
 			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
 			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
-			c.lastname
+			c.lastname,
+			c.Locked
 		FROM #tmp_customer c
 			INNER JOIN #credit credit ON c.custid = credit.mrecommend
 			LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
@@ -384,7 +427,8 @@ BEGIN
 			IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
 			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
-			c.lastname
+			c.lastname,
+			c.Locked
 		FROM #tmp_customer c
 			INNER JOIN #credit credit ON c.custid = credit.mrecommend
 			LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
