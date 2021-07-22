@@ -1,3 +1,5 @@
+/*<info serverAlias="DBAGE-bodb02" executers="bodbExtAccNet,bodbDownlineNetView,bodbDownlineNet,bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+
 ALTER PROCEDURE [dbo].[Age_Rpt_CustomerConsolidatedGroup_CheckBelonging]
 	@SessionCustID INT, --uplineID
 	@CustID INT = NULL,
@@ -14,6 +16,7 @@ AS
 	ORiginal: Age_CustomerSelCheckBelonging
 	
 	Revisions:
+		- 20210524@Tina: Lock account & indirect close account [redmine: #148600]
 	
 */
 BEGIN
@@ -45,9 +48,10 @@ IF @custid IS NULL
 
 -- Check SessionRoleID ------------
 SELECT	@SessionRoleID = roleid,
-		@IsActive = CASE WHEN closed = 1 OR Enabled = 0 THEN 0 ELSE 1 END
-FROM custinfo WITH (NOLOCK)
-WHERE custID = @SessionCustID
+		@IsActive = CASE WHEN cps.CloseInfo > 0 OR Enabled = 0 THEN 0 ELSE 1 END
+FROM custinfo ci WITH (NOLOCK)
+	INNER JOIN CustProductStatus cps WITH (NOLOCK) ON ci.custid = cps.CustID
+WHERE ci.custID = @SessionCustID
 
 IF ISNULL(@sessionRoleid ,0) = 0 RETURN
 -----------------------------------------
@@ -140,21 +144,3 @@ ELSE -- not headline or not same group
 END
 
 GO
-
-SET QUOTED_IDENTIFIER OFF 
-GO
-SET ANSI_NULLS ON 
-GO
-
-
-GO 
- GRANT VIEW DEFINITION ON [dbo].[Age_Rpt_CustomerConsolidatedGroup_CheckBelonging] TO [vnteam]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_CustomerConsolidatedGroup_CheckBelonging] TO [bodbExtAccNet]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_CustomerConsolidatedGroup_CheckBelonging] TO [bodbDownlineNetView]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_CustomerConsolidatedGroup_CheckBelonging] TO [bodbDownlineNet]
-GO 
- GRANT EXECUTE ON [dbo].[Age_Rpt_CustomerConsolidatedGroup_CheckBelonging] TO [bodbAdminNet]
-GO 
