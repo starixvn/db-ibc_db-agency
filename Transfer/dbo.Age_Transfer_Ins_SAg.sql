@@ -52,6 +52,7 @@ Revisions:
 	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
+	- 20210723@Evan: Transfer all pages work incorrect with disabled account [RedmineID: #158813]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -142,30 +143,17 @@ CREATE TABLE #recommend (CustId INT)
 IF (@CustStatus <> '' OR @CustStatus <> null)
 BEGIN
 	INSERT INTO #mrecommend (CustId)
-	SELECT custid
-	FROM CustDB.dbo.custInfo c WITH(NOLOCK)
-		CROSS APPLY  
-		(
-			SELECT 
-				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
-				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
-			FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
-			WHERE cs.CustID = c.custid
-		) AS cs
-	WHERE srecommend = @SAgID AND c.roleid = 3
-		AND	cs.IsClosed = case @CustStatus
-							when 'Open' then 0 
-							when 'Close' then 1 
-							when 'Suspend' then 0
-							else cs.IsClosed
-							end
-		AND cs.IsSuspended = case when cs.IsClosed = 0 then case @CustStatus
-																when 'Suspend' then 1 
-																when 'Open' then 0	
-																else cs.IsSuspended
-															end  
-								else cs.IsSuspended
-							end
+	SELECT c.custid  
+	FROM CustDB.dbo.custInfo c WITH(NOLOCK)  
+	INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on c.custid=cs.CustID
+	WHERE	srecommend = @SAgID 
+			AND c.roleid = 3  
+			AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0 and c.Enabled = 1 then 1
+							when @CustStatus = 'Suspend' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 and c.Enabled = 1 then 1
+							when @CustStatus = 'Close'	and cs.CloseInfo > 0 and c.Enabled = 1 then 1
+							when @CustStatus = 'Disable' and c.Enabled = 0 then 1
+							when @CustStatus = 'All' then 1
+							else 0 end
 END
 ELSE
 BEGIN
