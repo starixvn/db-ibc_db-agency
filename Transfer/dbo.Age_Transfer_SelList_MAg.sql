@@ -278,7 +278,7 @@ ELSE
 		Locked
 	)
 	SELECT 
-		c.custid, ci.enabled, c.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
+		c.custid, ci.enabled, ci.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
 	FROM CustInfo ci with (NOLOCK,index=IX_custinfo) 
 		INNER JOIN Customer c (nolock) on ci.custid = c.custid 
 		CROSS APPLY  
