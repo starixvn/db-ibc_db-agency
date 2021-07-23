@@ -317,7 +317,7 @@ ELSE
 					FROM dbo.CustProductStatus cs WITH(NOLOCK)
 					WHERE cs.CustID = ci.custid
 				) AS cs	
-	WHERE	c.srecommend = @SAgID AND c.roleid = 3  AND c.username like '%' + @Username + '%'  
+	WHERE	c.srecommend = @SAgID AND c.roleid = 3  AND ci.username like '%' + @Username + '%'  
 			AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0 and ci.Enabled = 1 then 1
 							when @CustStatus = 'Suspend' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 and ci.Enabled = 1 then 1
 							when @CustStatus = 'Close'	and cs.CloseInfo > 0 and ci.Enabled = 1 then 1
