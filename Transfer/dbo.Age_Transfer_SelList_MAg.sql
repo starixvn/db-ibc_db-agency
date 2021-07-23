@@ -279,7 +279,7 @@ ELSE
 	)
 	SELECT 
 		c.custid, ci.enabled, c.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
-	FROM CustInfo ci with (NOLOCK) 
+	FROM CustInfo ci with (NOLOCK) (NOLOCK,index=IX_custinfo) 
 		INNER JOIN Customer c (nolock) on ci.custid = c.custid 
 		CROSS APPLY  
 				(
@@ -292,7 +292,7 @@ ELSE
 					FROM dbo.CustProductStatus cs WITH(NOLOCK)
 					WHERE cs.CustID = ci.custid
 				) AS cs	
-	WHERE	ci.mrecommend=@masterid AND c.roleid = 2  AND ci.username like '%' + @Username + '%'  
+	WHERE	ci.mrecommend=@masterid AND ci.roleid = 2  AND ci.username like '%' + @Username + '%'  
 			AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0 and ci.Enabled = 1 then 1
 							when @CustStatus = 'Suspend' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 and ci.Enabled = 1 then 1
 							when @CustStatus = 'Close'	and cs.CloseInfo > 0 and ci.Enabled = 1 then 1
