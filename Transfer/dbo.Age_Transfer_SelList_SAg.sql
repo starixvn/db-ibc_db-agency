@@ -43,7 +43,7 @@ Revisions:
 	- 20181005@Percy: Revise indexes [RedmineID: #101644]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
-	- 20210723@Evan: Transfer all pages work incorrect with disabled account [RedmineID: #158813]
+	- 20210723@Evan: Add parameter @CustStatus and remove @enabled,@suspended,@closed parameter 
 
 Param's Explanation:
 • @CustID: SAgentID
