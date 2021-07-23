@@ -259,6 +259,10 @@ BEGIN
 			AND b.bettype >= 19999
 			AND b.ruben = 1
 			AND b.bettype NOT IN (21008, 21009)
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 
 		SELECT
 			@CustID AS CustId,
@@ -361,6 +365,10 @@ BEGIN
 			AND bettype >= 19999
 			AND ruben = 1
 			AND bettype NOT IN (21008, 21009)
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 
 		SELECT
 			@CustID AS CustId,
