@@ -148,12 +148,17 @@ BEGIN
 	INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on c.custid=cs.CustID
 	WHERE	srecommend = @SAgID 
 			AND c.roleid = 3  
-			AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0 and c.Enabled = 1 then 1
-							when @CustStatus = 'Suspend' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 and c.Enabled = 1 then 1
-							when @CustStatus = 'Close'	and cs.CloseInfo > 0 and c.Enabled = 1 then 1
-							when @CustStatus = 'Disable' and c.Enabled = 0 then 1
-							when @CustStatus = 'All' then 1
-							else 0 end
+			AND c.Enabled = case @CustStatus when 'All' then c.Enabled 
+					else	case @CustStatus  
+							when 'Disabled' then 0   
+							else 1 end  
+					end
+			AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0  then 1
+								when @CustStatus = 'Suspended' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 then 1
+								when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
+								when @CustStatus = 'Disabled' then 1
+								when @CustStatus = 'All' then 1
+								else 0 end
 END
 ELSE
 BEGIN
