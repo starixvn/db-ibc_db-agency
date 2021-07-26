@@ -266,10 +266,6 @@ WHERE b.srecommend = @SAgID
 	AND bettype >= 19999
 	AND matchid = 0
 	AND b.mrecommend = b.custid
-	AND 1 = CASE 
-				WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-				WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-			ELSE 1 END
 GROUP BY mrecommend
 /* End Balance Info */
 

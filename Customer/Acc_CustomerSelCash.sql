@@ -276,10 +276,6 @@ BEGIN
 			AND b.matchid = 0
 			AND b.bettype >= 19999
 			AND b.ruben = 1
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
     END
     ELSE IF @roleid = 4
     BEGIN
@@ -392,10 +388,6 @@ BEGIN
 			AND b.matchid = 0
 			AND b.bettype >= 19999
 			AND b.ruben = 1
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
 			
     END
 

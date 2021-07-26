@@ -278,10 +278,6 @@ BEGIN
 				AND b.matchid = 0
 				AND b.bettype >= 19999 
 				AND b.bettype NOT IN (21008, 21009)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
-						ELSE 1 END
 
 			SELECT @TotalCash = SUM(ISNULL(TotalCash,0)) 
 			FROM @tblTotalCash
@@ -357,10 +353,6 @@ BEGIN
 				AND b.matchid = 0
 				AND b.bettype >= 19999
 				AND b.bettype NOT IN (21008, 21009)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
-						ELSE 1 END
 
 			SELECT @TotalCash = SUM(ISNULL(TotalCash,0))
 			FROM @tblTotalCash
