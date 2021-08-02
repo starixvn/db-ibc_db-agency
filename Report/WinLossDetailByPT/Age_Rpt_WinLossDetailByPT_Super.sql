@@ -38,6 +38,10 @@ BEGIN
 		    Bettype INT
 		)    
 	DECLARE @isTest BIT, @__ProductDetails XML;   
+	DECLARE @cutoffDate SMALLDATETIME;
+	SELECT @cutoffDate = CutoffDate
+	FROM dbo.f_GetCutOffDate() f
+	WHERE f.TypeName = 'NetTO';
 
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);     
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);    
@@ -134,7 +138,8 @@ BEGIN
 				SUM(CASE
 						WHEN b.StatusID IN (112,113) AND b.MOdds IN (-0.25, 0.25) AND s.ProductId = 1 THEN ABS(b.stake)/2
 						WHEN b.StatusID = 111 AND s.ProductId IN (1) THEN 0 -- Sportsbook
-						WHEN s.IsUsingOddsSpread = 1 THEN CASE WHEN cont.ContributionBettype IS NULL THEN b.oddsspread ELSE 0 END-- LC and RNG
+						WHEN b.winlostdate < @cutoffDate AND s.ProductID IN (21, 39, 45, 46, 47, 51, 52, 57, 59, 65) THEN b.oddsspread
+						WHEN b.winlostdate >= @cutoffDate AND s.IsUsingOddsSpread = 1 THEN CASE WHEN cont.ContributionBettype IS NULL THEN b.oddsspread ELSE 0 END-- LC and RNG
 						ELSE ABS(b.stake) 
 					END
 					) AS TurnoverNoDraw,
@@ -156,7 +161,7 @@ BEGIN
 				INNER JOIN (
 							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, 
 									CASE 
-										WHEN f.RefTable IN (1, 2) OR ISNULL(p.GroupProductId, f.ProductID) = 47 THEN 1 
+										WHEN f.RefTable IN (1, 2) OR f.ProductID = 47 THEN 1 
 										ELSE 0 
 									END AS IsUsingOddsSpread
 							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f    
