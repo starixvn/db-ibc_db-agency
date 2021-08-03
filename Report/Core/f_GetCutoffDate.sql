@@ -18,7 +18,7 @@ RETURN
 
 	SELECT CutoffDate, TypeName
 	FROM (
-		VALUES ('2021-07-22', 'NetTO')
+		VALUES ('2021-08-05', 'NetTO')
 	) AS t (CutoffDate, TypeName)
 	
 GO
