@@ -3,10 +3,8 @@ ALTER PROCEDURE [Age_Transfer_SelList_SAg]
 	@SAgID int,
 	@PageSize int=500,
 	@PageIndex int=1,
-	@Username varchar(30)=null,
-	@Enabled bit = null,
-	@Closed bit=null,
-	@Suspended bit=null,
+	@Username nvarchar(50)=null,
+	@CustStatus varchar(50)='Open' ,
 	@IsYesterdayBalance bit = null,
 	@IsAllowTotalBalance bit = null,
 	@TotalOutStanding money = 0 OUTPUT,
@@ -45,6 +43,7 @@ Revisions:
 	- 20181005@Percy: Revise indexes [RedmineID: #101644]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
+	- 20210723@Evan: Replace parameter @enabled,@suspended,@closed with @CustStatus
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -270,22 +269,32 @@ IF @Username = ''
 		Locked
 	) 
 	SELECT 
-		c.custid, ci.enabled, c.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
+		c.custid, ci.enabled, ci.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
 	FROM CustInfo ci with (NOLOCK) 
 		INNER JOIN Customer c (nolock) on ci.custid = c.custid 
 		CROSS APPLY  
-		(
-			SELECT 
-				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
-				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
-				, Locked
-			FROM dbo.CustProductStatus cs WITH(NOLOCK)
-			WHERE cs.CustID = ci.custid
-		) AS cs
-	WHERE c.roleid=3 AND c.srecommend=@SAgID
-		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-		AND isnull(cs.IsClosed,0) = CASE WHEN @Suspended = 1 THEN 0 ELSE coalesce(@closed, isnull(cs.IsClosed, 0)) END
-		AND isnull(cs.IsSuspended,0) = CASE WHEN @Closed = 0 THEN 0 ELSE coalesce(@Suspended, isnull(cs.IsSuspended, 0)) END
+				(
+					SELECT 
+						CloseInfo
+						, SuspendInfo
+						, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+						, Locked
+					FROM dbo.CustProductStatus cs WITH(NOLOCK)
+					WHERE cs.CustID = ci.custid
+				) AS cs	
+	WHERE	c.srecommend = @SAgID AND c.roleid = 3 
+			AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
+					else	case @CustStatus  
+							when 'Disabled' then 0   
+							else 1 end  
+					end
+			AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0  then 1
+								when @CustStatus = 'Suspended' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 then 1
+								when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
+								when @CustStatus = 'Disabled' then 1
+								when @CustStatus = 'All' then 1
+								else 0 end
 ELSE
 	INSERT INTO #tmp_customer 
 	(
@@ -299,23 +308,32 @@ ELSE
 		Locked
 	)
 	SELECT 
-		c.custid, ci.enabled, c.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
+		c.custid, ci.enabled, ci.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
 	FROM CustInfo ci with (NOLOCK) 
-		INNER JOIN Customer c (nolock) on ci.custid = c.custid 
+		INNER JOIN Customer c with (NOLOCK) on ci.custid = c.custid 
 		CROSS APPLY  
-		(
-			SELECT 
-				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
-				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
-				, Locked
-			FROM dbo.CustProductStatus cs WITH(NOLOCK)
-			WHERE cs.CustID = ci.custid
-		) AS cs
-	WHERE 
-		c.roleid=3 AND c.srecommend=@SAgID and c.username like '%' + @Username + '%'  
-		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-		AND isnull(cs.IsClosed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(cs.IsClosed, 0)) end
-		AND isnull(cs.IsSuspended,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(cs.IsSuspended, 0))end
+				(
+					SELECT 
+						CloseInfo
+						, SuspendInfo
+						, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
+						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
+						, Locked
+					FROM dbo.CustProductStatus cs WITH(NOLOCK)
+					WHERE cs.CustID = ci.custid
+				) AS cs	
+	WHERE	c.srecommend = @SAgID AND c.roleid = 3 AND ci.username like '%' + @Username + '%'  
+			AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
+					else	case @CustStatus  
+							when 'Disabled' then 0   
+							else 1 end  
+					end
+			AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0  then 1
+								when @CustStatus = 'Suspended' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 then 1
+								when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
+								when @CustStatus = 'Disabled' then 1
+								when @CustStatus = 'All' then 1
+								else 0 end
 
 --Calc total pages
 IF @TotalPages = 0
