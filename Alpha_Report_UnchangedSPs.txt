@@ -1,1 +1,0 @@
-Transfer\Transfer All and Clear Credit\Age_ClearCredit_All_Ins.sql

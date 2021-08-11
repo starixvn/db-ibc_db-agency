@@ -12,7 +12,6 @@ AS
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
-		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -20,15 +19,6 @@ BEGIN
 
 	DECLARE @yesterday SMALLDATETIME
 	SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
-
-	-- get move bet date
-	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	CREATE TABLE #tempData
 	(
@@ -54,10 +44,6 @@ BEGIN
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN @tblrecommend r ON b.recommend = r.recommend
 		WHERE b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN b.bettype = 19999 and b.winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN b.bettype < 19999 and b.winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
 		GROUP BY
 			b.winlostdate, b.bettype, b.statusId,
 			b.custid
@@ -136,10 +122,6 @@ BEGIN
 		FROM dbo.bettrans b WITH (NOLOCK)
 		WHERE b.recommend = @CustId
 			AND b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
 		GROUP BY
 			b.winlostdate, b.bettype, b.statusId,
 			b.custid
