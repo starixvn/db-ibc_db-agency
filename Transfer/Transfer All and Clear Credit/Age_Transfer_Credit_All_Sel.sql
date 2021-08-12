@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -26,6 +27,15 @@ BEGIN
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
 	DECLARE @DownlineCustId INT, @DownlineRoleId TINYINT
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	IF @RoleId = 4
 		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId
@@ -178,6 +188,10 @@ BEGIN
 			FROM dbo.bettrans WITH (NOLOCK)
 			WHERE mrecommend = @DownlineCustId
 				AND bettype NOT IN (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY
 				winlostdate, bettype, statusId,
 				custId, CASE custid WHEN mrecommend THEN 3 WHEN recommend THEN 2 ELSE 1 END
@@ -299,6 +313,10 @@ BEGIN
 			FROM dbo.bettrans WITH (NOLOCK)
 			WHERE recommend = @DownlineCustId
 				AND bettype NOT IN (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY
 				winlostdate, bettype, statusId,
 				custId, CASE custid WHEN recommend THEN 2 ELSE 1 END

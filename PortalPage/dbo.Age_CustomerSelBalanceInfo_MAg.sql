@@ -13,6 +13,7 @@ AS
 	Revisions:
 		- 20171020@Percy: Apply core balance sp [RedmineID: #84690]
 		- 20200602@Percy: Separate PendingTransfer3rd to Cash and Balance [RedmineID: #135200]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -41,6 +42,15 @@ BEGIN
 		PendingTransfer3rd MONEY DEFAULT ((0))
 	)
 	
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
 	-- cash
 	INSERT INTO #BalanceInfo
 	(
@@ -50,14 +60,14 @@ BEGIN
 		memberCash,		yesterdayMemberCash,
 		PendingTransfer3rd
 	)
-	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId
+	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId, @MoveBetDay = @moveBetDay
 
 	-- winloss
 	INSERT INTO #BalanceInfo
 	(
 		todayWinloss,	yesterdayWinloss
 	)
-	EXEC dbo.Acc_CustomerSelWinLoss @CustId = @CustId
+	EXEC dbo.Acc_CustomerSelWinLoss @CustId = @CustId, @MoveBetDay = @moveBetDay
 
 	SELECT
 		@username					AS username,

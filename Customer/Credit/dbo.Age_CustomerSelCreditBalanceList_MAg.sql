@@ -40,6 +40,7 @@ Revisions:
 	- 20171020@Percy: Add waiting tickets on translog [RedmineID: #84690]
 	- 20180802@Paul: Enhance code, split into 2 smaller SPs: DBCUST.CustDB.Age_CustomerSelCreditBalClosedReason_MAg [Redmine: #97678]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	
 Param's Explanation:
 • @CustID: MAgentID
@@ -63,6 +64,15 @@ BEGIN
 
 	DECLARE @RowCount INT, @RowStart INT, @RowEnd INT
 	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	CREATE TABLE #tmp_customer
 	(
@@ -104,6 +114,10 @@ BEGIN
 								)
 						)
 				)
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY recommend
 
 		UNION ALL
@@ -162,6 +176,10 @@ BEGIN
 		FROM   bettrans with (NOLOCK)
 		WHERE  mrecommend = @CustID AND statusID > 1 AND bettype IN (SELECT bettype FROM #SportBettype WHERE RefTable IN(0,3))
 			AND winlostdate = @today
+			AND 1 = CASE 
+						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY recommend
 
 		UNION ALL

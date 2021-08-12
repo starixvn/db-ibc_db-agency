@@ -36,6 +36,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday_1
 		- 20180521@Percy: Add waiting tickets on translog [RedmineID: #95268]
 		- 20181005@Percy: Remove convert date on winlostdate [RedmineID: #101644]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 SET NOCOUNT ON
 
@@ -54,6 +55,15 @@ SELECT  @yesterday = DATEADD(DD, -1, @today)
 SELECT  @IsAllowTotalBalance = isnull(@IsAllowTotalBalance, 0)
 
 DECLARE @RoleID INT --nqminh - 19Feb09
+
+-- get move bet date
+DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 IF (@IsAllowTotalBalance = 0)
     select   
@@ -86,6 +96,10 @@ IF (@IsAllowTotalBalance = 0)
 									)
 									OR winlostdate < @yesterday
 								)
+							AND 1 = CASE 
+										WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+										WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+									ELSE 1 END
 						GROUP BY custid
 						UNION ALL
 						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance, 0
@@ -133,6 +147,10 @@ ELSE
 									)
 									OR winlostdate < @yesterday
 								)
+							AND 1 = CASE 
+										WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+										WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+									ELSE 1 END
 						GROUP BY custid
 						UNION ALL
 						SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance, 0
@@ -191,6 +209,10 @@ BEGIN
 				)
 				OR winlostdate < @yesterday
 			)
+		AND 1 = CASE 
+					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+				ELSE 1 END
 
 	SELECT  @TotalCash      = @TotalCash + ISNULL(SUM(winlost-actual_stake+playercomm), 0)
 	FROM bettransRNG WITH (NOLOCK)

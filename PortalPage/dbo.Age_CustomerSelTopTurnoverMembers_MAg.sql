@@ -19,6 +19,7 @@ AS
 	- 20130121@Dan: add linked server DBSUM for bodb_Summary
 	- 20170503@Percy: add constraint winlostdate due to MB BU process [RedmineID: #75955]
 	- 20181120@Percy: Remove linked-server DBSUM [RedmineID: #105170]
+	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -51,6 +52,10 @@ BEGIN
 	FROM bettrans b with(nolock)	
 	WHERE b.mrecommend = @custid AND b.winlostdate >= @tmpFromDate
 		AND b.bettype < 19999 AND b.statusid NOT IN (101,102,103) AND b.ruben = 1
+		AND 1 = CASE 
+					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+				ELSE 1 END
 	GROUP BY b.custid, b.username -- dont remove username due to performance
 
 	IF @moveBetsDay >= @currentMonth

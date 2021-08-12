@@ -26,6 +26,7 @@ AS
 		- 20201005@Danny: Convert Ipv6 to dummy IPv4 [Redmine: #142511]
 		- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 		- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
+		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 */
 
 BEGIN
@@ -68,6 +69,15 @@ BEGIN
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
 	DECLARE @DownlineCustId INT, @DownlineRoleId TINYINT, @DownlineCredit MONEY
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	IF @RoleId = 4
 		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)
@@ -280,10 +290,53 @@ BEGIN
 				SUM(b.mwinlost), SUM(b.acomm)
 			FROM dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-			WHERE b.bettype NOT IN (21008, 21009)
+			WHERE 
+				b.bettype NOT IN (21008, 21009)
+				AND 1 = CASE 
+							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+						ELSE 1 END
 			GROUP BY
 				b.winlostdate, b.bettype, b.statusId,
 				b.custid, b.recommend
+
+			----check move bet date again to make sure it is not changed
+			DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
+			EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
+
+			IF (@IsDiff = 1)
+			BEGIN
+
+				DELETE FROM #tempData
+
+				-- bettrans
+				INSERT INTO #tempData
+				(
+					winlostdate, bettype, statusId,
+					custid, recommend,
+					winlost, actual_stake, playercomm,
+					awinlost, comm,
+					mwinlost, acomm
+				)
+				SELECT
+					b.winlostdate, b.bettype, b.statusId,
+					b.custid, b.recommend,
+					SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
+					SUM(b.awinlost), SUM(b.comm),
+					SUM(b.mwinlost), SUM(b.acomm)
+				FROM dbo.bettrans b WITH (NOLOCK)
+					INNER JOIN @tblrecommend r ON b.recommend = r.recommend
+				WHERE 
+					b.bettype NOT IN (21008, 21009)
+					AND 1 = CASE 
+								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
+								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
+							ELSE 1 END
+				GROUP BY
+					b.winlostdate, b.bettype, b.statusId,
+					b.custid, b.recommend
+
+			END
 
 			-- Master Balance
 			IF @RoleId = 4
