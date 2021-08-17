@@ -16,10 +16,21 @@ AS
 
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
+		- 20210817@Sol: Allow more time to transfer (phase 2) - [RedmineID: #160019]
 */
 
 BEGIN 
 	SET NOCOUNT ON
+
+	-- get move bet date
+	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	----
 
 	----Get Sport Bettype Matrix------
 	DECLARE @ProductIds VARCHAR(MAX), @isTest BIT
@@ -51,6 +62,10 @@ BEGIN
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
 			AND s.ProductID IN (3) --- Number Game
+			AND 1 = CASE 
+						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY m.matchid
 			,m.homeid
 			,m.awayid
@@ -81,6 +96,10 @@ BEGIN
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
 			AND s.ProductID <> 3 -- Not Number Game
+			AND 1 = CASE 
+						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY m.matchid
 			,m.homeid
 			,m.awayid

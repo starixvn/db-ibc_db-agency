@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[U3_Rpt_WinLossByBettype_SAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
@@ -17,10 +14,21 @@ AS
 
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
+		- 20210817@Sol: Allow more time to transfer (phase 2) - [RedmineID: #160019]
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	-- get move bet date
+	DECLARE @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	----
 
 	DECLARE @SAgWinLoss TABLE
 	(
@@ -65,6 +73,10 @@ BEGIN
 			AND ruben = 1  
 			AND SRecommend = @CustID
 			AND s.ProductID IN (3) --- Number Game
+			AND 1 = CASE 
+						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY b.bettype, b.liveindicator
 
 		UNION ALL --- Not number Game not group by liveindicator
@@ -87,6 +99,10 @@ BEGIN
 			AND ruben = 1  
 			AND SRecommend = @CustID
 			AND s.ProductID <> 3 -- Not Number Game
+			AND 1 = CASE 
+						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
+						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
+					ELSE 1 END
 		GROUP BY b.bettype 
 
 		INSERT INTO @SAgWinLoss
