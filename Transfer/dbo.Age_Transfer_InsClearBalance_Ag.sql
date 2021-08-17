@@ -60,6 +60,7 @@ Revisions:
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210726@Evan: Transfer all pages work incorrect with disabled account [RedmineID: #158813]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	
 
 Param's Explanation:
@@ -76,7 +77,7 @@ Declare @LogData nvarchar(500)
 Declare @agentid int, @custid int  
 DECLARE @currency int, @actualrate float, @currName nvarchar(10)    
 DECLARE @agUser nvarchar(50), @User nvarchar(50)  
-Declare @RefNo bigint, @ToCustID int, @Amount float, @Recommend1 int, @MRecommend1 int, @Recommend2 int, @MRecommend2 int, @grefno int, @srecommend1 int  
+Declare @RefNo bigint, @ToCustID int, @Amount float, @Recommend1 int, @MRecommend1 int, @Recommend2 int, @MRecommend2 int, @grefno BIGINT, @srecommend1 int  
 Declare @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
 
 select @IP = dbo.f_ConvertIPv6ToDummy(@IP)
