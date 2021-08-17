@@ -141,10 +141,6 @@ FROM (
 		)
 	C (bettype)
 	UNION ALL
-	SELECT typeid AS bettype, 3 AS CommGroup
-	FROM bettype WITH(NOLOCK)
-	WHERE typeid BETWEEN 7901 AND 7999 -- Bitcoin product
-	UNION ALL
 	SELECT typeid AS bettype, 4 AS CommGroup
 	FROM bettype WITH(NOLOCK)
 	WHERE
@@ -174,6 +170,7 @@ FROM (
 		OR typeid BETWEEN 5701 AND 5799 --GDG
 		OR typeid BETWEEN 3501 AND 3599 --BG
 		OR typeId BETWEEN 3701 AND 3799 --Pragmatic Live Casino 
+		OR typeid BETWEEN 7901 AND 7999 -- Bitcoin product
 		
 ) AS A
 
