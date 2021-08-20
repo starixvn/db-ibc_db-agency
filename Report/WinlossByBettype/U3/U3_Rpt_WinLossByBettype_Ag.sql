@@ -15,21 +15,10 @@ AS
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
 		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
-		- 20210817@Sol: Allow more time to transfer (phase 2) - [RedmineID: #160019]
 */
 
 BEGIN
 	SET NOCOUNT ON
-
-	-- get move bet date
-	DECLARE @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-
-	SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
-	----
 
 	DECLARE @AgWinLoss TABLE
 	(
@@ -79,10 +68,6 @@ BEGIN
 			AND b.statusID NOT IN (101, 102, 103)  ------('VOID', 'REJECT', 'Refund')
 			AND b.recommend = @custid
 			AND s.ProductID IN (3) --- Number Game
-			AND 1 = CASE 
-						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
 		GROUP BY b.bettype, b.liveindicator
 		
 	    UNION ALL --- Not number Game not group by liveindicator
@@ -107,10 +92,6 @@ BEGIN
 			AND statusID NOT IN (101, 102, 103) ------('VOID', 'REJECT', 'Refund')
 			AND recommend = @custid
 			AND s.ProductID <> 3 -- Not Number Game
-			AND 1 = CASE 
-						WHEN b.bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN b.bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
 		GROUP BY b.bettype
 
 
