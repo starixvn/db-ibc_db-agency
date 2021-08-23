@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByBettype_SAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
@@ -33,9 +30,18 @@ Revisions:
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20160607@Percy: Enhance Performance - Using index recommend on bettrans table [Redmine: #58268]
 	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
+	- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 + Note: Review index=IX_srecommend when modifying this SP 
 */
 SET NOCOUNT ON
+
+DECLARE @moveBetsDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 DECLARE @SAgWinLoss TABLE
 (
@@ -70,6 +76,11 @@ SELECT  @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay
 
 IF @TDate >= @BUDate 
 BEGIN	
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+	END
+
 	INSERT INTO @SAgWinLoss
 	SELECT b.bettype
 		,liveindicator
@@ -165,6 +176,21 @@ BEGIN
 		AND statusID NOT IN (0, 1, 101, 102, 103)
 		AND s.ProductID NOT IN (3, 6, 22, 23)
 	GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+
+	--bettrans14
+	IF @BalanceUpDay < @FromDate
+	BEGIN
+		SET @FDate = @FromDate;
+	END
+	ELSE
+	BEGIN
+		SET @FDate = @BalanceUpDay;
+	END
+		
+	IF @ToDate > @MoveBetsDay
+	BEGIN
+		SET @TDate = @MoveBetsDay;
+	END
 
 	INSERT INTO @SAgWinLoss
 	SELECT b.bettype
