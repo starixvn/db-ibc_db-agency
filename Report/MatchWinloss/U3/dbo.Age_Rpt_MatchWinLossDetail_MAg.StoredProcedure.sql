@@ -56,6 +56,7 @@ AS
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20201229@Malcolm : Support Happy 5 Linked Games [RedminedId : #146542]
 		- 20210107@Sol: Report Match Win Loss Detail - correct agent comm - [RedminedId : #148324]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -64,6 +65,16 @@ BEGIN
 	BEGIN
 		DROP TABLE #MAgMatchWLDetails
 	END
+
+	DECLARE @BalanceUpDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @BalanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
+
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
 
 	CREATE TABLE #MAgMatchWLDetails (
 					BetGroup		INT
@@ -146,6 +157,11 @@ BEGIN
 		-- Get all leagues by sport's selected
 		IF @Todate > @MoveBetsDay
 		BEGIN
+			IF @FromDate <= @MoveBetsDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+			END
+
 			INSERT INTO #MAgMatchWLDetails 	
 				SELECT
 					0 as BetGroup,
@@ -156,7 +172,7 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -180,8 +196,7 @@ BEGIN
 					b.mrecommend = @custid
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus, '') <> 'refund'
 					AND s.ProductID = 3
@@ -198,7 +213,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking-mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - b.apositiontaking - b.mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking-mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -223,8 +238,7 @@ BEGIN
 					b.mrecommend = @custid
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID IN (1, 4, 5, 26)
@@ -245,7 +259,7 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+						SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLost,
 						SUM(playercomm) as MemberComm,
 						SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -265,8 +279,7 @@ BEGIN
 						INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 					WHERE 
 						b.mrecommend = @custid
-						AND b.winlostdate >= @fromdate
-						AND b.winlostdate <= @todate
+						AND b.winlostdate BETWEEN @FDate AND @TDate
 						AND b.ruben = 1
 						AND b.statusID NOT IN (101, 102, 103) 
 						AND s.ProductID = 3
@@ -288,7 +301,7 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+						SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLost,
 						SUM(playercomm) as MemberComm,
 						SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -309,8 +322,7 @@ BEGIN
 					WHERE 
 						b.mrecommend = @custid
 						AND b.bettype IN (9,29)
-						AND b.winlostdate >= @fromdate
-						AND b.winlostdate <= @todate
+						AND b.winlostdate BETWEEN @FDate AND @TDate
 						AND b.ruben = 1
 						AND b.statusID NOT IN (101, 102, 103) 
 					GROUP BY b.bettype	
@@ -330,7 +342,7 @@ BEGIN
 					0 as liveindicator,
 					r.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -354,8 +366,7 @@ BEGIN
 				WHERE 
 					b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -375,7 +386,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid as leagueid,	
 					SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,				
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,	
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -397,8 +408,7 @@ BEGIN
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE 
 					b.mrecommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)
 					AND s.EventType = 2
@@ -408,6 +418,21 @@ BEGIN
 		
 		IF @Fromdate <= @MoveBetsDay
 		BEGIN	
+
+			IF @BalanceUpDay < @FromDate
+			BEGIN
+				SET @FDate = @FromDate;
+			END
+			ELSE
+			BEGIN
+				SET @FDate = @BalanceUpDay;
+			END
+		
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
 			INSERT INTO #MAgMatchWLDetails 	
 				SELECT
 					0 as BetGroup,
@@ -418,7 +443,7 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -442,8 +467,7 @@ BEGIN
 					b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.bettype NOT IN (9,29,10)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID = 3
@@ -460,7 +484,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -485,8 +509,7 @@ BEGIN
 					b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.bettype NOT IN (9,29,10)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID IN (1, 4, 5, 26)
@@ -507,7 +530,7 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+						SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLost,
 						SUM(playercomm) as MemberComm,
 						SUM(Winlost - actual_stake+ playercomm) as MemberTotal,
@@ -527,8 +550,7 @@ BEGIN
 						INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 					WHERE 
 						b.mrecommend = @custid
-						AND b.winlostdate >= @fromdate
-						AND b.winlostdate <= @todate
+						AND b.winlostdate BETWEEN @FDate AND @TDate
 						AND b.ruben = 1
 						AND b.statusID NOT IN (101, 102, 103)
 						AND s.ProductID = 3
@@ -549,7 +571,7 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+						SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLost,
 						SUM(playercomm) as MemberComm,
 						SUM(Winlost - actual_stake+ playercomm) as MemberTotal,
@@ -570,8 +592,7 @@ BEGIN
 					WHERE 
 						b.mrecommend = @custid
 						AND b.bettype IN (9, 29)
-						AND b.winlostdate >= @fromdate
-						AND b.winlostdate <= @todate
+						AND b.winlostdate BETWEEN @FDate AND @TDate
 						AND b.ruben = 1
 						AND b.statusID NOT IN (101, 102, 103)
 					GROUP BY b.bettype	
@@ -591,7 +612,7 @@ BEGIN
 					0 as liveindicator,
 					r.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -615,8 +636,7 @@ BEGIN
 					WHERE 
 						b.mrecommend = @custid
 						AND b.statusID NOT IN (101, 102, 103)
-						AND b.winlostdate >= @fromdate
-						AND b.winlostdate <= @todate
+						AND b.winlostdate BETWEEN @FDate AND @TDate
 						AND o.eventstatus = 'completed'
 						AND isnull(r.betstatus, '') <> 'refund'
 						AND s.ProductID = 5
@@ -636,7 +656,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,	
 					SUM(case when b.liveawayscore = 0 and b.bettype IN(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -658,8 +678,7 @@ BEGIN
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE 
 					b.mrecommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND s.EventType = 2
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)
@@ -680,6 +699,11 @@ BEGIN
 		
 		IF @Todate > @MoveBetsDay
 		BEGIN
+			IF @FromDate <= @MoveBetsDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+			END
+
 			INSERT INTO #MAgMatchWLDetails 	
 				SELECT
 					0 as BetGroup,
@@ -690,7 +714,7 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -715,8 +739,7 @@ BEGIN
 					b.mrecommend = @custid
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus, '') <> 'refund'
 					AND s.ProductID = 3
@@ -733,7 +756,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -760,8 +783,7 @@ BEGIN
 					AND b.bettype < 19001 
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID IN (1, 4, 5, 26)
@@ -783,7 +805,7 @@ BEGIN
 					0 as liveindicator,
 					r.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -808,8 +830,7 @@ BEGIN
 			WHERE 
 				b.mrecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND o.eventstatus = 'completed'
 				AND isnull(r.betstatus, '') <> 'refund'
 				AND s.ProductID = 5
@@ -828,7 +849,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid  as leagueid,	
 					SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,	
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -851,8 +872,7 @@ BEGIN
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE 
 					b.mrecommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND s.EventType = 2
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103) 
@@ -862,6 +882,21 @@ BEGIN
 		
 		IF @Fromdate <= @MoveBetsDay
 		BEGIN	
+		
+			IF @BalanceUpDay < @FromDate
+			BEGIN
+				SET @FDate = @FromDate;
+			END
+			ELSE
+			BEGIN
+				SET @FDate = @BalanceUpDay;
+			END
+		
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
 			INSERT INTO #MAgMatchWLDetails 	
 				SELECT
 					0 as BetGroup,
@@ -872,7 +907,7 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -897,8 +932,7 @@ BEGIN
 					b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.bettype NOT IN (9,29,10)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate 
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'  
 					AND isnull(m.betstatus,'') <> 'refund'  
 					AND s.ProductID = 3
@@ -915,7 +949,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -942,8 +976,7 @@ BEGIN
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.bettype < 19001 
 					AND b.bettype NOT IN (9,29,10)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund' 
 					AND s.ProductID IN (1, 4, 5, 26)
@@ -965,7 +998,7 @@ BEGIN
 					0 as liveindicator,
 					r.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(acomm/(1 - apositiontaking - mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -990,8 +1023,7 @@ BEGIN
 				WHERE 
 					b.mrecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -1010,7 +1042,7 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid  as leagueid,	
 					SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
-					SUM(acomm/(1 - apositiontaking-mpositiontaking)) as GrossComm,
+					SUM(CASE WHEN (1 - apositiontaking - mpositiontaking) = 0 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLost,
 					SUM(playercomm) as MemberComm,
 					SUM(Winlost - actual_stake+ playercomm) as MemberTotal,
@@ -1033,8 +1065,7 @@ BEGIN
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE 
 					b.mrecommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND s.EventType = 2
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)

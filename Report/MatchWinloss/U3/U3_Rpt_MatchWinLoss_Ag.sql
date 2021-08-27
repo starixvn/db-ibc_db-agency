@@ -16,10 +16,41 @@ AS
 
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 BEGIN 
 	SET NOCOUNT ON
+
+	DECLARE @moveBetsDay SMALLDATETIME, @balanceUpDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @moveBetsDay = MoveBetsDay, @balanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
+
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @FDate14 SMALLDATETIME, @TDate14 SMALLDATETIME
+	SELECT @FDate = @FromDate, @TDate = @ToDate	
+
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+	END
+
+	IF @BalanceUpDay < @FromDate
+	BEGIN
+		SET @FDate14 = @FromDate;
+	END
+	ELSE
+	BEGIN
+		SET @FDate14 = @BalanceUpDay;
+	END
+		
+	IF @ToDate > @MoveBetsDay
+	BEGIN
+		SET @TDate14 = @MoveBetsDay;
+	END
 
 	----Get Sport Bettype Matrix------
 	DECLARE @ProductIds VARCHAR(MAX), @isTest BIT
@@ -46,8 +77,7 @@ BEGIN
 			INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		WHERE b.recommend = @custid			
-			AND m.eventdate >= @fromdate
-			AND m.eventdate <= @todate
+			AND b.winlostdate BETWEEN @FDate AND @TDate
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
 			AND s.ProductID IN (3) --- Number Game
@@ -76,8 +106,7 @@ BEGIN
 			INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype			 
 		WHERE b.recommend = @custid
-			AND m.eventdate >= @fromdate
-			AND m.eventdate <= @todate
+			AND b.winlostdate BETWEEN @FDate AND @TDate
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
 			AND s.ProductID <> 3 -- Not Number Game
@@ -105,8 +134,7 @@ BEGIN
 			INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		WHERE b.recommend = @custid			
-			AND m.eventdate >= @fromdate
-			AND m.eventdate <= @todate
+			AND b.winlostdate BETWEEN @FDate14 AND @TDate14
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
 			AND s.ProductID IN (3) --- Number Game
@@ -135,8 +163,7 @@ BEGIN
 			INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype			 
 		WHERE b.recommend = @custid
-			AND m.eventdate >= @fromdate
-			AND m.eventdate <= @todate
+			AND b.winlostdate BETWEEN @FDate14 AND @TDate14
 			AND m.eventstatus = 'completed'
 			AND isnull(m.betstatus, '') <> 'refund'
 			AND s.ProductID <> 3 -- Not Number Game

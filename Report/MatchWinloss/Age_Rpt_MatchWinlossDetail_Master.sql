@@ -21,6 +21,7 @@ AS
 			2. @leagueIds: get data from league table
 			2. @league3rdIds: get data from league3rd table
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 BEGIN 

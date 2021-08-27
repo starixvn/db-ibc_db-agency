@@ -115,66 +115,69 @@ BEGIN
 		GROUP BY b.bettype
 
 		--bettrans14
-		IF @BalanceUpDay < @FromDate
+		IF @FromDate <= @MoveBetsDay
 		BEGIN
-			SET @FDate = @FromDate;
-		END
-		ELSE
-		BEGIN
-			SET @FDate = @BalanceUpDay;
-		END
+			IF @BalanceUpDay < @FromDate
+			BEGIN
+				SET @FDate = @FromDate;
+			END
+			ELSE
+			BEGIN
+				SET @FDate = @BalanceUpDay;
+			END
 		
-		IF @ToDate > @MoveBetsDay
-		BEGIN
-			SET @TDate = @MoveBetsDay;
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
+			INSERT INTO @AgWinLoss
+			SELECT b.bettype,
+				   liveindicator,
+				   SUM(comm/(1 - apositiontaking)) as GrossComm,
+				   SUM(ABS(stake)) as TurnOver,
+				   SUM(winlost - actual_stake),
+				   SUM(awinlost),
+				   SUM(playercomm),
+				   SUM(comm - playercomm),
+				   isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+				   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
+				   -SUM(winlost - actual_stake + awinlost + comm),
+				   COUNT(transid) as NoOfTicket
+			FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype		
+			WHERE 1 = 1		 
+				AND winlostdate BETWEEN @FDate AND @TDate
+				AND ruben = 1
+				AND statusID NOT IN (101, 102, 103) ------('VOID', 'REJECT', 'Refund')
+				AND recommend = @custid
+				AND s.ProductID IN (3) --- Number Game
+			GROUP BY b.bettype, liveindicator
+
+			UNION ALL
+			SELECT 
+				   b.bettype,
+				   0 as liveindicator,
+				   SUM( comm/(1 - apositiontaking)) as GrossComm,
+				   SUM(ABS(stake)) as TurnOver,
+				   SUM(winlost - actual_stake),
+				   SUM(awinlost),
+				   SUM(playercomm),
+				   SUM(comm - playercomm),
+				   isnull(SUM(winlost-actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
+				   isnull(SUM(awinlost), 0) + isnull(SUM(comm-playercomm), 0) as AgTotal,
+				   -SUM(winlost - actual_stake + awinlost+comm),
+				   COUNT(transid) as NoOfTicket
+			FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
+			WHERE 1 = 1
+				AND winlostdate BETWEEN @FDate AND @TDate
+				AND ruben = 1
+				AND statusID NOT IN (101, 102, 103) ------('VOID', 'REJECT', 'Refund')
+				AND recommend = @custid
+				AND s.ProductID <> 3 -- Not Number Game
+			GROUP BY b.bettype
 		END
-
-		INSERT INTO @AgWinLoss
-		SELECT b.bettype,
-		       liveindicator,
-		       SUM(comm/(1 - apositiontaking)) as GrossComm,
-		       SUM(ABS(stake)) as TurnOver,
-			   SUM(winlost - actual_stake),
-			   SUM(awinlost),
-			   SUM(playercomm),
-			   SUM(comm - playercomm),
-			   isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
-			   isnull(SUM(awinlost), 0) + isnull(SUM(comm - playercomm), 0) as AgTotal,
-			   -SUM(winlost - actual_stake + awinlost + comm),
-			   COUNT(transid) as NoOfTicket
-		FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype		
-		WHERE 1 = 1		 
-			AND winlostdate BETWEEN @FDate AND @TDate
-			AND ruben = 1
-			AND statusID NOT IN (101, 102, 103) ------('VOID', 'REJECT', 'Refund')
-			AND recommend = @custid
-			AND s.ProductID IN (3) --- Number Game
-		GROUP BY b.bettype, liveindicator
-
-        UNION ALL
-		SELECT 
-			   b.bettype,
-		       0 as liveindicator,
-		       SUM( comm/(1 - apositiontaking)) as GrossComm,
-		       SUM(ABS(stake)) as TurnOver,
-			   SUM(winlost - actual_stake),
-			   SUM(awinlost),
-			   SUM(playercomm),
-			   SUM(comm - playercomm),
-			   isnull(SUM(winlost-actual_stake), 0) + isnull(SUM(playercomm), 0) as MemberTotal,
-			   isnull(SUM(awinlost), 0) + isnull(SUM(comm-playercomm), 0) as AgTotal,
-			   -SUM(winlost - actual_stake + awinlost+comm),
-			   COUNT(transid) as NoOfTicket
-		FROM Bettrans14 b WITH(NOLOCK, INDEX = IX_recommend)
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype	
-		WHERE 1 = 1
-		    AND winlostdate BETWEEN @FDate AND @TDate
-			AND ruben = 1
-			AND statusID NOT IN (101, 102, 103) ------('VOID', 'REJECT', 'Refund')
-			AND recommend = @custid
-			AND s.ProductID <> 3 -- Not Number Game
-		GROUP BY b.bettype
 	END
 
 	SELECT bettype,

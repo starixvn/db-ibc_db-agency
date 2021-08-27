@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_SAg]  
 	@CustID					INT --srecommend  
 	,@FromDate				SMALLDATETIME
@@ -76,12 +73,20 @@ AS
 	  - 20160808@Johnson: Integrate NG2 [Redmine: #61397]
 	  - 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	  - 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
+	  - 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 
  + Note: Review index=IX_srecommend when modifying this SP   
  */  
   
 SET NOCOUNT ON  
 
+DECLARE @moveBetsDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
  
 DECLARE @SAgWinLoss TABLE(
 				CustID		INT
@@ -231,6 +236,11 @@ SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay, @CID = @cu
 
 IF @TDate >= @BUDate   
 BEGIN   
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+	END
+
      INSERT INTO @SAgWinLoss  
       SELECT  
        mrecommend
@@ -270,8 +280,19 @@ BEGIN
 		--AND ruben = 1
       GROUP BY mrecommend, b.bettype  
    
-	IF @BUDate < @FDate 
-		SELECT @BUDate = @FDate 
+	IF @BalanceUpDay < @FromDate
+	BEGIN
+		SET @FDate = @FromDate;
+	END
+	ELSE
+	BEGIN
+		SET @FDate = @BalanceUpDay;
+	END
+		
+	IF @ToDate > @MoveBetsDay
+	BEGIN
+		SET @TDate = @MoveBetsDay;
+	END
   
     INSERT INTO @SAgWinLoss  
      SELECT     
@@ -287,19 +308,21 @@ BEGIN
 		dbo.sum_winloss b WITH (NOLOCK) 
 		INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
      WHERE  
-		winlostdate BETWEEN @BUDate AND @TDate
+		winlostdate BETWEEN @FDate AND @TDate
 		AND Srecommend = @CID
 		AND roleid = 3  
      GROUP BY custid  
 END  
 IF @FromDate < @BalanceUpDay   
 BEGIN  
+	SELECT @FDate = @FromDate, @TDate = @ToDate
+
 	IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)  
-		SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDay)  
+		SELECT @TDate = DATEADD(dd, -1, @BalanceUpDay)  
    
 
 	IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
-		SELECT @FromDate = '2016-06-01'
+		SELECT @FDate = '2016-06-01'
 			
 
     INSERT INTO @SAgWinLoss  
@@ -316,7 +339,7 @@ BEGIN
 		bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
 		INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
      WHERE  
-		Winlostdate BETWEEN @FromDate AND @ToDate  
+		Winlostdate BETWEEN @FDate AND @TDate
 		AND SRecommend = @CustID  
 		AND mrecommend = mrecommend
 		AND recommend = recommend
