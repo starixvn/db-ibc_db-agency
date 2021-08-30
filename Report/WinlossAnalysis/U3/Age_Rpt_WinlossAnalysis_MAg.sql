@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,  
@@ -436,7 +433,7 @@ BEGIN
 			,betcount
 		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) --- Remove link server DBSUM 
 			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
-		WHERE winlostdate BETWEEN @FromDate AND @ToDate
+		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND Srecommend = @Srecommend    --- Add Srecommend to get the index seek 
 			AND mrecommend = @CustID
 			AND recommend = recommend

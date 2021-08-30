@@ -74,7 +74,7 @@ BEGIN
 	
 	SELECT @BalanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
 
-	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
+	DECLARE @FDate SMALLDATETIME = @FromDate, @TDate SMALLDATETIME = @ToDate
 
 	CREATE TABLE #MAgMatchWLDetails (
 					BetGroup		INT

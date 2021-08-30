@@ -72,7 +72,7 @@ EXEC bodb02.dbo.Age_SelBalanceUpDay
 	
 SELECT @BalanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
 
-DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
+DECLARE @FDate SMALLDATETIME = @FromDate, @TDate SMALLDATETIME = @ToDate
 
 CREATE TABLE #SportBettype(
 			ProductID INT
