@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="1"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] 
 	@CustID				INT
 	,@fromdate			SMALLDATETIME   
@@ -354,7 +351,7 @@ BEGIN
 		END	
 	END
 
-	IF @fdate <= @MoveBetsDay
+	IF @FromDate <= @MoveBetsDay
 	BEGIN
 		INSERT INTO #RecommendList (recommend)
 		SELECT CustId 

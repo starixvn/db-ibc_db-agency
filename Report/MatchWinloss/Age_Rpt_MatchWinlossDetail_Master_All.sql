@@ -375,7 +375,7 @@ BEGIN
 			END	
 		END
 
-		IF @fdate <= @MoveBetsDay
+		IF @FromDate <= @MoveBetsDay
 		BEGIN			
 			IF @BalanceUpDay < @FromDate
 			BEGIN
