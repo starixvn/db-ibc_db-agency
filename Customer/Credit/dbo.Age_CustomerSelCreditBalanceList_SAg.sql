@@ -88,7 +88,7 @@ BEGIN
 		[lastlogged]	SMALLDATETIME NULL,
 		[usedCredit]	MONEY NULL,
 		Locked			TINYINT,
-		CreatedDate		DATETIME
+		CreatedDate		SMALLDATETIME
 	)
 
 	CREATE TABLE #balance  
