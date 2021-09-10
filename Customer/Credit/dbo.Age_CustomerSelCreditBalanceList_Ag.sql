@@ -324,7 +324,7 @@ BEGIN
 			,isnull(ci.credit, 0) AS credit
 			,CONVERT(NVARCHAR(30), c.lastlogged, 121) AS lastlogged
 			,ci.Locked
-			,c.creatdate
+			,c.creatdate AS CreatedDate
 		FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
 			INNER JOIN Customer c (NOLOCK) ON ci.custid = c.custid
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid
