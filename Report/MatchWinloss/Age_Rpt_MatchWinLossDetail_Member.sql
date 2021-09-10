@@ -36,14 +36,6 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @balanceUpDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-	
-	SELECT @balanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
-
 	-- for Parlay
 	DECLARE @showSB	BIT,
 			@showVS	BIT,
@@ -359,15 +351,9 @@ BEGIN
 		
 		IF @Fromdate <= @MoveBetsDay
 		BEGIN
-			IF @BalanceUpDay < @FromDate
-			BEGIN
-				SET @FDate = @FromDate;
-			END
-			ELSE
-			BEGIN
-				SET @FDate = @BalanceUpDay;
-			END
-		
+			
+			SET @FDate = @FromDate;
+			
 			IF @ToDate > @MoveBetsDay
 			BEGIN
 				SET @TDate = @MoveBetsDay;
@@ -777,15 +763,9 @@ BEGIN
 		
 			IF @Fromdate <= @MoveBetsDay
 			BEGIN
-				IF @BalanceUpDay < @FromDate
-				BEGIN
-					SET @FDate = @FromDate;
-				END
-				ELSE
-				BEGIN
-					SET @FDate = @BalanceUpDay;
-				END
-		
+				
+				SET @FDate = @FromDate;
+				
 				IF @ToDate > @MoveBetsDay
 				BEGIN
 					SET @TDate = @MoveBetsDay;
