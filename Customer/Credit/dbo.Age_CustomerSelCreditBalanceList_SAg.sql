@@ -41,6 +41,7 @@ Revisions:
 	- 20180802@Paul: Enhance code, split into 2 smaller SPs: DBCUST.CustDB.Age_CustomerSelCreditBalClosedReason_SAg [Redmine: #97678]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20210910@Elodie: Alpha - Enhance customer's experience with auto clear given credit - [Redmine: #160429]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -86,7 +87,8 @@ BEGIN
 		[credit]		MONEY NULL,
 		[lastlogged]	SMALLDATETIME NULL,
 		[usedCredit]	MONEY NULL,
-		Locked			TINYINT
+		Locked			TINYINT,
+		CreatedDate		DATETIME
 	)
 
 	CREATE TABLE #balance  
@@ -220,12 +222,13 @@ BEGIN
 			[credit],
 			[lastlogged],
 			[usedCredit],
-			Locked
+			Locked,
+			CreatedDate
 		)
 		SELECT 
 			c.custid, ci.enabled, c.username, c.iplogin, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
 			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit,
-			cs.Locked
+			cs.Locked, c.CreatedDate
 		FROM 
 			CustInfo ci WITH (NOLOCK) 
 			inner join Customer c (nolock) on ci.custid = c.custid
@@ -257,12 +260,13 @@ BEGIN
 			[credit],
 			[lastlogged],
 			[usedCredit],
-			Locked
+			Locked,
+			CreatedDate
 		)
 		SELECT 
 			c.custid, ci.enabled, c.username, c.iplogin, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
 			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit,
-			cs.Locked
+			cs.Locked, c.CreatedDate
 		FROM 
 			CustInfo ci WITH (NOLOCK) 
 			inner join Customer c (nolock) on ci.custid = c.custid
@@ -304,7 +308,8 @@ BEGIN
 			isnull(c.credit,0) - isnull(c.usedCredit,0) betCredit,
 			isnull(c.credit,0) credit,		
 			CONVERT(nvarchar(30), c.lastlogged, 121) AS lastlogged,
-			c.Locked
+			c.Locked,
+			c.CreatedDate
 		FROM #tmp_customer c 
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid 
 			LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid 
