@@ -228,7 +228,7 @@ BEGIN
 		SELECT 
 			c.custid, ci.enabled, c.username, c.iplogin, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
 			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit,
-			cs.Locked, c.CreatedDate
+			cs.Locked, c.creatdate
 		FROM 
 			CustInfo ci WITH (NOLOCK) 
 			inner join Customer c (nolock) on ci.custid = c.custid
@@ -266,7 +266,7 @@ BEGIN
 		SELECT 
 			c.custid, ci.enabled, c.username, c.iplogin, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
 			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit,
-			cs.Locked, c.CreatedDate
+			cs.Locked, c.creatdate
 		FROM 
 			CustInfo ci WITH (NOLOCK) 
 			inner join Customer c (nolock) on ci.custid = c.custid
