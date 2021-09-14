@@ -41,6 +41,7 @@ AS
 		- 20210305@Malcolm: add new bettype for cricket AIO  - [RedminedId : #148454]
 		- 20210310@Malcolm: Add Pragmatic Live Casino [RedmineId : #133717]
 		- 20210412@Malcolm: Add Time Machine HDP bettype (229) [RedmineID: #152749]
+		- 20210810@Evan: Add Bitcoin product - [Redmine: #159036]	
 
 	- Columns:
 		- CommGroup:
@@ -139,7 +140,6 @@ FROM (
 			(9490),(9491)
 		)
 	C (bettype)
-
 	UNION ALL
 	SELECT typeid AS bettype, 4 AS CommGroup
 	FROM bettype WITH(NOLOCK)
@@ -170,6 +170,7 @@ FROM (
 		OR typeid BETWEEN 5701 AND 5799 --GDG
 		OR typeid BETWEEN 3501 AND 3599 --BG
 		OR typeId BETWEEN 3701 AND 3799 --Pragmatic Live Casino 
+		OR typeid BETWEEN 7901 AND 7999 -- Bitcoin product
 		
 ) AS A
 
