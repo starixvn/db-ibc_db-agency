@@ -26,6 +26,7 @@ AS
 		- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 		- 20201228@Danny: Capture total cash before transfering [Redmine: #146038]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -87,7 +88,7 @@ BEGIN
 
 	DECLARE @FromUsername NVARCHAR(50), @ToUsername NVARCHAR(50), @SubAccName VARCHAR(30),
 			@Currency INT, @CurrencyName NVARCHAR(100), @actualrate FLOAT,
-			@RefNo BIGINT, @grefno INT, @LogData NVARCHAR(200), @transdesc NVARCHAR(2000), @ABSAmount MONEY
+			@RefNo BIGINT, @grefno BIGINT, @LogData NVARCHAR(200), @transdesc NVARCHAR(2000), @ABSAmount MONEY
 			
 	SELECT
 		@srecommend = srecommend,

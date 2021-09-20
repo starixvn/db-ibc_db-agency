@@ -59,6 +59,7 @@ Revisions:
 	- 20201015@Malcolm : Add sub account information when transfering [RedmineId : #143478]
 	- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -67,7 +68,7 @@ Param's Explanation:
   @SuperIDsTransferTotal: Supers are allowed to tranfer total balance including today balance 
 */
 
-Declare @RefNo bigint, @ToCustID int, @MRecommend1 int, @agentid int, @custid int, @grefno int, @srecommend int
+Declare @RefNo bigint, @ToCustID int, @MRecommend1 int, @agentid int, @custid int, @grefno BIGINT, @srecommend int
 DECLARE @currency int, @actualrate float, @currName nvarchar(10) , @User nvarchar(50)
 DECLARE @agUser nvarchar(50), @ABSamount MONEY
 DECLARE @SubAccName VARCHAR(30) = ''

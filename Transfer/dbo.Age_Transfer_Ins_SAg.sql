@@ -54,6 +54,7 @@ Revisions:
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210723@Evan: Transfer all pages work incorrect with disabled account [RedmineID: #158813]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -461,7 +462,7 @@ WHERE c.roleid = 2
 	INNER JOIN CustDB.dbo.custinfo ci with (NOLOCK) ON ci.custid = #Master.custid 
 	
  DECLARE @currency int, @actualrate float, @currName nvarchar(10),
-	     @transcode bigint, @amount float, @grefno int
+	     @transcode bigint, @amount float, @grefno BIGINT
  DECLARE @SAUser nvarchar(50), @MAgUser nvarchar(50), @MAgentID int
  DECLARE @LogData nvarchar(300), @SubAccName varchar(30)
  
