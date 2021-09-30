@@ -25,6 +25,7 @@ AS
 		- 20191030@Percy: Prevent divide by 0 [RedmineID: #118699]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 BEGIN 
@@ -106,6 +107,11 @@ BEGIN
 	
 		IF @tdate > @MoveBetsDay
 		BEGIN
+			IF @FromDate <= @MoveBetsDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+			END
+
 			INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 			SELECT  0 AS BetGroup,
 					m.matchid,
@@ -134,8 +140,7 @@ BEGIN
 				INNER JOIN match m WITH (NOLOCK) ON m.matchid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype 		
 			WHERE b.srecommend = @custid
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed' 
 				AND ISNULL(m.betstatus,'') <> 'refund'					
 				AND b.statusID NOT IN (101, 102, 103)
@@ -174,8 +179,7 @@ BEGIN
 				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype			
 			WHERE b.srecommend = @custid				
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND ISNULL(m.betstatus,'') <> 'refund'
 				AND b.Bettype < 19001
@@ -217,8 +221,7 @@ BEGIN
 				INNER JOIN outright m with (nolock) on m.orid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE b.srecommend = @custid
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND s.ProductID IN (1, 2)
 				AND s.EventType = 2
 				AND b.ruben = 1
@@ -261,8 +264,7 @@ BEGIN
 				WHERE b.srecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND o.eventstatus = 'completed'
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -272,8 +274,16 @@ BEGIN
 			END	
 		END
 
-		IF @fdate <= @MoveBetsDay
+		IF @FromDate <= @MoveBetsDay
 		BEGIN
+			
+			SET @FDate = @FromDate;
+			
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
 			INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 			SELECT  0 AS BetGroup,
 					m.matchid,
@@ -302,8 +312,7 @@ BEGIN
 				INNER JOIN match14 m WITH (NOLOCK) ON m.matchid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 				--INNER JOIN #RecommendList R ON R.recommend = b.recommend
-			WHERE b.winlostdate >= @fdate
-				AND b.winlostdate <= @tdate
+			WHERE b.winlostdate BETWEEN @FDate AND @TDate
 				AND b.srecommend = @CustId
 				AND m.eventstatus = 'completed'
 				AND ISNULL(m.betstatus,'') <> 'refund'
@@ -343,8 +352,7 @@ BEGIN
 				LEFT JOIN (SELECT * FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				--INNER JOIN #RecommendList R ON R.recommend = b.recommend			
-			WHERE b.winlostdate >= @fdate
-				AND b.winlostdate <= @tdate
+			WHERE b.winlostdate BETWEEN @FDate AND @TDate
 				AND b.srecommend = @CustId
 				AND m.eventstatus = 'completed'
 				AND ISNULL(m.betstatus,'') <> 'refund'
@@ -387,8 +395,7 @@ BEGIN
 				INNER JOIN outright14 m with (nolock) on m.orid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				--INNER JOIN #RecommendList R ON R.recommend = b.recommend
-			WHERE b.winlostdate >= @fdate
-				AND b.winlostdate <= @tdate
+			WHERE b.winlostdate BETWEEN @FDate AND @TDate
 				AND b.srecommend = @CustId
 				AND s.ProductID IN (1, 2)
 				AND s.EventType = 2
@@ -433,8 +440,7 @@ BEGIN
 				WHERE b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
 					AND b.srecommend = @CustId
-					AND b.winlostdate >= @fdate
-					AND b.winlostdate <= @tdate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND o.eventstatus = 'completed' 
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5

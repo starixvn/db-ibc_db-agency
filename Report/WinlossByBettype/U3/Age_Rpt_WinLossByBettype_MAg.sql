@@ -37,6 +37,7 @@ Revisions:
 	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
 	- 20161020@Francis: Revise SP to aggregate data querying from bettrans/bettrans14 to enhance performance [Redmine: #58268]
 	- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
+	- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -91,6 +92,12 @@ BEGIN
 	BEGIN
 		IF @TDate > @MoveBetDay
 		BEGIN
+			
+			IF @FromDate <= @MoveBetDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetDay);
+			END
+
 			INSERT INTO @MAgWinLoss (bettype, liveindicator, GrossComm, TurnOver, AgTotal, MAgWinlost, Comm, MAgTotal, Company,	NoOfTicket)
 			SELECT s.Parent_Bettype
 				, CASE s.ProductID
@@ -132,8 +139,23 @@ BEGIN
 					ELSE 0 END
 		END
 		
-		IF @FDate <= @MoveBetDay
+		IF @FromDate <= @MoveBetDay
 		BEGIN
+			
+			IF @BalanceUpDay < @FromDate
+			BEGIN
+				SET @FDate = @FromDate;
+			END
+			ELSE
+			BEGIN
+				SET @FDate = @BalanceUpDay;
+			END
+		
+			IF @ToDate > @MoveBetDay
+			BEGIN
+				SET @TDate = @MoveBetDay;
+			END
+
 			INSERT INTO @MAgWinLoss (bettype, liveindicator, GrossComm, TurnOver, AgTotal, MAgWinlost, Comm, MAgTotal, Company,	NoOfTicket)
 			SELECT s.Parent_Bettype
 				, CASE s.ProductID
@@ -172,19 +194,20 @@ BEGIN
 					ELSE 0 END
 		END
 	
-	SELECT bettype, liveindicator,
-		   SUM(GrossComm) as GrossComm,
-		   SUM(TurnOver) as TurnOver,	
-		   SUM(AgTotal) as AgTotal,
-		   SUM(MAgWinlost) as MAgWinlost,
-		   SUM(Comm) as Comm,
-		   SUM(MAgTotal) as MAgTotal,
-		   SUM(Company) as Company,
-		   SUM(NoOfTicket) as NoOfTicket
-	  FROM @MAgWinLoss 
-	 GROUP BY bettype, liveindicator
-	 ORDER BY bettype, liveindicator
-	
 	END
+
+	SELECT bettype, liveindicator,
+			SUM(GrossComm) as GrossComm,
+			SUM(TurnOver) as TurnOver,	
+			SUM(AgTotal) as AgTotal,
+			SUM(MAgWinlost) as MAgWinlost,
+			SUM(Comm) as Comm,
+			SUM(MAgTotal) as MAgTotal,
+			SUM(Company) as Company,
+			SUM(NoOfTicket) as NoOfTicket
+	FROM @MAgWinLoss 
+	GROUP BY bettype, liveindicator
+	ORDER BY bettype, liveindicator
+
 END
 GO

@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinlossAnalysis_MAg]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,  
@@ -55,6 +52,7 @@ AS
 		- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 	
 	Param's Explanation:
 		+ @ReportType: 1-Daily; 2-Monthly; 3-Sports
@@ -63,6 +61,14 @@ AS
 BEGIN
 	SET NOCOUNT ON
 	
+	DECLARE @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
 	DECLARE @AgencyWinloss AS TABLE (
 										winlostdate DATETIME,
 										custid		INT,										
@@ -346,6 +352,11 @@ BEGIN
 		
 	IF @TDate >= @BUDate
 	BEGIN
+		IF @FromDate <= @MoveBetsDay
+		BEGIN
+			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+		END
+
 		INSERT INTO @AgencyWinloss
 		SELECT winlostdate, mrecommend, t.sporttype
 			,SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end)
@@ -365,8 +376,19 @@ BEGIN
 			mrecommend, winlostdate, t.sporttype 
 
 		-- get data from sum_winloss
-		IF @BUDate < @FDate --if this case occurs then there is no data from sum_winloss_old
-		SELECT @BUDate = @FDate
+		IF @BalanceUpDate < @FromDate
+		BEGIN
+			SET @FDate = @FromDate;
+		END
+		ELSE
+		BEGIN
+			SET @FDate = @BalanceUpDate;
+		END
+		
+		IF @ToDate > @MoveBetsDay
+		BEGIN
+			SET @TDate = @MoveBetsDay;
+		END
 		
 		INSERT INTO @AgencyWinloss
 		SELECT winlostdate, custid, b.sporttype
@@ -380,21 +402,23 @@ BEGIN
 			,awinlost + mwinlost + acomm + winlost
 			,betcount
 		FROM sum_winloss b WITH(NOLOCK) INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
-		WHERE winlostdate BETWEEN @BUDate AND @TDate
+		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND mrecommend = @CID
 			AND roleid = 3
 
 	END
 	IF @FromDate < @BalanceUpDate
 	BEGIN
-	
+		
+		SELECT @FDate = @FromDate, @TDate = @ToDate
+
 		IF @Todate >= DATEADD(dd, -1, @BalanceUpDate)
 		BEGIN
-			SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDate)
+			SELECT @TDate = DATEADD(dd, -1, @BalanceUpDate)
 		END
 		
 		IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
-			SELECT @FromDate = '2016-06-01'		
+			SELECT @FDate = '2016-06-01'		
 			
 		INSERT INTO @AgencyWinloss
 		SELECT winlostdate, custid, b.sporttype
@@ -409,7 +433,7 @@ BEGIN
 			,betcount
 		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) --- Remove link server DBSUM 
 			INNER JOIN @TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  
-		WHERE winlostdate BETWEEN @FromDate AND @ToDate
+		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND Srecommend = @Srecommend    --- Add Srecommend to get the index seek 
 			AND mrecommend = @CustID
 			AND recommend = recommend

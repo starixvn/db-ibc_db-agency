@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="1"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_SAg_ByLeague] 
 	@CustID				INT
 	,@fromdate			SMALLDATETIME   
@@ -25,6 +22,7 @@ AS
 	Revisions:
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 BEGIN 
@@ -33,6 +31,14 @@ BEGIN
 	---- To avoid parametter sniffing
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME
 	SELECT @FDate = @fromdate, @TDate= @todate
+
+	DECLARE @BalanceUpDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @BalanceUpDay = BalanceUpDay FROM @tblMoveBetBalanceUp
 
 	IF OBJECT_ID('tempdb..#SAgMatchWLDetails') IS NOT NULL
 	BEGIN
@@ -138,6 +144,11 @@ BEGIN
 	-- Get all leagues by sport's selected
 	IF @tdate > @MoveBetsDay
 	BEGIN
+		IF @FromDate <= @MoveBetsDay
+		BEGIN
+			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+		END
+
 		IF @showNG	= 1
 		BEGIN 
 			INSERT INTO #SAgMatchWLDetails 
@@ -150,7 +161,7 @@ BEGIN
 				,b.liveindicator
 				,m.leagueid
 				,SUM(ABS(stake)) AS turnover
-				,SUM(scomm/(1 - tpositiontaking)) AS GrossComm
+				,SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm
 				,SUM(winlost - actual_stake) AS MemberWinLost
 				,SUM(playercomm) AS MemberComm
 				,SUM(Winlost - actual_stake + playercomm) AS MemberTotal
@@ -175,8 +186,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype 		
 			WHERE 
 				b.srecommend = @custid
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed' 
 				AND isnull(m.betstatus,'') <> 'refund'					
 				AND b.statusID NOT IN (101, 102, 103)
@@ -199,7 +209,7 @@ BEGIN
 				,0 AS liveindicator
 				,m.leagueid
 				,SUM(ABS(stake)) AS turnover
-				,SUM(scomm/(1 - tpositiontaking)) AS GrossComm
+				,SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm
 				,SUM(winlost - actual_stake) AS MemberWinLost
 				,SUM(playercomm) AS MemberComm
 				,SUM(Winlost - actual_stake + playercomm) AS MemberTotal
@@ -225,8 +235,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype			
 			WHERE 
 				b.srecommend = @custid				
-				AND m.eventdate >= @fromdate
-				AND m.eventdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND b.Bettype < 19001
@@ -256,7 +265,7 @@ BEGIN
 				m.leagueid,
 				SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
 				--isnull(SUM(stake), 0) as turnover,
-				isnull(SUM(scomm/(1 - tpositiontaking)), 0) as GrossComm,
+				isnull(SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) as GrossComm,
 				isnull(SUM(winlost - actual_stake), 0) as MemberWinLost,
 				isnull(SUM(playercomm), 0) as MemberComm,
 				isnull(SUM(Winlost - actual_stake + playercomm), 0) as MemberTotal,
@@ -281,8 +290,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE 
 				b.srecommend = @custid
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND s.ProductID IN (1, 2)
 				AND s.EventType = 2
 				AND b.ruben = 1
@@ -305,7 +313,7 @@ BEGIN
 				0 as liveindicator,
 				r.leagueid,
 				SUM(ABS(stake)) as turnover,
-				SUM(comm/(1 - tpositiontaking)) as GrossComm,
+				SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 				SUM(winlost - actual_stake) as MemberWinLost,
 				SUM(playercomm) as MemberComm,
 				SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -332,8 +340,7 @@ BEGIN
 			WHERE 
 				b.srecommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
-				AND o.eventdate >= @fromdate
-				AND o.eventdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND o.eventstatus = 'completed'
 				AND isnull(r.betstatus,'') <> 'refund'
 				AND s.ProductID = 5
@@ -344,13 +351,27 @@ BEGIN
 		END	
 	END
 
-	IF @fdate <= @MoveBetsDay
+	IF @FromDate <= @MoveBetsDay
 	BEGIN
 		INSERT INTO #RecommendList (recommend)
 		SELECT CustId 
 		FROM dbo.CustInfo WITH (NOLOCK) 
 		WHERE srecommend = @CustId AND RoleId = 2		
 		
+		IF @BalanceUpDay < @FromDate
+		BEGIN
+			SET @FDate = @FromDate;
+		END
+		ELSE
+		BEGIN
+			SET @FDate = @BalanceUpDay;
+		END
+		
+		IF @ToDate > @MoveBetsDay
+		BEGIN
+			SET @TDate = @MoveBetsDay;
+		END
+
 		IF @showNG = 1 
 		BEGIN
 			INSERT INTO #SAgMatchWLDetails 
@@ -363,7 +384,7 @@ BEGIN
 				b.liveindicator,
 				m.leagueid,
 				SUM(ABS(stake)) as turnover,
-				SUM(scomm/(1 - tpositiontaking)) as GrossComm,
+				SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 				SUM(winlost - actual_stake) as MemberWinLost,
 				SUM(playercomm) as MemberComm,
 				SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -388,8 +409,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype		
 				INNER JOIN #RecommendList R ON R.recommend = b.recommend
 			WHERE 
-				m.eventdate >= @fdate
-				AND m.eventdate <= @tdate
+				b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND b.statusID NOT IN (101, 102, 103)
@@ -412,7 +432,7 @@ BEGIN
 				0 as liveindicator,
 				m.leagueid,
 				SUM(ABS(stake)) as turnover,
-				SUM(scomm/(1 - tpositiontaking)) as GrossComm,
+				SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 				SUM(winlost - actual_stake) as MemberWinLost,
 				SUM(playercomm) as MemberComm,
 				SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -438,8 +458,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				INNER JOIN #RecommendList R ON R.recommend = b.recommend			
 			WHERE 
-				m.eventdate >= @fdate
-				AND m.eventdate <= @tdate
+				b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND b.bettype < 19001 
@@ -469,7 +488,7 @@ BEGIN
 				m.leagueid,
 				--isnull(SUM(stake), 0) as turnover,
 				SUM(case when b.liveawayscore = 0 AND b.bettype IN(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
-				isnull(SUM(scomm/(1 - tpositiontaking)), 0) as GrossComm,
+				isnull(SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END), 0) as GrossComm,
 				isnull(SUM(winlost - actual_stake), 0) as MemberWinLost,
 				isnull(SUM(playercomm), 0) as MemberComm,
 				isnull(SUM(Winlost - actual_stake + playercomm), 0) as MemberTotal,
@@ -494,8 +513,7 @@ BEGIN
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				INNER JOIN #RecommendList R ON R.recommend = b.recommend
 			WHERE 
-				b.winlostdate >= @fdate
-				AND b.winlostdate <= @tdate
+				b.winlostdate BETWEEN @FDate AND @TDate
 				AND s.ProductID IN (1, 2)
 				AND s.EventType = 2
 				AND b.ruben=1
@@ -518,7 +536,7 @@ BEGIN
 				0 as liveindicator,
 				r.leagueid,
 				SUM(ABS(stake)) as turnover,
-				SUM(comm/(1 - tpositiontaking)) as GrossComm,
+				SUM(CASE WHEN b.tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
 				SUM(winlost - actual_stake) as MemberWinLost,
 				SUM(playercomm) as MemberComm,
 				SUM(Winlost - actual_stake + playercomm) as MemberTotal,
@@ -545,8 +563,7 @@ BEGIN
 				INNER JOIN #RecommendList Re ON Re.recommend = b.recommend
 			WHERE 
 				b.statusID NOT IN (101, 102, 103)
-				AND o.eventdate >= @fdate
-				AND o.eventdate <= @tdate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND o.eventstatus = 'completed' 
 				AND isnull(r.betstatus,'') <> 'refund'
 				AND s.ProductID = 5

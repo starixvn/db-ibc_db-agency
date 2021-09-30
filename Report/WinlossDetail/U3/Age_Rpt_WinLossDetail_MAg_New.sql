@@ -1,7 +1,4 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE bodb02
-GO
-
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_MAg_New] 
 	@custid			 INT = NULL --mrecommend
 	,@FromDate       SMALLDATETIME
@@ -92,13 +89,22 @@ AS
 		- 20160808@Johnson: Integrate NG2 [Redmine: #61397]
 		- 20160809@Percy: Modify Net Turnover for Allbet [RedmineID: #61873]
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
-	- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
+		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
-	- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
+		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 
 SET NOCOUNT ON
+
+DECLARE @moveBetsDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 DECLARE @RowStart	INT
 		,@RowEnd	INT
@@ -275,6 +281,11 @@ SELECT @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay, @CID = @cu
 
 IF @TDate >= @BUDate
 BEGIN 
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+	END
+
     INSERT INTO #MAgWinLossDetails
 	    SELECT Recommend,			
 			   SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN (33, 43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver, 
@@ -332,8 +343,19 @@ BEGIN
 			AND mrecommend = @CID
 	  GROUP BY Recommend, b.bettype
 		
-	IF @BUDate < @FDate
-	    SELECT @BUDate = @FDate
+	IF @BalanceUpDay < @FromDate
+	BEGIN
+		SET @FDate = @FromDate;
+	END
+	ELSE
+	BEGIN
+		SET @FDate = @BalanceUpDay;
+	END
+		
+	IF @ToDate > @MoveBetsDay
+	BEGIN
+		SET @TDate = @MoveBetsDay;
+	END
 	
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
@@ -355,7 +377,7 @@ BEGIN
 	        ON b.sporttype = t.sporttype
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1
-		   AND winlostdate BETWEEN @BUDate AND @Tdate			
+		   AND winlostdate BETWEEN @FDate AND @Tdate			
 		   AND MRecommend = @CID
 		   AND RoleID = 2
 	  GROUP BY CustID
@@ -363,11 +385,13 @@ END
 
 IF @FromDate < @BalanceUpDay 
 BEGIN
+	SELECT @FDate = @FromDate, @TDate = @ToDate
+
 	IF @ToDate >= DATEADD(dd, -1, @BalanceUpDay)
-		SELECT @ToDate = DATEADD(dd, -1, @BalanceUpDay)
+		SELECT @TDate = DATEADD(dd, -1, @BalanceUpDay)
 	
 	IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
-		SELECT @FromDate = '2016-06-01'	
+		SELECT @FDate = '2016-06-01'	
 		
     INSERT INTO #MAgWinLossDetails
 	    SELECT CustID,			
@@ -389,7 +413,7 @@ BEGIN
 	        ON b.sporttype = t.sporttype
 	       AND b.bettype = t.bettype
 	     WHERE 1 = 1
-		   AND winlostdate BETWEEN @fromdate AND @ToDate			
+		   AND winlostdate BETWEEN @FDate AND @TDate
 		   and Srecommend = @Srecommend --- Add Srecommend to get the index seek 
 		   and MRecommend = @custid
 		   and recommend = recommend

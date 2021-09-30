@@ -39,8 +39,18 @@ Revisions:
 	- 20160413@Percy: Support Voidbridge single wallet [Redmine: #55259]
 	- 20160607@Percy: Enhance Performance - Using index recommend on bettrans table [Redmine: #58268]
 	- 20160809@Johnson: Integrate NG2 [Redmine: #61397]
+	- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 SET NOCOUNT ON
+
+DECLARE @moveBetsDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
 DECLARE @AgWinLoss TABLE
 (
 	bettype int, 
@@ -72,6 +82,11 @@ SELECT  @FDate = @FromDate, @TDate = @ToDate, @BUDate = @BalanceUpDay
 
 IF @TDate >= @BUDate
 BEGIN 
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+	END
+
 	INSERT INTO @AgWinLoss
 		SELECT b.bettype,
 			   liveindicator,
@@ -160,8 +175,24 @@ BEGIN
 		   AND s.ProductID NOT IN (3, 6, 22, 23)
 		 GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
+	--bettrans14
+	IF @FromDate <= @MoveBetsDay
+	BEGIN
+		IF @BalanceUpDay < @FromDate
+		BEGIN
+			SET @FDate = @FromDate;
+		END
+		ELSE
+		BEGIN
+			SET @FDate = @BalanceUpDay;
+		END
+		
+		IF @ToDate > @MoveBetsDay
+		BEGIN
+			SET @TDate = @MoveBetsDay;
+		END
 
-	INSERT INTO @AgWinLoss
+		INSERT INTO @AgWinLoss
 		SELECT b.bettype,
 		       liveindicator,
 		       SUM(comm/(1 - apositiontaking)) as GrossComm,
@@ -247,6 +278,7 @@ BEGIN
 		   and recommend = @custid
 		   AND s.ProductID NOT IN (3, 6, 22, 23)
 		 GROUP BY CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+	END
 
 END
 

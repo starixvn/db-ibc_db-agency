@@ -1,7 +1,4 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
 ALTER PROCEDURE [dbo].[U3_Rpt_WinLossByBettype_SAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
@@ -17,10 +14,25 @@ AS
 
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 BEGIN
 	SET NOCOUNT ON
+
+	DECLARE @FDate	SMALLDATETIME,
+			@TDate	SMALLDATETIME
+	    
+	SELECT	@FDate = @FromDate,
+			@TDate = @ToDate 
+
+	DECLARE @moveBetsDay SMALLDATETIME
+	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+
+	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+	SELECT @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 	DECLARE @SAgWinLoss TABLE
 	(
@@ -46,6 +58,11 @@ BEGIN
 
 	IF @Todate >= @BalanceUpDay 
 	BEGIN	
+		IF @FromDate <= @MoveBetsDay
+		BEGIN
+			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+		END
+
 		INSERT INTO @SAgWinLoss
 		SELECT b.bettype
 			,liveindicator
@@ -60,7 +77,7 @@ BEGIN
 		FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		WHERE 1 = 1
-			AND winlostdate BETWEEN @FromDate AND @ToDate			
+			AND winlostdate BETWEEN @FDate AND @TDate
 			AND statusID NOT IN (101, 102, 103) --- ('VOID', 'REJECT', 'Refund')
 			AND ruben = 1  
 			AND SRecommend = @CustID
@@ -82,55 +99,74 @@ BEGIN
 		FROM dbo.bettrans b WITH (NOLOCK, INDEX = IX_srecommend)
 			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
 		WHERE 1 = 1
-			AND winlostdate BETWEEN @FromDate AND @ToDate				
+			AND winlostdate BETWEEN @FDate AND @TDate
 			AND statusID NOT IN (101, 102, 103) --- ('VOID', 'REJECT', 'Refund')
 			AND ruben = 1  
 			AND SRecommend = @CustID
 			AND s.ProductID <> 3 -- Not Number Game
 		GROUP BY b.bettype 
 
-		INSERT INTO @SAgWinLoss
-		SELECT b.bettype
-			,liveindicator
-			,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
-			,SUM(ABS(stake)) AS TurnOver
-			,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
-			,SUM(swinlost)
-			,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
-			,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
-			,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans14 b WITH (NOLOCK)
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype
-		WHERE 1 = 1
-			AND winlostdate BETWEEN @FromDate AND @ToDate
-			AND statusID NOT IN (101, 102, 103)
-			AND ruben = 1
-			AND Srecommend = @CustID
-			AND s.ProductID IN (3) --- Number Game
-		GROUP BY b.bettype, b.liveindicator
+		--bettrans14
+		IF @FromDate <= @MoveBetsDay
+		BEGIN
 
-		UNION ALL --- Not number Game not group by liveindicator
-		SELECT 
-			b.bettype
-			,0 AS liveindicator
-			,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
-			,SUM(ABS(stake)) AS TurnOver
-			,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
-			,SUM(swinlost)
-			,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
-			,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
-			,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
-			,COUNT(transid) AS NoOfTicket
-		FROM dbo.bettrans14 b WITH (NOLOCK)
-			INNER JOIN @SportBettype s ON s.Bettype = b.bettype		
-		WHERE 1 = 1
-			AND winlostdate BETWEEN @FromDate AND @ToDate				 
-			AND statusID NOT IN (101, 102, 103)
-			AND ruben = 1
-			AND Srecommend = @CustID
-			AND s.ProductID <> 3 -- Not Number Game
-		GROUP BY b.bettype
+			IF @BalanceUpDay < @FromDate
+			BEGIN
+				SET @FDate = @FromDate;
+			END
+			ELSE
+			BEGIN
+				SET @FDate = @BalanceUpDay;
+			END
+		
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
+			INSERT INTO @SAgWinLoss
+			SELECT b.bettype
+				,liveindicator
+				,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
+				,SUM(ABS(stake)) AS TurnOver
+				,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
+				,SUM(swinlost)
+				,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
+				,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
+				,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
+				,COUNT(transid) AS NoOfTicket
+			FROM dbo.bettrans14 b WITH (NOLOCK)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype
+			WHERE 1 = 1
+				AND winlostdate BETWEEN @FDate AND @TDate
+				AND statusID NOT IN (101, 102, 103)
+				AND ruben = 1
+				AND Srecommend = @CustID
+				AND s.ProductID IN (3) --- Number Game
+			GROUP BY b.bettype, b.liveindicator
+
+			UNION ALL --- Not number Game not group by liveindicator
+			SELECT 
+				b.bettype
+				,0 AS liveindicator
+				,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
+				,SUM(ABS(stake)) AS TurnOver
+				,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
+				,SUM(swinlost)
+				,isnull(SUM(scomm), 0) - isnull(SUM(acomm), 0)
+				,isnull(SUM(swinlost), 0) + isnull(SUM(scomm), 0) - SUM(acomm)
+				,- (isnull(SUM(swinlost), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(mwinlost), 0) + isnull(SUM(scomm), 0) + isnull(SUM(winlost - actual_stake), 0))
+				,COUNT(transid) AS NoOfTicket
+			FROM dbo.bettrans14 b WITH (NOLOCK)
+				INNER JOIN @SportBettype s ON s.Bettype = b.bettype		
+			WHERE 1 = 1
+				AND winlostdate BETWEEN @FDate AND @TDate
+				AND statusID NOT IN (101, 102, 103)
+				AND ruben = 1
+				AND Srecommend = @CustID
+				AND s.ProductID <> 3 -- Not Number Game
+			GROUP BY b.bettype
+		END
 	END
 
 	SELECT bettype,

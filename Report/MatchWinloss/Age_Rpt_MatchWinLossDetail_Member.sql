@@ -30,6 +30,7 @@ AS
 		- 20201201@Malcolm : Support Leap Gaming [RedminedId : #131375]
 		- 20201229@Malcolm : Support Happy 5 Linked Games [RedminedId : #146542]
 		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
+		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 */
 
 BEGIN
@@ -43,6 +44,10 @@ BEGIN
 	SELECT	@showSB = CASE WHEN PATINDEX('%,1,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
 			@showVS = CASE WHEN PATINDEX('%,5,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END,
 			@showNG = CASE WHEN PATINDEX('%,3,%', ',' + @ProductIds + ',') > 0 THEN 1 ELSE 0 END
+
+	---- To avoid parametter sniffing
+	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME;
+	SELECT @FDate = @fromdate, @TDate= @todate;
 
 	CREATE TABLE #SportBettype(
 		ProductID INT,
@@ -86,6 +91,12 @@ BEGIN
 	BEGIN
 		IF @Todate > @MoveBetsDay
 		BEGIN
+			
+			IF @FromDate <= @MoveBetsDay
+			BEGIN
+				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+			END
+
 			-- get data on table match
 			INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
 			SELECT	0 as BetGroup,
@@ -114,8 +125,7 @@ BEGIN
 				AND b.bettype NOT IN (9,10,29)
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus, '') <> 'refund'
 				AND s.ProductID = 3		  
@@ -149,8 +159,7 @@ BEGIN
 				AND b.bettype NOT IN (9,10,29)
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID NOT IN (3, 30)
@@ -193,8 +202,7 @@ BEGIN
 			INNER JOIN #SportBettype s
 				ON b.bettype = s.Bettype
 			WHERE b.recommend = @custid
-			AND b.winlostdate >= @fromdate
-			AND b.winlostdate <= @todate
+			AND b.winlostdate BETWEEN @FDate AND @TDate
 			AND s.EventType = 2
 			AND b.ruben = 1
 			AND b.statusID NOT IN (101, 102, 103)
@@ -231,8 +239,7 @@ BEGIN
 			WHERE b.recommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND o.eventstatus = 'completed'
 				AND isnull(r.betstatus,'') <> 'refund'
 				AND s.ProductID = 5
@@ -265,8 +272,7 @@ BEGIN
 				FROM bettrans b WITH (NOLOCK)		
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)
 					AND s.ProductID = 3
@@ -299,8 +305,7 @@ BEGIN
 						'' as showtime
 				FROM bettrans b WITH (NOLOCK)						
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (9,29)
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)
@@ -334,8 +339,7 @@ BEGIN
 				FROM bettrans b WITH (NOLOCK)		
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND s.ProductID = 5
 					AND s.EventType = 0
 					AND b.ruben = 1
@@ -347,6 +351,14 @@ BEGIN
 		
 		IF @Fromdate <= @MoveBetsDay
 		BEGIN
+			
+			SET @FDate = @FromDate;
+			
+			IF @ToDate > @MoveBetsDay
+			BEGIN
+				SET @TDate = @MoveBetsDay;
+			END
+
 			-- get data on table match
 			INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
 			SELECT  0 as BetGroup,
@@ -375,8 +387,7 @@ BEGIN
 				AND b.bettype NOT IN (9, 29, 10)
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus, '') <> 'refund'
 				AND s.ProductID = 3
@@ -410,8 +421,7 @@ BEGIN
 				AND b.bettype NOT IN (9,29,10)
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND m.eventstatus = 'completed'
 				AND isnull(m.betstatus,'') <> 'refund'
 				AND s.ProductID NOT IN (3, 30)
@@ -444,8 +454,7 @@ BEGIN
 				INNER JOIN outright14 m WITH (NOLOCK) ON m.orid = b.matchid
 				INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 			WHERE b.recommend = @custid
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND s.EventType = 2
 				AND b.ruben = 1
 				AND b.statusID not in (101, 102, 103)
@@ -480,8 +489,7 @@ BEGIN
 			WHERE b.recommend = @custid
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
-				AND b.winlostdate >= @fromdate
-				AND b.winlostdate <= @todate
+				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND o.eventstatus = 'completed'
 				AND isnull(r.betstatus,'') <> 'refund'
 				AND s.ProductID = 5
@@ -514,8 +522,7 @@ BEGIN
 				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)
 					AND s.ProductID = 3
@@ -548,8 +555,7 @@ BEGIN
 						'' as showtime
 				FROM bettrans14 b WITH (NOLOCK)
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.bettype IN (9,29)
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)
@@ -583,8 +589,7 @@ BEGIN
 				FROM bettrans14 b WITH (NOLOCK)		
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND s.ProductID = 5
 					AND s.EventType = 0
 					AND b.ruben = 1
@@ -607,6 +612,11 @@ BEGIN
 	
 			IF @Todate > @MoveBetsDay
 			BEGIN
+				IF @FromDate <= @MoveBetsDay
+				BEGIN
+					SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
+				END
+
 				-- get data on table match
 				INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
@@ -636,8 +646,7 @@ BEGIN
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus, '') <> 'refund' 
 					AND s.ProductID = 3			
@@ -672,8 +681,7 @@ BEGIN
 					AND b.bettype NOT IN (9, 29, 10)
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID NOT IN (3, 30)
@@ -707,8 +715,7 @@ BEGIN
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND s.EventType = 2
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103)
@@ -744,8 +751,7 @@ BEGIN
 				WHERE b.recommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
@@ -757,6 +763,14 @@ BEGIN
 		
 			IF @Fromdate <= @MoveBetsDay
 			BEGIN
+				
+				SET @FDate = @FromDate;
+				
+				IF @ToDate > @MoveBetsDay
+				BEGIN
+					SET @TDate = @MoveBetsDay;
+				END
+
 				-- get data on table match
 				INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 as BetGroup,
@@ -786,8 +800,7 @@ BEGIN
 					AND b.bettype NOT IN (9, 29, 10)
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID = 3
@@ -822,8 +835,7 @@ BEGIN
 					AND b.bettype NOT IN (9,29,10)
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND m.eventstatus = 'completed'
 					AND isnull(m.betstatus,'') <> 'refund'
 					AND s.ProductID NOT IN (3, 30)
@@ -857,8 +869,7 @@ BEGIN
 					INNER JOIN @tmpLeague l ON m.leagueid = l.leagueid
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.recommend = @custid
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND s.EventType = 2
 					AND b.ruben = 1
 					AND b.statusID not in (101, 102, 103)
@@ -894,8 +905,7 @@ BEGIN
 				WHERE b.recommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
-					AND b.winlostdate >= @fromdate
-					AND b.winlostdate <= @todate
+					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND o.eventstatus = 'completed'
 					AND isnull(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
