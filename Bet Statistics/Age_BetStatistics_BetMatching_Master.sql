@@ -14,6 +14,7 @@ AS
 
 	Revisions:
 		- 20200114@Percy: Initialize SP [RedmineID: #127288]
+		- 20211001@Evan: Extend data type column IP [RedmineID: #90903]
 */
 
 BEGIN
@@ -32,7 +33,7 @@ BEGIN
 		,betteam		NVARCHAR(10)
 		,hdp1			SMALLMONEY
 		,hdp2			SMALLMONEY
-		,IP				NVARCHAR(15)
+		,IP				VARCHAR(45)
 		,odds			SMALLMONEY
 		,oddstype		TINYINT
 		,transdate		DATETIME
@@ -277,7 +278,7 @@ BEGIN
 	END
 
 	-- Get sharing IP
-	CREATE TABLE #IP (custid INT, IP NVARCHAR(15))
+	CREATE TABLE #IP (custid INT, IP VARCHAR(45))
 
 	CREATE INDEX IX_IP ON #IP (custid, IP)
 
