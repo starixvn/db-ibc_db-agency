@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20200114@Percy:	Initialize SP [RedmineID: #124701]
+		- 20211001@Evan:	Extend data type column IP [RedmineID: #90903]
 */
 
 BEGIN
@@ -24,7 +25,7 @@ BEGIN
 
 	DECLARE @matchCustInfo TABLE (matchid INT, custid INT)
 
-	CREATE TABLE #BetStatisticsByIP (IP NVARCHAR(15), CustId INT, BetCount INT, Stake MONEY, MemberWinLoss MONEY, SuperWinLoss MONEY, Company MONEY)
+	CREATE TABLE #BetStatisticsByIP (IP VARCHAR(45), CustId INT, BetCount INT, Stake MONEY, MemberWinLoss MONEY, SuperWinLoss MONEY, Company MONEY)
 	CREATE CLUSTERED INDEX CIX_IP ON #BetStatisticsByIP (IP, CustId)
 
 	IF @WinlostDate > @MoveBetsDay
