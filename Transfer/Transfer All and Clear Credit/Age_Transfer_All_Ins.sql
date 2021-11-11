@@ -6,7 +6,7 @@ ALTER PROCEDURE [dbo].[Age_Transfer_All_Ins]
 	@DownlineUsername		NVARCHAR(50),
 	@SuperIDsTransferTotal	NVARCHAR(50) = '',
 	@IsAllDayTransfer		BIT = 0,
-	@IP						NVARCHAR(15) = '',
+	@IP						VARCHAR(45) = '',
 	@Language				VARCHAR(2) = 'E',
 	@ErrCode				INT = 0 OUTPUT,
 	@ErrMsg					NVARCHAR(4000) = '' OUTPUT
@@ -28,13 +28,12 @@ AS
 		- 20201228@Danny: Capture total cash before transfering  [Redmine: #146038]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 */
 
 BEGIN
 	SET NOCOUNT ON
 	
-	select @IP = dbo.f_ConvertIPv6ToDummy(@IP)	
-
 	---- #1 CHECK UM TRANSFER FUNCTION
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @CustID
@@ -163,9 +162,8 @@ BEGIN
 					SELECT TOP 1 1
 					FROM @tblcustId c
 						CROSS APPLY (
-							SELECT TOP 1 1 AS t FROM dbo.bettrans b WITH (NOLOCK)
+							SELECT TOP 1 1 AS t FROM dbo.Transfer b WITH (NOLOCK)
 							WHERE b.custid = c.custid
-								AND b.matchId = 0
 								AND b.bettype IN (21003, 21004)
 								AND b.transdate >= CONVERT(DATE, GETDATE()) AND b.transdate < DATEADD(DAY, 1, CONVERT(DATE, GETDATE()))
 						) AS b
@@ -292,13 +290,32 @@ BEGIN
 			FROM dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
 			WHERE 
-				b.bettype NOT IN (21008, 21009)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				bettype < 19999
+				AND winlostdate > @moveBetsDay
 			GROUP BY
 				b.winlostdate, b.bettype, b.statusId,
+				b.custid, b.recommend
+
+			-- Transfer
+			INSERT INTO #tempData
+			(
+				winlostdate, bettype, statusId,
+				custid, recommend,
+				winlost, actual_stake, playercomm,
+				awinlost, comm,
+				mwinlost, acomm
+			)	
+			SELECT
+				b.winlostdate, b.bettype, 131,
+				b.custid, b.recommend,
+				SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
+				SUM(b.awinlost), SUM(b.comm),
+				SUM(b.mwinlost), SUM(b.acomm)
+			FROM dbo.Transfer b WITH (NOLOCK)
+				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
+			WHERE (b.bettype = 19999 and b.winlostdate <= @moveBetsDay) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
+			GROUP BY
+				b.winlostdate, b.bettype, 
 				b.custid, b.recommend
 
 			----check move bet date again to make sure it is not changed
@@ -328,13 +345,32 @@ BEGIN
 				FROM dbo.bettrans b WITH (NOLOCK)
 					INNER JOIN @tblrecommend r ON b.recommend = r.recommend
 				WHERE 
-					b.bettype NOT IN (21008, 21009)
-					AND 1 = CASE 
-								WHEN bettype = 19999 and winlostdate > @NewMoveBetDate THEN 0 --> get data from ticket detail
-								WHEN bettype < 19999 and winlostdate <= @NewMoveBetDate THEN 0 --> get data from sum record
-							ELSE 1 END
+					bettype < 19999
+					AND winlostdate > @NewMoveBetDate
 				GROUP BY
 					b.winlostdate, b.bettype, b.statusId,
+					b.custid, b.recommend
+
+				-- Transfer
+				INSERT INTO #tempData
+				(
+					winlostdate, bettype, statusId,
+					custid, recommend,
+					winlost, actual_stake, playercomm,
+					awinlost, comm,
+					mwinlost, acomm
+				)	
+				SELECT
+					b.winlostdate, b.bettype, 131,
+					b.custid, b.recommend,
+					SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
+					SUM(b.awinlost), SUM(b.comm),
+					SUM(b.mwinlost), SUM(b.acomm)
+				FROM dbo.Transfer b WITH (NOLOCK)
+					INNER JOIN @tblrecommend r ON b.recommend = r.recommend
+				WHERE (b.bettype = 19999 and b.winlostdate <= @NewMoveBetDate) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
+				GROUP BY
+					b.winlostdate, b.bettype,
 					b.custid, b.recommend
 
 			END
@@ -352,8 +388,8 @@ BEGIN
 					winlostdate, bettype, 112,
 					@DownlineCustId,
 					SUM(winlost), SUM(actual_stake)
-				FROM dbo.bettrans WITH (NOLOCK)
-				WHERE custId = @DownlineCustId AND matchId = 0 AND bettype >= 20000
+				FROM dbo.Transfer WITH (NOLOCK)
+				WHERE custId = @DownlineCustId AND Bettype >= 20000
 				GROUP BY
 					winlostdate, bettype
 			END
@@ -609,9 +645,8 @@ BEGIN
 			IF @IsAllDayTransfer = 0
 				AND EXISTS (
 					SELECT 1
-					FROM dbo.bettrans WITH (NOLOCK)
+					FROM dbo.Transfer WITH (NOLOCK)
 					WHERE custid = @memberId
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND transdate BETWEEN CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120) AND CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120) + ' 23:59:59'
 				)
@@ -623,16 +658,15 @@ BEGIN
 			BEGIN
 				-- for agent
 			
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @agentId, @agentName, @refno, @Now, 21004, 'From Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						@memberBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName,recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)
+				VALUES (@UserID, @agentId, @agentName, @refno, @Now, 21004, 'From Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+						@memberBalance, 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@agentId, @memberId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -647,9 +681,8 @@ BEGIN
 				IF @ErrCode <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@agentId, @memberId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -662,16 +695,15 @@ BEGIN
 				DECLARE @TotalCashMem MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @memberId, @TotalCash  = @TotalCashMem OUTPUT
 
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-				VALUES (0, @UserID, @memberId, @memberName, @refno, @Now, 21004, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						@memberBalance, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMem)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @memberId, @memberName, @refno, @Now, 21004, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+						@memberBalance, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMem, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@agentId, @memberId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -735,16 +767,15 @@ BEGIN
 			ELSE IF @memberBalance < 0
 			BEGIN
 				-- for agent
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @agentId, @agentName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						ABS(@memberBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @agentId, @agentName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+						ABS(@memberBalance), CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@agentId, @memberId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -757,16 +788,15 @@ BEGIN
 				DECLARE @TotalCashMemNev MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @memberId, @TotalCash  = @TotalCashMemNev OUTPUT
 
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-				VALUES (0, @UserID, @memberId, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						ABS(@memberBalance), 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMemNev)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @memberId, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+						ABS(@memberBalance), 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMemNev, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@agentId, @memberId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -887,15 +917,14 @@ BEGIN
 			IF @agentBalance > 0
 			BEGIN
 				-- for master
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						@agentBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @masterId, @masterName, @refno, @Now, 21003, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+						@agentBalance, 0,CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@masterId, @agentId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -909,16 +938,15 @@ BEGIN
 				DECLARE @TotalCashAgPov MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgPov OUTPUT
 
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-				VALUES (0, @UserID, @agentId, @agentName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						@agentBalance, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashAgPov)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @agentId, @agentName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+						@agentBalance, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashAgPov, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@masterId, @agentId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -963,16 +991,15 @@ BEGIN
 			ELSE IF @agentBalance < 0
 			BEGIN
 				-- for master
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID)
-				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						ABS(@agentBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+						ABS(@agentBalance), CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@masterId, @agentId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -985,16 +1012,15 @@ BEGIN
 				DECLARE @TotalCashAgNegative MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgNegative OUTPUT
 
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance)
-				VALUES (0, @UserID, @agentId, @agentName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						ABS(@agentBalance), 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131,@TotalCashAgNegative)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @agentId, @agentName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+						ABS(@agentBalance), 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131,@TotalCashAgNegative, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@masterId, @agentId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -1077,16 +1103,15 @@ BEGIN
 			IF @masterBalance > 0
 			BEGIN
 				-- for super
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-				VALUES (0, @UserID, @superId, @superName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						@masterBalance, 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @superId, @superName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+						@masterBalance, 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@superId, @masterId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -1099,16 +1124,15 @@ BEGIN
 				DECLARE @TotalCashMAgPov MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgPov OUTPUT
 
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
-				VALUES (0, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						@masterBalance, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @masterId, @superId, 0, 0, 0, @ip, 131, @TotalCashMAgPov)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+						@masterBalance, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @masterId, @superId, 0, 0, 0, @ip, 131, @TotalCashMAgPov, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@superId, @masterId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -1153,16 +1177,15 @@ BEGIN
 			ELSE IF @masterBalance < 0
 			BEGIN
 				-- for super
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID)
-				VALUES (0, @UserID, @superId, @superName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
-						ABS(@masterBalance), 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
+				VALUES (@UserID, @superId, @superName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+						ABS(@masterBalance), CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@superId, @masterId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 
@@ -1175,16 +1198,15 @@ BEGIN
 				DECLARE @TotalCashMAgNegative MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgNegative OUTPUT
 
-				INSERT INTO dbo.bettrans (matchid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, status, ruben, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance)
-				VALUES (0, @UserID, @masterId, @masterName, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
-						ABS(@masterBalance), 0, 'Completed', 1, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @masterId, @superId, 0, 0, 0, @ip, 131, @TotalCashMAgNegative)
+				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
+				VALUES (@UserID, @masterId, @masterName, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+						ABS(@masterBalance), 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @masterId, @superId, 0, 0, 0, @ip, 131, @TotalCashMAgNegative, SYSDATETIME())
 
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.bettrans WITH (ROWLOCK, UPDLOCK)
+					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
 					WHERE custid IN (@superId, @masterId)
-						AND matchid = 0
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
 

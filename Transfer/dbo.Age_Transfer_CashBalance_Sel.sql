@@ -13,6 +13,7 @@ AS
 		- 20181005@Percy: Revise indexes [RedmineID: #101644]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 
 	Param's Explanation:
 		- @CustID: custid of Master/Agent/Member
@@ -126,38 +127,33 @@ BEGIN
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 			
 			-- settle tickets
-				-- < yesterday
 		INSERT INTO #BalanceInfo (agentCash, memberCash, memberOutstanding, PendingTransfer3rd)
 		SELECT
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END),
-			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
+			SUM( CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ),
+			SUM( CASE WHEN custid = @custid  THEN winlost-actual_stake+playercomm ELSE 0  END),
 			0,
-			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
+			0
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @uplineId
-			AND b.ruben = 1
-			AND b.winlostdate < @yesterday
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+			AND b.bettype < 19999
+			AND b.statusID IN (111, 112, 113)
+			AND winlostdate > @moveBetsDay
+			AND (
+				b.winlostdate < @yesterday
+				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+			)
 				
-				-- >= yesterday
+		-- transfer tickets
 		INSERT INTO #BalanceInfo (agentCash, memberCash, memberOutstanding, PendingTransfer3rd)
 		SELECT
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END),
 			SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END END),
 			0,
 			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE b.recommend = @uplineId
-			AND b.ruben = 1
-			AND b.winlostdate >= @yesterday
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+		FROM dbo.Transfer b WITH(NOLOCK)
+		WHERE 
+			b.recommend = @uplineId
+			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
 
 		SELECT
 			@CustID AS CustId,
@@ -215,50 +211,32 @@ BEGIN
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
 			-- settle tickets
-				-- < yesterday
 		INSERT INTO #BalanceInfo (masterCash, agentCash, agentOutstanding)
 		SELECT
 			SUM(mwinlost+acomm-comm),
-			SUM(CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
+			SUM(CASE WHEN recommend = @custid THEN awinlost+comm-playercomm ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.mrecommend = @uplineId
-			AND b.ruben = 1
-			AND b.winlostdate < @yesterday
-			AND b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
-				-- >= yesterday
+			AND b.bettype < 19999
+			AND b.statusID IN (111, 112, 113)
+			AND winlostdate > @moveBetsDay
+			AND (
+				b.winlostdate < @yesterday
+				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+			)
+		-- transfer tickets
 		INSERT INTO #BalanceInfo (masterCash, agentCash, agentOutstanding)
 		SELECT
-			SUM(mwinlost+acomm-comm),
+			ISNULL(SUM(mwinlost+acomm-comm), 0) + ISNULL(SUM(CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE 0 END),0),
 			SUM(CASE WHEN recommend = @custid THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),
 			0
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE b.mrecommend = @uplineId
-			AND b.ruben = 1
-			AND b.winlostdate >= @yesterday
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-			AND b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
-
-				-- sum, balance, transfer tickets of this master
-		INSERT INTO #BalanceInfo (masterCash, agentCash, agentOutstanding)
-		SELECT
-			SUM(winlost-actual_stake),
-			0,
-			0
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE b.custid = @uplineId
-			AND b.matchid = 0
-			AND b.bettype >= 19999
-			AND b.ruben = 1
-			AND b.bettype NOT IN (21008, 21009)
+		FROM dbo.Transfer b WITH(NOLOCK)
+		WHERE 
+			b.mrecommend = @uplineId
+			AND (
+					(bettype = 19999 and winlostdate <= @moveBetsDay) OR (bettype > 19999 and b.bettype NOT IN (21008, 21009))
+				)
 
 		SELECT
 			@CustID AS CustId,
@@ -316,7 +294,6 @@ BEGIN
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 
 			-- settle tickets
-				-- < yesterday
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
 		SELECT
 			SUM(swinlost+scomm-acomm),
@@ -324,44 +301,26 @@ BEGIN
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.srecommend = @uplineId
-			AND b.ruben = 1
-			AND b.winlostdate < @yesterday
-			AND b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+			AND b.bettype < 19999
+			AND b.statusID IN (111, 112, 113)
+			AND winlostdate > @moveBetsDay
+			AND (
+				b.winlostdate < @yesterday
+				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+			)
 
-				-- >= yesterday
+		-- transfer tickets
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
 		SELECT
-			SUM(swinlost+scomm-acomm),
-			SUM(CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm ELSE 0 END),
-			0
-		FROM dbo.bettrans b WITH(NOLOCK)
+			ISNULL(SUM(swinlost+scomm-acomm), 0) + ISNULL(SUM(CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE 0 END),0),
+			ISNULL(SUM(CASE WHEN mrecommend = @CustID THEN mwinlost+acomm-comm END),0) 
+				+ ISNULL(SUM(CASE WHEN b.custid = @CustID THEN winlost-actual_stake END),0),
+			0 
+		FROM dbo.Transfer b WITH(NOLOCK)
 		WHERE b.srecommend = @uplineId
-			AND b.ruben = 1
-			AND b.winlostdate >= @yesterday
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-			AND b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
-
-				-- sum, balance, transfer tickets of this master and upline super
-		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
-		SELECT
-			SUM(CASE WHEN custid = @uplineId THEN winlost-actual_stake ELSE 0 END),
-			SUM(CASE WHEN custid = @CustID THEN winlost-actual_stake ELSE 0 END),
-			0
-		FROM dbo.bettrans WITH(NOLOCK)
-		WHERE custid IN (@CustID, @uplineId)
-			AND matchid = 0
-			AND bettype >= 19999
-			AND ruben = 1
-			AND bettype NOT IN (21008, 21009)
-
+			AND (
+					(bettype = 19999 and winlostdate <= @moveBetsDay) OR (bettype > 19999 and b.bettype NOT IN (21008, 21009))
+				)
 		SELECT
 			@CustID AS CustId,
 			@roleID AS RoleId,

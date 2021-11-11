@@ -45,6 +45,7 @@ Revisions:
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210723@Evan: Replace parameter @enabled,@suspended,@closed with @CustStatus
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 
 Param's Explanation:
 • @CustID: MAgentID
@@ -132,12 +133,12 @@ GROUP BY c.recommend
 INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 SELECT
 	recommend,
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+		+ ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 	ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 0)
 FROM dbo.bettransRnG WITH(NOLOCK)
 WHERE mrecommend = @masterid
@@ -151,12 +152,12 @@ GROUP BY recommend
 INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 SELECT
 	recommend,
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-	ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN awinlost+comm-playercomm ELSE 0 END), 0)
-		+ ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+		+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+	ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
+		+ ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 	ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 0)
 FROM dbo.bettransLC WITH(NOLOCK)
 WHERE mrecommend = @masterid
@@ -200,44 +201,38 @@ GROUP BY recommend
 INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
 	recommend,
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0),
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0),
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0),
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0),
+	SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END),
+	SUM(awinlost+comm-playercomm),
+	ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0)
+		+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+	ISNULL(SUM(awinlost+comm-playercomm ), 0) + ISNULL(SUM(winlost-actual_stake+playercomm ), 0),
 	0,
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
+	0
 FROM dbo.bettrans b WITH(NOLOCK)
 WHERE b.mrecommend = @masterid
-	AND ruben = 1
-	AND winlostdate < @yesterday
-	AND 1 = CASE 
-			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-		ELSE 1 END
+	AND b.bettype < 19999
+	AND b.statusID IN (111, 112, 113)
+	AND (
+				b.winlostdate < @yesterday
+				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+			)
+	AND winlostdate > @moveBetsDay 
 GROUP BY recommend
 
 INSERT INTO #balance (recommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 SELECT
-	recommend,
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0),
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0),
-	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END END), 0)
-		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END ELSE 0 END END), 0),
+	Recommend,
+	SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END),
+	SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END),
+	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
+		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0),
 	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
 		+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0),
 	0,
 	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
-FROM dbo.bettrans b WITH(NOLOCK)
+FROM dbo.Transfer b WITH(NOLOCK)
 WHERE b.mrecommend = @masterid
-	AND ruben = 1
-	AND winlostdate >= @yesterday
-	AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable IN (1,2))
-	AND 1 = CASE 
-			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-		ELSE 1 END
+	AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
 GROUP BY recommend
 /* End Balance Info */
 

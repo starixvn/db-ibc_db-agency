@@ -13,6 +13,7 @@ AS
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210817@Sol: Allow more time to transfer (phase 2) - [RedmineID: #160019]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 */
 
 BEGIN
@@ -54,13 +55,25 @@ BEGIN
 			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-		WHERE b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN b.bettype = 19999 and b.winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN b.bettype < 19999 and b.winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+		WHERE bettype < 19999 
+			AND winlostdate > @moveBetsDay 
 		GROUP BY
 			b.winlostdate, b.bettype, b.statusId,
+			b.custid
+		-- transfer
+		INSERT INTO #tempData
+		(
+			winlostdate, bettype, statusId,
+			custid, amount
+		)
+		SELECT
+			b.winlostdate, b.bettype, 131,
+			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
+		FROM dbo.Transfer b WITH (NOLOCK)
+			INNER JOIN @tblrecommend r ON b.recommend = r.recommend
+		WHERE (b.bettype = 19999 and b.winlostdate <= @moveBetsDay) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
+		GROUP BY
+			b.winlostdate, b.bettype, 
 			b.custid
 
 		DELETE t
@@ -136,13 +149,28 @@ BEGIN
 			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
 		FROM dbo.bettrans b WITH (NOLOCK)
 		WHERE b.recommend = @CustId
-			AND b.bettype NOT IN (21008, 21009)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+			AND bettype < 19999
+			AND winlostdate > @moveBetsDay
 		GROUP BY
 			b.winlostdate, b.bettype, b.statusId,
+			b.custid
+			
+		-- transfer
+		INSERT INTO #tempData
+		(
+			winlostdate, bettype, statusId,
+			custid, amount
+		)
+		SELECT
+			b.winlostdate, b.bettype, 131,
+			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
+		FROM dbo.Transfer b WITH (NOLOCK)
+		WHERE b.recommend = @CustId
+			AND (
+					(b.bettype = 19999 and b.winlostdate <= @moveBetsDay) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
+				)
+		GROUP BY
+			b.winlostdate, b.bettype, 
 			b.custid
 
 		DELETE t

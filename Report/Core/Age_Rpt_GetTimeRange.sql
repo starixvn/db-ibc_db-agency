@@ -1,3 +1,4 @@
+/*<info serverAlias="DBAGE-bodb_AGE" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_GetTimeRange] (
 	@RptTypeId	TINYINT		 = 0
 	,@SiteName	VARCHAR(100) = ''
@@ -13,6 +14,7 @@ Revisions:
 	-20140926@Bobby.Nguyen: Init SP
 	-20141121@Bobby.Nguyen: Add Historical report time range
 	-20150326@Bobby.Nguyen: Update Historical report time range without counting the current year
+	-20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	
 Param's Explanation: 
 	- @RptTypeId: 0: All time ranges - X: specific one
@@ -120,11 +122,10 @@ BEGIN
 		FROM @Age_RptTimeRange d
 		CROSS APPLY (
 			SELECT TOP 1 
-				bt.winlostdate	AS BalanceDate
-			FROM bodb02.dbo.Bettrans bt WITH(NOLOCK)  
-			WHERE bt.bettype	= 20000 
-				AND bt.matchid	= 0 
-				AND bt.custid	= 3  
+				t.winlostdate	AS BalanceDate
+			FROM bodb02.dbo.Transfer t WITH(NOLOCK)  
+			WHERE t.bettype	= 20000 
+				AND t.custid	= 3  
 		) t
 		WHERE d.TypeName IN ('BalanceUp')
 
@@ -164,11 +165,5 @@ BEGIN
 
 	RETURN;
 END
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_GetTimeRange] TO [BODBDownlineNet] AS [dbo]
-GO
-
-GRANT EXECUTE ON [dbo].[Age_Rpt_GetTimeRange] TO [BODBDownlineNetView] AS [dbo]
 GO
 
