@@ -34,6 +34,7 @@ Revisions:
 	- 20150310@Cody: Apply sport bettype matrix [Redmine: #30169]
 	- 20160712@Percy: Using inline function for SportBettypeMatrix [RedmineID: #53152]
 	- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+	- 20211103@Evan: NapU3 - Report Match Win Loss does not show data range 14 - [RedmineID: #164178]
 */
 
 SET NOCOUNT ON
@@ -74,7 +75,10 @@ IF @ToDate > @MoveBetsDay
 BEGIN
 	SET @TDate14 = @MoveBetsDay;
 END
-	
+ELSE
+BEGIN
+	SET @TDate14 = @ToDate;
+END	
 SELECT x.*, ISNULL(x.isNeutral, CONVERT(BIT, 0)) AS IsNeutral
 FROM
 (
