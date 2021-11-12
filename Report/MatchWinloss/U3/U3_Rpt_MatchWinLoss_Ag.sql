@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+		- 20211103@Evan: NapU3 - Report Match Win Loss does not show data range 14 - [RedmineID: #164178]
 */
 
 BEGIN 
@@ -51,7 +52,10 @@ BEGIN
 	BEGIN
 		SET @TDate14 = @MoveBetsDay;
 	END
-
+	ELSE
+	BEGIN
+		SET @TDate14 = @ToDate;
+	END
 	----Get Sport Bettype Matrix------
 	DECLARE @ProductIds VARCHAR(MAX), @isTest BIT
 	SELECT  @ProductIds = dbo.U3_f_GetProductList(), @isTest = dbo.f_CheckSPVersion(@@PROCID)
