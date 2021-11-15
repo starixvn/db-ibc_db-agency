@@ -16,20 +16,21 @@ AS
 		- 20100721@Jacob: Add param @bettype 
 		- 20130730@Lukas: get live score from match instead odds		
 		- 20181226@Percy: Add table OddsES for E-Sports [RedmineID: #106994]
+		- 20211115@Malcolm: Exclude odds are deleted [Redmine: #164321]
 */
 SET NOCOUNT ON
 
 SELECT TOP 1 matchid, hdp1, hdp2, odds1a, odds2a, switch, oddsstatus
 INTO #odds
 FROM dbo.odds WITH (NOLOCK)
-WHERE bettype = @bettype AND matchid = @matchid
+WHERE bettype = @bettype AND matchid = @matchid AND IsDeleted = 0
 ORDER BY oddsid DESC
 
 IF @@ROWCOUNT = 0
 	INSERT INTO #odds
 	SELECT TOP 1 matchid, hdp1, hdp2, odds1a, odds2a, switch, oddsstatus
 	FROM dbo.oddsES WITH (NOLOCK)
-	WHERE bettype = @bettype AND matchid = @matchid
+	WHERE bettype = @bettype AND matchid = @matchid AND IsDeleted = 0
 	ORDER BY oddsid DESC
 
 SELECT o.hdp1, o.hdp2, o.odds1a, o.odds2a,
@@ -41,7 +42,7 @@ SELECT o.hdp1, o.hdp2, o.odds1a, o.odds2a,
 	m.awayid,
 	isnull(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral	
 FROM #odds o
-	LEFT JOIN dbo.match m WITH (NOLOCK) ON o.matchid = m.matchid
+	LEFT JOIN dbo.match m WITH (NOLOCK) ON o.matchid = m.matchid AND m.IsDeleted = 0
 	
 DROP TABLE #odds	
 GO

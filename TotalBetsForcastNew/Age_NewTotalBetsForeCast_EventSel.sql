@@ -15,6 +15,7 @@ AS
 		- 20151216@Bobby: Initial
 		- 20170816@Percy: Change data type of Sporttype [RedmineID: #73545]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20211115@Malcolm: Exclude Matchs are deleted [Redmine: #164321]
 	
 	Parameter's Explanation:
 			
@@ -38,6 +39,7 @@ BEGIN
 			SELECT TOP 1 1 
 			FROM dbo.odds o WITH(NOLOCK) 
 			WHERE o.matchid	= m.matchid 
+				AND o.IsDeleted = 0
 				AND o.bettype IN (1,3,7,8,5,15)
 				AND o.oddsstatus <> 'closed'
 		)
@@ -46,6 +48,7 @@ BEGIN
 					WHEN @IsLive = 1 AND m.kickofftime <= @timeNow	THEN 1
 					ELSE 0
 				END
+		AND m.IsDeleted = 0
 	ORDER BY ISNULL(m.kickofftime,1) DESC, m.eventdate DESC
 
 END
