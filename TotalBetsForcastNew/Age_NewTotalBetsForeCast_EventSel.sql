@@ -39,7 +39,7 @@ BEGIN
 			SELECT TOP 1 1 
 			FROM dbo.odds o WITH(NOLOCK) 
 			WHERE o.matchid	= m.matchid 
-				AND o.IsDeleted = 0
+				AND ISNULL(o.IsDeleted, 0) <> 1
 				AND o.bettype IN (1,3,7,8,5,15)
 				AND o.oddsstatus <> 'closed'
 		)
@@ -48,7 +48,7 @@ BEGIN
 					WHEN @IsLive = 1 AND m.kickofftime <= @timeNow	THEN 1
 					ELSE 0
 				END
-		AND m.IsDeleted = 0
+		AND ISNULL(m.IsDeleted, 0) <> 1
 	ORDER BY ISNULL(m.kickofftime,1) DESC, m.eventdate DESC
 
 END
