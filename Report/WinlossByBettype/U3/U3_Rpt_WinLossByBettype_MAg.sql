@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[U3_Rpt_WinLossByBettype_MAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
@@ -16,6 +16,7 @@ AS
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
 		- 20181003@Helen: Modify code to adapt indexes changed on DB053 [Redmine:101405]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+		- 20211123@Percy: Fix divide by 0 [RedmineID: #164854]
 */
 
 BEGIN	
@@ -67,7 +68,7 @@ BEGIN
 		INSERT INTO @MAgWinLoss
 		SELECT b.bettype
 			,liveindicator
-			,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
+			,SUM(ISNULL(acomm / NULLIF(1 - apositiontaking - mpositiontaking, 0), 0)) AS GrossComm
 			,SUM(ABS(stake)) AS TurnOver
 			,isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(comm), 0)
 			,SUM(mwinlost)
@@ -89,7 +90,7 @@ BEGIN
 		SELECT
 			b.bettype
 			,0 AS liveindicator
-			,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
+			,SUM(ISNULL(acomm / NULLIF(1 - apositiontaking - mpositiontaking, 0), 0)) AS GrossComm
 			,SUM(ABS(stake)) AS TurnOver
 			,isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(comm), 0)
 			,SUM(mwinlost)
@@ -127,7 +128,7 @@ BEGIN
 			INSERT INTO @MAgWinLoss
 			SELECT b.bettype
 				,liveindicator
-				,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
+				,SUM(ISNULL(acomm / NULLIF(1 - apositiontaking - mpositiontaking, 0), 0)) AS GrossComm
 				,SUM(ABS(stake)) AS TurnOver
 				,isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(comm), 0)
 				,SUM(mwinlost)
@@ -149,7 +150,7 @@ BEGIN
 			SELECT 
 				 b.bettype
 				,0 AS liveindicator
-				,SUM(acomm / (1 - apositiontaking - mpositiontaking)) AS GrossComm
+				,SUM(ISNULL(acomm / NULLIF(1 - apositiontaking - mpositiontaking, 0), 0)) AS GrossComm
 				,SUM(ABS(stake)) AS TurnOver
 				,isnull(SUM(winlost - actual_stake), 0) + isnull(SUM(awinlost), 0) + isnull(SUM(comm), 0)
 				,SUM(mwinlost)

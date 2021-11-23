@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[U3_Rpt_MatchWinLoss_Ag]
 	@CustID   INT,
 	@FromDate DATETIME,
@@ -18,6 +15,7 @@ AS
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 		- 20211103@Evan: NapU3 - Report Match Win Loss does not show data range 14 - [RedmineID: #164178]
+		- 20211123@Percy: Fix divide by 0 [RedmineID: #164854]
 */
 
 BEGIN 
@@ -74,7 +72,7 @@ BEGIN
 			,m.isNeutral
 			,m.matchcode
 			,m.showtime
-			,SUM(b.comm / (1 - b.apositiontaking)) AS GrossComm
+			,SUM(ISNULL(b.comm / NULLIF(1 - b.apositiontaking, 0), 0)) AS GrossComm
 			,SUM(comm - playercomm) AS commission
 			,SUM(awinlost) AS positiontaking
 		FROM bettrans b WITH (NOLOCK)
@@ -103,7 +101,7 @@ BEGIN
 			,m.isNeutral
 			,m.matchcode
 			,m.showtime
-			,SUM(b.comm / (1 - b.apositiontaking)) AS GrossComm
+			,SUM(ISNULL(b.comm / NULLIF(1 - b.apositiontaking, 0), 0)) AS GrossComm
 			,SUM(comm - playercomm) AS commission
 			,SUM(awinlost) AS positiontaking
 		FROM bettrans b WITH (NOLOCK)
@@ -131,7 +129,7 @@ BEGIN
 			,m.isNeutral
 			,m.matchcode
 			,m.showtime
-			,SUM(b.comm / (1 - b.apositiontaking)) AS GrossComm
+			,SUM(ISNULL(b.comm / NULLIF(1 - b.apositiontaking, 0), 0)) AS GrossComm
 			,SUM(comm - playercomm) AS commission
 			,SUM(awinlost) AS positiontaking
 		FROM bettrans14 b WITH (NOLOCK)
@@ -160,7 +158,7 @@ BEGIN
 			,m.isNeutral
 			,m.matchcode
 			,m.showtime
-			,SUM(b.comm / (1 - b.apositiontaking)) AS GrossComm
+			,SUM(ISNULL(b.comm / NULLIF(1 - b.apositiontaking, 0), 0)) AS GrossComm
 			,SUM(comm - playercomm) AS commission
 			,SUM(awinlost) AS positiontaking
 		FROM bettrans14 b WITH (NOLOCK)

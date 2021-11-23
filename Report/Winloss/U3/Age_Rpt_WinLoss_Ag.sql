@@ -79,6 +79,7 @@ AS
 		- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+		- 20211123@Percy: Fix divide by 0 [RedmineID: #164854]
 */
     
 SET NOCOUNT ON
@@ -254,7 +255,7 @@ BEGIN
 	    SELECT 
 		    CustID
 		   	,SUM(CASE WHEN b.liveawayscore = 0 AND b.bettype IN(33,43) THEN ABS(b.stake)/2 ELSE ABS(b.stake) END) AS TurnOver
-		    ,SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE comm/(1 - apositiontaking) END) AS GrossComm
+		    ,SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END END) AS GrossComm
 		    ,SUM(winlost - actual_stake)
 		    ,SUM(awinlost)
 		    ,SUM(playercomm)

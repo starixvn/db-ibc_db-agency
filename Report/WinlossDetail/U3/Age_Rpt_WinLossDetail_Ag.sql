@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Ag]
 	@CustID				INT = NULL --recommend
 	,@FromDate			SMALLDATETIME
@@ -92,6 +92,7 @@ AS
 		- 20170808@Percy: Integrate Lucky 3 [RedmineID: #80219]
 		- 20170705@Percy: Support Keno Lottery [RedmineID: #78064]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+		- 20211123@Percy: Fix divide by 0 [RedmineID: #164854]
 */
 SET NOCOUNT ON
 
@@ -280,7 +281,7 @@ BEGIN
 					WHEN s.ProductID = 21 THEN b.oddsspread -- Allbet
 					ELSE ABS(b.stake) 
 					END) AS TurnoverNoDraw
-		       ,SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE comm/(1 - apositiontaking) END) AS GrossComm
+		       ,SUM(CASE WHEN b.bettype = 1000 THEN oddsspread ELSE CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END END) AS GrossComm
 		       ,SUM(winlost - actual_stake) --MemberWinlost
 		       ,SUM(playercomm) -- PlayerComm
 		       ,ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(playercomm), 0) --MemberTotal

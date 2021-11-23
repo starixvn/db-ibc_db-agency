@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[U3_Rpt_WinLossByBettype_SAg]
 	@CustID INT,
 	@FromDate SMALLDATETIME,
@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20170830@Percy: Integrate Lucky 3 [RedmineID: #76770]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+		- 20211123@Percy: Fix divide by 0 [RedmineID: #164854]
 */
 
 BEGIN
@@ -66,7 +67,7 @@ BEGIN
 		INSERT INTO @SAgWinLoss
 		SELECT b.bettype
 			,liveindicator
-			,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
+			,SUM(ISNULL(scomm / NULLIF(1 - tpositiontaking, 0), 0)) AS GrossComm
 			,SUM(ABS(stake)) AS TurnOver
 			,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
 			,SUM(swinlost)
@@ -88,7 +89,7 @@ BEGIN
 		SELECT 
 			b.bettype
 			,0 AS liveindicator
-			,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
+			,SUM(ISNULL(scomm / NULLIF(1 - tpositiontaking, 0), 0)) AS GrossComm
 			,SUM(ABS(stake)) AS TurnOver
 			,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
 			,SUM(swinlost)
@@ -127,7 +128,7 @@ BEGIN
 			INSERT INTO @SAgWinLoss
 			SELECT b.bettype
 				,liveindicator
-				,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
+				,SUM(ISNULL(scomm / NULLIF(1 - tpositiontaking, 0), 0)) AS GrossComm
 				,SUM(ABS(stake)) AS TurnOver
 				,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
 				,SUM(swinlost)
@@ -149,7 +150,7 @@ BEGIN
 			SELECT 
 				b.bettype
 				,0 AS liveindicator
-				,SUM(isnull(scomm / (1 - tpositiontaking), 0)) AS GrossComm
+				,SUM(ISNULL(scomm / NULLIF(1 - tpositiontaking, 0), 0)) AS GrossComm
 				,SUM(ABS(stake)) AS TurnOver
 				,SUM(mwinlost + awinlost + acomm + winlost - actual_stake)
 				,SUM(swinlost)
