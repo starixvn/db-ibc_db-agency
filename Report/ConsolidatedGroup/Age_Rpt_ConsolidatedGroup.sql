@@ -38,7 +38,8 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200310@Malcolm : Add gross comm column [RedmineID : #129918]
 		- 20200316@Malcolm : fix bug show incorrect grosscomm value on range sum [Redmine : #129918]
-		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]	 
+		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
+		- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -112,7 +113,7 @@ BEGIN
 	DECLARE @isTest BIT = 0
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-	CREATE TABLE #SportBettype (ProductID INT, Bettype INT)
+	CREATE TABLE #SportBettype (ProductID INT, Bettype INT, RefTable TINYINT)
 
 	CREATE CLUSTERED INDEX ix_SportBettype_cl ON #SportBettype(Bettype)
 
@@ -159,8 +160,8 @@ BEGIN
 		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
 	END
 
-	INSERT INTO #SportBettype (ProductID, Bettype)
-	SELECT ISNULL(p.GroupProductId, s.ProductID), s.Bettype
+	INSERT INTO #SportBettype (ProductID, Bettype, RefTable)
+	SELECT ISNULL(p.GroupProductId, s.ProductID), s.Bettype, s.RefTable
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest) s
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId
 		LEFT JOIN @ExistingProductDetails e ON e.ProductId = s.ProductID
@@ -221,7 +222,11 @@ BEGIN
 				,SUM(acomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(swinlost,0)) + SUM(ISNULL(scomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 				,COUNT(1) betcount
-				,SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) GrossComm
+				,SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						WHEN b.tpositiontaking = 1 THEN 0
+						ELSE scomm / (1 - b.tpositiontaking)
+					END) AS GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.srecommend = c.CustID
@@ -230,6 +235,30 @@ BEGIN
 				AND c.roleID = 4
 			GROUP BY  b.srecommend, b.winlostdate, s.ProductID, c.username, c.currency
 
+			;WITH CTE_GrossComm AS (
+				SELECT b.srecommend, b.winlostdate, s.ProductID, SUM(b.BetStake * b.sdiscount) AS GrossComm
+				FROM dbo.bettransRnG b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
+					INNER JOIN #TmpCust c ON b.srecommend = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 4
+				GROUP BY b.srecommend, b.winlostdate, s.ProductID
+			
+				UNION ALL
+				SELECT b.srecommend, b.winlostdate, s.ProductID, SUM(b.NetStake * b.sdiscount) AS GrossComm
+				FROM dbo.bettransLC b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
+					INNER JOIN #TmpCust c ON b.srecommend = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 4
+				GROUP BY b.srecommend, b.winlostdate, s.ProductID
+			)
+			UPDATE a
+			SET a.GrossComm = c.GrossComm
+			FROM @AgencyWinloss a
+				INNER JOIN CTE_GrossComm c ON a.custid = c.srecommend AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
 		END
 
 		IF @isMAg = 1 
@@ -266,7 +295,11 @@ BEGIN
 				,SUM(comm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(mwinlost,0)) + SUM(ISNULL(acomm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 				,COUNT(1) betcount
-				,SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm / (1 - apositiontaking - mpositiontaking) END)  GrossComm
+				,SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						WHEN b.apositiontaking + b.mpositiontaking = 1 THEN 0
+						ELSE b.acomm / (1 - b.apositiontaking - b.mpositiontaking)
+					END) AS GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.mrecommend = c.CustID
@@ -275,6 +308,31 @@ BEGIN
 				AND c.roleID = 3
 			GROUP BY 
 				b.mrecommend, b.winlostdate, s.ProductID, c.username, c.currency
+
+			;WITH CTE_GrossComm AS (
+				SELECT b.mrecommend, b.winlostdate, s.ProductID, SUM(b.BetStake * b.adiscount) AS GrossComm
+				FROM dbo.bettransRnG b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
+					INNER JOIN #TmpCust c ON b.mrecommend = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 3
+				GROUP BY b.mrecommend, b.winlostdate, s.ProductID
+			
+				UNION ALL
+				SELECT b.mrecommend, b.winlostdate, s.ProductID, SUM(b.NetStake * b.adiscount) AS GrossComm
+				FROM dbo.bettransLC b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
+					INNER JOIN #TmpCust c ON b.mrecommend = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 3
+				GROUP BY b.mrecommend, b.winlostdate, s.ProductID
+			)
+			UPDATE a
+			SET a.GrossComm = c.GrossComm
+			FROM @AgencyWinloss a
+				INNER JOIN CTE_GrossComm c ON a.custid = c.mrecommend AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
 		END
 
 		IF @isAg = 1
@@ -311,7 +369,11 @@ BEGIN
 				,SUM(playercomm) precomm
 				,SUM(ISNULL(awinlost,0)) + SUM(ISNULL(comm,0)) + SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) company
 				,COUNT(1) betcount
-				,SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm / (1 - apositiontaking) END) GrossComm
+				,SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						WHEN b.apositiontaking = 1 THEN 0
+						ELSE b.comm / (1 - b.apositiontaking)
+					END) AS GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.recommend = c.CustID
@@ -320,6 +382,31 @@ BEGIN
 				AND c.roleID = 2
 			GROUP BY 
 				b.recommend, b.winlostdate, s.ProductID, c.username, c.currency
+
+			;WITH CTE_GrossComm AS (
+				SELECT b.recommend, b.winlostdate, s.ProductID, SUM(b.BetStake * b.discount) AS GrossComm
+				FROM dbo.bettransRnG b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
+					INNER JOIN #TmpCust c ON b.recommend = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 2
+				GROUP BY b.recommend, b.winlostdate, s.ProductID
+			
+				UNION ALL
+				SELECT b.recommend, b.winlostdate, s.ProductID, SUM(b.NetStake * b.discount) AS GrossComm
+				FROM dbo.bettransLC b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
+					INNER JOIN #TmpCust c ON b.recommend = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 2
+				GROUP BY b.recommend, b.winlostdate, s.ProductID
+			)
+			UPDATE a
+			SET a.GrossComm = c.GrossComm
+			FROM @AgencyWinloss a
+				INNER JOIN CTE_GrossComm c ON a.custid = c.recommend AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
 		END
 
 		IF @isMem = 1
@@ -356,7 +443,10 @@ BEGIN
 				,0 as precomm
 				,SUM(ISNULL(winlost,0)-ISNULL(actual_stake,0)) +SUM(playercomm) company
 				,COUNT(1) betcount
-				,SUM(playercomm) GrossComm
+				,SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						ELSE b.playercomm
+					END) AS GrossComm
 			FROM	bettrans b WITH(NOLOCK) 
 				INNER JOIN #SportBettype s ON b.bettype = s.bettype
 				INNER JOIN #TmpCust c ON b.custid = c.CustID
@@ -365,6 +455,31 @@ BEGIN
 				AND roleID = 1
 			GROUP BY 
 				b.CustID, b.winlostdate, s.ProductID, c.username, c.currency
+
+			;WITH CTE_GrossComm AS (
+				SELECT b.custid, b.winlostdate, s.ProductID, SUM(b.BetStake * b.playerdiscount) AS GrossComm
+				FROM dbo.bettransRnG b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
+					INNER JOIN #TmpCust c ON b.custid = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 1
+				GROUP BY b.custid, b.winlostdate, s.ProductID
+			
+				UNION ALL
+				SELECT b.custid, b.winlostdate, s.ProductID, SUM(b.NetStake * b.playerdiscount) AS GrossComm
+				FROM dbo.bettransLC b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
+					INNER JOIN #TmpCust c ON b.custid = c.CustId
+				WHERE b.winlostdate BETWEEN @fdate AND @tdate
+					AND b.StatusId IN (111, 112, 113)
+					AND c.roleID = 1
+				GROUP BY b.custid, b.winlostdate, s.ProductID
+			)
+			UPDATE a
+			SET a.GrossComm = c.GrossComm
+			FROM @AgencyWinloss a
+				INNER JOIN CTE_GrossComm c ON a.custid = c.custid AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
 		END
 
 
