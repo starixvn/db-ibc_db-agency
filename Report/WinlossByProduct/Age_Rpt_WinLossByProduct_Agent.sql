@@ -27,6 +27,7 @@ AS
 		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
 		- 20201202@Malcolm: Separate Bet Types - MMR Odds [RedmineId : #146159]
 		- 20201124@Malcolm: Show sport type name for Virtual Sports 3 [redmine: #131375]
+		- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -100,10 +101,10 @@ BEGIN
 		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
 	END
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, RefTable TINYINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
-	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)
-	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType, f.EventType
+	INSERT INTO #SportBettype (ProductID, Bettype, RefTable, GroupTypeId, SportType, EventType)
+	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.RefTable, f.Bettype, s.SportType, f.EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
 			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23)
@@ -152,7 +153,11 @@ BEGIN
 						ELSE 0
 					END AS liveindicator,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END AS IsMMR,
-					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm / (1 - apositiontaking - mpositiontaking) END) AS GrossComm,
+					SUM(CASE
+							WHEN s.RefTable IN (1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0
+							ELSE acomm / (1 - apositiontaking - mpositiontaking)
+						END) AS GrossComm,
 					SUM(ABS(stake)) AS TurnOver,
 					ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(comm), 0) AS AgTotal,
 					SUM(mwinlost) AS MAgWinlost,
@@ -174,6 +179,33 @@ BEGIN
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 END,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
+
+			;WITH CTE_GrossComm AS (
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.BetStake * b.adiscount) AS GrossComm
+				FROM dbo.bettransRnG b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 1
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.mrecommend = @CustID
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+
+				UNION ALL
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.NetStake * b.adiscount) AS GrossComm
+				FROM dbo.bettransLC b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 2
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.mrecommend = @CustID
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+			)
+			UPDATE t
+			SET t.GrossComm = ISNULL(c.GrossComm, 0)
+			FROM #MAgWinLoss t
+				INNER JOIN (
+					SELECT ProductID, GroupTypeId AS bettype, SUM(GrossComm) AS GrossComm
+					FROM CTE_GrossComm
+					GROUP BY ProductID, GroupTypeId
+				) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
 
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
@@ -255,10 +287,11 @@ BEGIN
 						ELSE 0
 					END AS liveindicator,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END AS IsMMR,
-					SUM(CASE 
-						WHEN b.bettype = 1000 THEN oddsspread
-						WHEN b.bettype BETWEEN 1401 AND 1499 THEN acomm
-						ELSE CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm / (1 - apositiontaking - mpositiontaking) END END) AS GrossComm,
+					SUM(CASE
+							WHEN s.RefTable IN (1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0
+							ELSE acomm / (1 - apositiontaking - mpositiontaking)
+						END) AS GrossComm,
 					SUM(ABS(stake)) AS TurnOver,
 					ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(comm), 0) AS AgTotal,
 					SUM(mwinlost) AS MAgWinlost,
@@ -280,6 +313,33 @@ BEGIN
 						WHEN 3 THEN b.liveindicator
 						ELSE 0 END,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
+
+			;WITH CTE_GrossComm AS (
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.BetStake * b.adiscount) AS GrossComm
+				FROM dbo.bettransRnG14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 1
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.mrecommend = @CustID
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+
+				UNION ALL
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.NetStake * b.adiscount) AS GrossComm
+				FROM dbo.bettransLC14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 2
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.mrecommend = @CustID
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+			)
+			UPDATE t
+			SET t.GrossComm = ISNULL(c.GrossComm, 0)
+			FROM #MAgWinLoss t
+				INNER JOIN (
+					SELECT ProductID, GroupTypeId AS bettype, SUM(GrossComm) AS GrossComm
+					FROM CTE_GrossComm
+					GROUP BY ProductID, GroupTypeId
+				) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
 
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
