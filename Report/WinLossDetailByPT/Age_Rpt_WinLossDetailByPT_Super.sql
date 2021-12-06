@@ -156,8 +156,12 @@ BEGIN
 						WHEN s.ProductId = 1 AND b.statusId = 111 THEN 0 -- SB draw
 						WHEN s.ProductId = 1 AND b.StatusId IN (112, 113) AND b.modds IN (-0.25, 0.25) THEN ABS(b.stake)/2 -- SB half won/lose
 						ELSE ABS(b.stake)
-					END) AS TurnoverNoDraw,
-				SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1-tpositiontaking) END), -- GrossComm 
+					END), -- TurnoverNoDraw
+				SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						WHEN tpositiontaking = 1 THEN 0
+						ELSE scomm/(1-tpositiontaking)
+					END), -- GrossComm 
 				SUM(winlost - actual_stake), -- MemberWinLost	
 				SUM(playercomm), -- PlayerComm		
 				SUM(winlost - actual_stake) + SUM(playercomm), -- MemberTotal		
@@ -181,7 +185,7 @@ BEGIN
 		;WITH CTE_NetTO_GrossComm AS (
 			SELECT s.ProductID
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.BetStake ELSE 0 END) AS TurnoverNoDraw
-				,SUM(b.BetStake * b.discount) AS GrossComm
+				,SUM(b.BetStake * b.sdiscount) AS GrossComm
 			FROM dbo.bettransRnG b WITH(NOLOCK)
 				INNER JOIN @SportBettypeMatrix s ON b.GameId = s.Bettype AND s.RefTable = 1
 			WHERE winlostdate BETWEEN @FDate AND @TDate
@@ -192,7 +196,7 @@ BEGIN
 			UNION ALL
 			SELECT s.ProductID
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.NetStake ELSE 0 END) AS TurnoverNoDraw
-				,SUM(b.NetStake * b.discount) AS GrossComm
+				,SUM(b.NetStake * b.sdiscount) AS GrossComm
 			FROM dbo.bettransLC b WITH(NOLOCK)
 				INNER JOIN @SportBettypeMatrix s ON b.GameId = s.Bettype AND s.RefTable = 2
 			WHERE winlostdate BETWEEN @FDate AND @TDate
