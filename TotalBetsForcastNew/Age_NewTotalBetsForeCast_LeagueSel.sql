@@ -48,11 +48,11 @@ BEGIN
 										WHEN @IsLive = 1 AND m.kickofftime <= @timeNow	THEN 1
 									ELSE 0
 								END	
-							AND ISNULL(m.IsDeleted, 0) <> 1
-							AND ISNULL(o.IsDeleted, 0) <> 1
+							AND m.IsDeleted <> 1
+							AND o.IsDeleted <> 1
 				)
 			AND l.isTest= CASE WHEN @isshowall = 1 THEN l.isTest ELSE @isshowall END
-			AND ISNULL(l.IsDeleted, 0) <> 1
+			AND l.IsDeleted <> 1
 	
 	-- filter by main league
 	DELETE d

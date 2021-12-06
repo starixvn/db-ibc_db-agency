@@ -23,14 +23,14 @@ SET NOCOUNT ON
 SELECT TOP 1 matchid, hdp1, hdp2, odds1a, odds2a, switch, oddsstatus
 INTO #odds
 FROM dbo.odds WITH (NOLOCK)
-WHERE bettype = @bettype AND matchid = @matchid AND ISNULL(IsDeleted, 0) <> 1
+WHERE bettype = @bettype AND matchid = @matchid AND IsDeleted <> 1
 ORDER BY oddsid DESC
 
 IF @@ROWCOUNT = 0
 	INSERT INTO #odds
 	SELECT TOP 1 matchid, hdp1, hdp2, odds1a, odds2a, switch, oddsstatus
 	FROM dbo.oddsES WITH (NOLOCK)
-	WHERE bettype = @bettype AND matchid = @matchid AND ISNULL(IsDeleted, 0) <> 1
+	WHERE bettype = @bettype AND matchid = @matchid AND IsDeleted <> 1
 	ORDER BY oddsid DESC
 
 SELECT o.hdp1, o.hdp2, o.odds1a, o.odds2a,
@@ -42,7 +42,7 @@ SELECT o.hdp1, o.hdp2, o.odds1a, o.odds2a,
 	m.awayid,
 	isnull(m.isNeutral, CONVERT(BIT, 0)) AS IsNeutral	
 FROM #odds o
-	LEFT JOIN dbo.match m WITH (NOLOCK) ON o.matchid = m.matchid AND ISNULL(m.IsDeleted, 0) <> 1
+	LEFT JOIN dbo.match m WITH (NOLOCK) ON o.matchid = m.matchid AND m.IsDeleted <> 1
 	
 DROP TABLE #odds	
 GO
