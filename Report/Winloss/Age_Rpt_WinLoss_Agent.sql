@@ -44,6 +44,8 @@ BEGIN
 		Comm		MONEY
 	);
 
+	CREATE TABLE #GrossComm (CustId INT, GrossComm MONEY)
+
 	CREATE TABLE #TmpCondSumWL(
 		SportType	INT,
 		BetType		INT
@@ -170,7 +172,9 @@ BEGIN
 			AND b.statusID IN (111, 112, 113)
 		GROUP BY recommend;
 
-		;WITH CTE_GrossComm AS (
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1) -- bettransRnG
+		BEGIN
+			INSERT INTO #GrossComm (CustId, GrossComm)
 			SELECT b.recommend AS CustId, SUM(b.BetStake * b.adiscount) AS GrossComm
 			FROM dbo.bettransRnG b WITH (NOLOCK)
 				INNER JOIN @SportBettypeMatrix s ON b.gameId = s.Bettype AND s.RefTable = 1
@@ -178,8 +182,11 @@ BEGIN
 				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND b.statusID IN (111, 112, 113)
 			GROUP BY b.recommend
-			
-			UNION ALL
+		END
+
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 2) -- bettransLC
+		BEGIN
+			INSERT INTO #GrossComm (CustId, GrossComm)
 			SELECT b.recommend AS CustId, SUM(b.NetStake * b.adiscount) AS GrossComm
 			FROM dbo.bettransLC b WITH (NOLOCK)
 				INNER JOIN @SportBettypeMatrix s ON b.gameId = s.Bettype AND s.RefTable = 2
@@ -187,14 +194,18 @@ BEGIN
 				AND b.winlostdate BETWEEN @FDate AND @TDate
 				AND b.statusID IN (111, 112, 113)
 			GROUP BY b.recommend
-		)
-		UPDATE t
-		SET t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
-		FROM #MAgWinLoss t
-			INNER JOIN (
-				SELECT CustId, SUM(GrossComm) AS GrossComm FROM CTE_GrossComm GROUP BY CustId
-			) c ON t.CustId = c.CustId
+		END
 
+		IF EXISTS (SELECT 1 FROM #GrossComm)
+		BEGIN
+			UPDATE t
+			SET t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+			FROM #MAgWinLoss t
+				INNER JOIN (
+					SELECT CustId, SUM(GrossComm) AS GrossComm FROM #GrossComm GROUP BY CustId
+				) c ON t.CustId = c.CustId
+		END
+		
 		IF @BalanceUpDay < @FromDate
 		BEGIN
 			SET @FDate = @FromDate;
@@ -281,6 +292,10 @@ BEGIN
 		INNER JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 	GROUP BY w.CustID, c.UserName
 	ORDER BY c.Username;
+
+	DROP TABLE #GrossComm
+	DROP TABLE #MAgWinLoss
+	DROP TABLE #TmpCondSumWL
 
 	SET NOCOUNT OFF;
 END

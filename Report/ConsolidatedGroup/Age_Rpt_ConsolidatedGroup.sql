@@ -80,6 +80,8 @@ BEGIN
 		betcount	    INT,
 		GrossComm       MONEY
 	)
+
+	DECLARE @GrossComm TABLE (winlostdate DATETIME, custid INT, ProductId TINYINT, GrossComm MONEY)
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
 	CREATE TABLE #TmpCondSumWL (ProductID TINYINT, sporttype SMALLINT, bettype SMALLINT)
 	CREATE TABLE #TmpCust (CustID INT, RoleID INT, username VARCHAR(30), currency TINYINT)
@@ -235,7 +237,9 @@ BEGIN
 				AND c.roleID = 4
 			GROUP BY  b.srecommend, b.winlostdate, s.ProductID, c.username, c.currency
 
-			;WITH CTE_GrossComm AS (
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.srecommend, b.winlostdate, s.ProductID, SUM(b.BetStake * b.sdiscount) AS GrossComm
 				FROM dbo.bettransRnG b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
@@ -244,8 +248,11 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 4
 				GROUP BY b.srecommend, b.winlostdate, s.ProductID
-			
-				UNION ALL
+			END
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.srecommend, b.winlostdate, s.ProductID, SUM(b.NetStake * b.sdiscount) AS GrossComm
 				FROM dbo.bettransLC b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
@@ -254,11 +261,15 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 4
 				GROUP BY b.srecommend, b.winlostdate, s.ProductID
-			)
-			UPDATE a
-			SET a.GrossComm = c.GrossComm
-			FROM @AgencyWinloss a
-				INNER JOIN CTE_GrossComm c ON a.custid = c.srecommend AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
+
+			IF EXISTS (SELECT 1 FROM @GrossComm)
+			BEGIN
+				UPDATE a
+				SET a.GrossComm = ISNULL(a.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM @AgencyWinloss a
+					INNER JOIN @GrossComm c ON a.custid = c.custid AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
 		END
 
 		IF @isMAg = 1 
@@ -309,7 +320,11 @@ BEGIN
 			GROUP BY 
 				b.mrecommend, b.winlostdate, s.ProductID, c.username, c.currency
 
-			;WITH CTE_GrossComm AS (
+			DELETE @GrossComm
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.mrecommend, b.winlostdate, s.ProductID, SUM(b.BetStake * b.adiscount) AS GrossComm
 				FROM dbo.bettransRnG b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
@@ -318,8 +333,11 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 3
 				GROUP BY b.mrecommend, b.winlostdate, s.ProductID
-			
-				UNION ALL
+			END
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.mrecommend, b.winlostdate, s.ProductID, SUM(b.NetStake * b.adiscount) AS GrossComm
 				FROM dbo.bettransLC b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
@@ -328,11 +346,15 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 3
 				GROUP BY b.mrecommend, b.winlostdate, s.ProductID
-			)
-			UPDATE a
-			SET a.GrossComm = c.GrossComm
-			FROM @AgencyWinloss a
-				INNER JOIN CTE_GrossComm c ON a.custid = c.mrecommend AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
+
+			IF EXISTS (SELECT 1 FROM @GrossComm)
+			BEGIN
+				UPDATE a
+				SET a.GrossComm = ISNULL(a.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM @AgencyWinloss a
+					INNER JOIN @GrossComm c ON a.custid = c.custid AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
 		END
 
 		IF @isAg = 1
@@ -383,7 +405,11 @@ BEGIN
 			GROUP BY 
 				b.recommend, b.winlostdate, s.ProductID, c.username, c.currency
 
-			;WITH CTE_GrossComm AS (
+			DELETE @GrossComm
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.recommend, b.winlostdate, s.ProductID, SUM(b.BetStake * b.discount) AS GrossComm
 				FROM dbo.bettransRnG b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
@@ -392,8 +418,11 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 2
 				GROUP BY b.recommend, b.winlostdate, s.ProductID
-			
-				UNION ALL
+			END
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.recommend, b.winlostdate, s.ProductID, SUM(b.NetStake * b.discount) AS GrossComm
 				FROM dbo.bettransLC b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
@@ -402,11 +431,15 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 2
 				GROUP BY b.recommend, b.winlostdate, s.ProductID
-			)
-			UPDATE a
-			SET a.GrossComm = c.GrossComm
-			FROM @AgencyWinloss a
-				INNER JOIN CTE_GrossComm c ON a.custid = c.recommend AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
+
+			IF EXISTS (SELECT 1 FROM @GrossComm)
+			BEGIN
+				UPDATE a
+				SET a.GrossComm = ISNULL(a.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM @AgencyWinloss a
+					INNER JOIN @GrossComm c ON a.custid = c.custid AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
 		END
 
 		IF @isMem = 1
@@ -456,7 +489,11 @@ BEGIN
 			GROUP BY 
 				b.CustID, b.winlostdate, s.ProductID, c.username, c.currency
 
-			;WITH CTE_GrossComm AS (
+			DELETE @GrossComm
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.custid, b.winlostdate, s.ProductID, SUM(b.BetStake * b.playerdiscount) AS GrossComm
 				FROM dbo.bettransRnG b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 1
@@ -465,8 +502,11 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 1
 				GROUP BY b.custid, b.winlostdate, s.ProductID
-			
-				UNION ALL
+			END
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO @GrossComm (custid, winlostdate, ProductId, GrossComm)
 				SELECT b.custid, b.winlostdate, s.ProductID, SUM(b.NetStake * b.playerdiscount) AS GrossComm
 				FROM dbo.bettransLC b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.GameId = s.bettype AND s.RefTable = 2
@@ -475,11 +515,15 @@ BEGIN
 					AND b.StatusId IN (111, 112, 113)
 					AND c.roleID = 1
 				GROUP BY b.custid, b.winlostdate, s.ProductID
-			)
-			UPDATE a
-			SET a.GrossComm = c.GrossComm
-			FROM @AgencyWinloss a
-				INNER JOIN CTE_GrossComm c ON a.custid = c.custid AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
+
+			IF EXISTS (SELECT 1 FROM @GrossComm)
+			BEGIN
+				UPDATE a
+				SET a.GrossComm = ISNULL(a.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM @AgencyWinloss a
+					INNER JOIN @GrossComm c ON a.custid = c.custid AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
+			END
 		END
 
 

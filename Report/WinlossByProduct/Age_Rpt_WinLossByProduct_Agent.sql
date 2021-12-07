@@ -54,6 +54,9 @@ BEGIN
 		NumberOfTickets	INT,
 		IsMMR			BIT
 	);
+
+	CREATE TABLE #GrossComm (ProductID TINYINT, bettype INT, GrossComm MONEY)
+
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
 	DECLARE @isTest BIT = 0, @__ProductDetails XML;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -180,7 +183,9 @@ BEGIN
 						ELSE 0 END,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
 
-			;WITH CTE_GrossComm AS (
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
 				SELECT s.ProductID, s.GroupTypeId, SUM(b.BetStake * b.adiscount) AS GrossComm
 				FROM dbo.bettransRnG b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 1
@@ -188,8 +193,11 @@ BEGIN
 					AND b.mrecommend = @CustID
 					AND b.statusID IN (111, 112, 113)
 				GROUP BY s.ProductID, s.GroupTypeId
+			END
 
-				UNION ALL
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
 				SELECT s.ProductID, s.GroupTypeId, SUM(b.NetStake * b.adiscount) AS GrossComm
 				FROM dbo.bettransLC b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 2
@@ -197,16 +205,20 @@ BEGIN
 					AND b.mrecommend = @CustID
 					AND b.statusID IN (111, 112, 113)
 				GROUP BY s.ProductID, s.GroupTypeId
-			)
-			UPDATE t
-			SET t.GrossComm = ISNULL(c.GrossComm, 0)
-			FROM #MAgWinLoss t
-				INNER JOIN (
-					SELECT ProductID, GroupTypeId AS bettype, SUM(GrossComm) AS GrossComm
-					FROM CTE_GrossComm
-					GROUP BY ProductID, GroupTypeId
-				) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+			END
 
+			IF EXISTS (SELECT 1 FROM #GrossComm)
+			BEGIN
+				UPDATE t
+				SET t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM #MAgWinLoss t
+					INNER JOIN (
+						SELECT ProductID, bettype, SUM(GrossComm) AS GrossComm
+						FROM #GrossComm
+						GROUP BY ProductID, bettype
+					) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+			END
+			
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
 			BEGIN
@@ -314,7 +326,11 @@ BEGIN
 						ELSE 0 END,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
 
-			;WITH CTE_GrossComm AS (
+			TRUNCATE TABLE #GrossComm
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
 				SELECT s.ProductID, s.GroupTypeId, SUM(b.BetStake * b.adiscount) AS GrossComm
 				FROM dbo.bettransRnG14 b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 1
@@ -322,8 +338,11 @@ BEGIN
 					AND b.mrecommend = @CustID
 					AND b.statusID IN (111, 112, 113)
 				GROUP BY s.ProductID, s.GroupTypeId
+			END
 
-				UNION ALL
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
 				SELECT s.ProductID, s.GroupTypeId, SUM(b.NetStake * b.adiscount) AS GrossComm
 				FROM dbo.bettransLC14 b WITH (NOLOCK)
 					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 2
@@ -331,15 +350,19 @@ BEGIN
 					AND b.mrecommend = @CustID
 					AND b.statusID IN (111, 112, 113)
 				GROUP BY s.ProductID, s.GroupTypeId
-			)
-			UPDATE t
-			SET t.GrossComm = ISNULL(c.GrossComm, 0)
-			FROM #MAgWinLoss t
-				INNER JOIN (
-					SELECT ProductID, GroupTypeId AS bettype, SUM(GrossComm) AS GrossComm
-					FROM CTE_GrossComm
-					GROUP BY ProductID, GroupTypeId
-				) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+			END
+
+			IF EXISTS (SELECT 1 FROM #GrossComm)
+			BEGIN
+				UPDATE t
+				SET t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM #MAgWinLoss t
+					INNER JOIN (
+						SELECT ProductID, bettype, SUM(GrossComm) AS GrossComm
+						FROM #GrossComm
+						GROUP BY ProductID, bettype
+					) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+			END
 
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
@@ -414,6 +437,10 @@ BEGIN
 	FROM #MAgWinLoss t
 	GROUP BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR
 	ORDER BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR;
+
+	DROP TABLE #GrossComm
+	DROP TABLE #MAgWinLoss
+	DROP TABLE #SportBettype
 
 	SET NOCOUNT OFF;
 END

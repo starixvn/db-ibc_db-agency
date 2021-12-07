@@ -112,7 +112,10 @@ BEGIN
 			SAgComm			MONEY, 
 			SAgTotal		MONEY, 
 			Company			MONEY
-		);    
+		);
+	
+	CREATE TABLE #GrossComm (ProductID INT, TurnoverNoDraw MONEY, GrossComm MONEY)
+	
 	--Avoid Parameter Sniffing for bettrans and sum_winloss    
 	DECLARE @FDate SMALLDATETIME,    
 			@TDate SMALLDATETIME,    
@@ -182,7 +185,9 @@ BEGIN
 				AND b.statusID IN (111, 112, 113)     
 		GROUP BY s.ProductID;
 
-		;WITH CTE_NetTO_GrossComm AS (
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1) -- bettransRnG
+		BEGIN
+			INSERT INTO #GrossComm (ProductID, TurnoverNoDraw, GrossComm)
 			SELECT s.ProductID
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.BetStake ELSE 0 END) AS TurnoverNoDraw
 				,SUM(b.BetStake * b.sdiscount) AS GrossComm
@@ -192,8 +197,11 @@ BEGIN
 				AND srecommend = @CID
 				AND statusID IN (111, 112, 113) 
 			GROUP BY s.ProductID
+		END
 
-			UNION ALL
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 2) -- bettransLC
+		BEGIN
+			INSERT INTO #GrossComm (ProductID, TurnoverNoDraw, GrossComm)
 			SELECT s.ProductID
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.NetStake ELSE 0 END) AS TurnoverNoDraw
 				,SUM(b.NetStake * b.sdiscount) AS GrossComm
@@ -203,14 +211,18 @@ BEGIN
 				AND srecommend = @CID
 				AND statusID IN (111, 112, 113) 
 			GROUP BY s.ProductID
-		)
-		UPDATE t
-		SET t.TurnoverNoDraw = ISNULL(t.TurnoverNoDraw, 0) + ISNULL(c.TurnoverNoDraw, 0)
-			,t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
-		FROM #ComWinLossDetails t
-			INNER JOIN (
-				SELECT ProductID, SUM(GrossComm) AS GrossComm, SUM(TurnoverNoDraw) AS TurnoverNoDraw FROM CTE_NetTO_GrossComm GROUP BY ProductID
-			) c ON t.ProductID = c.ProductID
+		END
+
+		IF EXISTS (SELECT 1 FROM #GrossComm)
+		BEGIN
+			UPDATE t
+			SET t.TurnoverNoDraw = ISNULL(t.TurnoverNoDraw, 0) + ISNULL(c.TurnoverNoDraw, 0)
+				,t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+			FROM #ComWinLossDetails t
+				INNER JOIN (
+					SELECT ProductID, SUM(GrossComm) AS GrossComm, SUM(TurnoverNoDraw) AS TurnoverNoDraw FROM #GrossComm GROUP BY ProductID
+				) c ON t.ProductID = c.ProductID
+		END
 		
 		IF @BalanceUpDay < @FromDate    
 		BEGIN    
@@ -330,5 +342,6 @@ BEGIN
 	ORDER BY Turnover DESC;  
     
 	DROP TABLE #TmpCondSumWL    
-	DROP TABLE #ComWinLossDetails   
+	DROP TABLE #ComWinLossDetails
+	DROP TABLE #GrossComm
 END

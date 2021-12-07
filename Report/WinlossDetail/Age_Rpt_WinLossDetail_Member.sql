@@ -68,6 +68,8 @@ BEGIN
 		NoOfTicket		INT
 	);
 
+	CREATE TABLE #GrossComm (CustId INT, TurnoverNoDraw MONEY, GrossComm MONEY)
+
 	CREATE TABLE #TmpCondSumWL(
 		SportType	INT,
 		BetType		INT
@@ -210,7 +212,9 @@ BEGIN
 			AND Recommend = @CID
 		GROUP BY CustID;
 
-		;WITH CTE_NetTO_GrossComm AS (
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1) -- bettransRnG
+		BEGIN
+			INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 			SELECT b.CustId
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.BetStake ELSE 0 END) AS TurnoverNoDraw
 				,SUM(b.BetStake * b.discount) AS GrossComm
@@ -220,8 +224,11 @@ BEGIN
 				AND statusID IN (111, 112, 113) 
 				AND recommend = @CID
 			GROUP BY b.CustId
+		END
 
-			UNION ALL
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 2) -- bettransLC
+		BEGIN
+			INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 			SELECT b.CustId
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.NetStake ELSE 0 END) AS TurnoverNoDraw
 				,SUM(b.NetStake * b.discount) AS GrossComm
@@ -231,15 +238,19 @@ BEGIN
 				AND statusID IN (111, 112, 113) 
 				AND recommend = @CID
 			GROUP BY b.CustId
-		)
-		UPDATE t
-		SET t.TurnoverNoDraw = ISNULL(t.TurnoverNoDraw, 0) + ISNULL(c.TurnoverNoDraw, 0)
-			,t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
-		FROM #AgWinLossDetails t
-			INNER JOIN (
-				SELECT CustId, SUM(GrossComm) AS GrossComm, SUM(TurnoverNoDraw) AS TurnoverNoDraw FROM CTE_NetTO_GrossComm GROUP BY CustId
-			) c ON t.CustId = c.CustId
+		END
 
+		IF EXISTS (SELECT 1 FROM #GrossComm)
+		BEGIN
+			UPDATE t
+			SET t.TurnoverNoDraw = ISNULL(t.TurnoverNoDraw, 0) + ISNULL(c.TurnoverNoDraw, 0)
+				,t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+			FROM #AgWinLossDetails t
+				INNER JOIN (
+					SELECT CustId, SUM(GrossComm) AS GrossComm, SUM(TurnoverNoDraw) AS TurnoverNoDraw FROM #GrossComm GROUP BY CustId
+				) c ON t.CustId = c.CustId
+		END
+		
 		IF @BalanceUpDay < @FromDate
 		BEGIN
 			SET @FDate = @FromDate;
@@ -395,6 +406,7 @@ BEGIN
 
 	DROP TABLE #AgWinLossDetails;
 	DROP TABLE #TmpCondSumWL;
+	DROP TABLE #GrossComm;
 
 	SET NOCOUNT OFF;
 END 

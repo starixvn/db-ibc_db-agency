@@ -1,5 +1,5 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
+ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
@@ -73,6 +73,8 @@ BEGIN
 		SAgComm			MONEY,
 		NoOfTicket		INT
 	);
+
+	CREATE TABLE #GrossComm (CustId INT, TurnoverNoDraw MONEY, GrossComm MONEY)
 
 	CREATE TABLE #TmpCondSumWL(
 		SportType	INT,
@@ -213,7 +215,9 @@ BEGIN
 			AND b.statusID IN (111, 112, 113) 
 		GROUP BY MRecommend;
 
-		;WITH CTE_NetTO_GrossComm AS (
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1) -- bettransRnG
+		BEGIN
+			INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 			SELECT b.mrecommend AS CustId
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.BetStake ELSE 0 END) AS TurnoverNoDraw
 				,SUM(b.BetStake * b.sdiscount) AS GrossComm
@@ -223,8 +227,11 @@ BEGIN
 				AND statusID IN (111, 112, 113) 
 				AND srecommend = @CID
 			GROUP BY b.mrecommend
+		END
 
-			UNION ALL
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 2) -- bettransLC
+		BEGIN
+			INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 			SELECT b.mrecommend AS CustId
 				,SUM(CASE WHEN s.IsContributionBettype = 0 THEN b.NetStake ELSE 0 END) AS TurnoverNoDraw
 				,SUM(b.NetStake * b.sdiscount) AS GrossComm
@@ -234,15 +241,19 @@ BEGIN
 				AND statusID IN (111, 112, 113) 
 				AND srecommend = @CID
 			GROUP BY b.mrecommend
-		)
-		UPDATE t
-		SET t.TurnoverNoDraw = ISNULL(t.TurnoverNoDraw, 0) + ISNULL(c.TurnoverNoDraw, 0)
-			,t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
-		FROM #SAgWinLossDetails t
-			INNER JOIN (
-				SELECT CustId, SUM(GrossComm) AS GrossComm, SUM(TurnoverNoDraw) AS TurnoverNoDraw FROM CTE_NetTO_GrossComm GROUP BY CustId
-			) c ON t.CustId = c.CustId
+		END
 
+		IF EXISTS (SELECT 1 FROM #GrossComm)
+		BEGIN
+			UPDATE t
+			SET t.TurnoverNoDraw = ISNULL(t.TurnoverNoDraw, 0) + ISNULL(c.TurnoverNoDraw, 0)
+				,t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+			FROM #SAgWinLossDetails t
+				INNER JOIN (
+					SELECT CustId, SUM(GrossComm) AS GrossComm, SUM(TurnoverNoDraw) AS TurnoverNoDraw FROM #GrossComm GROUP BY CustId
+				) c ON t.CustId = c.CustId
+		END
+		
 		IF @BalanceUpDay < @FromDate
 		BEGIN
 			SET @FDate = @FromDate;
@@ -423,6 +434,7 @@ BEGIN
 
 	DROP TABLE #SAgWinLossDetails;
 	DROP TABLE #TmpCondSumWL;
+	DROP TABLE #GrossComm;
 
 	SET NOCOUNT OFF;
 END
