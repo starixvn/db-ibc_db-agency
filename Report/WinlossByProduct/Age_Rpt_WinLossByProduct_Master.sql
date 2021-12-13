@@ -52,7 +52,8 @@ BEGIN
 		SAgWinloss		MONEY, 
 		SAgComm			MONEY, 
 		NumberOfTickets INT,
-		IsMMR			BIT
+		IsMMR			BIT,
+		DateRange		TINYINT -- 1: bettrans, 2: bettrans14
 	);
 
 	CREATE TABLE #GrossComm (ProductID TINYINT, bettype INT, GrossComm MONEY)
@@ -143,7 +144,7 @@ BEGIN
 				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 			END
 
-			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets, DateRange)
 			SELECT  s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
@@ -165,7 +166,8 @@ BEGIN
 					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
 					SUM(swinlost) AS SAgWinloss,
 					ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SAgComm,
-					COUNT(transid) AS NumberOfTickets
+					COUNT(transid) AS NumberOfTickets,
+					1 AS DateRange
 			FROM dbo.bettrans b WITH(NOLOCK)
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
@@ -217,6 +219,7 @@ BEGIN
 						FROM #GrossComm
 						GROUP BY ProductID, bettype
 					) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+				WHERE t.DateRange = 1
 			END
 			
 			-- VS Outright
@@ -286,7 +289,7 @@ BEGIN
 				SET @TDate = @MoveBetsDay;
 			END
 
-			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets)
+			INSERT INTO #SAgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MAgTotal, SAgWinloss, SAgComm, NumberOfTickets, DateRange)
 			SELECT  s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
@@ -308,7 +311,8 @@ BEGIN
 					SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
 					SUM(swinlost) AS SAgWinloss,
 					ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS SAgComm,
-					COUNT(transid) AS NumberOfTickets
+					COUNT(transid) AS NumberOfTickets,
+					2 AS DateRange
 			FROM dbo.bettrans14 b WITH(NOLOCK)
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
@@ -362,6 +366,7 @@ BEGIN
 						FROM #GrossComm
 						GROUP BY ProductID, bettype
 					) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+				WHERE t.DateRange = 2
 			END
 
 			-- VS Outright
