@@ -26,6 +26,7 @@ AS
 		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
 		- 20201202@Malcolm: Separate Bet Types - MMR Odds [RedmineId : #146159]
 		- 20201124@Malcolm: Show sport type name for Virtual Sports 3 [redmine: #131375]
+		- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -50,8 +51,12 @@ BEGIN
 		MemberComm		MONEY, 
 		AgComm			MONEY, 
 		NumberOfTickets INT,
-		IsMMR			BIT
+		IsMMR			BIT,
+		DateRange		TINYINT -- 1: bettrans, 2: bettrans14
 	);
+
+	CREATE TABLE #GrossComm (ProductID TINYINT, bettype INT, GrossComm MONEY)
+
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
 	DECLARE @isTest BIT = 0, @__ProductDetails XML;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -99,10 +104,10 @@ BEGIN
 		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
 	END
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, RefTable TINYINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
 
-	INSERT INTO #SportBettype (ProductID, Bettype, GroupTypeId, SportType, EventType)
-	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.Bettype, s.SportType, f.EventType
+	INSERT INTO #SportBettype (ProductID, Bettype, RefTable, GroupTypeId, SportType, EventType)
+	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.RefTable, f.Bettype, s.SportType, f.EventType
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
 			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23)
@@ -138,7 +143,7 @@ BEGIN
 				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 			END
 
-			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets, DateRange)
 			SELECT	s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
@@ -151,13 +156,18 @@ BEGIN
 						ELSE 0 
 					END AS liveindicator,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END AS IsMMR,
-					SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END) AS GrossComm,
+					SUM(CASE
+							WHEN s.RefTable IN (1, 2) THEN 0
+							WHEN apositiontaking = 1 THEN 0
+							ELSE comm / (1 - apositiontaking)
+						END) AS GrossComm,
 					SUM(ABS(stake)) AS Turnover,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(awinlost) AS AgWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(comm - playercomm) AS AgComm,
-					COUNT(transid) AS NumberOfTickets
+					COUNT(transid) AS NumberOfTickets,
+					1 AS DateRange
 			FROM Bettrans b WITH(NOLOCK)
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5 AND s.EventType = 1
@@ -176,6 +186,43 @@ BEGIN
 					END,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
 
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.BetStake * b.discount) AS GrossComm
+				FROM dbo.bettransRnG b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 1
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.recommend = @custid
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+			END
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.NetStake * b.discount) AS GrossComm
+				FROM dbo.bettransLC b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 2
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.recommend = @custid
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+			END
+
+			IF EXISTS (SELECT 1 FROM #GrossComm)
+			BEGIN
+				UPDATE t
+				SET t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM #AgWinLoss t
+					INNER JOIN (
+						SELECT ProductID, bettype, SUM(GrossComm) AS GrossComm
+						FROM #GrossComm
+						GROUP BY ProductID, bettype
+					) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+				WHERE t.DateRange = 1
+			END
+			
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
 			BEGIN
@@ -245,7 +292,7 @@ BEGIN
 				SET @TDate = @MoveBetsDay;
 			END
 
-			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets)
+			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets, DateRange)
 			SELECT  s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
@@ -258,13 +305,18 @@ BEGIN
 						ELSE 0 
 					END AS liveindicator,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END AS IsMMR,
-					SUM(CASE WHEN apositiontaking = 1 THEN 0 ELSE comm/(1 - apositiontaking) END) AS GrossComm,
+					SUM(CASE
+							WHEN s.RefTable IN (1, 2) THEN 0
+							WHEN apositiontaking = 1 THEN 0
+							ELSE comm / (1 - apositiontaking)
+						END) AS GrossComm,
 					SUM(ABS(stake)) AS Turnover,
 					SUM(winlost - actual_stake) AS MemberWinLoss,
 					SUM(awinlost) AS AgWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(comm - playercomm) AS AgComm,
-					COUNT(transid) AS NumberOfTickets
+					COUNT(transid) AS NumberOfTickets,
+					2 AS DateRange
 			FROM Bettrans14 b WITH(NOLOCK)
 				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
@@ -282,6 +334,45 @@ BEGIN
 						ELSE 0
 					END,
 					CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN 1 ELSE 0 END
+
+			TRUNCATE TABLE #GrossComm
+			
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 1) -- bettransRnG
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.BetStake * b.discount) AS GrossComm
+				FROM dbo.bettransRnG14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 1
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.recommend = @custid
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+			END
+
+			IF EXISTS (SELECT 1 FROM #SportBettype WHERE RefTable = 2) -- bettransLC
+			BEGIN
+				INSERT INTO #GrossComm (ProductID, bettype, GrossComm)
+				SELECT s.ProductID, s.GroupTypeId, SUM(b.NetStake * b.discount) AS GrossComm
+				FROM dbo.bettransLC14 b WITH (NOLOCK)
+					INNER JOIN #SportBettype s ON b.gameID = s.Bettype AND s.RefTable = 2
+				WHERE b.winlostdate BETWEEN @FDate AND @TDate
+					AND b.recommend = @custid
+					AND b.statusID IN (111, 112, 113)
+				GROUP BY s.ProductID, s.GroupTypeId
+			END
+
+			IF EXISTS (SELECT 1 FROM #GrossComm)
+			BEGIN
+				UPDATE t
+				SET t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+				FROM #AgWinLoss t
+					INNER JOIN (
+						SELECT ProductID, bettype, SUM(GrossComm) AS GrossComm
+						FROM #GrossComm
+						GROUP BY ProductID, bettype
+					) c ON t.ProductID = c.ProductID AND t.bettype = c.bettype
+				WHERE t.DateRange = 2
+			END
 
 			-- VS Outright
 			IF EXISTS (SELECT ProductId FROM #SportBettype WHERE ProductID = 5 AND EventType = 3)
@@ -359,6 +450,10 @@ BEGIN
 	FROM #AgWinLoss t
 	GROUP BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR
 	ORDER BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR;
+
+	DROP TABLE #AgWinLoss
+	DROP TABLE #GrossComm
+	DROP TABLE #SportBettype
 
 	SET NOCOUNT OFF;
 END

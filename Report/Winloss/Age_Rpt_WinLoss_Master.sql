@@ -21,6 +21,7 @@ AS
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
+		- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -43,6 +44,8 @@ BEGIN
 		SAgWinlost	MONEY,
 		Comm		MONEY
 	);
+
+	CREATE TABLE #GrossComm (CustId INT, GrossComm MONEY)
   
 	CREATE TABLE #TmpCondSumWL(
 		SportType	INT,
@@ -124,15 +127,10 @@ BEGIN
 			@TDate = @ToDate,
 			@CID = @custid;
 
-	DECLARE @SportBettypeMatrix TABLE(
-		BetType	smallint
-	);
+	DECLARE @SportBettypeMatrix TABLE (BetType SMALLINT, RefTable TINYINT);
 
-	INSERT INTO @SportBettypeMatrix(
-		BetType
-	)
-	SELECT f.BetType
-	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+	INSERT INTO @SportBettypeMatrix (BetType, RefTable)
+	SELECT f.BetType, f.RefTable FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
 		LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID
 	WHERE EXISTS(SELECT 1
 				 WHERE e.ProductId IS NULL 
@@ -153,7 +151,11 @@ BEGIN
 		INSERT INTO #SAgWinLoss(CustID, TurnOver, GrossComm, MAgTotal, SAgWinlost, Comm)
 		SELECT  mrecommend AS CustID,
 				SUM(ABS(b.stake)) AS TurnOver,
-				SUM(CASE WHEN tpositiontaking = 1 THEN 0 ELSE scomm/(1 - tpositiontaking) END) AS GrossComm,
+				SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						WHEN tpositiontaking = 1 THEN 0
+						ELSE scomm/(1 - tpositiontaking)
+					END) AS GrossComm,
 				SUM(mwinlost + awinlost + acomm + winlost - actual_stake) AS MAgTotal,
 				SUM(swinlost) AS SAgWinlost,
 				ISNULL(SUM(scomm), 0) - ISNULL(SUM(acomm), 0) AS Comm
@@ -162,8 +164,42 @@ BEGIN
 		WHERE SRecommend = @CID 
 			AND  winlostdate BETWEEN @FDate AND @TDate 
 			AND  b.statusID IN (111, 112, 113)  
-		GROUP BY mrecommend, b.bettype;
-   
+		GROUP BY mrecommend;
+
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1) -- bettransRnG
+		BEGIN
+			INSERT INTO #GrossComm (CustId, GrossComm)
+			SELECT b.mrecommend AS CustId, SUM(b.BetStake * b.sdiscount) AS GrossComm
+			FROM dbo.bettransRnG b WITH (NOLOCK)
+				INNER JOIN @SportBettypeMatrix s ON b.gameId = s.Bettype AND s.RefTable = 1
+			WHERE b.srecommend = @CID 
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND b.statusID IN (111, 112, 113)
+			GROUP BY b.mrecommend
+		END
+
+		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 2) -- bettransLC
+		BEGIN
+			INSERT INTO #GrossComm (CustId, GrossComm)
+			SELECT b.mrecommend AS CustId, SUM(b.NetStake * b.sdiscount) AS GrossComm
+			FROM dbo.bettransLC b WITH (NOLOCK)
+				INNER JOIN @SportBettypeMatrix s ON b.gameId = s.Bettype AND s.RefTable = 2
+			WHERE b.srecommend = @CID 
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND b.statusID IN (111, 112, 113)
+			GROUP BY b.mrecommend
+		END
+
+		IF EXISTS (SELECT 1 FROM #GrossComm)
+		BEGIN
+			UPDATE t
+			SET t.GrossComm = ISNULL(t.GrossComm, 0) + ISNULL(c.GrossComm, 0)
+			FROM #SAgWinLoss t
+				INNER JOIN (
+					SELECT CustId, SUM(GrossComm) AS GrossComm FROM #GrossComm GROUP BY CustId
+				) c ON t.CustId = c.CustId
+		END
+		
 		IF @BalanceUpDay < @FromDate
 		BEGIN
 			SET @FDate = @FromDate;
@@ -249,6 +285,10 @@ BEGIN
 		INNER JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID   
 	GROUP BY w.CustID, c.UserName  
 	ORDER BY c.Username;
+
+	DROP TABLE #GrossComm
+	DROP TABLE #SAgWinLoss
+	DROP TABLE #TmpCondSumWL
 
 	SET NOCOUNT OFF;
 END
