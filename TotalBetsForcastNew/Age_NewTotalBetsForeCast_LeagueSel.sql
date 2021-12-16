@@ -15,6 +15,7 @@ ALTER PROCEDURE [dbo].[Age_NewTotalBetsForeCast_LeagueSel] (
 		- 20170816@Percy: Change data type of Sporttype [RedmineID: #73545]
 		- 20200512@Sophia: Change datatype leaguename to nvarchar(500) [Redmine: #134020]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20211115@Malcolm: Exclude Leagues are deleted [Redmine: #164321]
 	
 	Parameter's Explanation:
 			
@@ -47,8 +48,11 @@ BEGIN
 										WHEN @IsLive = 1 AND m.kickofftime <= @timeNow	THEN 1
 									ELSE 0
 								END	
+							AND m.IsDeleted <> 1
+							AND o.IsDeleted <> 1
 				)
 			AND l.isTest= CASE WHEN @isshowall = 1 THEN l.isTest ELSE @isshowall END
+			AND l.IsDeleted <> 1
 	
 	-- filter by main league
 	DELETE d
