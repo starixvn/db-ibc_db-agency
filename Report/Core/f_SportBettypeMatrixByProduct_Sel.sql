@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBEXT-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="" isFunction="1" isNested="1"></info>*/
 USE [bodb02]
 GO
 
@@ -16,6 +16,7 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrixByProduct_Sel]
 	Revisions:
 		- 20170220@Paul: Return more columns [RedmineID: #68723]
 		- 20170812@Percy: Add new server: DBACC.bodb02 [RedmineID: #66992]
+		- 20170830@Percy: Add new server: DBEXT.bodb02 [RedmineID: #66992]
 
 	Paramters Explanation:
  		@ProductID: list of products
