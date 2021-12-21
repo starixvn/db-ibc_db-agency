@@ -43,6 +43,7 @@ Revisions:
 	- 20180720@Paul: Enhance code, split into 3 smaller SPs: DBTXN.bodb02.Age_CustomerSelCreditBalNetPosition_Ag, DBCUST.CustDB.Age_CustomerSelCreditBalClosedReason_Ag [Redmine: #97678]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20210910@Elodie: Alpha - Enhance customer's experience with auto clear given credit - [Redmine: #160429]
 
 Param's Explanation:
 
@@ -323,8 +324,9 @@ BEGIN
 			,isnull(ci.credit, 0) AS credit
 			,CONVERT(NVARCHAR(30), c.lastlogged, 121) AS lastlogged
 			,ci.Locked
+			,c.creatdate AS CreatedDate
 		FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
-			JOIN Customer c (NOLOCK) ON ci.custid = c.custid
+			INNER JOIN Customer c (NOLOCK) ON ci.custid = c.custid
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid
 			LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
 		ORDER BY RowNumber
