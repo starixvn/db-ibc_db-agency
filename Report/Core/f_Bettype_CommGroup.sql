@@ -43,6 +43,7 @@ AS
 		- 20210412@Malcolm: Add Time Machine HDP bettype (229) [RedmineID: #152749]
 		- 20210810@Evan: Add Bitcoin product - [Redmine: #159036]	
 		- 20210305@Malcolm: add new bettype for cricket AIO Phase 2 - [RedminedId : #154810]
+		- 20211214@Evan: Add New Games for PP - [Redmine: #165393]	
 
 	- Columns:
 		- CommGroup:
@@ -156,6 +157,7 @@ FROM (
 		OR typeid BETWEEN 2401 AND 2499
 		OR typeid BETWEEN 4001 AND 4100 -- Macau Games
 		OR typeid BETWEEN 4101 AND 4300 -- PP
+		OR typeid BETWEEN 6701 AND 7000 -- PP
 		OR typeid BETWEEN 4301 AND 4600 -- SG
 		OR typeid BETWEEN 5500 AND 5599 -- RNG War
 		OR typeid BETWEEN 5601 AND 5699 -- ION
