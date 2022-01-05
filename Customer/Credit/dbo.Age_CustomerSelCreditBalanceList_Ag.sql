@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_Ag]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -44,6 +44,7 @@ Revisions:
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210910@Elodie: Alpha - Enhance customer's experience with auto clear given credit - [Redmine: #160429]
+	- 20220105@Sophia: Workaround, change SP to DBTXN [Redmine: #167057]
 
 Param's Explanation:
 
@@ -128,14 +129,14 @@ BEGIN
 			,cs.IsSuspended
 			,ci.credit
 			,cs.Locked
-		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		FROM CUSTDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
 				SELECT 
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CUSTDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs
 		WHERE 1 = ci.roleid 
@@ -177,14 +178,14 @@ BEGIN
 			,cs.IsSuspended
 			,ci.credit
 			,cs.Locked
-		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		FROM CUSTDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
 				SELECT 
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CUSTDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs
 		WHERE 1 = ci.roleid 
@@ -326,7 +327,7 @@ BEGIN
 			,ci.Locked
 			,c.creatdate AS CreatedDate
 		FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
-			INNER JOIN Customer c (NOLOCK) ON ci.custid = c.custid
+			INNER JOIN CUSTDB.dbo.Customer c (NOLOCK) ON ci.custid = c.custid
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid
 			LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid
 		ORDER BY RowNumber
