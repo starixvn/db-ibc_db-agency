@@ -27,12 +27,18 @@ AS
 		- 20201202@Malcolm: Separate Bet Types - MMR Odds [RedmineId : #146159]
 		- 20201124@Malcolm: Show sport type name for Virtual Sports 3 [redmine: #131375]
 		- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
+		- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 	
 	Param's Explanation:
-	 @ProductDetails:		
+	  @ProductDetails:		
 		<ROOT>
-				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "0"/>
-				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "4298"/>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "0" LeagueGroupID = "0" TicketType = "0"/>
+				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "4298" LeagueGroupID = "0" TicketType = "0"/>
+				<ProductDetail ProductId = "1" Sporttype = "0" Bettype = "0" LeagueGroupID = "0" TicketType = "0"/>
+				<ProductDetail ProductId = "1" Sporttype = "1" Bettype = "0" LeagueGroupID = "42,74" TicketType = "0"/>
+				<ProductDetail ProductId = "1" Sporttype = "1" Bettype = "0" LeagueGroupID = "113" TicketType = "0"/>
+				<ProductDetail ProductId = "1" Sporttype = "2" Bettype = "0" LeagueGroupID = "42,74" TicketType = "0"/>
+				<ProductDetail ProductId = "1" Sporttype = "2" Bettype = "0" LeagueGroupID = "113" TicketType = "0"/>
 		</ROOT>	
 */
 
@@ -57,57 +63,21 @@ BEGIN
 
 	CREATE TABLE #GrossComm (ProductID TINYINT, bettype INT, GrossComm MONEY)
 
-	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
+	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype SMALLINT,Bettype INT, LeagueGroupID SMALLINT, ticketType TINYINT)
 	DECLARE @isTest BIT = 0, @__ProductDetails XML;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
 
-	IF ISNULL(@ProductDetails,'') = ''
-	BEGIN 
-		INSERT INTO @ExistingProductDetails
-		(
-			ProductId
-			,Sporttype
-			,Bettype
-		)
-		VALUES(NULL, NULL, NULL)
-	END
-	ELSE IF ISNULL(@ProductDetails,'')  = 'All'
-	BEGIN
-		INSERT INTO @ExistingProductDetails
-		(
-			ProductId
-			,Sporttype
-			,Bettype
-		)
-		SELECT 
-			ProductId
-			,Sporttype
-			,Bettype
-		FROM dbo.f_GetProductDetail() f
-	END
-	ELSE 		
-	BEGIN	
-		SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
+	INSERT INTO @ExistingProductDetails(ProductId,Sporttype,Bettype,LeagueGroupID,TicketType)
+	SELECT ProductId,Sporttype,Bettype,LeagueGroupID,TicketType
+	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails)
 
-		INSERT INTO @ExistingProductDetails
-		(
-			ProductId
-			,Sporttype
-			,Bettype
-		)
-		SELECT 
-			t.c.value('(@ProductId)[1]', 'SMALLINT') AS ProductID
-			, t.c.value('(@Sporttype)[1]', 'SMALLINT') AS Sporttype
-			, t.c.value('(@Bettype)[1]', 'SMALLINT') AS Bettype
-		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
-	END
+	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, RefTable TINYINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT, LeagueGroupID SMALLINT, ticketType TINYINT, sporttype_filter SMALLINT);
 
-	CREATE TABLE #SportBettype (ProductID TINYINT, Bettype SMALLINT, RefTable TINYINT, GroupTypeId INT, SportType SMALLINT, EventType TINYINT);
-
-	INSERT INTO #SportBettype (ProductID, Bettype, RefTable, GroupTypeId, SportType, EventType)
-	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.RefTable, f.Bettype, s.SportType, f.EventType
+	INSERT INTO #SportBettype (ProductID, Bettype, RefTable, GroupTypeId, SportType, EventType, LeagueGroupID, ticketType, sporttype_filter)
+	SELECT ISNULL(p.GroupProductId, f.ProductID), f.Bettype, f.RefTable, f.Bettype, s.SportType, f.EventType, ISNULL(e.LeagueGroupID,0), ISNULL(e.ticketType,0), ISNULL(e.Sporttype,0) 
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel (@ProductIds, @isTest) f
 		LEFT JOIN dbo.SportBettypeMatrix s WITH(NOLOCK)
 			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23)
@@ -143,6 +113,58 @@ BEGIN
 				SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 			END
 
+			; WITH cte_bettrans AS
+			(
+				SELECT  b.bettype,
+						b.liveindicator,
+						b.oddstype,
+						b.apositiontaking,
+						b.matchid,
+						SUM(ABS(stake)) stake,
+						SUM(awinlost) awinlost, 
+						SUM(playercomm) playercomm, 
+						SUM(winlost) winlost, 
+						SUM(actual_stake) actual_stake,
+						SUM(comm) comm,
+						CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+									) AND b.betdaqid <> -2 THEN m.sporttype
+						ELSE 0 END sporttype_filter, 
+						CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+									) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+						ELSE 0 END LeagueGroupID,
+						CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType,
+						COUNT(1) AS NumberOfTickets
+				FROM	dbo.bettrans b WITH(NOLOCK)
+					LEFT JOIN	dbo.match m WITH(NOLOCK)  ON b.matchid = m.matchid
+					LEFT JOIN   dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
+				WHERE winlostdate BETWEEN @FDate AND @TDate
+					AND statusID IN (111, 112, 113)
+					AND recommend = @custid
+				GROUP BY	b.bettype,
+							b.liveindicator,
+							b.oddstype,
+							b.apositiontaking,
+							b.matchid,
+							CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+									) AND b.betdaqid <> -2 THEN m.sporttype
+							ELSE 0 END, 
+							CASE WHEN ( 
+										(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+											OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+											OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+										) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+							ELSE 0 END,
+							CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END
+			)
 			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets, DateRange)
 			SELECT	s.ProductID,
 					s.GroupTypeId,
@@ -166,14 +188,11 @@ BEGIN
 					SUM(awinlost) AS AgWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(comm - playercomm) AS AgComm,
-					COUNT(transid) AS NumberOfTickets,
+					SUM(NumberOfTickets) AS NumberOfTickets,
 					1 AS DateRange
-			FROM Bettrans b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
+			FROM cte_bettrans b WITH(NOLOCK)
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND  b.sporttype_filter = s.sporttype_filter AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType  AND  (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5 AND s.EventType = 1
-			WHERE winlostdate BETWEEN @FDate AND @TDate
-				AND statusID IN (111, 112, 113)
-				AND recommend = @custid
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN ISNULL(m.sporttype, b.matchId)
@@ -292,6 +311,58 @@ BEGIN
 				SET @TDate = @MoveBetsDay;
 			END
 
+			; WITH cte_bettrans14 AS
+			(
+				SELECT  b.bettype,
+						b.liveindicator,
+						b.oddstype,
+						b.apositiontaking,
+						b.matchid,
+						SUM(ABS(stake)) stake,
+						SUM(awinlost) awinlost, 
+						SUM(playercomm) playercomm, 
+						SUM(winlost) winlost, 
+						SUM(actual_stake) actual_stake,
+						SUM(comm) comm,
+						CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+									) AND b.betdaqid <> -2 THEN m.sporttype
+						ELSE 0 END sporttype_filter, 
+						CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+									) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+						ELSE 0 END LeagueGroupID,
+						CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType,
+						COUNT(1) AS NumberOfTickets
+				FROM	dbo.bettrans14 b WITH(NOLOCK)
+					LEFT JOIN	dbo.match m WITH(NOLOCK)  ON b.matchid = m.matchid
+					LEFT JOIN   dbo.League l WITH(NOLOCK) ON m.leagueid = l.leagueid
+				WHERE winlostdate BETWEEN @FDate AND @TDate
+					AND statusID IN (111, 112, 113)
+					AND recommend = @custid
+				GROUP BY	b.bettype,
+							b.liveindicator,
+							b.oddstype,
+							b.apositiontaking,
+							b.matchid,
+							CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+									) AND b.betdaqid <> -2 THEN m.sporttype
+							ELSE 0 END, 
+							CASE WHEN ( 
+										(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+											OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+											OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+										) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+							ELSE 0 END,
+							CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END
+			)
 			INSERT INTO #AgWinLoss(ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, Turnover, MemberWinLoss, AgWinLoss, MemberComm, AgComm, NumberOfTickets, DateRange)
 			SELECT  s.ProductID,
 					s.GroupTypeId,
@@ -315,14 +386,11 @@ BEGIN
 					SUM(awinlost) AS AgWinLoss,
 					SUM(playercomm) AS MemberComm,
 					SUM(comm - playercomm) AS AgComm,
-					COUNT(transid) AS NumberOfTickets,
+					SUM(NumberOfTickets) AS NumberOfTickets,
 					2 AS DateRange
-			FROM Bettrans14 b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND (ProductID <> 5 OR EventType <> 3))
+			FROM cte_bettrans14 b WITH(NOLOCK)
+				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND  b.sporttype_filter = s.sporttype_filter AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType  AND  (ProductID <> 5 OR EventType <> 3))
 				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
-			WHERE winlostdate BETWEEN @FDate AND @TDate
-				AND statusID IN (111, 112, 113)
-				AND recommend = @custid
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
 						WHEN 5 THEN ISNULL(m.sporttype, b.matchid)

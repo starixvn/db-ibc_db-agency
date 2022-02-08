@@ -8,6 +8,7 @@ AS
   
 	Revisions:
 		- 20200819@Malcolm: Initialize Sps - [Redmine: #139575]
+		- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 		
 */
 
@@ -19,5 +20,7 @@ BEGIN
 		,Sporttype
 		,Bettype
 		,[Order]
+		,LeagueGroupID
+		,TicketType
 	FROM dbo.f_GetProductDetail()
 END
