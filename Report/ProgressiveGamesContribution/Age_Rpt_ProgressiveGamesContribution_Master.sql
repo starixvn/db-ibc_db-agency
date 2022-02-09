@@ -66,10 +66,10 @@ BEGIN
 			AND b.statusID IN (111, 112, 113)
 		GROUP BY s.ProductId, s.bettype
 		
-		IF EXISTS (SELECT val FROM strSplit (@ProductIds,',') WHERE val = 32) 
+		IF EXISTS (SELECT val FROM strSplit (@ProductIds,',') WHERE val IN (32,36)) 
 		INSERT INTO #Contribution (ProductId, BetType, TurnOver, Contribution, ContributionSuper, ContributionMaster, ContributionAgent)
 		SELECT
-			32 AS ProductId, bb.GameId,
+			sb.ProductId, bb.GameId,
 			SUM(ISNULL(bc.BetStake, 0)),
 			SUM(ISNULL(bc.ContributionStake3rd, 0)),
 			SUM(ISNULL(bc.swinlost, 0)),
@@ -77,30 +77,12 @@ BEGIN
 			SUM(ISNULL(bc.awinlost, 0))
 		FROM dbo.bettransRNG bc WITH (NOLOCK)
 			INNER JOIN dbo.bettransRNG bb WITH (NOLOCK) ON bc.RefNo2 = bb.TransId
+			INNER JOIN @SportBettypeMatrix sb ON bb.GameId = sb.bettype AND sb.ProductID IN(32,36)
 		WHERE bc.srecommend = @CustID
 			AND bc.winlostdate BETWEEN @FDate AND @TDate
 			AND bc.statusID IN (111, 112, 113)
-			AND EXISTS(SELECT sc.ProductID FROM @SportBettypeMatrix sc WHERE bc.GameId = sc.ContributionBettype AND sc.ProductID = 32 )
-			AND EXISTS(SELECT sb.ProductID FROM @SportBettypeMatrix sb WHERE bb.GameId = sb.bettype AND sb.ProductID = 32 )
-		GROUP BY bb.GameId
-
-		IF EXISTS (SELECT val FROM strSplit (@ProductIds,',') WHERE val = 36) 
-		INSERT INTO #Contribution (ProductId, BetType, TurnOver, Contribution, ContributionSuper, ContributionMaster, ContributionAgent)
-		SELECT
-			36 AS ProductId, bb.GameId,
-			SUM(ISNULL(bc.BetStake, 0)),
-			SUM(ISNULL(bc.ContributionStake3rd, 0)),
-			SUM(ISNULL(bc.swinlost, 0)),
-			SUM(ISNULL(bc.mwinlost, 0)),
-			SUM(ISNULL(bc.awinlost, 0))
-		FROM dbo.bettransRNG bc WITH (NOLOCK)
-			INNER JOIN dbo.bettransRNG bb WITH (NOLOCK) ON bc.RefNo2 = bb.TransId
-		WHERE bc.srecommend = @CustID
-			AND bc.winlostdate BETWEEN @FDate AND @TDate
-			AND bc.statusID IN (111, 112, 113)
-			AND EXISTS(SELECT sc.ProductID FROM @SportBettypeMatrix sc WHERE bc.GameId = sc.ContributionBettype AND sc.ProductID = 36 )
-			AND EXISTS(SELECT sb.ProductID FROM @SportBettypeMatrix sb WHERE bb.GameId = sb.bettype AND sb.ProductID = 36 )
-		GROUP BY bb.GameId
+			AND EXISTS(SELECT sc.ProductID FROM @SportBettypeMatrix sc WHERE bc.GameId = sc.ContributionBettype AND sc.ProductID IN(32,36))
+		GROUP BY bb.GameId,sb.ProductId
 	END
 
 	IF @FromDate <= @MoveBetsDay
