@@ -47,6 +47,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20210512@Malcolm: Add AdvantPlay Product [redmine: #154256]
 		- 20210609@Malcolm: Add AE Sexy - [Redmine: #156239]	
 		- 20210810@Evan: Add Bitcoin product - [Redmine: #159036]	
+		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
 
 	Paramters Explanation:
  		@ProductID: list of products
@@ -72,7 +73,9 @@ RETURN
 				(32, 248, 4297), -- PP Jackpot Contribution
 				(32, 248, 4298), -- PP Jackpot Prize
 				(34, 165, 0), -- Card Club
-				(36, 247, 0), -- Spadegaming
+				(36, 247, 0), -- SG Normal Bet
+				(36, 247, 4599), -- SG Jackpot Contribution
+				(36, 247, 4600), -- SG Jackpot Prize
 				(38, 245, 0), -- Virtual Games
 				(39, 244, 0), -- SA Gaming
 				(42, 200, 0), -- Saba.club Normal Bets
