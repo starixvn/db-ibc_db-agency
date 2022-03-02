@@ -67,6 +67,12 @@ BEGIN
 	DECLARE @isTest BIT = 0, @__ProductDetails XML;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
+	DECLARE @SeparateSabaSport_Cutoff DATE 
+
+	SELECT @SeparateSabaSport_Cutoff = CutoffDate
+	FROM dbo.f_GetCutoffDate()
+	WHERE TypeName = 'SabaSport'
+
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
 
@@ -130,13 +136,13 @@ BEGIN
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									) AND b.betdaqid <> -2 THEN m.sporttype
+									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 						ELSE 0 END sporttype_filter, 
 						CASE WHEN ( 
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
 						ELSE 0 END LeagueGroupID,
 						CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType,
 						COUNT(1) AS NumberOfTickets
@@ -155,13 +161,13 @@ BEGIN
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									) AND b.betdaqid <> -2 THEN m.sporttype
+									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 							ELSE 0 END, 
 							CASE WHEN ( 
 										(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 											OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 											OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-										) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+										) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
 							ELSE 0 END,
 							CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END
 			)
@@ -191,7 +197,7 @@ BEGIN
 					SUM(NumberOfTickets) AS NumberOfTickets,
 					1 AS DateRange
 			FROM cte_bettrans b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND  b.sporttype_filter = s.sporttype_filter AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType  AND  (ProductID <> 5 OR EventType <> 3))
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype AND (s.ProductID <> 5 OR s.EventType <> 3) AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype_filter = s.sporttype_filter AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
 				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5 AND s.EventType = 1
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
@@ -328,13 +334,13 @@ BEGIN
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									) AND b.betdaqid <> -2 THEN m.sporttype
+									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 						ELSE 0 END sporttype_filter, 
 						CASE WHEN ( 
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
 						ELSE 0 END LeagueGroupID,
 						CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType,
 						COUNT(1) AS NumberOfTickets
@@ -353,13 +359,13 @@ BEGIN
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									) AND b.betdaqid <> -2 THEN m.sporttype
+									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 							ELSE 0 END, 
 							CASE WHEN ( 
 										(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 											OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 											OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-										) AND b.betdaqid <> -2 THEN l.LeagueGroupID
+										) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
 							ELSE 0 END,
 							CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END
 			)
@@ -389,7 +395,7 @@ BEGIN
 					SUM(NumberOfTickets) AS NumberOfTickets,
 					2 AS DateRange
 			FROM cte_bettrans14 b WITH(NOLOCK)
-				INNER JOIN #SportBettype s ON (b.bettype = s.Bettype AND  b.sporttype_filter = s.sporttype_filter AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType  AND  (ProductID <> 5 OR EventType <> 3))
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype AND (s.ProductID <> 5 OR s.EventType <> 3) AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype_filter = s.sporttype_filter AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
 				LEFT JOIN dbo.match14 m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5
 			GROUP BY s.ProductID, s.GroupTypeId,
 					CASE s.ProductID
