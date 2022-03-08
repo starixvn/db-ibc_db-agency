@@ -12,6 +12,7 @@ AS
 		- 20200908@Malcolm : Report Enhancement for Jackpot Product Filter [RedmineID : #139575]
 		- 20210609@Malcolm: Add AE Sexy - [Redmine: #156239]	
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
+		- 20220124@Evan: Add Allbet Promotion - [Redmine: #166981]
 		
 */
 RETURN
@@ -30,4 +31,8 @@ RETURN
 	SELECT 'ProductDetail' AS RefId, '7' AS ResourceId, 36 AS ProductId, 247 AS Sporttype, 4599 AS Bettype, 7 AS [Order]	
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '8' AS ResourceId, 36 AS ProductId, 247 AS Sporttype, 4600 AS Bettype, 8 AS [Order]	
+	UNION ALL   
+	SELECT 'ProductDetail' AS RefId, '9' AS ResourceId, 21 AS ProductId, 211 AS Sporttype, 0 AS Bettype, 9 AS [Order]   
+	UNION ALL   
+	SELECT 'ProductDetail' AS RefId, '10' AS ResourceId, 21 AS ProductId, 211 AS Sporttype, 2499 AS Bettype, 10 AS [Order]  
 	

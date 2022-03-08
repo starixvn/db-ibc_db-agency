@@ -48,7 +48,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20210609@Malcolm: Add AE Sexy - [Redmine: #156239]	
 		- 20210810@Evan: Add Bitcoin product - [Redmine: #159036]	
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
-
+		- 20220124@Evan: Add Allbet Promotion - [Redmine: #166981]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -63,7 +63,8 @@ RETURN
 				(8, 202, 0), --Keno
 				(12, 255, 0), --Gold Deluxe
 				(15, 204, 0), --Colossus Bets
-				(21, 211, 0), --Allbet
+				(21, 211, 0), --Allbet Normal Bets
+				(21, 211, 2499), --Allbet Promotion
 				(22, 212, 0), --Macau Games
 				(23, 213, 0), --NG2
 				(24, 219, 0), --Fishing World
