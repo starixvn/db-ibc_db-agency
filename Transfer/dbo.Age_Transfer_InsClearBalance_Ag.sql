@@ -62,6 +62,7 @@ Revisions:
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 
 Param's Explanation:
 • @FromCustID: list from custid
@@ -210,15 +211,15 @@ END
 ELSE
 BEGIN
 	INSERT INTO #custid (CustId)
-	SELECT CONVERT(INT, val) AS CustId
-	FROM dbo.strSplit(@ToCustIDs, ',')
+	SELECT CONVERT(INT, value) AS CustId
+	FROM STRING_SPLIT(@ToCustIDs, ',')
 END
 
 /* *********** Calculating balance *********** */
 /* Note: using recommend = @AgentId on bettrans, bettransRnG, bettransLC, translog to using index on recommend column */
 
   --TOTAL BALANCE INCLUDING TODAY BALANCE 
- IF (SELECT srecommend FROM CustDB.dbo.custInfo (NOLOCK) WHERE custid = @AgentID AND roleid = 2) IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@SuperIDsTransferTotal, ','))
+ IF (SELECT srecommend FROM CustDB.dbo.custInfo (NOLOCK) WHERE custid = @AgentID AND roleid = 2) IN (SELECT CONVERT(INT,value) FROM STRING_SPLIT(@SuperIDsTransferTotal, ','))
  BEGIN 
 	-- bettransRnG
 	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)

@@ -52,6 +52,7 @@ Revisions:
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -146,8 +147,8 @@ SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
 DECLARE @tblCustIds TABLE (CustId INT)
 
 INSERT INTO @tblCustIds (CustId)
-select convert(int, val) 
-from dbo.strSplit (@ToCustIDs, ',' ) 
+select convert(int, value) 
+from STRING_SPLIT (@ToCustIDs, ',' ) 
 
 -- Get bettype --
 DECLARE @isTest BIT = 0
@@ -187,7 +188,7 @@ BEGIN
 END
   
  --MASTER IS ALLOWED TO TRANSFER TOTAL BALANCE INCLUDING TODAY BALANCE 
- IF (SELECT srecommend FROM CustDB.dbo.custinfo (NOLOCK) WHERE custid = @MasterID AND ROLEid = 3 ) IN  (SELECT CONVERT(INT,val) FROM dbo.strSplit(@SuperIDsTransferTotal, ','))
+ IF (SELECT srecommend FROM CustDB.dbo.custinfo (NOLOCK) WHERE custid = @MasterID AND ROLEid = 3 ) IN  (SELECT CONVERT(INT,value) FROM STRING_SPLIT(@SuperIDsTransferTotal, ','))
 BEGIN
 	-- bettransRNG
 	INSERT INTO #BalanceInfo (CustId, Balance)

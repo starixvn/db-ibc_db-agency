@@ -56,6 +56,7 @@ Revisions:
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -137,7 +138,7 @@ SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
 DECLARE @tblCustIds TABLE (CustId INT)
 
 INSERT INTO @tblCustIds (CustId)
-select convert(int, val) from dbo.strSplit (@ToCustIDs, ',')
+SELECT CONVERT(INT, value) FROM STRING_SPLIT (@ToCustIDs, ',')
 
 -- Get bettype --
 DECLARE @isTest BIT = 0
@@ -185,7 +186,7 @@ WHERE c.roleid = 2
 	AND EXISTS (SELECT 1 FROM #mrecommend m WHERE c.mrecommend = m.CustId)
 
  --Allow some IDs to transfer total balance including the balance of today
- IF @SAgID IN (select convert(int, val) from dbo.strSplit (@SuperIDsTransferTotal, ','))
+ IF @SAgID IN (SELECT CONVERT(INT, value) from STRING_SPLIT(@SuperIDsTransferTotal, ','))
  BEGIN 
 	-- bettransRNG
 	INSERT INTO #BalanceInfo (CustId, Balance)
