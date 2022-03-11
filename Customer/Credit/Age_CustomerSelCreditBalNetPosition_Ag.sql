@@ -16,6 +16,7 @@ AS
 	Revisions:
 		- 20180720@Paul: Create new, splitted from DBAGE.bodb02.Age_CustomerSelCreditBalanceList_Ag [Redmine: #97678]
 		- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
+		- 20220310@Percy: Use SELECT TOP (1) on CROSS APPLY statement [RedmineID: #169687]
 
 */
 BEGIN
@@ -45,7 +46,7 @@ BEGIN
 			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
 				CROSS APPLY  
 				(
-					SELECT 
+					SELECT TOP (1)
 						CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 						, ISNULL(Locked, 0) AS Locked
@@ -82,7 +83,7 @@ BEGIN
 			FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = IX_custinfo_1)
 				CROSS APPLY  
 				(
-					SELECT 
+					SELECT TOP (1)
 						CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 						, ISNULL(Locked, 0) AS Locked
