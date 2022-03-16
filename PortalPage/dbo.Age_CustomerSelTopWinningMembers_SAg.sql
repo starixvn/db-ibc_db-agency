@@ -19,6 +19,7 @@ AS
 		- 20170503@Percy: add constraint winlostdate due to MB BU process [RedmineID: #75955]
 		- 20181120@Percy: Remove linked-server DBSUM [RedmineID: #105170]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -40,14 +41,10 @@ BEGIN
 	SELECT b.custid, ISNULL(SUM(winlost-actual_stake),0)
 	FROM bettrans b with(nolock)	
 	WHERE b.srecommend = @custid 
-		AND b.ruben = 1 
 		AND b.winlostdate >= @tmpFromDate
-		AND b.bettype < 19999 
-		AND b.statusid NOT IN (101,102,103)
-		AND 1 = CASE 
-					WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-					WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-				ELSE 1 END
+		AND b.winlostdate > @moveBetsDay
+		AND b.bettype < 19999
+		AND b.statusID IN (111,112,113)
 	GROUP BY b.custid
 
 	IF @moveBetsDay >= @currentMonth

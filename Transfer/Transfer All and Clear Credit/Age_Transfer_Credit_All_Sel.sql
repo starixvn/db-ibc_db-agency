@@ -16,6 +16,7 @@ AS
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 */
 
 BEGIN
@@ -101,9 +102,8 @@ BEGIN
 					SELECT TOP 1 1
 					FROM @tblcustId c
 						CROSS APPLY (
-							SELECT TOP 1 1 AS t FROM dbo.bettrans b WITH (NOLOCK)
+							SELECT TOP 1 1 AS t FROM dbo.Transfer b WITH (NOLOCK)
 							WHERE b.custid = c.custid
-								AND b.matchId = 0
 								AND b.bettype IN (21003, 21004)
 								AND b.transdate >= CONVERT(DATE, GETDATE()) AND b.transdate < DATEADD(DAY, 1, CONVERT(DATE, GETDATE()))
 						) AS b
@@ -181,19 +181,39 @@ BEGIN
 			)
 			SELECT
 				winlostdate, bettype, statusId,
-				custId, CASE custid WHEN mrecommend THEN 3 WHEN recommend THEN 2 ELSE 1 END,
+				custId, 1,
 				SUM(winlost), SUM(actual_stake), SUM(playercomm),
 				SUM(awinlost), SUM(comm),
 				SUM(mwinlost), SUM(acomm)
 			FROM dbo.bettrans WITH (NOLOCK)
 			WHERE mrecommend = @DownlineCustId
-				AND bettype NOT IN (21008, 21009)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND bettype < 19999
+				AND winlostdate > @moveBetsDay
 			GROUP BY
 				winlostdate, bettype, statusId,
+				custId
+			-- Transfer
+			INSERT INTO #Data
+			(
+				winlostdate, bettype, statusId,
+				custId, roleId,
+				winlost, actual_stake, playercomm,
+				awinlost, comm,
+				mwinlost, acomm
+			)
+			SELECT
+				winlostdate, bettype, 131,
+				custId, CASE custid WHEN mrecommend THEN 3 WHEN recommend THEN 2 ELSE 1 END,
+				SUM(winlost), SUM(actual_stake), SUM(playercomm),
+				SUM(awinlost), SUM(comm),
+				SUM(mwinlost), SUM(acomm)
+			FROM dbo.Transfer WITH (NOLOCK)
+			WHERE mrecommend = @DownlineCustId
+				AND (
+						(bettype = 19999 and winlostdate <= @moveBetsDay) OR (bettype > 19999 and bettype NOT IN (21008, 21009))
+					)
+			GROUP BY
+				winlostdate, bettype, 
 				custId, CASE custid WHEN mrecommend THEN 3 WHEN recommend THEN 2 ELSE 1 END
 
 			-- Don't get tickets on bettrans which have bettypes on bettransRnG/LC with winlostdate >= yesterday
@@ -307,18 +327,36 @@ BEGIN
 			)
 			SELECT
 				winlostdate, bettype, statusId,
-				custId, CASE custid WHEN recommend THEN 2 ELSE 1 END,
+				custId, 1,
 				SUM(winlost), SUM(actual_stake), SUM(playercomm),
 				SUM(awinlost), SUM(comm)
 			FROM dbo.bettrans WITH (NOLOCK)
 			WHERE recommend = @DownlineCustId
-				AND bettype NOT IN (21008, 21009)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND bettype < 19999
+				AND winlostdate > @moveBetsDay
 			GROUP BY
 				winlostdate, bettype, statusId,
+				custId
+			-- Transfer
+			INSERT INTO #Data
+			(
+				winlostdate, bettype, statusId,
+				custId, roleId,
+				winlost, actual_stake, playercomm,
+				awinlost, comm
+			)
+			SELECT
+				winlostdate, bettype, 131,
+				custId, CASE custid WHEN recommend THEN 2 ELSE 1 END,
+				SUM(winlost), SUM(actual_stake), SUM(playercomm),
+				SUM(awinlost), SUM(comm)
+			FROM dbo.Transfer WITH (NOLOCK)
+			WHERE recommend = @DownlineCustId
+				AND (
+						(bettype = 19999 and winlostdate <= @moveBetsDay) OR (bettype > 19999 and bettype NOT IN (21008, 21009))
+					)
+			GROUP BY
+				winlostdate, bettype, 
 				custId, CASE custid WHEN recommend THEN 2 ELSE 1 END
 
 			-- Don't get tickets on bettrans which have bettypes on bettransRnG/LC with winlostdate >= yesterday

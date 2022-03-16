@@ -16,6 +16,7 @@ AS
 		20181003@Patrick: Index revolution [RedmineID: #101405]
 		20181105@Paul: Enhance perf [RedmineID: #103443]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 */
 
 BEGIN
@@ -61,26 +62,24 @@ BEGIN
 			FROM dbo.bettransRNG WITH(NOLOCK, INDEX=IX_custid)
 			WHERE custid = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1)
+				AND statusID IN (111, 112, 113)
 
 			UNION ALL -- bettransLC
 			SELECT winlostdate, winlost-actual_stake+playercomm as memberWL
 			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_custid)
 			WHERE custid = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1)
+				AND statusID IN (111, 112, 113)
 
 			UNION ALL --bettrans
 			SELECT winlostdate, winlost-actual_stake+playercomm as memberWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_custid)		
 			WHERE custid = @__custId
-				AND b.statusID NOT IN (0, 1)
+				AND b.bettype < 19999
+				AND b.statusID IN (111, 112, 113)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND winlostdate > @moveBetsDay
 		) x
     END
     ELSE IF @roleid = 2
@@ -93,26 +92,24 @@ BEGIN
 			FROM dbo.bettransRNG WITH (NOLOCK, INDEX=IX_recommend)
 			WHERE recommend = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1)
+				AND statusID IN (111, 112, 113)
 
 			UNION ALL -- bettransLC
 			SELECT winlostdate, awinlost+comm-playercomm as agentWL
 			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_recommend)
 			WHERE recommend = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1)
+				AND statusID IN (111, 112, 113)
 
 			UNION ALL --bettrans
 			SELECT winlostdate, awinlost+comm-playercomm as agentWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_recommend)		
 			WHERE recommend = @__custId
-				AND b.statusID NOT IN (0, 1)
+				AND b.bettype < 19999
+				AND b.statusID IN (111, 112, 113)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND winlostdate > @moveBetsDay
 		) x		
     END
     ELSE IF @roleid = 3
@@ -125,26 +122,24 @@ BEGIN
 			FROM dbo.bettransRNG WITH (NOLOCK, INDEX=IX_mrecommend)
 			WHERE mrecommend = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1)
+				AND statusID IN (111, 112, 113)
 
 			UNION ALL -- bettransLC
 			SELECT winlostdate, mwinlost+acomm-comm as masterWL
 			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_mrecommend)
 			WHERE mrecommend = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1)
+				AND statusID IN (111, 112, 113)
 
 			UNION ALL --bettrans
 			SELECT winlostdate, mwinlost+acomm-comm as masterWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_mrecommend)		
 			WHERE mrecommend = @__custId
-				AND b.statusID NOT IN (0, 1)
+				AND b.bettype < 19999
+				AND b.statusID IN (111, 112, 113)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND winlostdate > @moveBetsDay
 		) x
 			
     END
@@ -158,26 +153,24 @@ BEGIN
 			FROM dbo.bettransRNG WITH (NOLOCK, INDEX=IX_srecommend)
 			WHERE srecommend = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1) 
+				AND statusID IN (111, 112, 113) 
 
 			UNION ALL -- bettransLC
 			SELECT winlostdate, swinlost+scomm-acomm as superWL
 			FROM dbo.bettransLC WITH (NOLOCK, INDEX=IX_srecommend)
 			WHERE srecommend = @__custId
 				AND winlostdate >= @yesterday
-				AND statusID NOT IN (0, 1)
+				AND statusID IN (111, 112, 113)
 
 			UNION ALL --bettrans
 			SELECT winlostdate, swinlost+scomm-acomm as superWL
 			FROM dbo.bettrans b WITH (NOLOCK, INDEX=IX_srecommend)		
 			WHERE srecommend = @__custId
-				AND b.statusID NOT IN (0, 1)
+				AND b.bettype < 19999
+				AND b.statusID IN (111, 112, 113)
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
-				AND 1 = CASE 
-							WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-							WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-						ELSE 1 END
+				AND winlostdate > @moveBetsDay
 		) x
 
     END

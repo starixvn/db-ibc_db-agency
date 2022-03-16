@@ -23,6 +23,7 @@ AS
 		- 20200414@Sophia: BBIN - add Transfer In/Out Amount [Redmine: #131358]
 		- 20210729@Elodie: Change use CustProductStatus.CloseInfo instead of CustInfo.closed [Redmine: #148600]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	Param's Explanation:
 		- @CustID: SAgentID
 */
@@ -137,47 +138,47 @@ BEGIN
 		) AS T
 	WHERE T.RowNumber BETWEEN @RowStart AND @RowEnd	
 	
-	
 	INSERT INTO #MemberBalance(CustId, Balance)
-	SELECT c.custid, ISNULL(SUM(CASE WHEN s.Bettype IS NOT NULL AND winlostdate >= @yesterday THEN 0
-							ELSE winlost - actual_stake + playercomm END), 0) AS Balance
-	FROM #Cust_tmp c WITH(NOLOCK)
-		INNER LOOP JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
-		LEFT JOIN #SportBettype s ON s.bettype = b.Bettype
-	
-	WHERE b.statusID NOT IN (0,1,101,102)	
-		AND 1 = CASE 
-					WHEN b.bettype = 19999 and b.winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-					WHEN b.bettype < 19999 and b.winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-				ELSE 1 END
-	GROUP BY c.custid
-
-	--get data from bettransRnG table within 2 days: today & yesterday
-	UNION ALL
-	SELECT c.custid, SUM(winlost - actual_stake + playercomm) AS Balance
-	FROM #Cust_tmp c WITH(NOLOCK)
-		INNER JOIN bodb02.dbo.bettransRNG b WITH(NOLOCK) ON c.CustId = b.CustId 
-	WHERE  b.statusID NOT IN (0,1,101,102)	AND winlostdate >= @yesterday	
-	GROUP BY c.custid
-	
-	-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
-	UNION ALL
-	SELECT	ci.custid, SUM(blc.winlost - blc.actual_stake + blc.playercomm) AS Balance
-	FROM	#Cust_tmp AS ci WITH (NOLOCK)
-		INNER JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)	ON	blc.custid = ci.custid 	
-	WHERE	blc.statusID NOT IN (0, 1, 101, 102) AND	blc.winlostdate >= @yesterday
-	GROUP BY ci.custid
-	
+	SELECT a.CustID, SUM(a.Balance) 
+	FROM
+		(   --get data from Bettrans
+			SELECT c.custid, ISNULL(CASE WHEN s.Bettype IS NOT NULL AND winlostdate >= @yesterday THEN 0
+								ELSE winlost - actual_stake + playercomm END, 0) AS Balance
+			FROM #Cust_tmp c WITH(NOLOCK)
+				INNER LOOP JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
+				LEFT JOIN #SportBettype s ON s.bettype = b.Bettype
+			WHERE b.statusID IN (111,112,113)
+					AND b.bettype < 19999
+					AND b.winlostdate > @moveBetsDay
+			--get data from Transfer
+			UNION ALL
+			SELECT c.custid, winlost - actual_stake + playercomm AS Balance
+			FROM #Cust_tmp c WITH(NOLOCK)
+				INNER LOOP JOIN bodb02.dbo.Transfer b WITH(NOLOCK) ON c.CustId = b.CustId
+			WHERE (bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999
+			--get data from bettransRnG table within 2 days: today & yesterday
+			UNION ALL
+			SELECT c.custid, winlost - actual_stake + playercomm AS Balance
+			FROM #Cust_tmp c WITH(NOLOCK)
+				INNER JOIN bodb02.dbo.bettransRNG b WITH(NOLOCK) ON c.CustId = b.CustId 
+			WHERE  b.statusID IN (111,112,113)	AND winlostdate >= @yesterday	
+			-- 20160318@Billy: Get tickets from [bettransLC] table within 2 days: today & yesterday
+			UNION ALL
+			SELECT	ci.custid, blc.winlost - blc.actual_stake + blc.playercomm AS Balance
+			FROM	#Cust_tmp AS ci WITH (NOLOCK)
+				INNER JOIN	bodb02.dbo.bettransLC AS blc WITH (NOLOCK)	ON	blc.custid = ci.custid 	
+			WHERE	blc.statusID IN (111,112,113) AND	blc.winlostdate >= @yesterday
+		) a
+	GROUP BY a.CustID
 	OPTION (MAXDOP 8)
 	
 	-------- Transfer 3rd In/ Out
 	INSERT INTO #Transfer (CustId, Transfer3rd)
 	SELECT  b.CustId, SUM(winlost - actual_stake) AS Transfer3rd
 	FROM #Cust_tmp c  
-	INNER LOOP JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
+	INNER LOOP JOIN bodb02.dbo.Transfer b WITH(NOLOCK) ON c.CustId = b.CustId
 	WHERE b.Bettype IN (21008, 21009)
-		  AND b.MatchID  = 0
-	GROUP BY b.CustId 
+	GROUP BY b.CustId
 
 	--Calc total rows
 	SELECT @TotalRows = COUNT(1)
@@ -215,6 +216,7 @@ BEGIN
 	DROP TABLE #Cust_tmp
 	DROP TABLE #SportBettype
 	DROP TABLE #Cust_Downline
+	DROP TABLE #Transfer
 	
 END
 

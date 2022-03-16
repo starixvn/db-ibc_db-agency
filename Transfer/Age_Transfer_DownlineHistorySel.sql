@@ -16,6 +16,7 @@ AS
 	
 	Revisions:  
 		- 20201228@Danny: Transfer To Downline History Report  [Redmine: #146038]
+		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 */  
  
 BEGIN
@@ -102,15 +103,14 @@ SET NOCOUNT ON;
 		END
 
 		INSERT INTO #UplineTrans (Refno)
-		SELECT	refno AS RefNo	
-		FROM	dbo.bettrans b WITH (NOLOCK)  
+		SELECT	RefNo	
+		FROM	dbo.Transfer b WITH (NOLOCK)  
 		WHERE custid = @CustID 
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
 
-
 		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, creator)
-		SELECT  refno AS RefNo,
+		SELECT  RefNo,
 				CustID,
 				d.username,
 				TransDate,
@@ -118,12 +118,11 @@ SET NOCOUNT ON;
 				ABS(winlost - actual_stake) TransferAmt,
 				ISNULL(balance,0) as OldBalance,
 				ISNULL((balance + winlost - actual_stake),0)  AS NewBalance,
-				transdesc as TransDesc,
+				TransDesc,
 				creator
-		FROM dbo.bettrans b WITH (NOLOCK)  
+		FROM dbo.Transfer b WITH (NOLOCK)  
 		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
 		WHERE  winlostdate BETWEEN @FDate AND @TDate AND bettype > 20000;
-   
 		
 	END  
 

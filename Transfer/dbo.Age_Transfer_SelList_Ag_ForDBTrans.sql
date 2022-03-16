@@ -54,6 +54,7 @@ Revisions:
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210723@Evan: Replace parameter @enabled,@suspended,@closed with @CustStatus
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	
 Param's Explanation:
 • @CustID: AgentID
@@ -130,8 +131,8 @@ BEGIN
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
 		custid,
-		ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-		ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
 	FROM dbo.bettransRnG WITH(NOLOCK, INDEX = ix_recommend)
 	WHERE recommend = @CustID
@@ -145,8 +146,8 @@ BEGIN
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
 		custid,
-		ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-		ISNULL(SUM(CASE WHEN statusID NOT IN (0, 1) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
 	FROM dbo.bettransLC WITH(NOLOCK, INDEX = ix_recommend)
 	WHERE recommend = @CustID
@@ -175,13 +176,20 @@ BEGIN
 	FROM dbo.bettrans b WITH(NOLOCK, INDEX = ix_recommend)
 	WHERE 
 		recommend = @CustID
-		AND 1 = CASE 
-			WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-			WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-		ELSE 1 END
+		AND bettype < 19999 
+		AND winlostdate > @moveBetsDay 
 	GROUP BY custid,winlostdate,ruben,bettype
 	OPTION (MAXDOP 1)
 	
+	INSERT INTO #bettrans_tmp (custid, winlostdate,ruben,bettype,actual_stake_total,TotalBalance)
+	SELECT custid, winlostdate,1,bettype, SUM(actual_stake) AS actual_stake_total, SUM(winlost-actual_stake+playercomm) AS TotalBalance
+	FROM dbo.Transfer b WITH(NOLOCK)
+	WHERE 
+		recommend = @CustID
+		AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+	GROUP BY custid,winlostdate,bettype
+	OPTION (MAXDOP 1)
+
 		-- running ticket
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT

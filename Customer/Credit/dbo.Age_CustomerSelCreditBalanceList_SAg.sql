@@ -42,6 +42,7 @@ Revisions:
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210910@Elodie: Alpha - Enhance customer's experience with auto clear given credit - [Redmine: #160429]
+	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -95,14 +96,16 @@ BEGIN
 	(
 		custid		INT PRIMARY KEY,
 		outstanding MONEY,		
-		balance		MONEY
+		balance		MONEY,
+		yesterdaybalance	MONEY
 	)
 
 	;WITH rt AS
 	(
 		SELECT mrecommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE 0 END),0) AS outstanding,
-			ISNULL(SUM(CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END), 0) AS balance
+			ISNULL(SUM(mwinlost+acomm-comm), 0) AS balance,
+			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END),0) AS yesterdaybalance 
 		FROM  bettrans WITH (NOLOCK)
 		WHERE srecommend = @CustID
 			AND	(
@@ -115,17 +118,24 @@ BEGIN
 								)
 						)
 				)
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
+			AND bettype < 19999
+			AND winlostdate > @moveBetsDay
 		GROUP BY mrecommend
-
+		UNION ALL
+		SELECT mrecommend AS custid,
+			0 AS outstanding,
+			ISNULL(SUM(CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END), 0) AS balance,
+			ISNULL(SUM(CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END), 0) AS yesterdaybalance
+		FROM  Transfer t WITH (NOLOCK)
+		WHERE srecommend = @CustID
+			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+		GROUP BY mrecommend
 		UNION ALL
 
 		SELECT mrecommend AS custid,
 			ISNULL(SUM(ABS(actual_stake) * mpositiontaking), 0) AS outstanding,
-			0 balance
+			0 balance,
+			0 yesterdaybalance
 		FROM  translog WITH(NOLOCK)
 		WHERE srecommend = @CustID
 			AND statusid IN (0,1)
@@ -136,7 +146,8 @@ BEGIN
 		SELECT
 			mrecommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE  0 END),0) outstanding,
-			ISNULL(SUM(CASE WHEN statusID > 1 THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END ELSE  0 END),0) AS balance
+			ISNULL(SUM(CASE WHEN statusID > 1 THEN mwinlost+acomm-comm ELSE  0 END),0) AS balance,
+			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE  0 END),0) AS yesterdaybalance
 		FROM  bettransRNG WITH (NOLOCK)
 		WHERE srecommend = @CustID
 			AND (
@@ -150,7 +161,8 @@ BEGIN
 		SELECT
 			mrecommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE  0 END),0) outstanding,
-			ISNULL(SUM(CASE WHEN statusID > 1 THEN CASE WHEN custid=mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END ELSE  0 END),0) AS balance
+			ISNULL(SUM(CASE WHEN statusID > 1 THEN mwinlost+acomm-comm ELSE  0 END),0) AS balance,
+			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END),0) AS yesterdaybalance
 		FROM  bettransLC WITH (NOLOCK)
 		WHERE srecommend = @CustID
 			AND (
@@ -162,48 +174,10 @@ BEGIN
 	INSERT INTO #balance
 	SELECT custid,
 		SUM(outstanding),
-		SUM(balance)
+		SUM(balance),
+		SUM(yesterdaybalance)
 	FROM rt
 	GROUP BY custid
-
-	CREATE TABLE #today_balance
-	(
-		custid	INT PRIMARY KEY,
-		balance MONEY
-	)
-
-	;WITH today_balance AS (
-		SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
-		FROM   bettrans WITH (NOLOCK)
-		WHERE  srecommend = @CustID AND statusID > 1 AND bettype IN (SELECT bettype FROM #SportBettype WHERE RefTable IN(0,3))
-			AND winlostdate = @today
-			AND 1 = CASE 
-						WHEN bettype = 19999 and winlostdate > @moveBetsDay THEN 0 --> get data from ticket detail
-						WHEN bettype < 19999 and winlostdate <= @moveBetsDay THEN 0 --> get data from sum record
-					ELSE 1 END
-		GROUP BY mrecommend
-
-		UNION ALL
-
-		SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
-		FROM   bettransRNG WITH (NOLOCK)
-		WHERE  srecommend = @CustID AND statusID > 1
-			AND winlostdate = @today
-		GROUP BY mrecommend
-
-		UNION ALL
-
-		SELECT mrecommend AS custid, SUM(mwinlost+acomm-comm) AS balance
-		FROM   bettransLC WITH (NOLOCK)
-		WHERE  srecommend = @CustID AND statusID > 1
-			AND winlostdate = @today
-		GROUP BY mrecommend
-	)
-	INSERT INTO #today_balance
-	SELECT	custid, SUM(balance) AS balance
-	FROM	today_balance
-	GROUP BY custid
-
 	    
 	SET @Username = isnull(@Username, '')
 
@@ -304,7 +278,7 @@ BEGIN
 			c.lastname, 
 			isnull(balance.outstanding,0) AS outstanding, 
 			isnull(balance.balance,0) AS balance,
-			isnull(balance.balance,0) - isnull(today_balance.balance,0) yesterday_balance,
+			isnull(balance.yesterdaybalance,0) yesterday_balance,
 			isnull(c.credit,0) - isnull(c.usedCredit,0) betCredit,
 			isnull(c.credit,0) credit,		
 			CONVERT(nvarchar(30), c.lastlogged, 121) AS lastlogged,
@@ -312,12 +286,10 @@ BEGIN
 			c.CreatedDate
 		FROM #tmp_customer c 
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid 
-			LEFT JOIN #today_balance AS today_balance ON c.custid = today_balance.custid 
 	)a
 	WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 
 	drop table #balance
-	drop table #today_balance
 	drop table #tmp_customer
 	DROP TABLE #SportBettype
 END
