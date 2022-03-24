@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02,DBWH-bodb02,DBTXN-bodb02" selecters="bodbLicenseeNet" viewers="vnteam" isFunction="1" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBWH-bodb02,DBTXN-bodb02,DBACC-bodb02" selecters="bodbLicenseeNet" viewers="vnteam" isFunction="1" isNested="0"></info>*/
 ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 (
 	 @ProductID		TINYINT		 = 0
