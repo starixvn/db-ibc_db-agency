@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02,DBPRO-bodb02,DBDWH-bodb02,DBTXN-bodb02,DBBAL-bodb02" executers="bodbLicenseeNet" viewers="vnteam" isFunction="1" isNested="0"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02,DBWH-bodb02,DBTXN-bodb02" selecters="bodbLicenseeNet" viewers="vnteam" isFunction="1" isNested="0"></info>*/
 ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 (
 	 @ProductID		TINYINT		 = 0
@@ -16,12 +13,13 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 	Creator: Percy	
 	Date: 20160323
 	Task: Get SportType_Bettype
-	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02, DBPRO.bodb02, DBDWH.bodb02, DBTXN.bodb02
+	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02, DBWH.bodb02, DBTXN.bodb02, DBPRO-bodb02
 		
 	Revisions:
 		- 20160505@Percy: Return 2 columns RefTable, CasinoType
 		- 20170629@Harper: Return ProductPrefix column [RedmineID: #78241]
 		- 20210816@Sophia: add DBBAL [Redmine: #154300]
+		- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 
 	Paramters Explanation:
  		@ProductID, @SportType, @BetType
@@ -57,6 +55,6 @@ WHERE   (@ProductID		= 0  OR  ma.ProductID	= @ProductID)
 	AND (@BetType		= 0  OR  ma.BetType		= @BetType)			
 	AND (@IsLive		= 2  OR  ma.IsLive		= @IsLive)
 	AND (@SubProduct	= '' OR  ma.SubProduct	= @SubProduct)
-	AND (@ProductPrefix = '' OR  p.ProductPrefix IN (SELECT val FROM strSplit(@ProductPrefix, ',')))
+	AND (@ProductPrefix = '' OR  p.ProductPrefix IN (SELECT value FROM STRING_SPLIT(@ProductPrefix, ',')))
 	AND (ma.IsTest		= 0	 OR  ma.IsTest		= @IsTest)
 GO
