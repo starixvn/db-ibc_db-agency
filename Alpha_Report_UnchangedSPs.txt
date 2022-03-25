@@ -7,25 +7,6 @@ Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_MAg.sql
 Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_SAg.sql
 Customer\ViewMemberWinLimit\Age_CustomerSelWinlimitInfo.sql
 Report\MatchWinloss\Age_Rpt_MatchWinLoss_Member.sql
-Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinLoss_Ag.StoredProcedure.sql
-Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinloss_SelLeagueBySport.sql
-Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinLossDetail_Ag.StoredProcedure.sql
-Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinLossDetail_MAg.StoredProcedure.sql
-Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinlossDetail_SAg_All.sql
-Report\MatchWinloss\U3\dbo.Age_Rpt_MatchWinlossDetail_SAg_ByLeague.sql
-Report\Winloss\U3\Age_Rpt_WinLoss_Ag.sql
-Report\Winloss\U3\Age_Rpt_WinLoss_MAg.sql
-Report\Winloss\U3\Age_Rpt_WinLoss_SAg.sql
-Report\WinlossAnalysis\U3\Age_Rpt_WinlossAnalysis_Ag.sql
-Report\WinlossAnalysis\U3\Age_Rpt_WinlossAnalysis_MAg.sql
-Report\WinlossAnalysis\U3\Age_Rpt_WinlossAnalysis_SAg.sql
-Report\WinlossByBettype\U3\Age_Rpt_WinLossByBettype_Ag.sql
-Report\WinlossByBettype\U3\Age_Rpt_WinLossByBettype_MAg.sql
-Report\WinlossByBettype\U3\Age_Rpt_WinLossByBettype_SAg.sql
-Report\WinlossByBettype\U3\Details\Age_Rpt_WinLossByBettype_Details.sql
-Report\WinlossDetail\U3\Age_Rpt_WinLossDetail_Ag.sql
-Report\WinlossDetail\U3\Age_Rpt_WinLossDetail_MAg.sql
-Report\WinlossDetail\U3\Age_Rpt_WinLossDetail_SAg.sql
 Transfer\Acc_CustomerSelCash_CaptureBalance.sql
 Transfer\dbo.Age_Transfer_CashBalance_Ins.sql
 Transfer\dbo.Age_Transfer_CashBalance_Sel.sql
@@ -33,6 +14,5 @@ Transfer\dbo.Age_Transfer_SelList_Ag.sql
 Transfer\dbo.Age_Transfer_SelList_Ag_ForDBTrans.sql
 Transfer\dbo.Age_Transfer_SelList_MAg.sql
 Transfer\dbo.Age_Transfer_SelList_SAg.sql
-Transfer\dbo.Age_Transfer_SelMemberInfo_Yesterday.sql
 Transfer\dbo.Age_Transfer_SelMemberInfo_Yesterday_ForDBTrans.sql
 Transfer\Transfer All and Clear Credit\Age_Transfer_Credit_All_Sel.sql
