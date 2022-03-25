@@ -341,8 +341,8 @@ BEGIN
 		FROM	dbo.SUM_winloss b WITH(NOLOCK)    
 				INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype 
 											AND b.bettype = t.bettype  
-											AND b.leagueGroupID = t.LeagueGroupID
-											AND b.ticketType = t.ticketType
+											AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID
+											AND ISNULL(b.ticketType,0) = t.ticketType
 		WHERE	b.winlostdate BETWEEN @FDate AND @TDate    
 				AND b.custid  = @CID   
 				AND RoleID = 4    
@@ -401,8 +401,8 @@ BEGIN
 				AND b.RoleID = 4    
 				AND b.sporttype = w.sporttype    
 				AND b.bettype = w.bettype  
-				AND b.leagueGroupID = w.LeagueGroupID
-				AND b.ticketType = w.ticketType
+				AND ISNULL(b.leagueGroupID,0) = w.LeagueGroupID
+				AND ISNULL(b.ticketType,0) = w.ticketType
 				
 		GROUP BY  w.ProductID;  
 	END    

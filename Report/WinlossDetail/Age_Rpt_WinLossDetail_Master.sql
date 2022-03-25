@@ -351,7 +351,7 @@ BEGIN
 				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				SUM(betcount) AS NoOfTicket
 		FROM dbo.SUM_winloss b WITH(NOLOCK)
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND b.leagueGroupID = t.LeagueGroupID AND b.ticketType = t.TicketType
+			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND SRecommend = @CID
 			AND RoleID = 3
@@ -406,8 +406,8 @@ BEGIN
 			AND b.RoleID = 3
 			AND b.sporttype = w.sporttype
 			AND b.bettype = w.bettype
-			AND b.LeagueGroupID = w.LeagueGroupID
-			AND b.TicketType = w.TicketType
+			AND ISNULL(b.LeagueGroupID,0) = w.LeagueGroupID
+			AND ISNULL(b.TicketType,0) = w.TicketType
 		GROUP BY CustID
 		OPTION (MAXRECURSION 0);
 	END	

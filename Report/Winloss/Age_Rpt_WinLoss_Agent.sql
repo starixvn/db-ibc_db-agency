@@ -260,7 +260,7 @@ BEGIN
 				SUM(mwinlost) AS MAgWinlost,
 				ISNULL(SUM(acomm), 0) - ISNULL(SUM(comm), 0) AS Comm
 		FROM  dbo.sum_winloss b WITH (NOLOCK) 
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND b.leagueGroupID = t.LeagueGroupID AND b.ticketType = t.TicketType
+			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND mrecommend = @CID
 			AND roleid = 2
@@ -309,8 +309,8 @@ BEGIN
 			AND RoleID = 2 
 			AND b.sporttype = w.sporttype
 			AND b.bettype = w.bettype		
-			AND b.leagueGroupID = w.LeagueGroupID
-			AND b.ticketType = w.ticketType
+			AND ISNULL(b.leagueGroupID,0) = w.LeagueGroupID
+			AND ISNULL(b.ticketType,0) = w.ticketType
 		GROUP BY CustID
 		OPTION (MAXRECURSION 0)
 	END

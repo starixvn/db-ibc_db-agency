@@ -261,7 +261,7 @@ BEGIN
 				SUM(playercomm) AS PlayerComm,
 				SUM(comm - playercomm) AS AgComm
 		FROM  DBO.Sum_WinLoss b WITH(NOLOCK) 
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND b.leagueGroupID = t.LeagueGroupID AND b.ticketType = t.TicketType
+			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 		WHERE recommend = @CID
 			AND Winlostdate BETWEEN @FDate AND @TDate
 			AND roleID = 1
@@ -310,8 +310,8 @@ BEGIN
 			AND roleID = 1
 			AND b.sporttype = w.sporttype
 			AND b.bettype = w.bettype 
-			AND b.leagueGroupID = w.LeagueGroupID
-			AND b.ticketType = w.TicketType
+			AND ISNULL(b.leagueGroupID,0) = w.LeagueGroupID
+			AND ISNULL(b.ticketType,0) = w.TicketType
 		GROUP BY CustID
 		OPTION (MAXRECURSION 0)
 	END

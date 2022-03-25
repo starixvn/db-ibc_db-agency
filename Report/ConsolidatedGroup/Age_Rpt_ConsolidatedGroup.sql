@@ -758,7 +758,7 @@ BEGIN
 					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover,
 					b.grosscomm , b.LeagueGroupID, b.ticketType
 		FROM	sum_winloss b WITH(NOLOCK) 		
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  AND b.leagueGroupID = t.leagueGroupID AND b.ticketType = t.TicketType
+			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  AND ISNULL(b.leagueGroupID,0) = t.leagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 			INNER JOIN #TmpCust c ON b.custid = c.CustID
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 
@@ -773,8 +773,8 @@ BEGIN
 					   AND s.srecommend = t.srecommend
 					   AND t.sporttype = s.sporttype
 					   AND t.bettype = s.bettype
-					   AND t.LeagueGroupID = s.leagueGroupID
-					   AND t.ticketType = s.ticketType
+					   AND t.LeagueGroupID = ISNULL(s.leagueGroupID,0)
+					   AND t.ticketType = ISNULL(s.ticketType,0)
 				       AND ( 
 					        (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
 							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid = 2) OR
@@ -960,7 +960,7 @@ BEGIN
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
 					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm, b.leagueGroupID, b.ticketType
 		FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  AND b.leagueGroupID = t.LeagueGroupID AND b.ticketType = t.TicketType
+			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 			INNER JOIN #TmpCust c ON b.custid = c.CustID
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
 
@@ -974,9 +974,9 @@ BEGIN
 				 WHERE s.winlostdate = t.winlostdate 
                        AND s.srecommend = t.srecommend
 					   AND s.sporttype = t.sporttype
-					   AND s.leagueGroupID = t.LeagueGroupID
+					   AND ISNULL(s.leagueGroupID,0) = t.LeagueGroupID
 					   AND s.bettype = t.bettype
-					   AND s.ticketType = t.ticketType
+					   AND ISNULL(s.ticketType,0) = t.ticketType
 					   AND ( 
 					         (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
 							 (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid = 2) OR
