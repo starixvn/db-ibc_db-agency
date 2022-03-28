@@ -1,18 +1,4 @@
-Customer\Acc_CustomerSelCash.sql
-Customer\Acc_CustomerSelOutstanding.sql
-Customer\Age_CustomerSelOutstanding.sql
-Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_Ag.sql
-Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_MAg.sql
-Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_SAg.sql
-Customer\ViewMemberWinLimit\Age_CustomerSelWinlimitInfo.sql
-Report\MatchWinloss\Age_Rpt_MatchWinLoss_Member.sql
-Transfer\Acc_CustomerSelCash_CaptureBalance.sql
-Transfer\dbo.Age_Transfer_CashBalance_Ins.sql
-Transfer\dbo.Age_Transfer_CashBalance_Sel.sql
-Transfer\dbo.Age_Transfer_SelList_Ag.sql
-Transfer\dbo.Age_Transfer_SelList_Ag_ForDBTrans.sql
-Transfer\dbo.Age_Transfer_SelList_MAg.sql
-Transfer\dbo.Age_Transfer_SelList_SAg.sql
-Transfer\dbo.Age_Transfer_SelMemberInfo_Yesterday_ForDBTrans.sql
-Transfer\Transfer All and Clear Credit\Age_Transfer_Credit_All_Sel.sql
-Transfer\dbo.Age_Transfer_SelMemberInfo_Yesterday.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Member.sql
+Report\CommbyBettype\Age_MemCommission_SelBettype.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Agent.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Master.sql

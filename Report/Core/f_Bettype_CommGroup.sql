@@ -46,6 +46,7 @@ AS
 		- 20211214@Evan: Add New Games for PP - [Redmine: #165393]	
 		- 20220303@Evan: Add bettypes of E-Sports 4 - [Redmine: #166326]
 		- 20220303@Evan: Add bettypes of Cricket - [Redmine: #166332]
+		- 20220328@Evan: Add bettypes of Macau Games - [Redmine: #170383]
 
 	- Columns:
 		- CommGroup:
@@ -164,6 +165,7 @@ FROM (
 		OR typeid BETWEEN 2101 AND 2399
 		OR typeid BETWEEN 2401 AND 2499
 		OR typeid BETWEEN 4001 AND 4100 -- Macau Games
+		OR typeid BETWEEN 5800 AND 5999 -- Macau Games
 		OR typeid BETWEEN 4101 AND 4300 -- PP
 		OR typeid BETWEEN 6701 AND 7000 -- PP
 		OR typeid BETWEEN 4301 AND 4600 -- SG
