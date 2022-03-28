@@ -1,6 +1,5 @@
 Customer\Acc_CustomerSelCash.sql
 Customer\Acc_CustomerSelOutstanding.sql
-Customer\Acc_CustomerSelTurnover.sql
 Customer\Age_CustomerSelOutstanding.sql
 Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_Ag.sql
 Customer\Credit\dbo.Age_CustomerSelCreditBalanceList_MAg.sql
@@ -16,3 +15,4 @@ Transfer\dbo.Age_Transfer_SelList_MAg.sql
 Transfer\dbo.Age_Transfer_SelList_SAg.sql
 Transfer\dbo.Age_Transfer_SelMemberInfo_Yesterday_ForDBTrans.sql
 Transfer\Transfer All and Clear Credit\Age_Transfer_Credit_All_Sel.sql
+Transfer\dbo.Age_Transfer_SelMemberInfo_Yesterday.sql
