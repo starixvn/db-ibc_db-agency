@@ -49,6 +49,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20210810@Evan: Add Bitcoin product - [Redmine: #159036]	
 		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
 		- 20220124@Evan: Add Allbet Promotion - [Redmine: #166981]
+		- 20220208@Evan: Add FGG product - [Redmine: #165685]	
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -103,7 +104,8 @@ RETURN
 				(66, 171, 0), --VGaming
 				(68, 174, 0), -- AdvantPlay Mini
 				(67, 172, 0),  -- AdvantPlay Product
-				(69, 175, 0)  -- Bitcoin product
+				(69, 175, 0),  -- Bitcoin product
+				(70, 176, 0)  -- FGG product
 		) d(ProductID, SportType, BetType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
