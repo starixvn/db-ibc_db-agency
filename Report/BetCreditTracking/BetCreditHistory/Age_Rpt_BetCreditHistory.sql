@@ -6,6 +6,9 @@ ALTER PROCEDURE Age_Rpt_BetCreditHistory
 	@UserName VARCHAR(30) = '',
 	@RefNo BIGINT = NULL,
 	@LoggedId INT = -1,
+	@PageIndex INT = 1,
+	@PageSize INT = 50,
+	@TotalRows INT = 0 OUTPUT,
 	@ErrorCode INT = 0 OUTPUT,
 	@ErrorMess VARchar(1000) = '' OUTPUT
 )
@@ -87,7 +90,7 @@ BEGIN
 	EXEC Age_SelBalanceUpDay
 
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
-	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate)
+	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate) --cover for users that are created in @today
 
 	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID TINYINT, rowid BIGINT, bettype SMALLINT)
 	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME, refNo BIGINT)
@@ -147,7 +150,8 @@ BEGIN
 			FROM dbo.BalanceRecord b WITH(NOLOCK)
 			WHERE 
 				b.custid = @CustId
-				AND b.ActionDate BETWEEN @InternalFromDate AND @InternalToDate
+				AND b.ActionDate >= @InternalFromDate 
+				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33
 				AND b.transid = ISNULL(@RefNo, b.transid)
 			UNION
@@ -166,7 +170,8 @@ BEGIN
 			FROM BalanceRecord.dbo.BalanceRecord_bk b WITH(NOLOCK)
 			WHERE 
 				b.custid = @CustId
-				AND b.ActionDate BETWEEN @InternalFromDate AND @InternalToDate
+				AND b.ActionDate >= @InternalFromDate 
+				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33
 				AND b.transid = ISNULL(@RefNo, b.transid)
 		)
@@ -237,7 +242,7 @@ BEGIN
 				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
 				AND br.bettype < 19999 AND b.bettype < 19999
 	
-				-- transfer
+			-- transfer
 			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
 			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
 			FROM #BalanceRecord br
@@ -282,6 +287,14 @@ BEGIN
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 				AND NOT EXISTS (SELECT TOP 1 1 FROM #Transaction t WHERE t.refno = b.transid )
 				AND br.bettype < 19999
+
+			-- transfer
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			FROM #BalanceRecord br
+				INNER JOIN dbo.transfer b WITH(NOLOCK)
+					ON br.custid = b.custid AND br.refNo = b.transid
+			WHERE  br.bettype >= 19999
 
 		END
 		ELSE IF (@InternalFromDate >= @BalanceUpDay AND @InternalFromDate <= @MoveBetsDay AND @InternalToDate > @MoveBetsDay) -- bettrans14 and bettrans
@@ -368,33 +381,22 @@ BEGIN
 			INNER JOIN #Transaction t
 				ON b.custid = t.custID AND b.refNo = t.transID
 
-		SELECT 
-			t.ActionId, t.ActionDate, t.winlostdate, t.refNo, t.actual_stake, t.winloss, t.playercomm, t.BalanceChanged, t.NewBalance, t.GivenCredit, t.BetCredit, t.Action
-		FROM 
-		(
+		DECLARE @RowStart INT , @RowEnd INT
+		SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
+
+		SELECT @TotalRows = COUNT(1) FROM #BalanceRecord b WITH(NOLOCK)
+
+		IF (@TotalRows = 0) --no row/invalid refno ...etc
+		BEGIN
 			SELECT 
-				-1 AS ActionId,
-				@OldActionDateFirstTimes ActionDate,
-				NULL AS winlostdate, 
-				NULL AS refNo, 
-				NULL AS actual_stake, 
-				NULL AS winloss, 
-				NULL AS playercomm, 
-				NULL AS BalanceChanged, 
-				NULL AS NewBalance, 
-				@OldCreditFirstTimes AS GivenCredit, 
-				NULL AS BetCredit, 
-				'Opening Credit' AS Action,
-				NULL AS rowid
-			UNION
-			SELECT 
+				0 AS RowNumber,
 				b.ActionID,
 				b.ActionDate, 
-				b.winlostdate, 
-				b.refNo, 
-				b.actual_stake,
-				b.winloss,
-				b.playercomm, 
+				b.Winlostdate, 
+				b.RefNo, 
+				b.Actual_stake,
+				b.Winloss,
+				b.Playercomm, 
 				b.BalanceChanged, 
 				b.NewBalance,
 				b.GivenCredit,
@@ -402,10 +404,82 @@ BEGIN
 				b.Action,
 				b.rowid
 			FROM #BalanceRecord b
-			WHERE b.winlostdate IS NOT NULL 
-					OR b.refNo IS NULL
-		) t
-		ORDER BY ActionDate, rowid
+		END
+		ELSE
+		BEGIN
+			---filter by refno only again because need to given credit to cal bet credit until now
+			IF (@RefNo IS NOT NULL)
+			BEGIN
+				SELECT @TotalRows = COUNT(1) FROM #BalanceRecord b WITH(NOLOCK) WHERE b.refNo = @RefNo
+
+				SELECT 
+					ROW_NUMBER() OVER (ORDER BY ActionDate, rowid) AS RowNumber,
+					b.ActionID,
+					b.ActionDate, 
+					b.Winlostdate, 
+					b.RefNo, 
+					b.Actual_stake,
+					b.Winloss,
+					b.Playercomm, 
+					b.BalanceChanged, 
+					b.NewBalance,
+					b.GivenCredit,
+					b.BetCredit,
+					b.Action,
+					b.rowid
+				FROM #BalanceRecord b
+				WHERE b.refNo = @RefNo
+			END
+			ELSE
+			BEGIN
+				SET @TotalRows = @TotalRows + 1
+				;WITH rs
+				AS
+				(
+					SELECT 
+						ROW_NUMBER() OVER (ORDER BY ActionDate, rowid) AS RowNumber,
+						t.ActionId, t.ActionDate, t.Winlostdate, t.RefNo, t.Actual_stake, t.Winloss, t.Playercomm, t.BalanceChanged, t.NewBalance, t.GivenCredit, t.BetCredit, t.Action, t.Rowid
+					FROM 
+					(
+						SELECT 
+							-1 AS ActionId,
+							@OldActionDateFirstTimes ActionDate,
+							NULL AS winlostdate, 
+							NULL AS refNo, 
+							NULL AS actual_stake, 
+							NULL AS winloss, 
+							NULL AS playercomm, 
+							NULL AS BalanceChanged, 
+							NULL AS NewBalance, 
+							@OldCreditFirstTimes AS GivenCredit, 
+							NULL AS BetCredit, 
+							'Opening Credit' AS Action,
+							NULL AS rowid
+						UNION
+						SELECT 
+							b.ActionID,
+							b.ActionDate, 
+							b.winlostdate, 
+							b.refNo, 
+							b.actual_stake,
+							b.winloss,
+							b.playercomm, 
+							b.BalanceChanged, 
+							b.NewBalance,
+							b.GivenCredit,
+							b.BetCredit,
+							b.Action,
+							b.rowid
+						FROM #BalanceRecord b
+						WHERE b.winlostdate IS NOT NULL 
+								OR b.refNo IS NULL
+					) t
+				)
+				SELECT * FROM rs
+				WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)
+				ORDER BY ActionDate, rowid
+			END
+		END
 
 	END
 
