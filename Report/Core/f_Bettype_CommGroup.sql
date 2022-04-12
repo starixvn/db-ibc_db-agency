@@ -46,7 +46,7 @@ AS
 		- 20211214@Evan: Add New Games for PP - [Redmine: #165393]	
 		- 20220303@Evan: Add bettypes of E-Sports 4 - [Redmine: #166326]
 		- 20220303@Evan: Add bettypes of Cricket - [Redmine: #166332]
-		- 20220328@Evan: Add bettypes of Macau Games - [Redmine: #170383]
+		- 20220328@Evan: Expand bettype range of Macau Games - [Redmine: #170383]
 
 	- Columns:
 		- CommGroup:
