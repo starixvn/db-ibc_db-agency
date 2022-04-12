@@ -55,7 +55,7 @@ RETURN
 			UNION ALL
 			SELECT	ProductId,  Sporttype, Bettype, LeagueGroupID, TicketType FROM	cte_filter
 			) d
-		CROSS APPLY (SELECT CAST (val AS INT) LeagueGroupID FROM  strSplit(d.LeagueGroupID, ',') x) x
+		CROSS APPLY (SELECT CAST (value AS INT) LeagueGroupID FROM  STRING_SPLIT(d.LeagueGroupID, ',') x) x
 	)
 		SELECT  t.ProductId, t.Sporttype, t.Bettype, t.LeagueGroupID, t.TicketType
 		FROM	cte_data t 

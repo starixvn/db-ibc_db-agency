@@ -19,6 +19,7 @@ AS
 		- 20170728@Paul: Return 0 if that month has no data [RedmineID: #80779]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20220420@Danny: Separate Saba Sport Performance [Redmine: #167177]
 */
 
 BEGIN
@@ -65,7 +66,7 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @isTest);
 
 	INSERT INTO #TmpCondSumWL(sporttype, bettype)
-	SELECT	SportType,
+	SELECT	DISTINCT SportType,
 			BetType
 	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds);
 
