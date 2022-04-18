@@ -17,6 +17,7 @@ AS
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 		- 20200612@Sol: added index to temp table #SportBettype [RedmineId: #134967]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20220418@Sol: Alpha - Enhance performance of Outstanding [RedmineID: #171382]
 */
 
 BEGIN
@@ -26,12 +27,6 @@ BEGIN
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
-
-	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, PRIMARY KEY CLUSTERED (RefTable, bettype));
-
-	INSERT INTO #SportBettype (bettype, RefTable)
-	SELECT bettype, RefTable
-	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest);
 
 	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY);
  
@@ -44,11 +39,15 @@ BEGIN
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettrans b WITH (NOLOCK)  
 	WHERE statusId IN (0, 1)
-		AND EXISTS (
+		AND EXISTS 
+		(
 			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 0 AND s.bettype = b.bettype
-		) -- bet tickets
+			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+			and IsTest <= @isTest
+			AND s.RefTable = 0
+			AND s.BetType = b.bettype
+		)
 		AND mrecommend =  @CustID		
 	GROUP BY recommend;
 	
@@ -62,10 +61,14 @@ BEGIN
 	FROM dbo.translog t WITH (NOLOCK)
 	WHERE t.statusID IN (0, 1)
 		AND mrecommend =  @CustID
-		AND EXISTS (
+		AND EXISTS 
+		(
 			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 3 AND s.bettype = t.gameID
+			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+			and IsTest <= @isTest
+			AND s.RefTable = 3
+			AND s.BetType = t.gameID
 		)
 	GROUP BY recommend;
 
@@ -78,10 +81,14 @@ BEGIN
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettransRnG b WITH (NOLOCK)  
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS (
+		AND EXISTS 
+		(
 			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 1 AND s.bettype = b.gameID
+			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+			and IsTest <= @isTest
+			AND s.RefTable = 1
+			AND s.BetType = b.gameID
 		)
 		AND mrecommend =  @CustID		
 	GROUP BY recommend;
@@ -95,10 +102,14 @@ BEGIN
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettransLC b WITH (NOLOCK)  
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS (
+		AND EXISTS 
+		(
 			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 2 AND s.bettype = b.gameID
+			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+			and IsTest <= @isTest
+			AND s.RefTable = 2
+			AND s.BetType = b.gameID
 		)
 		AND mrecommend =  @CustID		
 	GROUP BY recommend;
@@ -123,7 +134,6 @@ BEGIN
 		INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.recommend = c.custid
 	ORDER BY c.username;
 
-	DROP TABLE #SportBettype;
 	DROP TABLE #OutStanding;
 
 	SET NOCOUNT OFF;
