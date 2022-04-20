@@ -38,32 +38,23 @@ RETURN
 	), cte_filter AS 
 	(
 		SELECT 
-					t.c.value('(@ProductId)[1]', 'SMALLINT') AS ProductID
-					, t.c.value('(@Sporttype)[1]', 'SMALLINT') AS Sporttype
-					, t.c.value('(@Bettype)[1]', 'SMALLINT') AS Bettype
-					, t.c.value('(@LeagueGroupId)[1]', 'VARCHAR(500)') AS LeagueGroupID
-					, t.c.value('(@TicketType)[1]', 'TINYINT') AS TicketType
-		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
+					t.c.value('./@ProductId', 'SMALLINT') AS ProductID
+					, t.c.value('./@Sporttype', 'SMALLINT') AS Sporttype
+					, t.c.value('./@Bettype', 'SMALLINT') AS Bettype
+					, t.c.value('./@LeagueGroupId', 'SMALLINT') AS LeagueGroupID
+					, t.c.value('./@TicketType', 'TINYINT') AS TicketType
+		FROM @__ProductDetails.nodes('//ProductDetail') t(c)
 		WHERE  ISNULL(@ProductDetails,'') <> 'All' AND ISNULL(@ProductDetails,'') <> ''
-	), cte_data AS
-	(
-		SELECT d.ProductId,  d.Sporttype, d.Bettype, x.LeagueGroupID, d.TicketType
-		FROM (
-			SELECT	ProductId,  Sporttype, Bettype, LeagueGroupID, TicketType FROM	cte_empty
-			UNION ALL
-			SELECT	ProductId,  Sporttype, Bettype, LeagueGroupID, TicketType FROM	cte_full
-			UNION ALL
-			SELECT	ProductId,  Sporttype, Bettype, LeagueGroupID, TicketType FROM	cte_filter
-			) d
-		CROSS APPLY (SELECT CAST (value AS INT) LeagueGroupID FROM  STRING_SPLIT(d.LeagueGroupID, ',') x) x
 	)
-		SELECT  t.ProductId, t.Sporttype, t.Bettype, t.LeagueGroupID, t.TicketType
-		FROM	cte_data t 
-		UNION ALl
-		SELECT u.ProductId, u.Sporttype, u.Bettype, 0 LeagueGroupID, 1 TicketType
-		FROM   cte_data u 
-		WHERE  u.ProductId = 1 AND u.Sporttype = 0 AND u.Bettype = 0 AND u.TicketType = 0
-
+	SELECT d.ProductId,  d.Sporttype, d.Bettype, LeagueGroupID, d.TicketType
+	FROM (
+		SELECT	ProductId,  Sporttype, Bettype, LeagueGroupID, TicketType FROM	cte_empty
+		UNION ALL
+		SELECT	ProductId,  Sporttype, Bettype, LeagueGroupID, TicketType FROM	cte_full
+		UNION ALL
+		SELECT	ProductId,  Sporttype, Bettype, LeagueGroupID, TicketType FROM	cte_filter
+		) d
+		
 )
 GO
 
