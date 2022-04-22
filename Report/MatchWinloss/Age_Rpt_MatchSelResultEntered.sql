@@ -28,6 +28,7 @@ AS
 		- 20180814@Percy: Reopen code for BF [RedmineID: #90258]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20211115@Malcolm: Exclude Matchs are deleted [Redmine: #164321]
+		- 20220422@Evan: Remove Using IsDeleted field in League Table [Redmine: #171699]
 */
  
 BEGIN
@@ -59,7 +60,7 @@ BEGIN
 		SUM(Entered) Entered, SUM(NonEntered) NonEntered
 	FROM m
 		INNER JOIN dbo.League l WITH (NOLOCK) ON m.leagueid = l.leagueid
-	WHERE l.isTest <= @IncludeTestData AND l.IsDeleted <> 1
+	WHERE l.isTest <= @IncludeTestData 
 	GROUP BY m.eventdate, l.sporttype
 
 	-- Outright
@@ -78,7 +79,7 @@ BEGIN
 			AND m.OddsStatus <> 'closed'
 			AND l.isTest <= @IncludeTestData
 			AND m.IsDeleted <> 1
-			AND l.IsDeleted <> 1
+			
 		GROUP BY m.LeagueID, l.sporttype, m.eventdate, m.GroupMatch
 	) AS match
 	GROUP BY eventdate, sporttype
@@ -100,7 +101,7 @@ BEGIN
 		GROUP BY r.LeagueID, o.EventDate, r.EventTime
 	) AS m
 		INNER JOIN dbo.League l WITH (NOLOCK) ON m.LeagueID = l.LeagueID
-	WHERE l.isTest <= @IncludeTestData AND l.IsDeleted <> 1
+	WHERE l.isTest <= @IncludeTestData 
 	GROUP BY m.EventDate, l.sporttype
 	
 	SELECT IsToday, EventDate, Sporttype, Entered, NonEntered
