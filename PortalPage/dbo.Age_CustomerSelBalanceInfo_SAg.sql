@@ -14,16 +14,19 @@ AS
 		- 20171020@Percy: Apply core balance sp [RedmineID: #84690]
 		- 20200602@Percy: Separate PendingTransfer3rd to Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20220429@Malcolm: Offer telegram bot service - [Redmine: #167819]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @username NVARCHAR(50), @givenCredit MONEY, @memberCredit MONEY
+	DECLARE @username NVARCHAR(50), @givenCredit MONEY, @memberCredit MONEY, @Currency INT, @CurrencyName NVARCHAR(50)
 
-	SELECT @username = username, @givenCredit = ISNULL(Credit, 0)
+	SELECT @username = username, @givenCredit = ISNULL(Credit, 0), @Currency = currency
 	FROM dbo.custInfo WITH (NOLOCK)
 	WHERE custid = @custid
+
+	SELECT @CurrencyName = e.currency FROM dbo.Exchange e WITH(NOLOCK) WHERE e.ExchangeId = @Currency
 
 	SELECT @memberCredit = ISNULL(SUM(credit), 0)
 	FROM dbo.custInfo WITH (NOLOCK)
@@ -71,6 +74,7 @@ BEGIN
 
 	SELECT
 		@username					AS username,
+		@CurrencyName				AS CurrencyName,
 		SUM(superCash)				AS cashBalance,
 		SUM(yesterdaySuperCash)		AS yesterday_CashBalance,
 		SUM(superCash + masterCash + agentCash + memberCash) AS totalBalance,
