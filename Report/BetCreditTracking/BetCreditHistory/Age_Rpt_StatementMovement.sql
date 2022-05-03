@@ -24,7 +24,17 @@ BEGIN
 		@InternalToDate DATETIME,
 		@CustId INT = NULL,
 		@IsEnabled BIT = 0,
-		@LoggedRoleId TINYINT
+		@LoggedRoleId TINYINT,
+		@BalanceUpDate SMALLDATETIME, 
+		@MoveBetsDate SMALLDATETIME
+
+	---get mb/balanceup date
+	DECLARE @MBBU TABLE (BalanceUpDate SMALLDATETIME, MoveBetsDate SMALLDATETIME)
+	INSERT INTO @MBBU (BalanceUpDate, MoveBetsDate)
+	EXEC bodb02.dbo.Age_SelBalanceUpDay
+
+	SELECT @BalanceUpDate = BalanceUpDate, @MoveBetsDate = MoveBetsDate
+	FROM @MBBU
 
 	SELECT @InternalFromDate = @FromDate, @InternalToDate = @Todate
 
@@ -140,9 +150,14 @@ BEGIN
 	----remove bettype of parlay = 29, outright = 10
 	DELETE FROM #SportBettype WHERE Bettype IN (10, 29)
 
-	----get data by conditions
-	IF (@custid IS NULL)
-	BEGIN
+	IF @Todate >= @BalanceUpDate
+	BEGIN 
+		IF @FromDate <= @MoveBetsDate
+		BEGIN
+			SET @InternalFromDate = DATEADD(DD, 1, @MoveBetsDate);
+		END
+
+		--range bettrans
 		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
 		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
 		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
@@ -150,24 +165,70 @@ BEGIN
 				ON m.matchid = sh.MatchId
 			INNER JOIN #Custids c 
 				ON c.CustId = sh.CustId
-		WHERE 
-			EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
+		WHERE
+			sh.CustId = ISNULL(@CustId, sh.CustId)
+			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
 			AND 
 			(
 				(sh.WinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
 				OR (sh.OldWinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
 			)
 			AND m.sporttype <> 50 --removed data of cricket 
-	END
-	ELSE
-	BEGIN
+
+		IF @BalanceUpDate < @FromDate
+		BEGIN
+			SET @InternalFromDate = @FromDate
+		END
+		ELSE
+		BEGIN
+			SET @InternalFromDate = @BalanceUpDate
+		END
+		
+		IF @ToDate > @MoveBetsDate
+		BEGIN
+			SET @InternalToDate = @MoveBetsDate
+		END
+
+		--range 14
 		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
 		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
 		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
-			INNER JOIN dbo.match m WITH(NOLOCK)
+			INNER JOIN dbo.match14 m WITH(NOLOCK)
 				ON m.matchid = sh.MatchId
-		WHERE 
-			sh.CustId = @custid
+			INNER JOIN #Custids c 
+				ON c.CustId = sh.CustId
+		WHERE
+			sh.CustId = ISNULL(@CustId, sh.CustId)
+			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
+			AND 
+			(
+				(sh.WinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
+				OR (sh.OldWinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
+			)
+			AND m.sporttype <> 50 --removed data of cricket 
+
+	END
+
+	SELECT	@InternalFromDate = @FromDate,
+			@InternalToDate = @ToDate
+
+	IF @FromDate < @BalanceUpDate 
+	BEGIN
+		IF @ToDate >= DATEADD(DD, -1, @BalanceUpDate)
+		BEGIN
+			SELECT @InternalToDate = DATEADD(DD, -1, @BalanceUpDate);
+		END
+
+		--range bk
+		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
+		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
+		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
+			INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH(NOLOCK)
+				ON m.matchid = sh.MatchId
+			INNER JOIN #Custids c 
+				ON c.CustId = sh.CustId
+		WHERE
+			sh.CustId = ISNULL(@CustId, sh.CustId)
 			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
 			AND 
 			(
@@ -188,7 +249,7 @@ BEGIN
 	GROUP BY d.CustId, d.TransId
 
 	----final result to return to UI
-	SELECT c.custid, c.username, d.TransId, d.OldWinlostDate, d.WinlostDate, s.MemberWinloss, s.MemberComm, s.MemberTotal, s.IsMultipleMoved
+	SELECT c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, s.MemberWinloss, s.MemberComm, s.MemberTotal, s.IsMultipleMoved
 	FROM #DataDetail d WITH(NOLOCK)
 		INNER JOIN #SumAmount s WITH(NOLOCK)
 			ON d.CustId = s.CustId AND d.TransId = s.TransId
@@ -200,5 +261,6 @@ BEGIN
 	DROP TABLE #SportBettype
 	DROP TABLE #DataDetail
 	DROP TABLE #SumAmount
+	DROP TABLE #Custids
 
 END
