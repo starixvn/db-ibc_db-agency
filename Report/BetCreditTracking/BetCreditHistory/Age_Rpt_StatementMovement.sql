@@ -24,17 +24,7 @@ BEGIN
 		@InternalToDate DATETIME,
 		@CustId INT = NULL,
 		@IsEnabled BIT = 0,
-		@LoggedRoleId TINYINT,
-		@BalanceUpDate SMALLDATETIME, 
-		@MoveBetsDate SMALLDATETIME
-
-	---get mb/balanceup date
-	DECLARE @MBBU TABLE (BalanceUpDate SMALLDATETIME, MoveBetsDate SMALLDATETIME)
-	INSERT INTO @MBBU (BalanceUpDate, MoveBetsDate)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-
-	SELECT @BalanceUpDate = BalanceUpDate, @MoveBetsDate = MoveBetsDate
-	FROM @MBBU
+		@LoggedRoleId TINYINT
 
 	SELECT @InternalFromDate = @FromDate, @InternalToDate = @Todate
 
@@ -147,95 +137,37 @@ BEGIN
 		WHERE c.recommend = @LoggedId AND c.roleid = 1
 	END
 
-	----remove bettype of parlay = 29, outright = 10
-	DELETE FROM #SportBettype WHERE Bettype IN (10, 29)
-
-	IF @Todate >= @BalanceUpDate
-	BEGIN 
-		IF @FromDate <= @MoveBetsDate
-		BEGIN
-			SET @InternalFromDate = DATEADD(DD, 1, @MoveBetsDate);
-		END
-
-		--range bettrans
-		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
-		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
-		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
-			INNER JOIN dbo.match m WITH(NOLOCK)
-				ON m.matchid = sh.MatchId
-			INNER JOIN #Custids c 
-				ON c.CustId = sh.CustId
-		WHERE
-			sh.CustId = ISNULL(@CustId, sh.CustId)
-			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
-			AND 
-			(
-				(sh.WinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
-				OR (sh.OldWinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
-			)
-			AND m.sporttype <> 50 --removed data of cricket 
-
-		IF @BalanceUpDate < @FromDate
-		BEGIN
-			SET @InternalFromDate = @FromDate
-		END
-		ELSE
-		BEGIN
-			SET @InternalFromDate = @BalanceUpDate
-		END
-		
-		IF @ToDate > @MoveBetsDate
-		BEGIN
-			SET @InternalToDate = @MoveBetsDate
-		END
-
-		--range 14
-		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
-		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
-		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
-			INNER JOIN dbo.match14 m WITH(NOLOCK)
-				ON m.matchid = sh.MatchId
-			INNER JOIN #Custids c 
-				ON c.CustId = sh.CustId
-		WHERE
-			sh.CustId = ISNULL(@CustId, sh.CustId)
-			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
-			AND 
-			(
-				(sh.WinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
-				OR (sh.OldWinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
-			)
-			AND m.sporttype <> 50 --removed data of cricket 
-
-	END
-
-	SELECT	@InternalFromDate = @FromDate,
-			@InternalToDate = @ToDate
-
-	IF @FromDate < @BalanceUpDate 
+	----get data by conditions
+	IF (@custid IS NULL)
 	BEGIN
-		IF @ToDate >= DATEADD(DD, -1, @BalanceUpDate)
-		BEGIN
-			SELECT @InternalToDate = DATEADD(DD, -1, @BalanceUpDate);
-		END
-
-		--range bk
 		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
 		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
 		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
-			INNER JOIN DBARC.bodb_Archive.dbo.match_bk m WITH(NOLOCK)
-				ON m.matchid = sh.MatchId
 			INNER JOIN #Custids c 
 				ON c.CustId = sh.CustId
-		WHERE
-			sh.CustId = ISNULL(@CustId, sh.CustId)
+		WHERE 
+			EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
+			AND 
+			(
+				(sh.WinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
+				OR (sh.OldWinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
+			)
+			
+	END
+	ELSE
+	BEGIN
+		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
+		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
+		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
+		WHERE 
+			sh.CustId = @custid
 			AND EXISTS (SELECT TOP 1 1 FROM #SportBettype b WHERE sh.Bettype = b.Bettype)
 			AND 
 			(
 				(sh.WinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
 				OR (sh.OldWinlostDate BETWEEN @InternalFromDate AND @InternalToDate)
 			)
-			AND m.sporttype <> 50 --removed data of cricket 
+			
 	END
 
 	----sum data by transid
