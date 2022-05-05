@@ -93,6 +93,7 @@ BEGIN
 			,Winlost MONEY
 			,ActualStake MONEY
 			,PlayerComm	MONEY
+			,Bettype SMALLINT
 		)
 
 		CREATE TABLE #SumAmount
@@ -140,8 +141,8 @@ BEGIN
 	----get data by conditions
 	IF (@custid IS NULL)
 	BEGIN
-		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
-		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
+		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm, Bettype)
+		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm, sh.Bettype
 		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
 			INNER JOIN #Custids c 
 				ON c.CustId = sh.CustId
@@ -156,8 +157,8 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm)
-		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm
+		INSERT INTO #DataDetail(CustId, TransId, OldWinlostDate, WinlostDate, Winlost, ActualStake, PlayerComm, Bettype)
+		SELECT sh.CustId, sh.TransId, sh.OldWinlostDate, sh.WinlostDate, sh.Winlost, sh.ActualStake, sh.PlayerComm, sh.Bettype
 		FROM dbo.StatementMovementHistory sh WITH(NOLOCK)
 		WHERE 
 			sh.CustId = @custid
@@ -169,6 +170,9 @@ BEGIN
 			)
 			
 	END
+
+	----delete parlay, outright have old winlostdate > new winlostdate
+	DELETE FROM #DataDetail WHERE Bettype IN (10, 29) AND OldWinlostDate >= WinlostDate
 
 	----sum data by transid
 	INSERT INTO #SumAmount(CustId, TransId, MemberWinloss, MemberComm, MemberTotal, IsMultipleMoved)

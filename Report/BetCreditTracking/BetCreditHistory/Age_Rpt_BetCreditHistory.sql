@@ -92,6 +92,13 @@ BEGIN
 	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
 	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate) --cover for users that are created in @today
 
+	----check BU date with from/to date
+	IF (@FromDate < @BalanceUpDay OR @Todate < @BalanceUpDay)
+	BEGIN
+		SELECT @ErrorCode = 102, @ErrorMess = 'From Date/To Date must be greater than or equal "' + CONVERT(VARCHAR(20), @BalanceUpDay, 101) + '"'
+		RETURN
+	END
+
 	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID TINYINT, rowid BIGINT, bettype SMALLINT)
 	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME, refNo BIGINT)
 	CREATE TABLE #LogCredit(ActionID INT, ActionNameEN NVARCHAR(256), logid BIGINT, custid INT, logdate DATETIME, OldValue MONEY, NewValue MONEY)
@@ -152,7 +159,7 @@ BEGIN
 				b.custid = @CustId
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
-				AND b.Actionid <> 33
+				AND b.Actionid NOT IN (1, 20, 21, 33, 100, 255)
 				AND b.transid = ISNULL(@RefNo, b.transid)
 			UNION
 			SELECT 
@@ -172,7 +179,7 @@ BEGIN
 				b.custid = @CustId
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
-				AND b.Actionid <> 33
+				AND b.Actionid NOT IN (1, 20, 21, 33, 100, 255)
 				AND b.transid = ISNULL(@RefNo, b.transid)
 		)
 		INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid, rs.bettype)
@@ -383,56 +390,43 @@ BEGIN
 
 		DECLARE @RowStart INT , @RowEnd INT
 		SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
-
-		SELECT @TotalRows = COUNT(1) FROM #BalanceRecord b WITH(NOLOCK)
-
-		IF (@TotalRows = 0) --no row/invalid refno ...etc
-		BEGIN
-			SELECT 
-				0 AS RowNumber,
-				b.ActionID,
-				b.ActionDate, 
-				b.Winlostdate, 
-				b.RefNo, 
-				b.Actual_stake,
-				b.Winloss,
-				b.Playercomm, 
-				b.BalanceChanged, 
-				b.NewBalance,
-				b.GivenCredit,
-				b.BetCredit,
-				b.Action,
-				b.rowid
-			FROM #BalanceRecord b
-		END
-		ELSE
+		
 		BEGIN
 			---filter by refno only again because need to given credit to cal bet credit until now
 			IF (@RefNo IS NOT NULL)
 			BEGIN
 				SELECT @TotalRows = COUNT(1) FROM #BalanceRecord b WITH(NOLOCK) WHERE b.refNo = @RefNo
 
-				SELECT 
-					ROW_NUMBER() OVER (ORDER BY ActionDate, rowid) AS RowNumber,
-					b.ActionID,
-					b.ActionDate, 
-					b.Winlostdate, 
-					b.RefNo, 
-					b.Actual_stake,
-					b.Winloss,
-					b.Playercomm, 
-					b.BalanceChanged, 
-					b.NewBalance,
-					b.GivenCredit,
-					b.BetCredit,
-					b.Action,
-					b.rowid
-				FROM #BalanceRecord b
-				WHERE b.refNo = @RefNo
+				;WITH rs AS
+				(
+					SELECT 
+						ROW_NUMBER() OVER (ORDER BY ActionDate, rowid) AS RowNumber,
+						b.ActionID,
+						b.ActionDate, 
+						b.Winlostdate, 
+						b.RefNo, 
+						b.Actual_stake,
+						b.Winloss,
+						b.Playercomm, 
+						b.BalanceChanged, 
+						b.NewBalance,
+						b.GivenCredit,
+						b.BetCredit,
+						b.Action,
+						b.rowid
+					FROM #BalanceRecord b
+					WHERE b.refNo = @RefNo
+				)
+				SELECT * FROM rs
+				WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)
+				ORDER BY ActionDate, rowid
+					
 			END
 			ELSE
 			BEGIN
+				SELECT @TotalRows = COUNT(1) FROM #BalanceRecord b WITH(NOLOCK)
 				SET @TotalRows = @TotalRows + 1
+
 				;WITH rs
 				AS
 				(
