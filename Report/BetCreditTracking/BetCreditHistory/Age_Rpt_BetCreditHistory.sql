@@ -424,7 +424,11 @@ BEGIN
 			END
 			ELSE
 			BEGIN
-				SELECT @TotalRows = COUNT(1) FROM #BalanceRecord b WITH(NOLOCK)
+				SELECT @TotalRows = COUNT(1) 
+				FROM #BalanceRecord b WITH(NOLOCK)
+				WHERE b.winlostdate IS NOT NULL 
+					OR b.refNo IS NULL
+
 				SET @TotalRows = @TotalRows + 1
 
 				;WITH rs
