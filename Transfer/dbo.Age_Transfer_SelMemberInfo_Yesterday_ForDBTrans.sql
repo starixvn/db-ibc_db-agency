@@ -3,8 +3,6 @@ ALTER PROCEDURE [dbo].[Age_Transfer_SelMemberInfo_Yesterday_ForDBTrans]
 	@custid int,--member 
 	@IsAllowTotalBalance bit = null,
 	@username varchar(20) OUTPUT,--member 
-	@syncCasino BIT = 0 OUTPUT ,
-	@DisableCasino BIT = 0 OUTPUT,
 	@CashBalance money OUTPUT,
 	@Oustanding money OUTPUT,
 	@GivenCredit money OUTPUT,
@@ -44,6 +42,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday on db052/bodb02
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
 		
 */
 BEGIN
@@ -79,8 +78,6 @@ BEGIN
 			 @RoleID = customer.roleid, --nqminh - 19Feb09
 			 @LastLogin = customer.lastlogged,
 			 @Username = customer.username,  
-			 @syncCasino = ci.syncCasino,
-			 @DisableCasino = ci.DisableCasino,
 			 @GivenCredit = ci.credit,
 			 @CashBalance = isnull(b.CashBalance,0),
 			 @PendingTransfer3rd = isnull(b.PendingTransfer3rd,0)
@@ -139,8 +136,6 @@ BEGIN
 			 @RoleID = customer.roleid, --nqminh - 19Feb09
 			 @LastLogin = customer.lastlogged,
 			 @Username = customer.username, 
-			 @syncCasino = ci.syncCasino, 
-			 @DisableCasino = ci.DisableCasino,
 			 @GivenCredit = ci.credit,
 			 @CashBalance = isnull(b.CashBalance,0),
 			 @PendingTransfer3rd = isnull(b.PendingTransfer3rd,0)

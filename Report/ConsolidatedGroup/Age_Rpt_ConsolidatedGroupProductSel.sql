@@ -28,6 +28,7 @@ AS
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
 		- 20200918@Malcolm: Add Joker [redmine: #131609]
 		- 20201009@Malcolm: Add @SettingStatus param for this Sp [redmine: #143077]
+		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
 		
 	Param's Explanation:
 
@@ -79,7 +80,8 @@ BEGIN
 		SET		isShow = 1
 		WHERE	ProductID = 8
 	END 
-
+	
+	/*
 	-----3. Gold Deluxe
 	IF EXISTS (	SELECT	1
 				FROM	dbo.CustInfo C WITH (NOLOCK)
@@ -91,7 +93,7 @@ BEGIN
 		SET		isShow = 1
 		WHERE	ProductID = 12
 	END 
-
+	*/
 	-----------------------------------------------------------
 	----------------------------DCS---------------------------
 	SELECT t.ProductID,
