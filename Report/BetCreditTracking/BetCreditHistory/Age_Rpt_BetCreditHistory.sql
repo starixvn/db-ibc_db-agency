@@ -99,8 +99,8 @@ BEGIN
 		RETURN
 	END
 
-	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID TINYINT, rowid BIGINT, bettype SMALLINT)
-	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME, refNo BIGINT)
+	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID INT, rowid BIGINT, bettype SMALLINT, IsUserLogActionId BIT)
+	CREATE TABLE #Transaction(transID BIGINT, custID INT, winlostdate SMALLDATETIME, refNo BIGINT, IsBetTrans BIT DEFAULT 0)
 	CREATE TABLE #LogCredit(ActionID INT, ActionNameEN NVARCHAR(256), logid BIGINT, custid INT, logdate DATETIME, OldValue MONEY, NewValue MONEY)
 
 	IF EXISTS (SELECT top 1 1 from dbo.Customer c WITH(NOLOCK) WHERE c.creatdate > @InternalToDate AND c.custid = @CustId AND c.roleid = 1)
@@ -160,7 +160,6 @@ BEGIN
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
 				AND b.Actionid NOT IN (1, 20, 21, 33, 100, 255)
-				AND b.transid = ISNULL(@RefNo, b.transid)
 			UNION
 			SELECT 
 				ActionDate, 
@@ -180,9 +179,8 @@ BEGIN
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
 				AND b.Actionid NOT IN (1, 20, 21, 33, 100, 255)
-				AND b.transid = ISNULL(@RefNo, b.transid)
 		)
-		INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid, rs.bettype)
+		INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid, rs.bettype, IsUserLogActionId)
 		SELECT 
 			COALESCE(ActionDate, l.logdate) ActionDate, 
 			NULL winlostdate, 
@@ -195,7 +193,8 @@ BEGIN
 			COALESCE(l.NewValue, lo.NewValue, @OldCreditFirstTimes, 0) GivenCredit,
 			(b.NewBalance + COALESCE(l.NewValue, lo.NewValue, @OldCreditFirstTimes, 0)) AS BetCredit,
 			COALESCE(Action, l.ActionNameEN) AS Action, 
-			COALESCE(b.custid, l.custid) AS custid, b.ActionID, b.RowID, b.bettype
+			COALESCE(b.custid, l.custid) AS custid, COALESCE(b.ActionID, l.ActionID), b.RowID, b.bettype,
+			CASE WHEN b.ActionID IS NULL AND l.ActionID IS NOT NULL THEN 1 ELSE 0 END
 		FROM rs b WITH(NOLOCK)
 			FULL JOIN 
 			(
@@ -240,8 +239,8 @@ BEGIN
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- bettrans
-			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
-			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo, IsBetTrans)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo, 1
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettrans b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
@@ -286,8 +285,8 @@ BEGIN
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- bettrans
-			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
-			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo, IsBetTrans)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo, 1
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettrans14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
@@ -353,8 +352,8 @@ BEGIN
 			WHERE br.refNo NOT IN (SELECT transid FROM #Transaction)
 
 			-- bettrans
-			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
-			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo, IsBetTrans)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo, 1
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettrans b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
@@ -363,8 +362,8 @@ BEGIN
 				AND br.bettype < 19999 AND b.bettype < 19999
 
 
-			INSERT INTO #Transaction(transID, custID, winlostdate, refNo)
-			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo
+			INSERT INTO #Transaction(transID, custID, winlostdate, refNo, IsBetTrans)
+			SELECT br.refNo, br.custID, b.winlostdate, b.RefNo, 1
 			FROM #BalanceRecord br
 				INNER JOIN dbo.bettrans14 b WITH(NOLOCK)
 					ON br.custid = b.custid AND br.refNo = b.transid
@@ -384,9 +383,19 @@ BEGIN
 		--- update to final result
 		UPDATE b
 			SET b.winlostdate = t.winlostdate
+				, b.refNo = CASE WHEN s.RefTable = 3 THEN t.refNo ELSE b.refNo END
 		FROM #BalanceRecord b
 			INNER JOIN #Transaction t
 				ON b.custid = t.custID AND b.refNo = t.transID
+			OUTER APPLY 
+			(
+				SELECT s.RefTable
+				FROM SportBettypeMatrix s WITH(NOLOCK)
+				WHERE s.BetType = b.bettype
+					AND t.IsBetTrans = 1
+					AND s.RefTable IN (1, 2, 3)
+			) s
+		WHERE NOT (t.IsBetTrans = 1 AND ISNULL(s.RefTable, 0) IN (1,2))
 
 		DECLARE @RowStart INT , @RowEnd INT
 		SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
@@ -395,7 +404,9 @@ BEGIN
 			---filter by refno only again because need to given credit to cal bet credit until now
 			IF (@RefNo IS NOT NULL)
 			BEGIN
-				SELECT @TotalRows = COUNT(1) FROM #BalanceRecord b WITH(NOLOCK) WHERE b.refNo = @RefNo
+				SELECT @TotalRows = COUNT(1) 
+				FROM #BalanceRecord b WITH(NOLOCK) 
+				WHERE b.refNo = @RefNo AND b.winlostdate IS NOT NULL
 
 				;WITH rs AS
 				(
@@ -413,9 +424,11 @@ BEGIN
 						b.GivenCredit,
 						b.BetCredit,
 						b.Action,
-						b.rowid
+						b.rowid,
+						b.IsUserLogActionId
 					FROM #BalanceRecord b
 					WHERE b.refNo = @RefNo
+						AND b.winlostdate IS NOT NULL
 				)
 				SELECT * FROM rs
 				WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)
@@ -436,7 +449,7 @@ BEGIN
 				(
 					SELECT 
 						ROW_NUMBER() OVER (ORDER BY ActionDate, rowid) AS RowNumber,
-						t.ActionId, t.ActionDate, t.Winlostdate, t.RefNo, t.Actual_stake, t.Winloss, t.Playercomm, t.BalanceChanged, t.NewBalance, t.GivenCredit, t.BetCredit, t.Action, t.Rowid
+						t.ActionId, t.ActionDate, t.Winlostdate, t.RefNo, t.Actual_stake, t.Winloss, t.Playercomm, t.BalanceChanged, t.NewBalance, t.GivenCredit, t.BetCredit, t.Action, t.Rowid, t.IsUserLogActionId
 					FROM 
 					(
 						SELECT 
@@ -452,7 +465,8 @@ BEGIN
 							@OldCreditFirstTimes AS GivenCredit, 
 							NULL AS BetCredit, 
 							'Opening Credit' AS Action,
-							NULL AS rowid
+							NULL AS rowid,
+							0 AS IsUserLogActionId
 						UNION
 						SELECT 
 							b.ActionID,
@@ -467,7 +481,8 @@ BEGIN
 							b.GivenCredit,
 							b.BetCredit,
 							b.Action,
-							b.rowid
+							b.rowid,
+							b.IsUserLogActionId
 						FROM #BalanceRecord b
 						WHERE b.winlostdate IS NOT NULL 
 								OR b.refNo IS NULL
