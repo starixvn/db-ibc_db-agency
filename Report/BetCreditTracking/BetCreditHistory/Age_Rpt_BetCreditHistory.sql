@@ -159,7 +159,13 @@ BEGIN
 				b.custid = @CustId
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
-				AND b.Actionid NOT IN (1, 20, 21, 33, 100, 255)
+				AND b.Actionid <> 33 --- excluded action change of IsSum from 0 to 1
+				AND 
+				(
+					BalanceChanged <> 0
+					OR 
+					(BalanceChanged = 0 AND ActionID NOT IN (1, 20, 21, 100, 255)) --excluded others (won/lose->won/lose...), Reject Bet, Accept Bet, Bet SUM insert, Balance insert
+				)
 			UNION
 			SELECT 
 				ActionDate, 
@@ -178,7 +184,13 @@ BEGIN
 				b.custid = @CustId
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
-				AND b.Actionid NOT IN (1, 20, 21, 33, 100, 255)
+				AND b.Actionid <> 33 --- excluded action change of IsSum from 0 to 1
+				AND 
+				(
+					BalanceChanged <> 0
+					OR 
+					(BalanceChanged = 0 AND ActionID NOT IN (1, 20, 21, 100, 255)) --excluded others (won/lose->won/lose...), Reject Bet, Accept Bet, Bet SUM insert, Balance insert
+				)
 		)
 		INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid, rs.bettype, IsUserLogActionId)
 		SELECT 

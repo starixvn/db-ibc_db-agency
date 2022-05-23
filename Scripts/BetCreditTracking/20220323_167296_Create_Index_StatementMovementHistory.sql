@@ -9,13 +9,16 @@ USE bodb02;
 
 GO
 
-CREATE NONCLUSTERED INDEX IX_CustId_WlDate_OldWlDate ON [dbo].[StatementMovementHistory]
+CREATE CLUSTERED INDEX CIX_StatementMovementHistory ON [dbo].[StatementMovementHistory]
 (
 	[CustId] ASC,
-	[WinlostDate] ASC,
-	[OldWinlostDate] ASC
+	[BetType] ASC
 )
-INCLUDE([MatchId],[TransId],[Winlost],[ActualStake],[PlayerComm],[Bettype])
+
 GO
 
-
+CREATE NONCLUSTERED INDEX IX_WinlostDate ON [dbo].[StatementMovementHistory]
+(
+	[WinlostDate] ASC
+)
+GO
