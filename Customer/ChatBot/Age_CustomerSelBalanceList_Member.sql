@@ -1,7 +1,8 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/  
 CREATE PROCEDURE [dbo].[Age_CustomerSelBalanceList_Member]  
  @CustID  INT,  --Agent
- @PageSize INT = 0  
+ @PageSize INT = 0,
+ @PageIndex INT = 0  
 AS  
 /*  
 	Created by Evan  
@@ -15,6 +16,13 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
+	DECLARE @RowStart	INT,
+			@RowEnd		INT;
+		
+	SELECT	@PageIndex = @PageIndex - 1,
+			@RowStart = @PageSize * @PageIndex + 1,
+			@RowEnd = @RowStart + @PageSize - 1;
+	
 	DECLARE @isTest BIT
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
@@ -120,19 +128,43 @@ BEGIN
 		WHERE 
 			c.roleid = 1 AND c.recommend = @CustID 
 	
-	SELECT	 *
-	FROM (
-		SELECT
-			c.username,
-			c.custid, 
-			isnull(balance.balance,0) AS balance,
-			isnull(balance.yesterdaybalance,0) yesterday_balance,
-			ROW_NUMBER() OVER(ORDER BY balance DESC) RowNum
-		FROM #tmp_customer c 
-			INNER JOIN #balance AS balance ON c.custid = balance.custid 
-		WHERE balance <> 0
-	) x
-	WHERE x.RowNum <= @PageSize OR @PageSize <= 0
+	IF @PageSize <= 0
+		SELECT	x.custid,
+				x.username,
+				x.balance,
+				x.yesterday_balance
+		FROM (
+			SELECT
+				c.username,
+				c.custid, 
+				isnull(balance.balance,0) AS balance,
+				isnull(balance.yesterdaybalance,0) yesterday_balance
+			FROM #tmp_customer c 
+				INNER JOIN #balance AS balance ON c.custid = balance.custid 
+			WHERE balance <> 0
+		) x
+		ORDER BY balance DESC
+		
+	ELSE
+		SELECT	x.custid,
+				x.username,
+				x.balance,
+				x.yesterday_balance,
+				x.RowNum
+		FROM (
+			SELECT
+				c.username,
+				c.custid, 
+				isnull(balance.balance,0) AS balance,
+				isnull(balance.yesterdaybalance,0) yesterday_balance,
+				ROW_NUMBER() OVER(ORDER BY ABS(balance) DESC) RowNum
+			FROM #tmp_customer c 
+				INNER JOIN #balance AS balance ON c.custid = balance.custid 
+			WHERE balance <> 0
+		) x
+		WHERE (RowNum <= @PageSize AND @PageIndex < 0) 
+					OR (@PageIndex >= 0 AND RowNum BETWEEN @RowStart AND @RowEnd)
+		ORDER BY RowNum
 
 	DROP TABLE #balance
 	DROP TABLE #tmp_customer

@@ -3,7 +3,11 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
 	@CustID		INT, --srecommend
 	@ProductIds	VARCHAR(MAX),
 	@IsChatBot BIT = 0,
-	@PageSize INT = 0
+	@PageSize INT = 0,
+	@PageIndex INT = 1,
+	@TotalMemberOutstanding	Money = 0 OUTPUT,
+	@TotalSuperOutstanding	Money = 0 OUTPUT
+
 AS
 
 /*
@@ -19,10 +23,18 @@ AS
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 		- 20200612@Sol: added index to temp table #SportBettype [RedmineId: #134967]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
 */
 
 BEGIN
 	SET NOCOUNT ON;
+
+	DECLARE @RowStart	INT,
+			@RowEnd		INT;
+		
+	SELECT	@PageIndex = @PageIndex - 1,
+			@RowStart = @PageSize * @PageIndex + 1,
+			@RowEnd = @RowStart + @PageSize - 1;
 
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -101,43 +113,55 @@ BEGIN
 		AND srecommend =  @CustID		
 	GROUP BY mrecommend;
 
-	IF @IsChatBot = 0
-	WITH rt AS (
-		SELECT
-			mrecommend,
-			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
-			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding
-		FROM #OutStanding
-		GROUP BY mrecommend
-	)
-	SELECT
-		rt.mrecommend AS CustId,
-		c.username AS CustName,
-		rt.MemberOutstanding,
-		rt.SuperOutstanding
-	FROM rt
-		INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.mrecommend = c.custid
-	ORDER BY c.username;
-
-	ELSE
+	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
 		WITH rt AS (
-		SELECT
-			mrecommend,
-			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
-			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(SuperOutstanding, 0)) DESC) RowNum
-		FROM #OutStanding
-		GROUP BY mrecommend
+			SELECT
+				mrecommend,
+				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
+				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding
+			FROM #OutStanding
+			GROUP BY mrecommend
+		), rt1 AS(
+			SELECT ROW_NUMBER() OVER(ORDER BY c.username ) RowNum ,c.custid,c.username
+			FROM rt INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.mrecommend = c.custid
 		)
 		SELECT
 			rt.mrecommend AS CustId,
-			c.username AS CustName,
+			rt1.username AS CustName,
 			rt.MemberOutstanding,
 			rt.SuperOutstanding
 		FROM rt
-			INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.mrecommend = c.custid
-		WHERE RowNum <= @PageSize OR @PageSize <= 0
-	
+			INNER JOIN rt1 WITH (NOLOCK) ON rt.mrecommend = rt1.custid
+		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
+		ORDER BY RowNum;
+
+	ELSE -- Using for chatbot IsChatBot = 1, order by SuperOutstanding
+	BEGIN
+		
+			WITH rt AS (
+			SELECT
+				mrecommend,
+				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
+				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+				ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(SuperOutstanding, 0)) DESC) RowNum
+			FROM #OutStanding
+			GROUP BY mrecommend
+			)
+			SELECT
+				rt.mrecommend AS CustId,
+				c.username AS CustName,
+				rt.MemberOutstanding,
+				rt.SuperOutstanding
+			FROM rt
+				INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.mrecommend = c.custid
+			WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
+			ORDER BY RowNum
+		
+	END 
+		
+	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0))
+			,@TotalSuperOutstanding = SUM(ISNULL(SuperOutstanding, 0)) 
+	FROM #OutStanding
 
 	DROP TABLE #SportBettype;
 	DROP TABLE #OutStanding;

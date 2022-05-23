@@ -19,6 +19,7 @@ AS
         - 20180416@Sophia: Enhance performance high CPU for WC2018 [Redmine: #93100]
         - 20180731@Patrick: indexes revolution [RedmineId: #98757]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+        - 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
 
 */
 
@@ -49,29 +50,29 @@ BEGIN
     IF @roleid = 1
     BEGIN
         -- bettransRNG
-        INSERT INTO #Outstanding (memberOutstanding)
-        SELECT SUM(ABS(actual_stake))
+        INSERT INTO #Outstanding (memberOutstanding, agentOutstanding)
+        SELECT SUM(ABS(actual_stake)), SUM(ABS(actual_stake * apositiontaking))
         FROM dbo.bettransRNG WITH (NOLOCK, Index=IX_betrunning_custid)
         WHERE custid = @custid
             AND statusID IN (0, 1)
 
         -- bettransLC
-        INSERT INTO #Outstanding (memberOutstanding)
-        SELECT SUM(ABS(actual_stake))
+        INSERT INTO #Outstanding (memberOutstanding, agentOutstanding)
+        SELECT SUM(ABS(actual_stake)), SUM(ABS(actual_stake * apositiontaking))
         FROM dbo.bettransLC WITH (NOLOCK, Index=IX_betrunning_custid)
         WHERE custid = @custid
             AND statusID IN (0, 1)
 
         -- translog
-        INSERT INTO #Outstanding (memberOutstanding)
-        SELECT SUM(ABS(actual_stake))
+        INSERT INTO #Outstanding (memberOutstanding, agentOutstanding)
+        SELECT SUM(ABS(actual_stake)), SUM(ABS(actual_stake * apositiontaking))
         FROM dbo.translog WITH (NOLOCK, Index=IX_betrunning_custid)
         WHERE custid = @custid
             AND statusID IN (0, 1)
 
         -- bettrans
-        INSERT INTO #Outstanding (memberOutstanding)
-        SELECT SUM(ABS(actual_stake))
+        INSERT INTO #Outstanding (memberOutstanding, agentOutstanding)
+        SELECT SUM(ABS(actual_stake)), SUM(ABS(actual_stake * apositiontaking))
         FROM dbo.bettrans b WITH (NOLOCK, Index=IX_betrunning_custid)
         WHERE b.custid = @custid
             AND b.statusId IN (0,1)
@@ -81,8 +82,9 @@ BEGIN
     BEGIN
 
         -- bettransRNG
-        INSERT INTO #Outstanding (agentOutstanding, memberOutstanding)
+        INSERT INTO #Outstanding (masterOutstanding,agentOutstanding, memberOutstanding)
         SELECT 
+            SUM(ABS(actual_stake * mpositiontaking)),
             SUM(ABS(actual_stake * apositiontaking)),
             SUM(ABS(actual_stake))
         FROM dbo.bettransRNG WITH (NOLOCK, Index=IX_betrunning_recommend)
@@ -90,8 +92,9 @@ BEGIN
             AND statusID IN (0, 1)
 
         -- bettransLC
-        INSERT INTO #Outstanding (agentOutstanding, memberOutstanding)
+        INSERT INTO #Outstanding (masterOutstanding,agentOutstanding, memberOutstanding)
         SELECT 
+            SUM(ABS(actual_stake * mpositiontaking)),
             SUM(ABS(actual_stake * apositiontaking)),
             SUM(ABS(actual_stake))
         FROM dbo.bettransLC WITH (NOLOCK, Index=IX_betrunning_recommend)
@@ -99,8 +102,9 @@ BEGIN
             AND statusID IN (0, 1)
 
         -- translog
-        INSERT INTO #Outstanding (agentOutstanding, memberOutstanding)
+        INSERT INTO #Outstanding (masterOutstanding,agentOutstanding, memberOutstanding)
         SELECT 
+            SUM(ABS(actual_stake * mpositiontaking)),
             SUM(ABS(actual_stake * apositiontaking)),
             SUM(ABS(actual_stake))
         FROM dbo.translog WITH (NOLOCK, Index=IX_betrunning_recommend)
@@ -108,10 +112,11 @@ BEGIN
             AND statusID IN (0, 1)
 
         -- bettrans
-        INSERT INTO #Outstanding (agentOutstanding, memberOutstanding)
-        SELECT
-            SUM(ABS(actual_stake * apositiontaking)) AS agentOutstanding 
-           ,SUM(CASE WHEN custid <> @custid THEN ABS(actual_stake) ELSE 0 END) AS memberOutstanding
+        INSERT INTO #Outstanding (masterOutstanding,agentOutstanding, memberOutstanding)
+        SELECT 
+            SUM(ABS(actual_stake * mpositiontaking)),
+            SUM(ABS(actual_stake * apositiontaking)),
+            SUM(ABS(actual_stake))
         FROM dbo.bettrans b WITH(NOLOCK)
         WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
             AND b.recommend = @custid
@@ -120,8 +125,9 @@ BEGIN
     ELSE IF @roleid = 3
     BEGIN
         -- bettransRNG
-        INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
+        INSERT INTO #Outstanding (superOutstanding, masterOutstanding, memberOutstanding)
         SELECT 
+            SUM(ABS(actual_stake * spositiontaking)),
             SUM(ABS(actual_stake * mpositiontaking)),
             SUM(ABS(actual_stake))
         FROM dbo.bettransRNG WITH (NOLOCK, Index=IX_betrunning_mrecommend)
@@ -129,8 +135,9 @@ BEGIN
             AND statusID IN (0, 1)
 
         -- bettransLC
-        INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
+        INSERT INTO #Outstanding (superOutstanding, masterOutstanding, memberOutstanding)
         SELECT 
+            SUM(ABS(actual_stake * spositiontaking)),
             SUM(ABS(actual_stake * mpositiontaking)),
             SUM(ABS(actual_stake))
         FROM dbo.bettransLC WITH (NOLOCK, Index=IX_betrunning_mrecommend)
@@ -138,8 +145,9 @@ BEGIN
             AND statusID IN (0, 1)
 
         -- translog
-        INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
+        INSERT INTO #Outstanding (superOutstanding, masterOutstanding, memberOutstanding)
         SELECT 
+            SUM(ABS(actual_stake * spositiontaking)),
             SUM(ABS(actual_stake * mpositiontaking)),
             SUM(ABS(actual_stake))
         FROM dbo.translog WITH (NOLOCK, Index=IX_betrunning_mrecommend)
@@ -147,10 +155,11 @@ BEGIN
             AND statusID IN (0, 1)
 
         -- bettrans
-        INSERT INTO #Outstanding (masterOutstanding, memberOutstanding)
-        SELECT
-            SUM(ABS(actual_stake * mpositiontaking)) AS masterOutstanding 
-           ,SUM(CASE WHEN custid <> @custid AND custid <> recommend THEN ABS(actual_stake) ELSE 0 END) AS memberOutstanding
+        INSERT INTO #Outstanding (superOutstanding, masterOutstanding, memberOutstanding)
+        SELECT 
+            SUM(ABS(actual_stake * spositiontaking)),
+            SUM(ABS(actual_stake * mpositiontaking)),
+            SUM(ABS(actual_stake))
         FROM dbo.bettrans b WITH(NOLOCK)
         WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
             AND b.mrecommend = @custid
@@ -200,10 +209,10 @@ BEGIN
     END
 
     SELECT
-        SUM(superOutstanding)    AS superOutstanding,
-        SUM(masterOutstanding)    AS masterOutstanding,
-        SUM(agentOutstanding)    AS agentOutstanding,
-        SUM(memberOutstanding)    AS memberOutstanding
+        ISNULL(SUM(superOutstanding),0)    AS superOutstanding,
+        ISNULL(SUM(masterOutstanding),0)    AS masterOutstanding,
+        ISNULL(SUM(agentOutstanding),0)    AS agentOutstanding,
+        ISNULL(SUM(memberOutstanding),0)    AS memberOutstanding
     FROM #Outstanding
     
     DROP TABLE #SportBettype
