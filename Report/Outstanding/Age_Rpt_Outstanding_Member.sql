@@ -1,7 +1,9 @@
 /*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Member] 
 	@CustID		INT, --recommend
-	@ProductIds	VARCHAR(MAX)
+	@ProductIds	VARCHAR(MAX),
+	@IsChatBot BIT = 0,
+	@PageSize INT = 0
 AS
 
 /*
@@ -107,6 +109,8 @@ BEGIN
 		AND recommend =  @CustID		
 	GROUP BY custid;
 	
+
+	IF @IsChatBot = 0
 	WITH rt AS (
 		SELECT
 			custid,
@@ -127,6 +131,29 @@ BEGIN
 	FROM rt
 		INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.custid = c.custid
 	ORDER BY c.username;
+
+	ELSE
+	WITH rt AS (
+		SELECT
+			custid,
+			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
+			SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
+			SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
+			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(AgentOutstanding, 0)) DESC) RowNum
+		FROM #OutStanding
+		GROUP BY custid
+	)
+	SELECT
+		rt.custid AS CustId,
+		c.username AS CustName,
+		rt.MemberOutstanding,
+		rt.AgentOutstanding,
+		rt.MasterOutstanding,
+		rt.SuperOutstanding
+	FROM rt
+		INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.custid = c.custid
+	WHERE RowNum <= @PageSize OR @PageSize <= 0;
 
 	DROP TABLE #SportBettype;
 	DROP TABLE #OutStanding;
