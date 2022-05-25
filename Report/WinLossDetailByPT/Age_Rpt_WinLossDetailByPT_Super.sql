@@ -16,7 +16,8 @@ DB: DBAGE/bodb02
 Revisions:    
 	- 20210623@Evan: Initialize SPs [RedmineID : #157338]
 	- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
-	- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
+	- 20220508@Danny: Separate Saba Sport Performance [Redmine: #167177]
+	- 20220525@Danny: Separate Saba Sport Performance [Redmine: #173196]
 
 Param's Explanation:  
 	@CustId: srecommend  
@@ -86,10 +87,11 @@ BEGIN
 	IF @FromDate <= @MoveBetsDay
 	BEGIN
 		INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
-		SELECT f.ProductID, f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
+		SELECT ISNULL(p.GroupProductId, f.ProductID) , f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
 		FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
 			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
-		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
+			LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId    
+		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID =  ISNULL(p.GroupProductId, f.ProductID))
 	END
 	
 	CREATE TABLE #ComWinLossDetails     
