@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBWH-bodb02,DBTXN-bodb02,DBACC-bodb02,DBBAL-bodb02,DBBOF-bodb02,DBPRO-bodb02" selecters="bodbLicenseeNet" viewers="vnteam" isFunction="1" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBWH-bodb02,DBTXN-bodb02,DBACC-bodb02,DBBAL-bodb02,DBBOF-bodb02,DBPRO-bodb02,DBBAH-bodb02" selecters="bodbLicenseeNet" viewers="vnteam" isFunction="1" isNested="0"></info>*/
 ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 (
 	 @ProductID		TINYINT		 = 0
@@ -13,7 +13,7 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 	Creator: Percy	
 	Date: 20160323
 	Task: Get SportType_Bettype
-	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02, DBWH.bodb02, DBTXN.bodb02, DBBAL.bodb02, DBBOF.bodb02, DBPRO-bodb02
+	DB: DBAGE.bodb02, DBEXT.bodb02, DBACC.bodb02, DBWH.bodb02, DBTXN.bodb02, DBBAL.bodb02, DBBOF.bodb02, DBPRO-bodb02, DBBAH-bodb02
 		
 	Revisions:
 		- 20160505@Percy: Return 2 columns RefTable, CasinoType
@@ -21,6 +21,7 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrix_Sel]
 		- 20210816@Sophia: add DBBAL [Redmine: #154300]
 		- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 		- 20220509@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #172461]
+		- 20220222@Sol: Alpha - Avoid confusion when event date is moved - [RedmineID: #167296]
 
 	Paramters Explanation:
  		@ProductID, @SportType, @BetType
