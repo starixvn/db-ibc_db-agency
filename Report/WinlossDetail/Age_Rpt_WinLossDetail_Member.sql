@@ -37,13 +37,31 @@ Revisions:
 	- 20210310@Malcolm: Add Pragmatic Live Casino [RedmineId : #133717]
 	- 20210617@Sol: changed how to calc net turn over - [RedmineId : #156653]
 	- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
+	- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 	
 	Param's Explanation:
 	 @ProductDetails:		
-		<ROOT>
-				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "0"/>
-				<ProductDetail ProductId = "32" Sporttype = "248" Bettype = "4298"/>
-		</ROOT>	
+		N'<ROOT>
+                <ProductDetail ProductId="32" Sporttype="248" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="32" Sporttype="248" Bettype="4297" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="32" Sporttype="248" Bettype="4298" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="45" Sporttype="243" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="45" Sporttype="243" Bettype="3150" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="36" Sporttype="247" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="36" Sporttype="247" Bettype="4599" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="36" Sporttype="247" Bettype="4600" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="21" Sporttype="211" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="21" Sporttype="211" Bettype="2499" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="0" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="0" Bettype="0" LeagueGroupId="0" TicketType="1"/>
+                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="42" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="74" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="108" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="2" Bettype="0" LeagueGroupId="42" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="50" Bettype="0" LeagueGroupId="42" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="113" TicketType="0"/>
+                <ProductDetail ProductId="1" Sporttype="2" Bettype="0" LeagueGroupId="122" TicketType="0"/>
+            </ROOT>'
 */
 
 BEGIN
@@ -71,63 +89,38 @@ BEGIN
 	CREATE TABLE #GrossComm (CustId INT, TurnoverNoDraw MONEY, GrossComm MONEY)
 
 	CREATE TABLE #TmpCondSumWL(
-		SportType	INT,
-		BetType		INT
+		SportType		INT,
+		BetType			INT,
+		LeagueGroupID	SMALLINT, 
+		TicketType		TINYINT
 	);
 
-	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT)
+	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT, LeagueGroupID SMALLINT, TicketType TINYINT)
 	DECLARE @isTest BIT = 0, @__ProductDetails XML;
 
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
+	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
 
-	IF ISNULL(@ProductDetails,'') = ''
-	BEGIN 
-		INSERT INTO @ExistingProductDetails
-		(
-			ProductId
-			,Sporttype
-			,Bettype
-		)
-		VALUES(NULL, NULL, NULL)
-	END
-	ELSE IF ISNULL(@ProductDetails,'')  = 'All'
+	DECLARE @SeparateSabaSport_Cutoff SMALLDATETIME 
+
+	SELECT @SeparateSabaSport_Cutoff = CutoffDate
+	FROM dbo.f_GetCutoffDate()
+	WHERE TypeName = 'SabaSport'
+
+	INSERT INTO @ExistingProductDetails(ProductId,Sporttype,Bettype,LeagueGroupID,TicketType)
+	SELECT ProductId,Sporttype,Bettype,LeagueGroupID,TicketType
+	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails)
+
+	IF @FromDate <= @MoveBetsDay
 	BEGIN
-		INSERT INTO @ExistingProductDetails
-		(
-			ProductId
-			,Sporttype
-			,Bettype
-		)
-		SELECT 
-			ProductId
-			,Sporttype
-			,Bettype
-		FROM dbo.f_GetProductDetail() f
+		INSERT INTO #TmpCondSumWL(SportType, BetType, LeagueGroupID, TicketType) 
+		SELECT f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
+		FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
+			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
+		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
 	END
-	ELSE 		
-	BEGIN	
-		SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
-
-		INSERT INTO @ExistingProductDetails
-		(
-			ProductId
-			,Sporttype
-			,Bettype
-		)
-		SELECT 
-			t.c.value('(@ProductId)[1]', 'SMALLINT') AS ProductID
-			, t.c.value('(@Sporttype)[1]', 'SMALLINT') AS Sporttype
-			, t.c.value('(@Bettype)[1]', 'SMALLINT') AS Bettype
-		FROM @__ProductDetails.nodes('ROOT/ProductDetail') t(c)
-	END
-
-	INSERT INTO #TmpCondSumWL(SportType, BetType) 
-	SELECT f.SportType, f.BetType
-	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
-		LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId
-	WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType)
 
 	------Get @Srecommend
 	DECLARE @Srecommend int, @mrecommend int;
@@ -167,6 +160,58 @@ BEGIN
 			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 		END
 
+		;WITH cte_bettrans AS
+		(
+			SELECT	b.CustID,
+					b.statusId,
+					b.apositiontaking,
+					b.bettype,
+					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType, 
+					CASE WHEN  b.modds IN (-0.25, 0.25) THEN b.modds ELSE 0 END modds,
+					SUM(b.oddsspread) AS oddsspread,
+					SUM(ABS(b.stake)) AS stake,
+					SUM(winlost) AS winlost,
+					SUM(actual_stake) AS actual_stake,
+					SUM(playercomm) AS playercomm,
+					SUM(awinlost) AS awinlost,
+					SUM(comm) AS comm,
+					SUM(acomm) AS acomm,
+					COUNT(1) AS NoOfTicket,
+					CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
+					ELSE 0 END  sporttype, 
+					CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
+					ELSE 0 END LeagueGroupID
+			FROM	dbo.bettrans b WITH(NOLOCK)
+			LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50)
+			LEFT JOIN (
+					SELECT LeagueGroupID, leagueid
+					FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122)
+					)l  ON m.leagueid = l.leagueid
+			WHERE winlostdate BETWEEN @FDate AND @TDate
+				AND b.statusID IN (111, 112, 113) 
+				AND recommend = @CID
+			GROUP BY CustID, b.statusId, b.apositiontaking, b.bettype, CASE WHEN  b.modds IN (-0.25, 0.25) THEN b.modds ELSE 0 END, CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END ,
+					CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
+					ELSE 0 END, 
+					CASE WHEN ( 
+									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
+					ELSE 0 END
+		)
 		INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
 		SELECT	CustID,
 				SUM(ABS(b.stake)) AS TurnOver,
@@ -186,11 +231,16 @@ BEGIN
 				SUM(playercomm) AS PlayerComm,
 				SUM(awinlost) AS AgWinlost,
 				SUM(comm - playercomm) AS AgComm,
-				COUNT(1) AS NoOfTicket
-		FROM dbo.bettrans b WITH(NOLOCK)
+				SUM(NoOfTicket) AS NoOfTicket
+		FROM cte_bettrans b 
 			INNER JOIN (
-							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable
-							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
+							FROM (	
+									SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
+									FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+									WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+											AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+								 ) f
 								LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 								LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
 							WHERE EXISTS(SELECT 1
@@ -198,15 +248,13 @@ BEGIN
 											OR 
 												(
 													e.Bettype = f.BetType 
-														  OR (
-																e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g)
-														     )
+															OR (
+																e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+															)
 												)
 										)
-						) s ON b.bettype = s.Bettype
-		WHERE winlostdate BETWEEN @FDate AND @TDate
-			AND b.statusID IN (111, 112, 113) 
-			AND Recommend = @CID
+						) s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
+		
 		GROUP BY CustID;
 
 		-- bettransRnG
@@ -217,7 +265,12 @@ BEGIN
 		FROM dbo.bettransRnG b WITH(NOLOCK)
 			INNER JOIN (
 							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType
-							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+							FROM (	
+									SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
+									FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+									WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+											AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) AND ma.RefTable = 1
+								 ) f
 								LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 								LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
 							WHERE EXISTS(SELECT 1
@@ -225,12 +278,12 @@ BEGIN
 											OR 
 												(
 													e.Bettype = f.BetType 
-														  OR (
-																e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g)
-														     )
+														OR (
+																e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+															)
 												)
 										)
-								AND f.RefTable = 1
+								
 						) s ON b.gameID = s.Bettype
 			OUTER APPLY 
 			(
@@ -252,7 +305,12 @@ BEGIN
 		FROM dbo.bettransLC b WITH(NOLOCK)
 			INNER JOIN (
 							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType
-							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+							FROM (	
+									SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
+									FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+									WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+											AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) AND ma.RefTable = 2
+								 ) f
 								LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 								LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
 							WHERE EXISTS(SELECT 1
@@ -260,12 +318,12 @@ BEGIN
 											OR 
 												(
 													e.Bettype = f.BetType 
-														  OR (
-																e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g)
-														     )
+														 OR (
+																e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+															)
 												)
 										)
-								AND f.RefTable = 2
+								
 						) s ON b.gameID = s.Bettype
 			OUTER APPLY 
 			(
@@ -315,7 +373,7 @@ BEGIN
 				SUM(comm - playercomm) AS AgComm,
 				SUM(betcount) AS NoOfTicket
 		FROM dbo.sum_winloss b WITH (NOLOCK) 
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype
+			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 		WHERE winlostdate BETWEEN @FDate AND @TDate			
 			AND recommend = @CID
 			AND RoleID = 1
@@ -338,12 +396,12 @@ BEGIN
 		END
 
 		-- using cte to remove predicate when seek on sum_winloss_old
-		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype) AS
+		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype, leagueGroupID, ticketType) AS
 		(
-			SELECT @FDate AS winlostdate, SportType, BetType
+			SELECT @FDate AS winlostdate, SportType, BetType, leagueGroupID, ticketType
 			FROM #TmpCondSumWL
 			UNION ALL
-			SELECT DATEADD(DAY, 1, winlostdate), SportType, BetType
+			SELECT DATEADD(DAY, 1, winlostdate), SportType, BetType, leagueGroupID, ticketType
 			FROM CTE_Winlostdate
 			WHERE winlostdate < @TDate
 		)
@@ -366,6 +424,8 @@ BEGIN
 			AND RoleID = 1
 			AND b.sporttype = w.sporttype
 			AND b.bettype = w.bettype
+			AND ISNULL(b.leagueGroupID,0) = w.leagueGroupID
+			AND ISNULL(b.ticketType,0) = w.ticketType
 		GROUP BY CustID
 		OPTION (MAXRECURSION 0);
 	END

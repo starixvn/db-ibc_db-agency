@@ -47,65 +47,75 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20210512@Malcolm: Add AdvantPlay Product [redmine: #154256]
 		- 20210609@Malcolm: Add AE Sexy - [Redmine: #156239]	
 		- 20210810@Evan: Add Bitcoin product - [Redmine: #159036]	
-		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]	
+		- 20220106@Evan: Add SG Jackpot - [Redmine: #166685]
 		- 20220124@Evan: Add Allbet Promotion - [Redmine: #166981]
 		- 20220208@Evan: Add FGG product - [Redmine: #165685]	
+		- 20220208@Danny: Add Saba Sport - [Redmine: #167177]
 	Paramters Explanation:
  		@ProductID: list of products
 */
 RETURNS TABLE
 RETURN
-	SELECT ProductID, SportType, BetType
+	SELECT ProductID, SportType, BetType, LeagueGroupID, TicketType
 	FROM (
-		VALUES	(1, 0, 0), --Sportsbook
-				(6, 251, 71), (6, 208, 0), (6, 209, 0), (6, 210, 0), --RNG Casino
-				(3, 161, 0), --Number Game
-				(5, 180, 0), --Virtual Sports
-				(8, 202, 0), --Keno
-				(12, 255, 0), --Gold Deluxe
-				(15, 204, 0), --Colossus Bets
-				(21, 211, 0), --Allbet Normal Bets
-				(21, 211, 2499), --Allbet Promotion
-				(22, 212, 0), --Macau Games
-				(23, 213, 0), --NG2
-				(24, 219, 0), --Fishing World
-				(27, 190, 0), --Betradar Virtual Sports
-				(28, 220, 0), -- Keno
-				(32, 248, 0), -- PP Normal Bet
-				(32, 248, 4297), -- PP Jackpot Contribution
-				(32, 248, 4298), -- PP Jackpot Prize
-				(34, 165, 0), -- Card Club
-				(36, 247, 0), -- SG Normal Bet
-				(36, 247, 4599), -- SG Jackpot Contribution
-				(36, 247, 4600), -- SG Jackpot Prize
-				(38, 245, 0), -- Virtual Games
-				(39, 244, 0), -- SA Gaming
-				(42, 200, 0), -- Saba.club Normal Bets
-				(43, 223, 0), -- Indo 4D	
-				(45, 243, 0), -- AE Sexy Normal Bets
-				(45, 243, 3150), -- AE Sexy Lucky Draw
-				(40, 222, 0), -- Table Games	
-				(47, 241, 0), -- BBIN
-				(46, 242, 0), -- IBCBet Live Casino
-				(50, 224, 0), -- RNG War
-				(52, 225, 0), -- ION
-				(55, 232, 0), -- PG Soft
-				(56, 234, 0), -- Joker
-				(51, 233, 0), -- WM
-				(59, 236, 0), -- GDG
-				(49, 231, 0), -- Virtual Sports 3
-				(57, 239, 0), -- BG
-				(60, 237, 0), -- MaxGame
-				(37, 246, 0), -- Saba Promotion
-				(63, 169, 0), -- Sports Lottery
-				(65, 170, 0),-- PP Live Casino
-				(61, 238, 0),--Habanero
-				(62, 167, 0), -- Creative Gaming
-				(66, 171, 0), --VGaming
-				(68, 174, 0), -- AdvantPlay Mini
-				(67, 172, 0),  -- AdvantPlay Product
-				(69, 175, 0),  -- Bitcoin product
-				(70, 176, 0)  -- FGG product
-		) d(ProductID, SportType, BetType)
+		VALUES	(1, 0, 0, 0, 0), -- Normal Sportsbook,
+				(1, 0, 0, 0, 1), -- CashOut,
+				(1, 1, 0, 42, 0), -- SABA Soccer,
+				(1, 1, 0, 74, 0), -- SABA Soccer,
+				(1, 1, 0, 108, 0), -- SABA Soccer,
+				(1, 2, 0, 42, 0), -- SABA Basketball,
+				(1, 50, 0, 42, 0), -- SABA Cricket,
+				(1, 1, 0, 113, 0), -- SABA Soccer PinGoal,
+				(1, 2, 0, 122, 0), -- SABA Basketball PinGoal,
+				(6, 251, 71, 0, 0), (6, 208, 0, 0, 0), (6, 209, 0, 0, 0), (6, 210, 0, 0, 0), --RNG Casino
+				(3, 161, 0, 0, 0), --Number Game
+				(5, 180, 0, 0, 0), --Virtual Sports
+				(8, 202, 0, 0, 0), --Keno
+				(12, 255, 0, 0, 0), --Gold Deluxe
+				(15, 204, 0, 0, 0), --Colossus Bets
+				(21, 211, 0, 0, 0), --Allbet Normal Bets
+				(21, 211, 2499, 0, 0), --Allbet Promotion
+				(22, 212, 0, 0, 0), --Macau Games
+				(23, 213, 0, 0, 0), --NG2
+				(24, 219, 0, 0, 0), --Fishing World
+				(27, 190, 0, 0, 0), --Betradar Virtual Sports
+				(28, 220, 0, 0, 0), -- Keno
+				(32, 248, 0, 0, 0), -- PP Normal Bet
+				(32, 248, 4297, 0, 0), -- PP Jackpot Contribution
+				(32, 248, 4298, 0, 0), -- PP Jackpot Prize
+				(34, 165, 0, 0, 0), -- Card Club
+				(36, 247, 0, 0, 0), -- SG Normal Bet
+				(36, 247, 4599, 0, 0), -- SG Jackpot Contribution
+				(36, 247, 4600, 0, 0), -- SG Jackpot Prize
+				(38, 245, 0, 0, 0), -- Virtual Games
+				(39, 244, 0, 0, 0), -- SA Gaming
+				(42, 200, 0, 0, 0), -- Saba.club Normal Bets
+				(43, 223, 0, 0, 0), -- Indo 4D	
+				(45, 243, 0, 0, 0), -- AE Sexy Normal Bets
+				(45, 243, 3150, 0, 0), -- AE Sexy Lucky Draw
+				(40, 222, 0, 0, 0), -- Table Games	
+				(47, 241, 0, 0, 0), -- BBIN
+				(46, 242, 0, 0, 0), -- IBCBet Live Casino
+				(50, 224, 0, 0, 0), -- RNG War
+				(52, 225, 0, 0, 0), -- ION
+				(55, 232, 0, 0, 0), -- PG Soft
+				(56, 234, 0, 0, 0), -- Joker
+				(51, 233, 0, 0, 0), -- WM
+				(59, 236, 0, 0, 0), -- GDG
+				(49, 231, 0, 0, 0), -- Virtual Sports 3
+				(57, 239, 0, 0, 0), -- BG
+				(60, 237, 0, 0, 0), -- MaxGame
+				(37, 246, 0, 0, 0), -- Saba Promotion
+				(63, 169, 0, 0, 0), -- Sports Lottery
+				(65, 170, 0, 0, 0),-- PP Live Casino
+				(61, 238, 0, 0, 0),--Habanero
+				(62, 167, 0, 0, 0), -- Creative Gaming
+				(66, 171, 0, 0, 0), --VGaming
+				(68, 174, 0, 0, 0), -- AdvantPlay Mini
+				(67, 172, 0, 0, 0),  -- AdvantPlay Product
+				(69, 175, 0, 0, 0),  -- Bitcoin product
+				(70, 176, 0, 0, 0)  -- FGG product
+
+		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO

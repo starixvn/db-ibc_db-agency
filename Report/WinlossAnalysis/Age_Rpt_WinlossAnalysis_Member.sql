@@ -19,6 +19,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
+		- 20220420@Danny: Separate Saba Sport Performance [Redmine: #167177]
 */
 
 BEGIN
@@ -51,7 +52,7 @@ BEGIN
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;
 
 	INSERT INTO #TmpCondSumWL(ProductID, sporttype, bettype)
-	SELECT	ISNULL(p.GroupProductId, s.ProductID),
+	SELECT	DISTINCT ISNULL(p.GroupProductId, s.ProductID),
 			SportType,
 			BetType
 	FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) s
