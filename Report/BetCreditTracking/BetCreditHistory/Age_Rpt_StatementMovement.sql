@@ -5,6 +5,9 @@ ALTER PROCEDURE Age_Rpt_StatementMovement
 	@Todate DATETIME,
 	@UserName VARCHAR(30) = '',
 	@LoggedId INT = -1,
+	@PageIndex INT = 1,
+	@PageSize INT = 50,
+	@TotalRows INT = 0 OUTPUT,
 	@ErrorCode INT = 0 OUTPUT,
 	@ErrorMess VARchar(1000) = '' OUTPUT
 )
@@ -15,6 +18,7 @@ AS
 	DB: DBBAH/bodb02
 	Revisions:  
 		- 20220222@Sol: Initialize sp - [RedmineID: #167296] 
+		- 20220531@Sol: Alpha - Limit date range on Bet Credit Tracking - [RedmineID: #173447]
 	
 */
 BEGIN
@@ -108,6 +112,8 @@ BEGIN
 		CREATE CLUSTERED INDEX IX_SumAmount ON #SumAmount(CustId, TransId)
 
 		CREATE TABLE #Custids (CustId INT)
+
+		CREATE TABLE #tblFinalResult (RowNumber INT, Custid INT, Username VARCHAR(30), TransId BIGINT, OldWinlostDate DATETIME, WinlostDate DATETIME, MemberWinloss MONEY, MemberComm MONEY, MemberTotal MONEY, IsMultipleMoved BIT)
 	END
 	----end temp table
 
@@ -184,19 +190,36 @@ BEGIN
 	FROM #DataDetail d
 	GROUP BY d.CustId, d.TransId
 
+	----paging
+	DECLARE @RowStart INT , @RowEnd INT
+	SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
+
 	----final result to return to UI
-	SELECT c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, s.MemberWinloss, s.MemberComm, s.MemberTotal, s.IsMultipleMoved
+	INSERT INTO #tblFinalResult (RowNumber, Custid, Username, TransId, OldWinlostDate, WinlostDate, MemberWinloss, MemberComm, MemberTotal, IsMultipleMoved)
+	SELECT 
+		ROW_NUMBER() OVER (ORDER BY c.username, d.TransId, d.OldWinlostDate) AS RowNumber,
+		c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, s.MemberWinloss, s.MemberComm, s.MemberTotal, s.IsMultipleMoved
 	FROM #DataDetail d WITH(NOLOCK)
 		INNER JOIN #SumAmount s WITH(NOLOCK)
 			ON d.CustId = s.CustId AND d.TransId = s.TransId
 		INNER JOIN dbo.Customer c WITH(NOLOCK)
 			ON c.custid= d.CustId AND c.roleid = 1
-	ORDER BY c.username, d.TransId, d.OldWinlostDate
+
+	--get total row
+	SELECT @TotalRows = COUNT(1) FROM #tblFinalResult fr WITH(NOLOCK)
+	
+	SELECT
+		rs.RowNumber, rs.Custid, rs.Username, rs.TransId, rs.OldWinlostDate, rs.WinlostDate, rs.MemberWinloss, rs.MemberComm, rs.MemberTotal,
+		rs.IsMultipleMoved
+	FROM #tblFinalResult AS rs
+	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)
+	ORDER BY rs.username, rs.TransId, rs.OldWinlostDate
 
 	----remove temp tables
 	DROP TABLE #SportBettype
 	DROP TABLE #DataDetail
 	DROP TABLE #SumAmount
 	DROP TABLE #Custids
+	DROP TABLE #tblFinalResult
 
 END
