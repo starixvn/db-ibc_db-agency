@@ -6,7 +6,7 @@ ALTER PROCEDURE Age_Rpt_StatementMovement
 	@UserName VARCHAR(30) = '',
 	@LoggedId INT = -1,
 	@PageIndex INT = 1,
-	@PageSize INT = 50,
+	@PageSize INT = 100,
 	@TotalRows INT = 0 OUTPUT,
 	@ErrorCode INT = 0 OUTPUT,
 	@ErrorMess VARchar(1000) = '' OUTPUT
