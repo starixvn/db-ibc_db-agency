@@ -26,7 +26,7 @@ BEGIN
 	DECLARE @isTest BIT
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
 
-	CREATE TABLE #SportBettype (bettype INT)
+	CREATE TABLE #SportBettype (bettype SMALLINT)
 	INSERT INTO #SportBettype (bettype)
 	SELECT bettype FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 	WHERE RefTable NOT IN (0, 3) -- exclude bettrans, translog

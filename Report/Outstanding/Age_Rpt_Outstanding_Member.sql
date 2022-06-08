@@ -125,31 +125,31 @@ BEGIN
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
 		WITH rt AS (
 			SELECT
-				custid,
+				rt.custid,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
-				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding
-			FROM #OutStanding
-			GROUP BY custid
-		), rt1 AS(
-			SELECT ROW_NUMBER() OVER(ORDER BY c.username ) RowNum ,c.custid,c.username
-			FROM rt INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.custid = c.custid
+				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+				ROW_NUMBER() OVER(ORDER BY c.username ) RowNum ,
+				c.username
+			FROM #OutStanding rt
+			INNER JOIN 	dbo.custInfo c WITH (NOLOCK) 
+					ON 	rt.custid = c.custid
+			GROUP BY rt.custid,c.username
 		)
 		SELECT
 			rt.custid AS CustId,
-			rt1.username AS CustName,
+			rt.username AS CustName,
 			rt.MemberOutstanding,
 			rt.AgentOutstanding,
 			rt.MasterOutstanding,
 			rt.SuperOutstanding
-		FROM rt
-			INNER JOIN rt1 WITH (NOLOCK) ON rt.custid = rt1.custid
+		FROM	
+			rt
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum;
 
 	ELSE -- Using for chatbot IsChatBot = 1, order by AgentOutstanding
-	BEGIN
 		WITH rt AS (
 		SELECT
 			custid,
@@ -166,12 +166,11 @@ BEGIN
 			rt.MemberOutstanding,
 			rt.AgentOutstanding,
 			rt.MasterOutstanding
-		FROM rt
-			INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.custid = c.custid
+		FROM 		rt
+		INNER JOIN dbo.custInfo c WITH (NOLOCK) 
+				ON rt.custid = c.custid
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum
-
-	END
 
 	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
 			@TotalMasterOutstanding	= SUM(ISNULL(MasterOutstanding, 0)),

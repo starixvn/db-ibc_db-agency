@@ -200,7 +200,7 @@ BEGIN
         INSERT INTO #Outstanding (superOutstanding, memberOutstanding)
         SELECT
             SUM(ABS(actual_stake * spositiontaking)) AS superOutstanding 
-           ,SUM(CASE WHEN custid <> @custid AND custid <> recommend AND custid <> mrecommend THEN ABS(actual_stake) ELSE 0 END) AS memberOutstanding
+           ,SUM(ABS(actual_stake)) AS memberOutstanding
         FROM dbo.bettrans b WITH(NOLOCK)
         WHERE NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE s.Bettype = b.bettype)
             AND b.srecommend = @custid
