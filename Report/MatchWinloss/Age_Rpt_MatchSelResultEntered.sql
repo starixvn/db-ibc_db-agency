@@ -50,7 +50,6 @@ BEGIN
 		FROM dbo.match WITH (NOLOCK)
 		WHERE eventdate BETWEEN @FromDate AND @ToDate
 			AND eventStatus <> 'closed'
-			AND IsDeleted <> 1
 		GROUP BY leagueid, eventdate
 	)
 	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
@@ -78,7 +77,6 @@ BEGIN
 		WHERE m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.OddsStatus <> 'closed'
 			AND l.isTest <= @IncludeTestData
-			AND m.IsDeleted <> 1
 			
 		GROUP BY m.LeagueID, l.sporttype, m.eventdate, m.GroupMatch
 	) AS match

@@ -49,7 +49,6 @@ BEGIN
 										WHEN @IsLive = 1 AND m.kickofftime <= @timeNow	THEN 1
 									ELSE 0
 								END	
-							AND m.IsDeleted <> 1
 							AND o.IsDeleted <> 1
 				)
 			AND l.isTest= CASE WHEN @isshowall = 1 THEN l.isTest ELSE @isshowall END
