@@ -19,6 +19,7 @@ AS
 	DB: DBBAH/bodb02
 	Revisions:  
 		- 20220222@Sol: Initialize sp - [RedmineID: #167296] 
+		- 20220611@Sophia: Hide ActionID = 31 which have Action have text (IsSUM : 1 to 0)  
 	
 */
 BEGIN
@@ -160,6 +161,7 @@ BEGIN
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33 --- excluded action change of IsSum from 0 to 1
+				AND  CASE WHEN ActionID = 31 AND Action   LIKE '%IsSUM : 1 to 0%'  THEN 0 ELSE 1 END = 1 	 --- excluded action change of IsSum from 1 to 0					 
 				AND 
 				(
 					BalanceChanged <> 0
@@ -185,6 +187,7 @@ BEGIN
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33 --- excluded action change of IsSum from 0 to 1
+				AND  CASE WHEN ActionID = 31 AND Action LIKE '%IsSUM : 1 to 0%' THEN 0 ELSE 1 END = 1 	 --- excluded action change of IsSum from 1 to 0				 
 				AND 
 				(
 					BalanceChanged <> 0
