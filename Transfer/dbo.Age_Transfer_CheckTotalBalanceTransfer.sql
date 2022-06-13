@@ -1,4 +1,5 @@
-﻿ALTER PROCEDURE  [dbo].[Age_Transfer_CheckTotalBalanceTransfer]
+﻿/*<info serverAlias="DBCUST-CustDB" executers="bodbAdminNet" viewers="" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE  [dbo].[Age_Transfer_CheckTotalBalanceTransfer]
 	@CustID                 int,
 	@SuperIDsTransferTotal  varchar(200),
 	@IsAllowed              bit = null OUTPUT
@@ -10,6 +11,7 @@ AS
     Original:
     Revisions:
 		- 20150612@Kathy: Move sp from DBAGE.bodb02 to DBCUST.CustDB [Redmine:#36216]
+		- 20220509@Danny: Use String_split built-in function [RemineID: #171831]
 
     
     Param's Explanation:
@@ -26,14 +28,8 @@ BEGIN
     IF EXISTS(
         SELECT 1 FROM custinfo (NOLOCK) 
         WHERE custid = @custid 
-            AND srecommend IN (SELECT CONVERT(INT,val) FROM dbo.strSplit(@SuperIDsTransferTotal, ',')) )
+            AND srecommend IN (SELECT CONVERT(INT,value) FROM STRING_SPLIT(@SuperIDsTransferTotal, ',')) )
         SELECT @IsAllowed = 1
         
 END
 
-GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [bodbDownlineNet] AS [dbo]
-GO
-GRANT EXECUTE ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [bodbDownlineNetView] AS [dbo]
-GO
-GRANT VIEW DEFINITION ON [dbo].[Age_Transfer_CheckTotalBalanceTransfer] TO [vnteam] AS [dbo]
