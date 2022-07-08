@@ -19,6 +19,7 @@ AS
 	DB: DBBAH/bodb02
 	Revisions:  
 		- 20220222@Sol: Initialize sp - [RedmineID: #167296] 
+		- 20220707@Sol: Alpha - Hide sum row (isSum 1 to 0) - [RedmineID: #173971] 
 	
 */
 BEGIN
@@ -160,12 +161,11 @@ BEGIN
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33 --- excluded action change of IsSum from 0 to 1
-				AND 
-				(
-					BalanceChanged <> 0
-					OR 
-					(BalanceChanged = 0 AND ActionID NOT IN (1, 20, 21, 100, 255)) --excluded others (won/lose->won/lose...), Reject Bet, Accept Bet, Bet SUM insert, Balance insert
-				)
+				AND 1 = CASE 
+							WHEN b.BalanceChanged = 0 AND b.ActionID = 31 AND Action LIKE '%IsSUM : 1 to 0%' THEN 0
+							WHEN b.BalanceChanged = 0 AND b.ActionID IN (0, 1, 20, 21, 100, 255) THEN 0 --excluded others (won/lose->won/lose...), Reject Bet, Accept Bet, Bet SUM insert, Balance insert
+							ELSE 1
+						END
 			UNION
 			SELECT 
 				ActionDate, 
@@ -185,12 +185,11 @@ BEGIN
 				AND b.ActionDate >= @InternalFromDate 
 				AND b.ActionDate < @InternalToDate
 				AND b.Actionid <> 33 --- excluded action change of IsSum from 0 to 1
-				AND 
-				(
-					BalanceChanged <> 0
-					OR 
-					(BalanceChanged = 0 AND ActionID NOT IN (1, 20, 21, 100, 255)) --excluded others (won/lose->won/lose...), Reject Bet, Accept Bet, Bet SUM insert, Balance insert
-				)
+				AND 1 = CASE 
+							WHEN b.BalanceChanged = 0 AND b.ActionID = 31 AND Action LIKE '%IsSUM : 1 to 0%' THEN 0
+							WHEN b.BalanceChanged = 0 AND b.ActionID IN (0, 1, 20, 21, 100, 255) THEN 0 --excluded others (won/lose->won/lose...), Reject Bet, Accept Bet, Bet SUM insert, Balance insert
+							ELSE 1
+						END
 		)
 		INSERT INTO #BalanceRecord(ActionDate, winlostdate, refNo, actual_stake, winloss, playercomm, BalanceChanged, NewBalance, GivenCredit, BetCredit, Action, custid, ActionID, rowid, rs.bettype, IsUserLogActionId)
 		SELECT 
