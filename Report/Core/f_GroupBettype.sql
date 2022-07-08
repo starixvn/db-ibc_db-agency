@@ -19,7 +19,6 @@ RETURN
 		- 20190805@Sophia: PHAIO 4B, Bettype 470 -> 497, Change GroupTypeId of 11, 199 [RedmineID: #115231]
 		- 20191118@Percy: BMAIO - Add bet type 1302 (703) [RedmineID: #118622]
 		- 20191226@Percy: Apply column DisplayedTypeId on bettype table [RedmineID: #125126]
-		- 20220707@Evan: Add 3 pairs of primary-secondary Volleyball AIO bet types [Redmine: #173861]
 
 	Remark: Sportsbook only
 */
@@ -28,13 +27,7 @@ RETURN
 		SELECT bt.typeid AS bettype, bt.DisplayedTypeId AS GroupTypeId
 		FROM dbo.bettype bt WITH (NOLOCK)
 		WHERE bt.typeid <> bt.DisplayedTypeId
-			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId = 1) 
-		UNION ALL
-		SELECT 3900, 4
-		UNION ALL
-		SELECT 3917, 3910
-		UNION ALL
-		SELECT 3915, 3916
+			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId = 1)
 	)
 	SELECT DISTINCT t.bettype, t.GroupTypeId
 	FROM CTE_bettype b
