@@ -55,6 +55,7 @@ Revisions:
 	- 20210723@Evan: Replace parameter @enabled,@suspended,@closed with @CustStatus
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20220714@Evan: Modify sp to avoid dump (remove code select into) - [Redmine: #175450]
 	
 Param's Explanation:
 • @CustID: AgentID
@@ -117,6 +118,16 @@ BEGIN
 		PendingTransfer3rd money
 	)
 
+	CREATE TABLE #bettrans_tmp 
+	(
+		custid INT,
+		winlostdate SMALLDATETIME,
+		ruben TINYINT,
+		bettype SMALLINT,
+		actual_stake_total MONEY,
+		TotalBalance MONEY
+	)
+
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
@@ -170,9 +181,9 @@ BEGIN
 	GROUP BY custid
 
 	-- bettrans
-	
+
+	INSERT INTO #bettrans_tmp (custid, winlostdate,ruben,bettype,actual_stake_total,TotalBalance)
 	SELECT custid, winlostdate,ruben,bettype, SUM(actual_stake) AS actual_stake_total, SUM(winlost-actual_stake+playercomm) AS TotalBalance
-	INTO #bettrans_tmp
 	FROM dbo.bettrans b WITH(NOLOCK, INDEX = ix_recommend)
 	WHERE 
 		recommend = @CustID
