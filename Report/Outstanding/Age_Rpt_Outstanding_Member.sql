@@ -1,7 +1,13 @@
 /*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Member] 
 	@CustID		INT, --recommend
-	@ProductIds	VARCHAR(MAX)
+	@ProductIds	VARCHAR(MAX),
+	@IsChatBot BIT = 0,
+	@PageSize INT = 0,
+	@PageIndex INT = 1,
+	@TotalMemberOutstanding	Money = 0 OUTPUT,
+	@TotalMasterOutstanding	Money = 0 OUTPUT,
+	@TotalAgentOutstanding	Money = 0 OUTPUT
 AS
 
 /*
@@ -17,10 +23,18 @@ AS
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 		- 20200612@Sol: added index to temp table #SportBettype [RedmineId: #134967]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
 */
 
 BEGIN
 	SET NOCOUNT ON;
+
+	DECLARE @RowStart	INT,
+			@RowEnd		INT;
+		
+	SELECT	@PageIndex = @PageIndex - 1,
+			@RowStart = @PageSize * @PageIndex + 1,
+			@RowEnd = @RowStart + @PageSize - 1;
 
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
@@ -107,26 +121,61 @@ BEGIN
 		AND recommend =  @CustID		
 	GROUP BY custid;
 	
-	WITH rt AS (
+
+	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
+		WITH rt AS (
+			SELECT
+				rt.custid,
+				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
+				SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
+				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
+				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+				ROW_NUMBER() OVER(ORDER BY c.username ) RowNum ,
+				c.username
+			FROM #OutStanding rt
+			INNER JOIN 	dbo.custInfo c WITH (NOLOCK) 
+					ON 	rt.custid = c.custid
+			GROUP BY rt.custid,c.username
+		)
+		SELECT
+			rt.custid AS CustId,
+			rt.username AS CustName,
+			rt.MemberOutstanding,
+			rt.AgentOutstanding,
+			rt.MasterOutstanding,
+			rt.SuperOutstanding
+		FROM	
+			rt
+		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
+		ORDER BY RowNum;
+
+	ELSE -- Using for chatbot IsChatBot = 1, order by AgentOutstanding
+		WITH rt AS (
 		SELECT
 			custid,
 			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 			SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
 			SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
-			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding
+			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(AgentOutstanding, 0)) DESC) RowNum
 		FROM #OutStanding
 		GROUP BY custid
-	)
-	SELECT
-		rt.custid AS CustId,
-		c.username AS CustName,
-		rt.MemberOutstanding,
-		rt.AgentOutstanding,
-		rt.MasterOutstanding,
-		rt.SuperOutstanding
-	FROM rt
-		INNER JOIN dbo.custInfo c WITH (NOLOCK) ON rt.custid = c.custid
-	ORDER BY c.username;
+		)
+		SELECT
+			rt.custid AS CustId,
+			c.username AS CustName,
+			rt.MemberOutstanding,
+			rt.AgentOutstanding,
+			rt.MasterOutstanding
+		FROM 		rt
+		INNER JOIN dbo.custInfo c WITH (NOLOCK) 
+				ON rt.custid = c.custid
+		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
+		ORDER BY RowNum
+
+	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
+			@TotalMasterOutstanding	= SUM(ISNULL(MasterOutstanding, 0)),
+			@TotalAgentOutstanding = SUM(ISNULL(AgentOutstanding, 0))	
+	FROM #OutStanding
 
 	DROP TABLE #SportBettype;
 	DROP TABLE #OutStanding;
