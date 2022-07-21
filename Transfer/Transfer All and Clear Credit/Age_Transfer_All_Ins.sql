@@ -29,6 +29,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 */
 
 BEGIN
@@ -615,7 +616,7 @@ BEGIN
 
 		DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 
-		DECLARE @refno BIGINT, @grefno BIGINT
+		DECLARE @refno BIGINT, @TransID BIGINT
 
 		/*
 			============================== Start Member - Agent ==============================
@@ -630,17 +631,8 @@ BEGIN
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
-			UPDATE dbo.ref WITH (ROWLOCK, UPDLOCK)
-			SET @grefno = transcode = transcode + 1
-			WHERE refid = 'acc'
 
-			IF @@ERROR <> 0
-			BEGIN
-				SELECT @ErrCode = 114
-				RETURN
-			END
-
-			SELECT @refno = 200000000000 + @grefno
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
 			IF @IsAllDayTransfer = 0
 				AND EXISTS (
@@ -657,9 +649,10 @@ BEGIN
 			ELSE IF @memberBalance > 0
 			BEGIN
 				-- for agent
-			
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName,recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)
-				VALUES (@UserID, @agentId, @agentName, @refno, @Now, 21004, 'From Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName,recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)
+				VALUES (@TransID ,@UserID, @agentId, @agentName, @refno, @Now, 21004, 'From Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 						@memberBalance, 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -695,8 +688,9 @@ BEGIN
 				DECLARE @TotalCashMem MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @memberId, @TotalCash  = @TotalCashMem OUTPUT
 
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
-				VALUES (@UserID, @memberId, @memberName, @refno, @Now, 21004, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@TransID, @UserID, @memberId, @memberName, @refno, @Now, 21004, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 						@memberBalance, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMem, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -767,8 +761,9 @@ BEGIN
 			ELSE IF @memberBalance < 0
 			BEGIN
 				-- for agent
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
-				VALUES (@UserID, @agentId, @agentName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@TransID, @UserID, @agentId, @agentName, @refno, CURRENT_TIMESTAMP, 21004, 'To Customer::' + @memberName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 						ABS(@memberBalance), CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -788,8 +783,9 @@ BEGIN
 				DECLARE @TotalCashMemNev MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @memberId, @TotalCash  = @TotalCashMemNev OUTPUT
 
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
-				VALUES (@UserID, @memberId, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@TransID, @UserID, @memberId, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 						ABS(@memberBalance), 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashMemNev, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -902,23 +898,14 @@ BEGIN
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
-			UPDATE dbo.ref WITH (ROWLOCK, UPDLOCK)
-			SET @grefno = transcode = transcode + 1
-			WHERE refid = 'acc'
-
-			IF @@ERROR <> 0
-			BEGIN
-				SELECT @ErrCode = 115
-				RETURN
-			END
-
-			SELECT @refno = 200000000000 + @grefno
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
 			IF @agentBalance > 0
 			BEGIN
 				-- for master
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
-				VALUES (@UserID, @masterId, @masterName, @refno, @Now, 21003, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@TransID, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 						@agentBalance, 0,CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -938,8 +925,9 @@ BEGIN
 				DECLARE @TotalCashAgPov MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgPov OUTPUT
 
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
-				VALUES (@UserID, @agentId, @agentName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@TransID, @UserID, @agentId, @agentName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 						@agentBalance, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashAgPov, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -991,8 +979,9 @@ BEGIN
 			ELSE IF @agentBalance < 0
 			BEGIN
 				-- for master
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
-				VALUES (@UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, RepUpdateTime)
+				VALUES (@TransID, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 						ABS(@agentBalance), CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @masterId, @superId, 0, 0, @IP, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -1012,8 +1001,9 @@ BEGIN
 				DECLARE @TotalCashAgNegative MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentId, @TotalCash  = @TotalCashAgNegative OUTPUT
 
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
-				VALUES (@UserID, @agentId, @agentName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
+				VALUES (@TransID, @UserID, @agentId, @agentName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 						ABS(@agentBalance), 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131,@TotalCashAgNegative, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -1087,24 +1077,14 @@ BEGIN
 		BEGIN
 			SELECT @superId = @CustId, @superName = @username, @masterId = @DownlineCustId, @masterName = @DownlineUsername
 			
-			UPDATE dbo.ref WITH (ROWLOCK, UPDLOCK)
-			SET @grefno = transcode = transcode + 1
-			WHERE refid = 'acc'
-
-			IF @@ERROR <> 0
-			BEGIN
-				SELECT @ErrCode = 116
-
-				RETURN
-			END
-
-			SELECT @refno = 200000000000 + @grefno
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
 			IF @masterBalance > 0
 			BEGIN
 				-- for super
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
-				VALUES (@UserID, @superId, @superName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
+				VALUES (@TransID, @UserID, @superId, @superName, @refno, @Now, 21003, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 						@masterBalance, 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -1124,8 +1104,9 @@ BEGIN
 				DECLARE @TotalCashMAgPov MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgPov OUTPUT
 
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
-				VALUES (@UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
+				VALUES (@TransID, @UserID, @masterId, @masterName, @refno, @Now, 21003, 'To Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 						@masterBalance, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @masterId, @superId, 0, 0, 0, @ip, 131, @TotalCashMAgPov, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -1177,8 +1158,9 @@ BEGIN
 			ELSE IF @masterBalance < 0
 			BEGIN
 				-- for super
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
-				VALUES (@UserID, @superId, @superName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, RepUpdateTime)
+				VALUES (@TransID, @UserID, @superId, @superName, @refno, @Now, 21003, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 						ABS(@masterBalance), CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, 0, @superId, 0, 0, 0, @ip, 131, SYSDATETIME())
 
 				IF @@ERROR <> 0
@@ -1198,8 +1180,9 @@ BEGIN
 				DECLARE @TotalCashMAgNegative MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @masterId, @TotalCash  = @TotalCashMAgNegative OUTPUT
 
-				INSERT INTO dbo.Transfer (creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
-				VALUES (@UserID, @masterId, @masterName, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend, ip, statusID, balance, RepUpdateTime)
+				VALUES (@TransID, @UserID, @masterId, @masterName, @refno, CURRENT_TIMESTAMP, 21003, 'From Customer::' + @superName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 						ABS(@masterBalance), 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @masterId, @superId, 0, 0, 0, @ip, 131, @TotalCashMAgNegative, SYSDATETIME())
 
 				IF @@ERROR <> 0
