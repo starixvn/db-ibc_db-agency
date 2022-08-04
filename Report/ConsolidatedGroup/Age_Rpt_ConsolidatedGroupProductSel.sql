@@ -29,6 +29,7 @@ AS
 		- 20200918@Malcolm: Add Joker [redmine: #131609]
 		- 20201009@Malcolm: Add @SettingStatus param for this Sp [redmine: #143077]
 		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
+		- 20220803@Eden:  Implement the dependency between Macau Games Product Status and Jackpot Status [Redmine: #171715]
 		
 	Param's Explanation:
 
@@ -110,6 +111,7 @@ BEGIN
 				(SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4, @SettingStatus) 
 				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11, @SettingStatus) --NG2
 				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13, @SettingStatus) --FW, BetradarVS, Keno Lottery
+				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 21, @SettingStatus)
 				)c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
