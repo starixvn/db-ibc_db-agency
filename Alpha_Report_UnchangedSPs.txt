@@ -14,4 +14,5 @@ Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Master.sql
 Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Agent.sql
 Report\WinlossByProduct\Age_Rpt_WinLossByProduct_Member.sql
 Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroup.sql
+Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroupProductSel.sql
 Report\WinLossDetailByPT\Age_Rpt_WinLossDetailByPT_Super.sql
