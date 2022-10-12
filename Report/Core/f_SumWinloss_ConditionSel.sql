@@ -53,6 +53,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20220208@Danny: Add Saba Sport - [Redmine: #167177]
 		- 20220825@Eddie: Add SEAL Entertainment  [RedmineID: #176078]
 		- 20220907@Eddie: Add Microgaming  [RedmineId: #175850]
+		- 20221012@Eddie: Add Microgaming Tournament Prize [RedmineID: #178335]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -118,7 +119,8 @@ RETURN
 				(69, 175, 0, 0, 0),  -- Bitcoin product
 				(70, 176, 0, 0, 0),  -- FGG product
 				(72, 156, 0, 0, 0),  -- SEAL Entertainment
-				(73, 155, 0, 0, 0)  -- Microgaming
+				(73, 155, 0, 0, 0),  -- Microgaming
+				(73, 155, 8695, 0, 0)  -- Microgaming Tournament Prize
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
