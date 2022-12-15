@@ -16,6 +16,7 @@ AS
 		- 20220208@Danny: Add Saba Sport - [Redmine: #167177]
 		- 20221004@Eddie: Add Tournament Prize [RedmineID: #178335]
 		- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
+		- 20221215@Eddie: Change Tournament Prize to Promotion Prize [RedmineID: #181578]
 		
 */
 RETURN
@@ -65,4 +66,4 @@ RETURN
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '17' AS ResourceId, 73 AS ProductId, 155 AS Sporttype, 0 AS Bettype, 17 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType -- Normal Bets
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '18' AS ResourceId, 73 AS ProductId, 155 AS Sporttype, 8695 AS Bettype, 18 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType -- Tournament Prize
+	SELECT 'ProductDetail' AS RefId, '18' AS ResourceId, 73 AS ProductId, 155 AS Sporttype, 8695 AS Bettype, 18 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType -- Promotion Prize
