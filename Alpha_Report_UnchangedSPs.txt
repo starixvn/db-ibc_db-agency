@@ -6,6 +6,7 @@ Report\Charting\Age_Chart_WinlossAnalysis_Agent.sql
 Report\Charting\Age_Chart_WinlossAnalysis_Member.sql
 Report\ConsolidatedGroup\Age_Rpt_ConsolidatedGroupProductSel.sql
 Report\Core\Age_Rpt_GetProductDetail.sql
+Report\Core\f_ProductDetail_ConditionSel.sql
 Report\Winloss\Chatbot\Age_Rpt_SumWinLoss_Agent.sql
 Report\Winloss\Chatbot\Age_Rpt_SumWinLoss_Member.sql
 Report\Winloss\Chatbot\Age_Rpt_SumWinLoss_Master.sql
