@@ -14,6 +14,7 @@ AS
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20200428@Malcolm : re-order products [Redmine : #132760]
 		- 20200528@Malcolm : add Sportsbook 2 for Setting [Redmine : #134917]
+		- 20221024@Eddie : Change Macau Games to RNG Slot games [RedmineId : #174513]
 */
 
 BEGIN
@@ -40,9 +41,10 @@ BEGIN
 		   P.ProductName,
 		   P.EndOfSupportDate,
 		   ISNULL(p.OrderNo,0) AS OrderNo,
-		   0 AS [Type]
+		   CASE ProductID WHEN 16 THEN 0
+						  WHEN 18 THEN 53 END AS [Type]
 	FROM dbo.Products p WITH(NOLOCK)
-	WHERE ProductID = 16 AND @isShowSetting = 1
+	WHERE ProductID IN (16, 18) AND @isShowSetting = 1
 
 	ORDER BY OrderNo
 
