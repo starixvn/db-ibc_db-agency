@@ -54,6 +54,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20220825@Eddie: Add SEAL Entertainment  [RedmineID: #176078]
 		- 20220907@Eddie: Add Microgaming  [RedmineId: #175850]
 		- 20221012@Eddie: Add Microgaming Tournament Prize [RedmineID: #178335]
+		- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -70,6 +71,7 @@ RETURN
 				(1, 50, 0, 42, 0), -- SABA Cricket,
 				(1, 1, 0, 113, 0), -- SABA Soccer PinGoal,
 				(1, 2, 0, 122, 0), -- SABA Basketball PinGoal,
+				(1, 43, 0, 151, 0), -- SABA ESports PinGoal
 				(6, 251, 71, 0, 0), (6, 208, 0, 0, 0), (6, 209, 0, 0, 0), (6, 210, 0, 0, 0), --RNG Casino
 				(3, 161, 0, 0, 0), --Number Game
 				(5, 180, 0, 0, 0), --Virtual Sports

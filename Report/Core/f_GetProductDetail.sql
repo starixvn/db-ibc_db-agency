@@ -15,6 +15,7 @@ AS
 		- 20220124@Evan: Add Allbet Promotion - [Redmine: #166981]
 		- 20220208@Danny: Add Saba Sport - [Redmine: #167177]
 		- 20221004@Eddie: Add Tournament Prize [RedmineID: #178335]
+		- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 		
 */
 RETURN
@@ -57,6 +58,8 @@ RETURN
 	SELECT 'ProductDetail' AS RefId, '15' AS ResourceId, 1 AS ProductId, 1 AS Sporttype, 0 AS Bettype, 15 AS [Order], 113 AS LeagueGroupID,  0 AS TicketType -- SABA Soccer PinGoal
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '16' AS ResourceId, 1 AS ProductId, 2 AS Sporttype, 0 AS Bettype, 16 AS [Order], 122 AS LeagueGroupID,  0 AS TicketType -- SABA Basketball PinGoal
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '19' AS ResourceId, 1 AS ProductId, 43 AS Sporttype, 0 AS Bettype, 19 AS [Order], 151 AS LeagueGroupID,  0 AS TicketType -- SABA ESports PinGoal
 	
 	--- MG RNG
 	UNION ALL 
