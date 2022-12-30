@@ -32,6 +32,7 @@ AS
 		- 20210107@Sol: Report Match Win Loss Detail - correct agent comm - [RedminedId : #148324]
 		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 */
 
 BEGIN
@@ -77,7 +78,8 @@ BEGIN
 	CREATE TABLE #SportBettype (
 		ProductID	INT,
 		Bettype		INT,
-		EventType	INT
+		EventType	INT,
+		RefTable	TINYINT
 	);
 
 	
@@ -86,8 +88,8 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	INSERT INTO #SportBettype (ProductID, Bettype, EventType)
-	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype, EventType
+	INSERT INTO #SportBettype (ProductID, Bettype, EventType, RefTable)
+	SELECT ISNULL(p.GroupProductId, s.ProductID), Bettype, EventType, RefTable
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest) s
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;
 
@@ -112,7 +114,11 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+					SUM(CASE 
+						WHEN s.RefTable IN(1, 2) THEN 0
+						WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+						ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+					END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLoss,
 					SUM(playercomm) as MemberComm,
 					SUM(awinlost) as AgWinLoss,
@@ -148,7 +154,11 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+					SUM(CASE 
+						WHEN s.RefTable IN(1, 2) THEN 0
+						WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+						ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+					END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLoss,
 					SUM(playercomm) as MemberComm,
 					SUM(awinlost) as AgWinLoss,
@@ -190,7 +200,11 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -262,7 +276,11 @@ BEGIN
 						0 as liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -299,7 +317,11 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -334,7 +356,11 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid as leagueid,		
 					SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,				
-					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+					SUM(CASE 
+						WHEN s.RefTable IN(1, 2) THEN 0
+						WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+						ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+					END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLoss,
 					SUM(playercomm) as MemberComm,	
 					SUM(awinlost) as AgWinLoss,
@@ -378,7 +404,11 @@ BEGIN
 					b.liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+					SUM(CASE 
+						WHEN s.RefTable IN(1, 2) THEN 0
+						WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+						ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+					END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLoss,
 					SUM(playercomm) as MemberComm,
 					SUM(awinlost) as AgWinLoss,
@@ -414,7 +444,11 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,
 					SUM(ABS(stake)) as turnover,
-					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+					SUM(CASE 
+						WHEN s.RefTable IN(1, 2) THEN 0
+						WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+						ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+					END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLoss,
 					SUM(playercomm) as MemberComm,
 					SUM(awinlost) as AgWinLoss,
@@ -455,7 +489,11 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -526,7 +564,11 @@ BEGIN
 						0 as liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -562,7 +604,11 @@ BEGIN
 						0 as liveindicator,
 						0 as leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -597,7 +643,11 @@ BEGIN
 					0 as liveindicator,
 					m.leagueid,	
 					SUM(case when b.liveawayscore = 0 and b.bettype IN(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
-					SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+					SUM(CASE 
+						WHEN s.RefTable IN(1, 2) THEN 0
+						WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+						ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+					END) as GrossComm,
 					SUM(winlost - actual_stake) as MemberWinLoss,
 					SUM(playercomm) as MemberComm,
 					SUM(awinlost) as AgWinLoss,
@@ -649,7 +699,11 @@ BEGIN
 						b.liveindicator,
 						m.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -685,7 +739,11 @@ BEGIN
 						0 as liveindicator,
 						m.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -726,7 +784,11 @@ BEGIN
 						0 as liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -764,7 +826,11 @@ BEGIN
 						0 as liveindicator,
 						m.leagueid  as leagueid,	
 						SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,	
 						SUM(awinlost) as AgWinLoss,
@@ -809,7 +875,11 @@ BEGIN
 						b.liveindicator,
 						m.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -845,7 +915,11 @@ BEGIN
 						0 as liveindicator,
 						m.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -886,7 +960,11 @@ BEGIN
 						0 as liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) as turnover,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
@@ -924,7 +1002,11 @@ BEGIN
 						0 as liveindicator,
 						m.leagueid  as leagueid,	
 						SUM(case when b.liveawayscore = 0 and b.bettype in(33,43) then ABS(b.stake)/2 else ABS(b.stake) end) as TurnOver,
-						SUM(CASE WHEN apositiontaking + mpositiontaking = 1 THEN 0 ELSE acomm/(1 - apositiontaking - mpositiontaking) END) as GrossComm,
+						SUM(CASE 
+							WHEN s.RefTable IN(1, 2) THEN 0
+							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
+							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
+						END) as GrossComm,
 						SUM(winlost - actual_stake) as MemberWinLoss,
 						SUM(playercomm) as MemberComm,
 						SUM(awinlost) as AgWinLoss,
