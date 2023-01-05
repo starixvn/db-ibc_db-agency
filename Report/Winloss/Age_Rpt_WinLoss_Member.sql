@@ -24,7 +24,7 @@ AS
 		- 20211122@Percy: Enhance gross comm formula [RedmineID: #164479]
 		- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 		- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
-		
+		- 20230104@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 	
 	Param's Explanation:
 	  @ProductDetails:		
@@ -54,6 +54,10 @@ AS
     
 BEGIN
 	SET NOCOUNT ON;
+
+	DROP TABLE IF EXISTS #AgWinLoss;
+	DROP TABLE IF EXISTS #GrossComm;
+	DROP TABLE IF EXISTS #TmpCondSumWL;
 
 	CREATE TABLE #AgWinLoss(
 		CustID			INT,
@@ -158,15 +162,26 @@ BEGIN
 		; WITH cte_Bettrans AS 
 		(		
 			SELECT	b.CustID,
-					b.apositiontaking,
-					b.bettype,
 					SUM(comm) AS comm,
 					SUM(ABS(b.stake)) AS stake,
+					SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						WHEN apositiontaking = 1 THEN 0
+						ELSE comm/(1 - apositiontaking)
+					END) AS GrossComm,
 					SUM(winlost) AS winlost,
 					SUM(actual_stake) AS actual_stake,
 					SUM(awinlost) AS awinlost,
-					SUM(playercomm) AS playercomm,
-					CASE WHEN ( 
+					SUM(playercomm) AS playercomm
+					
+			FROM Bettrans b WITH(NOLOCK)
+				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43)
+				LEFT JOIN (
+					SELECT LeagueGroupID, leagueid
+					FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
+				) AS l  ON m.leagueid = l.leagueid
+				OUTER APPLY (
+					SELECT CASE WHEN ( 
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
@@ -181,47 +196,23 @@ BEGIN
 									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
 					ELSE 0 END LeagueGroupID,
 					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
-			FROM Bettrans b WITH(NOLOCK)
-			LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43)
-			LEFT JOIN (
-						SELECT LeagueGroupID, leagueid
-						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
-					  )l  ON m.leagueid = l.leagueid
+				) AS et
+				INNER JOIN @SportBettypeMatrix s ON b.bettype = s.bettype 
+					AND (s.ProductID <> 1 OR (s.ProductID = 1 AND et.sporttype = s.SportType AND et.LeagueGroupID = s.LeagueGroupID AND et.TicketType = s.TicketType))
 			WHERE  b.recommend = @CID
 				AND  b.winlostdate BETWEEN @FDate AND @TDate
 				AND  b.statusID IN (111, 112, 113)
-			GROUP BY b.CustID, b.apositiontaking, b.bettype, 
-					CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-										OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
-					ELSE 0 END,
-					CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-										OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-										OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-										OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-									) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
-					ELSE 0 END,
-					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END 
+			GROUP BY b.CustID
 		)
-
 		INSERT INTO #AgWinLoss(CustID, TurnOver, GrossComm, MemberWinLost, AgWinLost, PlayerComm, AgComm)
 		SELECT	CustID,
 		   		SUM(ABS(b.stake)) AS TurnOver,
-				SUM(CASE
-						WHEN s.RefTable IN (1, 2) THEN 0
-						WHEN apositiontaking = 1 THEN 0
-						ELSE comm/(1 - apositiontaking)
-					END) AS GrossComm,
+				SUM(GrossComm) AS GrossComm,
 				SUM(winlost - actual_stake) AS MemberWinLost,
 				SUM(awinlost) AS AgWinLost,
 				SUM(playercomm) AS PlayerComm,
 				SUM(comm - playercomm) AS AgComm
 		FROM cte_Bettrans b 
-			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
 		GROUP BY CustID;
 
 		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1) -- bettransRnG
@@ -348,10 +339,6 @@ BEGIN
 		INNER JOIN dbo.custInfo c WITH(NOLOCK) ON w.CustID = c.CustID 
 	GROUP BY w.CustID, c.UserName
 	ORDER BY c.Username;
-
-	DROP TABLE #AgWinLoss
-	DROP TABLE #GrossComm
-	DROP TABLE #TmpCondSumWL
 
 	SET NOCOUNT OFF;
 END

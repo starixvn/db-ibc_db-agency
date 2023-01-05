@@ -142,10 +142,9 @@ BEGIN
 				SELECT  
 					s.ProductID,
 					s.GroupTypeId,
-					CASE s.ProductID
-						WHEN 5 THEN ISNULL(m.sporttype, b.matchId)
-						WHEN 22 THEN s.SportType
-						WHEN 23 THEN s.SportType
+					CASE WHEN s.ProductID = 5 AND s.EventType = 1 THEN ISNULL(m.sporttype, b.matchId)
+						WHEN s.ProductID = 22 THEN s.SportType
+						WHEN s.ProductID = 23 THEN s.SportType
 					END AS SportType,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
@@ -197,10 +196,9 @@ BEGIN
 				GROUP BY	
 					s.ProductID,
 					s.GroupTypeId,
-					CASE s.ProductID
-						WHEN 5 THEN ISNULL(m.sporttype, b.matchId)
-						WHEN 22 THEN s.SportType
-						WHEN 23 THEN s.SportType
+					CASE WHEN s.ProductID = 5 AND s.EventType = 1 THEN ISNULL(m.sporttype, b.matchId)
+						WHEN s.ProductID = 22 THEN s.SportType
+						WHEN s.ProductID = 23 THEN s.SportType
 					END,
 					CASE s.ProductID
 						WHEN 3 THEN b.liveindicator
@@ -222,8 +220,6 @@ BEGIN
 					SUM(NoOfTicket) AS NoOfTicket,
 					1 AS DateRange
 			FROM cte_bettrans b
-				
-				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND s.ProductID = 5 AND s.EventType = 1
 			GROUP BY 
 					b.ProductID,
 					b.GroupTypeId,

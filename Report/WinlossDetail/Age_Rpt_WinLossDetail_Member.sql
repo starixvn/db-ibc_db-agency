@@ -230,7 +230,7 @@ BEGIN
 					ELSE 0 END LeagueGroupID,
 					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
 				) AS et
-				INNER JOIN cteSportBettype s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
+				INNER JOIN cteSportBettype s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND et.sporttype = s.SportType AND et.LeagueGroupID = s.LeagueGroupID AND et.TicketType = s.TicketType))
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND b.statusID IN (111, 112, 113) 
 				AND recommend = @CID
