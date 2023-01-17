@@ -139,7 +139,7 @@ BEGIN
 					s.ProductID,
 					s.GroupTypeId,
 					CASE 
-						WHEN s.ProductID = 5 AND s.EventType = 1 THEN ISNULL(m.sporttype, b.matchid)
+						WHEN s.ProductID = 5 AND s.EventType = 1 THEN ISNULL(m5.sporttype, b.matchid)
 						WHEN s.ProductID = 22 THEN s.SportType
 						WHEN s.ProductID = 23 THEN s.SportType
 					END AS SportType,
@@ -185,6 +185,7 @@ BEGIN
 					) AS et
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype 
 						AND (s.ProductID <> 5 OR s.EventType <> 3) AND (s.ProductID <> 1 OR (s.ProductID = 1 AND et.sporttype_filter = s.sporttype_filter AND et.LeagueGroupID = s.LeagueGroupID AND et.TicketType = s.TicketType))
+					LEFT JOIN dbo.match m5 WITH(NOLOCK) ON b.matchid = m5.matchid AND s.ProductID = 5 AND s.EventType = 1
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID IN (111, 112, 113)
 					AND recommend = @custid
@@ -192,7 +193,7 @@ BEGIN
 					s.ProductID,
 					s.GroupTypeId,
 					CASE 
-						WHEN s.ProductID = 5 AND s.EventType = 1 THEN ISNULL(m.sporttype, b.matchid)
+						WHEN s.ProductID = 5 AND s.EventType = 1 THEN ISNULL(m5.sporttype, b.matchid)
 						WHEN s.ProductID = 22 THEN s.SportType
 						WHEN s.ProductID = 23 THEN s.SportType
 					END,
@@ -337,7 +338,7 @@ BEGIN
 					s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
-						WHEN 5 THEN ISNULL(m.sporttype, b.matchid)
+						WHEN 5 THEN ISNULL(m5.sporttype, b.matchid)
 						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END AS SportType,
@@ -384,6 +385,7 @@ BEGIN
 					) AS et
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype 
 						AND (s.ProductID <> 5 OR s.EventType <> 3) AND (s.ProductID <> 1 OR (s.ProductID = 1 AND et.sporttype_filter = s.sporttype_filter AND et.LeagueGroupID = s.LeagueGroupID AND et.TicketType = s.TicketType))
+					LEFT JOIN dbo.match14 m5 WITH(NOLOCK) ON b.matchid = m5.matchid AND s.ProductID = 5
 				WHERE winlostdate BETWEEN @FDate AND @TDate
 					AND statusID IN (111, 112, 113)
 					AND recommend = @custid
@@ -391,7 +393,7 @@ BEGIN
 					s.ProductID,
 					s.GroupTypeId,
 					CASE s.ProductID
-						WHEN 5 THEN ISNULL(m.sporttype, b.matchid)
+						WHEN 5 THEN ISNULL(m5.sporttype, b.matchid)
 						WHEN 22 THEN s.SportType
 						WHEN 23 THEN s.SportType
 					END,
