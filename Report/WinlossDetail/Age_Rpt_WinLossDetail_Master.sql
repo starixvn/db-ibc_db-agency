@@ -160,30 +160,35 @@ BEGIN
 			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 		END
 
-		;WITH cteSportBettype AS (
-			SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
-			FROM (	
-					SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
-					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
-					WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
-							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
-					) f
-				LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
-				LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
-			WHERE EXISTS(
-				SELECT 1 
-				WHERE e.ProductId IS NULL 
-					OR (
+		DROP TABLE IF EXISTS #tmpSportBettype;
+		CREATE TABLE #tmpSportBettype (productid TINYINT, BetType INT, RefTable TINYINT, LeagueGroupID INT, TicketType TINYINT , SportType SMALLINT);
+		CREATE CLUSTERED INDEX CIX_tmp ON #tmpSportBettype(productid, BetType, RefTable);
+
+		INSERT INTO #tmpSportBettype
+		SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
+		FROM (	
+				SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
+				FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+				WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+				) f
+			LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+			LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+		WHERE EXISTS(SELECT 1 WHERE e.ProductId IS NULL 
+				OR 
+					(
 						e.Bettype = f.BetType 
-						OR (
-								e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
-						)
+								OR (
+										e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+									)
 					)
-				)
-		),
-		cte_bettrans AS
+				);
+		
+		-- TODO: get data from bettrans
+		;WITH cte_bettrans AS
 		(
 			SELECT	b.MRecommend,
+					b.bettype, s.productid, et.SportType, et.LeagueGroupID, et.TicketType,
 					SUM(ABS(b.stake)) AS stake,
 					SUM(CASE
 							WHEN s.RefTable IN (1, 2) THEN 0 -- bettransRnG/bettransLC
@@ -231,11 +236,12 @@ BEGIN
 					ELSE 0 END LeagueGroupID,
 					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
 				) AS et
-				INNER JOIN cteSportBettype s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND et.sporttype = s.SportType AND et.LeagueGroupID = s.LeagueGroupID AND et.TicketType = s.TicketType))
+				INNER JOIN (SELECT DISTINCT bettype, productid, refTable FROM #tmpSportBettype) AS s ON b.bettype = s.bettype
 			WHERE	b.winlostdate BETWEEN  @FDate AND @Tdate
 				AND b.srecommend = @CID
 				AND b.statusID IN (111, 112, 113) 
-			GROUP BY MRecommend
+			GROUP BY MRecommend,
+				b.bettype, s.productid, et.SportType, et.LeagueGroupID, et.TicketType
 					
 		)
 		INSERT INTO #SAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, SAgWinLost, SAgComm, NoOfTicket)
@@ -253,7 +259,9 @@ BEGIN
 				ISNULL(SUM(scomm),0) - ISNULL(SUM(acomm),0) AS SAgComm,
 				SUM(NoOfTicket) AS NoOfTicket
 		FROM cte_bettrans b 
-		GROUP BY MRecommend
+		INNER JOIN #tmpSportBettype s ON b.bettype = s.bettype 
+			AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
+		GROUP BY MRecommend;
 		
 		-- bettransRnG
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
@@ -470,25 +478,45 @@ BEGIN
 				SUM(SAgComm) as SAgComm,
 				SUM(NoOfTicket) as NumberOfTickets
 		FROM #SAgWinLossDetails;
-
-		RETURN;
 	END
-
-	IF @TotalRecords = 0  
-	BEGIN  
-		SELECT @TotalRecords = count(tmp.CustID)
-		FROM (
-			SELECT CustID
-			FROM #SAgWinLossDetails
-			GROUP BY CustID
-		) tmp;
+	ELSE
+	BEGIN
+		IF @TotalRecords = 0  
+		BEGIN  
+			SELECT @TotalRecords = count(tmp.CustID)
+			FROM (
+				SELECT CustID
+				FROM #SAgWinLossDetails
+				GROUP BY CustID
+			) tmp;
  
-	END
+		END
 
-	SELECT wl.*
-	FROM (
-		SELECT	w.CustID AS CustId, 
-				c.UserName AS CustName, 
+		SELECT wl.*
+		FROM (
+			SELECT	w.CustID AS CustId, 
+					c.UserName AS CustName, 
+					SUM(TurnOver) as Turnover,
+					SUM(TurnoverNoDraw) as NetTurnover,
+					SUM(GrossComm) as GrossComm,
+					SUM(MemberWinLost) as MemberWinLoss,
+					SUM(PlayerComm) as MemberComm,
+					SUM(AgWinlost) as AgWinLoss,
+					SUM(AgComm) as AgComm,
+					SUM(MAgWinlost) as MAgWinLoss,
+					SUM(MAgComm) as MAgComm,
+					SUM(SAgWinlost) as SAgWinLoss,
+					SUM(SAgComm) as SAgComm,
+					SUM(NoOfTicket) as NumberOfTickets,
+					ROW_NUMBER() over(order by c.UserName) as RowNum
+			FROM #SAgWinLossDetails w 
+				INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
+			GROUP BY w.CustID, c.UserName
+		) wl
+		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+
+		SELECT	NULL AS CustId,
+				'Total' AS CustName,
 				SUM(TurnOver) as Turnover,
 				SUM(TurnoverNoDraw) as NetTurnover,
 				SUM(GrossComm) as GrossComm,
@@ -500,29 +528,9 @@ BEGIN
 				SUM(MAgComm) as MAgComm,
 				SUM(SAgWinlost) as SAgWinLoss,
 				SUM(SAgComm) as SAgComm,
-				SUM(NoOfTicket) as NumberOfTickets,
-				ROW_NUMBER() over(order by c.UserName) as RowNum
-		FROM #SAgWinLossDetails w 
-			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-		GROUP BY w.CustID, c.UserName
-	) wl
-	WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
-
-	SELECT	NULL AS CustId,
-			'Total' AS CustName,
-			SUM(TurnOver) as Turnover,
-			SUM(TurnoverNoDraw) as NetTurnover,
-			SUM(GrossComm) as GrossComm,
-			SUM(MemberWinLost) as MemberWinLoss,
-			SUM(PlayerComm) as MemberComm,
-			SUM(AgWinlost) as AgWinLoss,
-			SUM(AgComm) as AgComm,
-			SUM(MAgWinlost) as MAgWinLoss,
-			SUM(MAgComm) as MAgComm,
-			SUM(SAgWinlost) as SAgWinLoss,
-			SUM(SAgComm) as SAgComm,
-			SUM(NoOfTicket) as NumberOfTickets
-	FROM #SAgWinLossDetails;
+				SUM(NoOfTicket) as NumberOfTickets
+		FROM #SAgWinLossDetails;
+	END
 
 	DROP TABLE #SAgWinLossDetails;
 	DROP TABLE #TmpCondSumWL;
