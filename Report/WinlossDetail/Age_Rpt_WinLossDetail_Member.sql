@@ -162,30 +162,6 @@ BEGIN
 			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 		END
 
-		DROP TABLE IF EXISTS #tmpSportBettype;
-		CREATE TABLE #tmpSportBettype (productid TINYINT, BetType INT, RefTable TINYINT, LeagueGroupID INT, TicketType TINYINT , SportType SMALLINT);
-		CREATE CLUSTERED INDEX CIX_tmp ON #tmpSportBettype(productid, BetType, RefTable);
-
-		INSERT INTO #tmpSportBettype
-		SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
-		FROM (	
-				SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
-				FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
-				WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
-						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
-				) f
-			LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
-			LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
-		WHERE EXISTS(SELECT 1 WHERE e.ProductId IS NULL 
-				OR 
-					(
-						e.Bettype = f.BetType 
-								OR (
-										e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
-									)
-					)
-				);
-
 		-- TODO: get data from bettrans
 		;WITH cte_bettrans AS
 		(
@@ -235,7 +211,13 @@ BEGIN
 					ELSE 0 END LeagueGroupID,
 					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
 				) AS et
-				INNER JOIN (SELECT DISTINCT bettype, productid, refTable FROM #tmpSportBettype) AS s ON b.bettype = s.bettype
+				INNER JOIN (
+					SELECT DISTINCT ISNULL(p.GroupProductId, ma.ProductID) AS ProductID, ma.BetType, ma.RefTable
+					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+					LEFT JOIN dbo.f_GroupProduct() p ON ma.ProductID = p.ProductId
+					WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+				) AS s ON b.bettype = s.bettype
 			WHERE winlostdate BETWEEN @FDate AND @TDate
 				AND b.statusID IN (111, 112, 113) 
 				AND recommend = @CID
@@ -253,7 +235,26 @@ BEGIN
 				SUM(comm - playercomm) AS AgComm,
 				SUM(NoOfTicket) AS NoOfTicket
 		FROM cte_bettrans b 
-		INNER JOIN #tmpSportBettype s ON b.bettype = s.bettype 
+		INNER JOIN (
+			SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
+			FROM (	
+					SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
+					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+					WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+					) f
+				LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+				LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+			WHERE EXISTS(SELECT 1 WHERE e.ProductId IS NULL 
+					OR 
+						(
+							e.Bettype = f.BetType 
+									OR (
+											e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+										)
+						)
+					)
+		) s ON b.bettype = s.bettype 
 			AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
 		GROUP BY CustID;
 
