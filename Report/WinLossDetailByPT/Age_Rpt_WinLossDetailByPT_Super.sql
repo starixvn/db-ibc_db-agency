@@ -19,6 +19,7 @@ Revisions:
 	- 20220508@Danny: Separate Saba Sport Performance [Redmine: #167177]
 	- 20220525@Danny: Separate Saba Sport Performance [Redmine: #173196]
 	- 20221208@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
+	- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 
 Param's Explanation:  
 	@CustId: srecommend  
@@ -134,10 +135,55 @@ BEGIN
 			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);    
 		END    
 
-		; WITH cte_bettrans AS 
+		; WITH cteSportBettype AS (
+			SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
+			FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
+				LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+				LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+			WHERE EXISTS(
+				SELECT 1
+				WHERE e.ProductId IS NULL 
+				OR (e.Bettype = f.BetType 
+					OR (
+						e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+					)
+				)
+			)
+		),
+		cte_bettrans AS 
 		(
-			SELECT  b.bettype,
-					CASE WHEN ( 
+			SELECT  s.ProductID,
+					SUM(ABS(b.stake)) stake,
+					SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0 -- bettransRnG/bettransLC
+						WHEN s.ProductId = 47 THEN b.oddsspread -- BBIN
+						WHEN s.ProductId = 1 AND b.statusId = 111 THEN 0 -- SB draw
+						WHEN s.ProductId = 1 AND b.StatusId IN (112, 113) AND b.modds IN (-0.25, 0.25) THEN ABS(b.stake)/2 -- SB half won/lose
+						ELSE ABS(b.stake)
+					END) AS TurnoverNoDraw,
+					SUM(CASE
+						WHEN s.RefTable IN (1, 2) THEN 0
+						WHEN tpositiontaking = 1 THEN 0
+						ELSE scomm/(1-tpositiontaking)
+					END) AS GrossComm,
+					SUM(scomm)  scomm,
+					SUM(winlost) winlost,
+					SUM(actual_stake) actual_stake,
+					SUM(playercomm) playercomm,
+					SUM(awinlost) awinlost,
+					SUM(mwinlost) mwinlost,
+					SUM(swinlost) swinlost,
+					SUM(comm) comm,
+					SUM(acomm) acomm
+
+			FROM	dbo.bettrans b WITH (NOLOCK) 
+				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43)
+				LEFT JOIN (
+						SELECT LeagueGroupID, leagueid
+						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
+				) AS l  ON m.leagueid = l.leagueid
+				OUTER APPLY (
+					SELECT CASE WHEN ( 
 									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
@@ -151,67 +197,20 @@ BEGIN
 									 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
 								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff  THEN l.LeagueGroupID
 					ELSE 0 END LeagueGroupID,
-					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType,
-					b.modds,
-					b.StatusId,
-					b.tpositiontaking,
-					SUM(ABS(b.stake)) stake,
-					SUM(b.oddsspread) oddsspread,
-					SUM(scomm)  scomm,
-					SUM(winlost) winlost,
-					SUM(actual_stake) actual_stake,
-					SUM(playercomm) playercomm,
-					SUM(awinlost) awinlost,
-					SUM(mwinlost) mwinlost,
-					SUM(swinlost) swinlost,
-					SUM(comm) comm,
-					SUM(acomm) acomm
-
-			FROM	dbo.bettrans b WITH (NOLOCK) 
-			LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43)
-			LEFT JOIN (
-					SELECT LeagueGroupID, leagueid
-					FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
-					)l  ON m.leagueid = l.leagueid
+					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
+				) AS et
+				INNER JOIN cteSportBettype s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND et.sporttype = s.SportType AND et.LeagueGroupID = s.LeagueGroupID AND et.TicketType = s.TicketType))
 			WHERE	b.winlostdate BETWEEN @FDate AND @Tdate    
 					AND b.srecommend = @CID   
 					AND b.statusID IN (111, 112, 113)     
-			GROUP BY  b.bettype,
-					CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff  THEN m.sporttype
-					ELSE 0 END, 
-					CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff  THEN l.LeagueGroupID
-					ELSE 0 END,
-					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END,
-					b.modds,
-					b.StatusId,
-					b.tpositiontaking
+			GROUP BY s.ProductID
 		)
 
 		INSERT INTO #ComWinLossDetails(ProductID,Turnover,TurnoverNoDraw,GrossComm,MemberWinLost,PlayerComm,MemberTotal,AgWinLost,AgComm,AgTotal,MAgWinLost,MAgComm,MAgTotal,SAgWinLost, SAgComm, SAgTotal, Company)    
-		SELECT	s.ProductID, 
+		SELECT	b.ProductID, 
 				SUM(ABS(b.stake)), -- Turnover  
-				SUM(CASE
-						WHEN s.RefTable IN (1, 2) THEN 0 -- bettransRnG/bettransLC
-						WHEN s.ProductId = 47 THEN b.oddsspread -- BBIN
-						WHEN s.ProductId = 1 AND b.statusId = 111 THEN 0 -- SB draw
-						WHEN s.ProductId = 1 AND b.StatusId IN (112, 113) AND b.modds IN (-0.25, 0.25) THEN ABS(b.stake)/2 -- SB half won/lose
-						ELSE ABS(b.stake)
-					END), -- TurnoverNoDraw
-				SUM(CASE
-						WHEN s.RefTable IN (1, 2) THEN 0
-						WHEN tpositiontaking = 1 THEN 0
-						ELSE scomm/(1-tpositiontaking)
-					END), -- GrossComm 
+				SUM(TurnoverNoDraw), -- TurnoverNoDraw
+				SUM(GrossComm), -- GrossComm 
 				SUM(winlost - actual_stake), -- MemberWinLost	
 				SUM(playercomm), -- PlayerComm		
 				SUM(winlost - actual_stake) + SUM(playercomm), -- MemberTotal		
@@ -226,23 +225,7 @@ BEGIN
 				SUM(swinlost + scomm - acomm), -- SAgTotal  
 				-(SUM(swinlost)+ SUM(mwinlost) +SUM(awinlost) + SUM(winlost-actual_stake)  + SUM(scomm)) -- Company                    
 		FROM	cte_bettrans b WITH (NOLOCK)    
-				INNER JOIN (
-							SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
-							FROM dbo.f_SportBettypeMatrixByProduct_Sel(@ProductIds, @IsTest) f
-								LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
-								LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
-							WHERE EXISTS(SELECT 1
-										 WHERE e.ProductId IS NULL 
-											OR 
-												(
-													e.Bettype = f.BetType 
-														  OR (
-																e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
-															)
-												)
-										)
-						) s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
-		GROUP BY s.ProductID;
+		GROUP BY b.ProductID;
 
 		-- bettransRnG
 		INSERT INTO #GrossComm (ProductID, TurnoverNoDraw, GrossComm)
