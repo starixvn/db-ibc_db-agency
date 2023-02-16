@@ -16,6 +16,7 @@ Revisions:
     - 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 	- 20200221@Malcolm : Add bettyep 91, remove bettype 87,88 [Redmine : #128220]
 	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+	- 20221227@Bobby: Correct formula for calculating Total Bet [RedmineID: #181608]
     
 Param's Explanation:
 • @custid: Master Agent ID
@@ -148,7 +149,7 @@ BEGIN
 						bettype, 
 						betteam,
 						liveindicator,
-						SUM(mpositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake,
+						SUM(mpositiontaking * actual_stake) Stake,
 						count(1) AS BetCount
 				FROM bettrans WITH (NOLOCK)
 				WHERE

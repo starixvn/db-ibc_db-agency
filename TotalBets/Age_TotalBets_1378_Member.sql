@@ -12,6 +12,7 @@ AS
 		- 20180617@Percy: Initilize SP [RedmineID: #97037]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20221227@Bobby: Correct formula for calculating Total Bet [RedmineID: #181608]
 */
 
 BEGIN
@@ -44,7 +45,7 @@ BEGIN
 		(SELECT
 			matchid, bettype, betteam,
 			liveindicator, livehomescore, liveawayscore,
-			SUM(apositiontaking * stake * case when abs(odds) <1 then 1 else abs(odds) end) Stake,
+			SUM(apositiontaking * actual_stake) Stake,
 			COUNT(*) BetCount
 		FROM	dbo.bettrans WITH (NOLOCK, INDEX = IX_betrunning_recommend)
 		WHERE

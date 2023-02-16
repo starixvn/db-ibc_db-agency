@@ -14,6 +14,7 @@ Revisions:
 	- 20150408@Cody: Apply bet radar bettype (157, 167) [Remine: #32734]
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+	- 20221227@Bobby: Correct formula for calculating Total Bet [RedmineID: #181608]
 	
 Param's Explanation:
 • @CustID: Master Agent ID
@@ -31,11 +32,11 @@ BEGIN
 		m.homeid,
 		m.awayid,
 		
-		sum((Case when (bettype = 2 OR bettype = 157) and betteam = 'h' then (a.mpositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS home_odds_OE,
-		sum((Case when (bettype = 2 OR bettype = 157) and betteam = 'a' then (a.mpositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS away_odds_OE,
+		sum((Case when (bettype = 2 OR bettype = 157) and betteam = 'h' then (a.mpositiontaking*actual_stake) else 0 end)) AS home_odds_OE,
+		sum((Case when (bettype = 2 OR bettype = 157) and betteam = 'a' then (a.mpositiontaking*actual_stake) else 0 end)) AS away_odds_OE,
 		
-		sum((Case when bettype=12 and betteam = 'h' then (a.mpositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS home_odds_OE_1st,
-		sum((Case when bettype=12 and betteam = 'a' then (a.mpositiontaking)*stake else 0 end)*(case when abs(odds) <1 then 1 else abs(odds) end)) AS away_odds_OE_1st,
+		sum((Case when bettype=12 and betteam = 'h' then (a.mpositiontaking*actual_stake) else 0 end)) AS home_odds_OE_1st,
+		sum((Case when bettype=12 and betteam = 'a' then (a.mpositiontaking*actual_stake) else 0 end)) AS away_odds_OE_1st,
 		
 		--league.lcolor,
 		sum(Case when bettype=5 and betteam = '1' then  (a.mpositiontaking)*stake   else 0 end) AS odds_1,
