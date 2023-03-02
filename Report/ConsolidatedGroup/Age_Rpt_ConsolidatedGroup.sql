@@ -43,6 +43,7 @@ AS
 		- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 		- 20221208@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
+		- 20230302@Danny: Group VS product in range14, bk [RedmineID: #184618]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -170,9 +171,10 @@ BEGIN
 
 	IF (@FromDate <= @MoveBetsDay)
 	BEGIN
-		INSERT INTO #TmpCondSumWL(SportType, BetType, LeagueGroupID, TicketType, ProductID) 
-		SELECT f.SportType, f.BetType, f.LeagueGroupID, f.TicketType, f.ProductID
+		INSERT INTO #TmpCondSumWL(SportType, BetType, LeagueGroupID, TicketType, ProductID)  
+		SELECT f.SportType, f.BetType, f.LeagueGroupID, f.TicketType, ISNULL(p.GroupProductId, f.ProductID) ProductID
 		FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
+			LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
 		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
 	END
