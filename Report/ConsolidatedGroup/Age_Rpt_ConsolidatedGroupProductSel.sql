@@ -1,7 +1,7 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_ConsolidatedGroupProductSel]
 	@CustId INT
-	,@SettingStatus BIT = 0
+	,@SettingStatus TINYINT = 0
 AS
 /*
 	Created: Sophia
@@ -30,6 +30,7 @@ AS
 		- 20201009@Malcolm: Add @SettingStatus param for this Sp [redmine: #143077]
 		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
 		- 20220803@Eden:  Implement the dependency between Macau Games Product Status and Jackpot Status [Redmine: #171715]
+		- 20221121@Eden: Unify RNG Lottery Customer Settings [RedmineID: #180640]
 		
 	Param's Explanation:
 
