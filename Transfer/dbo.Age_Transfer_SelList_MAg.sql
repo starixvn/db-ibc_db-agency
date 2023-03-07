@@ -46,6 +46,7 @@ Revisions:
 	- 20210723@Evan: Replace parameter @enabled,@suspended,@closed with @CustStatus
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 
 Param's Explanation:
 • @CustID: MAgentID
@@ -210,7 +211,6 @@ SELECT
 	0
 FROM dbo.bettrans b WITH(NOLOCK)
 WHERE b.mrecommend = @masterid
-	AND b.bettype < 19999
 	AND b.statusID IN (111, 112, 113)
 	AND (
 				b.winlostdate < @yesterday
@@ -232,7 +232,10 @@ SELECT
 	ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 FROM dbo.Transfer b WITH(NOLOCK)
 WHERE b.mrecommend = @masterid
-	AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+	AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+				WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+				WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+			ELSE 1 END
 GROUP BY recommend
 /* End Balance Info */
 

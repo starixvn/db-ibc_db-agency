@@ -44,6 +44,7 @@ Revisions:
 	- 20210910@Elodie: Alpha - Enhance customer's experience with auto clear given credit - [Redmine: #160429]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
+	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -121,7 +122,6 @@ BEGIN
 								)
 						)
 				)
-			AND bettype < 19999
 			AND winlostdate > @moveBetsDay
 		GROUP BY mrecommend
 		UNION ALL
@@ -133,7 +133,10 @@ BEGIN
 
 		FROM  Transfer t WITH (NOLOCK)
 		WHERE srecommend = @CustID
-			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
 		GROUP BY mrecommend
 		UNION ALL
 

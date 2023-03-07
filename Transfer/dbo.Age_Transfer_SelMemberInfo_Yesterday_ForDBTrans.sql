@@ -43,6 +43,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday on db052/bodb02
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		
 */
 BEGIN
@@ -93,7 +94,6 @@ BEGIN
 									,0 as PendingTransfer3rd
 							FROM bettrans as b with (NOLOCK) 
 							WHERE custid = @CustID
-								AND b.bettype < 19999
 								AND b.statusID IN (111, 112, 113)
 								AND (
 										(winlostdate >= @yesterday
@@ -110,7 +110,10 @@ BEGIN
 									,isnull(sum(case when b.bettype in (21008, 21009) then -(b.winlost-b.actual_stake) else 0 end), 0) as PendingTransfer3rd
 							FROM Transfer as b with (NOLOCK) 
 							WHERE custid = @CustID 
-								AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+								AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+											WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+											WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+									ELSE 1 END
 							GROUP BY custid
 							UNION ALL
 							SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance, 0
@@ -149,7 +152,6 @@ BEGIN
 									,0 as PendingTransfer3rd
 							FROM bettrans as b with (NOLOCK) 
 							WHERE custid = @CustID
-								AND b.bettype < 19999
 								AND b.statusID IN (111, 112, 113)
 								AND (
 										(winlostdate >= @yesterday
@@ -165,7 +167,10 @@ BEGIN
 									,isnull(sum(case when b.bettype in (21008, 21009) then -(b.winlost-b.actual_stake) else 0 end), 0) as PendingTransfer3rd
 							FROM Transfer as b with (NOLOCK) 
 							WHERE custid = @CustID 
-								AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+								AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+											WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+											WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+									ELSE 1 END
 							GROUP BY custid
 							UNION ALL
 							SELECT custid, isnull(sum(b.winlost-b.actual_stake+playercomm), 0) as CashBalance, 0
@@ -216,7 +221,6 @@ BEGIN
 		SELECT  @TotalCash      = ISNULL(SUM(winlost-actual_stake+playercomm), 0)
 		FROM bettrans WITH (NOLOCK)
 		WHERE custid = @CustID
-			AND bettype < 19999	
 			AND statusID IN (111, 112, 113)
 			AND (
 					(winlostdate >= @yesterday
@@ -230,7 +234,10 @@ BEGIN
 				@AmtTransferred = ISNULL(SUM(case when winlostdate = @today AND bettype = 21004 then winlost - actual_stake else 0 end), 0)
 		FROM Transfer WITH (NOLOCK)
 		WHERE custid = @CustID
-			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
 
 		SELECT  @TotalCash      = @TotalCash + ISNULL(SUM(winlost-actual_stake+playercomm), 0)
 		FROM bettransRNG WITH (NOLOCK)

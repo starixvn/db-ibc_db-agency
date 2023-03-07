@@ -13,6 +13,7 @@ AS
 		- 20191008@Johnson: remove credit info [redmine:#121538]
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 
 	Example: EXEC Age_BalanceMemberSel @CustID=1382337
 */
@@ -58,7 +59,7 @@ BEGIN
 		memberCash, yesterdayMemberCash,
 		PendingTransfer3rd
 	)
-	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId, @MoveBetDay = @moveBetDay
+	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId, @MoveBetDay = @moveBetDay, @BUDate = @balanceUpDay
 
 	SELECT
 		@custid AS CustID,		

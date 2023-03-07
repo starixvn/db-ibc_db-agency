@@ -1,7 +1,8 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
 AlTER PROCEDURE [dbo].[Acc_CustomerSelCash]
 	@CustId INT,
-	@MoveBetDay SMALLDATETIME = NULL
+	@MoveBetDay SMALLDATETIME = NULL,
+	@BUDate SMALLDATETIME = NULL
 AS
 
 /*
@@ -18,6 +19,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+    	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 
 BEGIN
@@ -40,20 +42,20 @@ BEGIN
 
 	SELECT @roleID = roleid FROM dbo.custInfo WITH (NOLOCK) WHERE custid = @__custId
 
-	-- get move bet date
+	-- get move bet, BU date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+	
 
-	IF (@MoveBetDay IS NULL)
+	IF (@MoveBetDay IS NULL OR @BUDate IS NULL)
 	BEGIN
 		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 		EXEC bodb02.dbo.Age_SelBalanceUpDay
-
 		SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 	END
 	ELSE
 	BEGIN
-		SELECT @moveBetsDay = @MoveBetDay
+		SELECT @moveBetsDay = @MoveBetDay , @balanceUpDay = @BUDate
 	END
 	
 	-- Get Balance Information --
@@ -95,7 +97,6 @@ BEGIN
 			SUM( CASE WHEN (winlostdate <= @yesterday) THEN winlost-actual_stake+playercomm ELSE 0 END) 
 		FROM dbo.bettrans b WITH (NOLOCK)
 		WHERE b.custid = @__custId
-			AND b.bettype < 19999
 			AND b.statusID IN (111, 112, 113)
 			AND (
 				b.winlostdate < @yesterday
@@ -111,7 +112,10 @@ BEGIN
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.Transfer b WITH (NOLOCK)
 		WHERE b.custid = @__custId
-			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
     END
     ELSE IF @roleid = 2
     BEGIN
@@ -148,7 +152,6 @@ BEGIN
 				SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END ) yesterdayMemberCash			
 		FROM dbo.bettrans b WITH (NOLOCK)      
 		WHERE b.recommend = @__custId 
-			AND b.bettype < 19999  
 			AND b.statusID IN (111, 112, 113)  
 			AND b.winlostdate > @moveBetsDay   
 		GROUP BY Winlostdate, Bettype
@@ -172,7 +175,10 @@ BEGIN
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END) AS PendingTransfer3rd
 		FROM dbo.Transfer b WITH (NOLOCK)    
 		WHERE b.recommend = @__custId
-			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999 )
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
     END
     ELSE IF @roleid = 3
     BEGIN
@@ -215,7 +221,6 @@ BEGIN
 				SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END) yesterdayMemberCash
 		FROM dbo.bettrans b WITH (NOLOCK)  
 		WHERE b.mrecommend = @__custId  
-			AND b.bettype < 19999
 			AND b.winlostdate > @moveBetsDay  
 			AND b.statusID IN (111, 112, 113) 
 		GROUP BY Winlostdate, Bettype
@@ -246,9 +251,10 @@ BEGIN
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END) AS PendingTransfer3rd
 		FROM dbo.Transfer b WITH (NOLOCK)
 		WHERE b.mrecommend = @__custId  
-			AND (
-					(bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999 			
-				)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
     END
     ELSE IF @roleid = 4
     BEGIN
@@ -297,7 +303,6 @@ BEGIN
 				   SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END) yesterdayMemberCash
 			FROM dbo.bettrans b WITH (NOLOCK)
 			WHERE b.srecommend = @__custId  
-				AND b.bettype < 19999
 				AND b.winlostdate > @moveBetsDay  
 				AND b.statusID IN (111, 112, 113)  
 			Group by bettype,b.winlostdate
@@ -333,9 +338,10 @@ BEGIN
 				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END) AS PendingTransfer3rd
 			FROM dbo.Transfer b WITH (NOLOCK)
 			WHERE b.srecommend = @__custId 
-				AND (
-						(bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999					 
-					)
+				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
     END
 
 	SELECT

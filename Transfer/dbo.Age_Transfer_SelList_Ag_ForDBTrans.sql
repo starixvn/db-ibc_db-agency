@@ -56,6 +56,7 @@ Revisions:
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	- 20220714@Evan: Modify sp to avoid dump (remove code select into) - [Redmine: #175450]
+	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	
 Param's Explanation:
 • @CustID: AgentID
@@ -187,7 +188,6 @@ BEGIN
 	FROM dbo.bettrans b WITH(NOLOCK, INDEX = ix_recommend)
 	WHERE 
 		recommend = @CustID
-		AND bettype < 19999 
 		AND winlostdate > @moveBetsDay 
 	GROUP BY custid,winlostdate,ruben,bettype
 	OPTION (MAXDOP 1)
@@ -197,7 +197,10 @@ BEGIN
 	FROM dbo.Transfer b WITH(NOLOCK)
 	WHERE 
 		recommend = @CustID
-		AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+		AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+					WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+					WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+				ELSE 1 END
 	GROUP BY custid,winlostdate,bettype
 	OPTION (MAXDOP 1)
 

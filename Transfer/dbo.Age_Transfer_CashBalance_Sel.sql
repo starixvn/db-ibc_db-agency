@@ -14,6 +14,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 
 	Param's Explanation:
 		- @CustID: custid of Master/Agent/Member
@@ -135,7 +136,6 @@ BEGIN
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @uplineId
-			AND b.bettype < 19999
 			AND b.statusID IN (111, 112, 113)
 			AND winlostdate > @moveBetsDay
 			AND (
@@ -153,7 +153,10 @@ BEGIN
 		FROM dbo.Transfer b WITH(NOLOCK)
 		WHERE 
 			b.recommend = @uplineId
-			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
 
 		SELECT
 			@CustID AS CustId,
@@ -218,7 +221,6 @@ BEGIN
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.mrecommend = @uplineId
-			AND b.bettype < 19999
 			AND b.statusID IN (111, 112, 113)
 			AND winlostdate > @moveBetsDay
 			AND (
@@ -234,10 +236,12 @@ BEGIN
 		FROM dbo.Transfer b WITH(NOLOCK)
 		WHERE 
 			b.mrecommend = @uplineId
-			AND (
-					(bettype = 19999 and winlostdate <= @moveBetsDay) OR (bettype > 19999 and b.bettype NOT IN (21008, 21009))
-				)
-
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
+			AND bettype NOT IN (21008, 21009)
+						
 		SELECT
 			@CustID AS CustId,
 			@roleID AS RoleId,
@@ -301,7 +305,6 @@ BEGIN
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.srecommend = @uplineId
-			AND b.bettype < 19999
 			AND b.statusID IN (111, 112, 113)
 			AND winlostdate > @moveBetsDay
 			AND (
@@ -318,9 +321,11 @@ BEGIN
 			0 
 		FROM dbo.Transfer b WITH(NOLOCK)
 		WHERE b.srecommend = @uplineId
-			AND (
-					(bettype = 19999 and winlostdate <= @moveBetsDay) OR (bettype > 19999 and b.bettype NOT IN (21008, 21009))
-				)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
+			AND bettype NOT IN (21008, 21009)
 		SELECT
 			@CustID AS CustId,
 			@roleID AS RoleId,

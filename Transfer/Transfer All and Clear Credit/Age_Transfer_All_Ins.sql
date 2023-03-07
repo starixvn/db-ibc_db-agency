@@ -30,6 +30,7 @@ AS
 		- 20210817@Sophia: Fix overflow Refno [Redmine: #160262]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 
 BEGIN
@@ -108,22 +109,22 @@ BEGIN
 		DECLARE @ErrTable TABLE (Id TINYINT, Content NVARCHAR(4000))
 	
 		-- 1. Check processing data
-		DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
-		EXEC dbo.Acc_CheckProcessingData @EndProcessingTime = @EndProcessingTime OUTPUT
+		-- DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
+		-- EXEC dbo.Acc_CheckProcessingData @EndProcessingTime = @EndProcessingTime OUTPUT
 
-		IF @EndProcessingTime IS NOT NULL
-		BEGIN
-			SELECT  @ErrMsg = CASE @Language WHEN 'E' THEN 'To ensure the accuracy of data while being processed, all transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.'
-										ELSE dbo.f_Get_MsgNamebyMsgID(50010, @Language)	END,
-					@RemainingTime = CONVERT(VARCHAR(8), DATEADD(HOUR, 12, @EndProcessingTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 12, @EndProcessingTime), 101) --convert time to GMT +8
+		-- IF @EndProcessingTime IS NOT NULL
+		-- BEGIN
+		-- 	SELECT  @ErrMsg = CASE @Language WHEN 'E' THEN 'To ensure the accuracy of data while being processed, all transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.'
+		-- 								ELSE dbo.f_Get_MsgNamebyMsgID(50010, @Language)	END,
+		-- 			@RemainingTime = CONVERT(VARCHAR(8), DATEADD(HOUR, 12, @EndProcessingTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 12, @EndProcessingTime), 101) --convert time to GMT +8
 
-			SELECT	@ErrMsg = REPLACE(@ErrMsg, '{expandedtime}', @RemainingTime)
+		-- 	SELECT	@ErrMsg = REPLACE(@ErrMsg, '{expandedtime}', @RemainingTime)
 
-			INSERT INTO @ErrTable (Id, Content)
-			SELECT 1, @ErrMsg
+		-- 	INSERT INTO @ErrTable (Id, Content)
+		-- 	SELECT 1, @ErrMsg
 
-			SELECT @ErrMsg = ''
-		END
+		-- 	SELECT @ErrMsg = ''
+		-- END
 
 		-- 2. Nagative given credit
 		IF @RoleId = 4
@@ -252,9 +253,6 @@ BEGIN
 		END 
 	END
 	
-	
-	
-
 	-- Calculate data
 	BEGIN
 		DECLARE @yesterday SMALLDATETIME
@@ -273,57 +271,12 @@ BEGIN
 		
 		-- Total Balance
 		BEGIN
-			-- bettrans
-			INSERT INTO #tempData
-			(
-				winlostdate, bettype, statusId,
-				custid, recommend,
-				winlost, actual_stake, playercomm,
-				awinlost, comm,
-				mwinlost, acomm
-			)
-			SELECT
-				b.winlostdate, b.bettype, b.statusId,
-				b.custid, b.recommend,
-				SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
-				SUM(b.awinlost), SUM(b.comm),
-				SUM(b.mwinlost), SUM(b.acomm)
-			FROM dbo.bettrans b WITH (NOLOCK)
-				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-			WHERE 
-				bettype < 19999
-				AND winlostdate > @moveBetsDay
-			GROUP BY
-				b.winlostdate, b.bettype, b.statusId,
-				b.custid, b.recommend
+			
 
-			-- Transfer
-			INSERT INTO #tempData
-			(
-				winlostdate, bettype, statusId,
-				custid, recommend,
-				winlost, actual_stake, playercomm,
-				awinlost, comm,
-				mwinlost, acomm
-			)	
-			SELECT
-				b.winlostdate, b.bettype, 131,
-				b.custid, b.recommend,
-				SUM(b.winlost), SUM(b.actual_stake), SUM(b.playercomm),
-				SUM(b.awinlost), SUM(b.comm),
-				SUM(b.mwinlost), SUM(b.acomm)
-			FROM dbo.Transfer b WITH (NOLOCK)
-				INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-			WHERE (b.bettype = 19999 and b.winlostdate <= @moveBetsDay) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
-			GROUP BY
-				b.winlostdate, b.bettype, 
-				b.custid, b.recommend
-
-			----check move bet date again to make sure it is not changed
-			DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
-			EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
-
-			IF (@IsDiff = 1)
+			----check MB date, BU date again to make sure it is not changed
+			DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
+			
+			WHILE (@IsDiff = 1)
 			BEGIN
 
 				DELETE FROM #tempData
@@ -346,8 +299,7 @@ BEGIN
 				FROM dbo.bettrans b WITH (NOLOCK)
 					INNER JOIN @tblrecommend r ON b.recommend = r.recommend
 				WHERE 
-					bettype < 19999
-					AND winlostdate > @NewMoveBetDate
+					winlostdate > @moveBetsDay
 				GROUP BY
 					b.winlostdate, b.bettype, b.statusId,
 					b.custid, b.recommend
@@ -369,30 +321,57 @@ BEGIN
 					SUM(b.mwinlost), SUM(b.acomm)
 				FROM dbo.Transfer b WITH (NOLOCK)
 					INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-				WHERE (b.bettype = 19999 and b.winlostdate <= @NewMoveBetDate) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
+				WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+								WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+								WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+							ELSE 1 END
+					AND bettype NOT IN (21008, 21009)
 				GROUP BY
-					b.winlostdate, b.bettype,
+					b.winlostdate, b.bettype, 
 					b.custid, b.recommend
 
-			END
+				-- Master Balance
+				IF @RoleId = 4
+				BEGIN
+					
+					INSERT INTO #tempData
+					(
+						winlostdate, bettype, statusId,
+						custid,
+						winlost, actual_stake
+					)
+					SELECT
+						winlostdate, bettype, 112,
+						@DownlineCustId,
+						SUM(winlost), SUM(actual_stake)
+					FROM dbo.Transfer WITH (NOLOCK)
+					WHERE custId = @DownlineCustId AND Bettype >= 20000
+						AND 1 = CASE WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+									WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+								ELSE 1 END
+					GROUP BY
+						winlostdate, bettype
+				END
 
-			-- Master Balance
-			IF @RoleId = 4
-			BEGIN
-				INSERT INTO #tempData
-				(
-					winlostdate, bettype, statusId,
-					custid,
-					winlost, actual_stake
-				)
-				SELECT
-					winlostdate, bettype, 112,
-					@DownlineCustId,
-					SUM(winlost), SUM(actual_stake)
-				FROM dbo.Transfer WITH (NOLOCK)
-				WHERE custId = @DownlineCustId AND Bettype >= 20000
-				GROUP BY
-					winlostdate, bettype
+				----check MB date, BU date again to make sure it is not changed
+				SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+				EXEC dbo.Acc_ReCheck_MBUDate 
+					@MBDate = @moveBetsDay,
+					@BUDate = @balanceUpDay,
+					@IsDiff = @IsDiff OUTPUT,
+					@NewMBDate = @NewMoveBetDate OUTPUT,
+					@NewBUDate = @NewBalanceUpDate OUTPUT
+				
+				IF @IsDiff = -1 
+				BEGIN
+					SELECT @ErrMsg = 'BalanceUpDate value is null. Please contact DBA for support.', @ErrCode = 109				
+					RETURN	
+				END
+
+				IF @IsDiff = 1 
+				BEGIN
+					SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+				END
 			END
 
 			-- Don't get tickets on bettrans which have bettypes on bettransRnG/LC with winlostdate >= yesterday
@@ -640,6 +619,7 @@ BEGIN
 					FROM dbo.Transfer WITH (NOLOCK)
 					WHERE custid = @memberId
 						AND bettype IN (21003, 21004)
+						AND winlostdate >= @balanceUpDay
 						AND transdate BETWEEN CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120) AND CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120) + ' 23:59:59'
 				)
 			BEGIN

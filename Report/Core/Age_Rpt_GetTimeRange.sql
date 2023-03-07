@@ -15,6 +15,7 @@ Revisions:
 	-20141121@Bobby.Nguyen: Add Historical report time range
 	-20150326@Bobby.Nguyen: Update Historical report time range without counting the current year
 	-20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 	
 Param's Explanation: 
 	- @RptTypeId: 0: All time ranges - X: specific one
@@ -122,10 +123,10 @@ BEGIN
 		FROM @Age_RptTimeRange d
 		CROSS APPLY (
 			SELECT TOP 1 
-				t.winlostdate	AS BalanceDate
-			FROM bodb02.dbo.Transfer t WITH(NOLOCK)  
-			WHERE t.bettype	= 20000 
-				AND t.custid	= 3  
+				CONVERT(SMALLDATETIME, VValue)	AS BalanceDate
+			FROM bodb02.dbo.MBUSettings
+			WHERE VName = 'BalanceUpDate'
+
 		) t
 		WHERE d.TypeName IN ('BalanceUp')
 
