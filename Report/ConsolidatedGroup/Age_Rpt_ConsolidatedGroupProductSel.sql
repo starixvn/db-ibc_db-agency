@@ -31,6 +31,7 @@ AS
 		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
 		- 20220803@Eden:  Implement the dependency between Macau Games Product Status and Jackpot Status [Redmine: #171715]
 		- 20221121@Eden: Unify RNG Lottery Customer Settings [RedmineID: #180640]
+		- 20230323@Eden: Migrate NG and Keno to DCS structure [Redmine: #179711]
 		
 	Param's Explanation:
 
@@ -51,51 +52,28 @@ BEGIN
 	INSERT INTO @ProductList (ProductID, ProductName, EndOfSupportDate)
 	SELECT	ProductID, ProductName, EndOfSupportDate
 	FROM	dbo.Products WITH (NOLOCK)
-	WHERE GroupType = 0		
+	WHERE GroupType = 0	
+	
+	CREATE TABLE #SportBettypeFilter (RealProductId TINYINT, SportType SMALLINT,Bettype SMALLINT,IsLive BIT, SettingType TINYINT)
+	CREATE TABLE #ProductSettingType(
+		SettingType	tinyint,
+		SettingName	varchar(30)
+	)
+
+	INSERT INTO #ProductSettingType(SettingType,SettingName)
+	SELECT SettingType,SettingName 
+	FROM DBCUST.CUSTDB.dbo.ProductSettingType WITH(NOLOCK) 
+	WHERE SettingName IN('Product Status')
+
+	INSERT INTO #SportBettypeFilter (RealProductId,SportType,Bettype,IsLive, SettingType)
+	SELECT p.RealProductId,p.SportType,p.Bettype,p.IsLive, p.SettingType   
+	FROM dbo.f_CustSetting_ProductSettingDetailSel(@SettingStatus) p
+		INNER JOIN #ProductSettingType t ON p.SettingType = t.SettingType
 
 	UPDATE	@ProductList
 	SET		isShow = 1
-	WHERE	ProductID IN (1,6,3) ---SB, Casino, Number Game: always show
+	WHERE	ProductID IN (1) ---SB: always show
 
-	/*
-	-----1. Virtual Sports
-	IF EXISTS (	SELECT	1
-				FROM	dbo.CustInfo C WITH (NOLOCK)
-				INNER JOIN @TmpCustID T 
-						ON T.CustID = C.CustID
-				WHERE	C.HideVirtualSports = 0)
-	BEGIN 
-		UPDATE @ProductList
-		SET		isShow = 1
-		WHERE	ProductID = 5
-	END 
-	*/
-
-	-----2. Keno
-	IF EXISTS (	SELECT	1
-				FROM	dbo.CustInfo C WITH (NOLOCK)
-				INNER JOIN @TmpCustID T 
-						ON T.CustID = C.CustID
-				WHERE	C.HideKeno = 0)
-	BEGIN 
-		UPDATE @ProductList
-		SET		isShow = 1
-		WHERE	ProductID = 8
-	END 
-	
-	/*
-	-----3. Gold Deluxe
-	IF EXISTS (	SELECT	1
-				FROM	dbo.CustInfo C WITH (NOLOCK)
-				INNER JOIN @TmpCustID T 
-						ON T.CustID = C.CustID
-				WHERE	C.HideGoldDeluxe = 0)
-	BEGIN 
-		UPDATE @ProductList
-		SET		isShow = 1
-		WHERE	ProductID = 12
-	END 
-	*/
 	-----------------------------------------------------------
 	----------------------------DCS---------------------------
 	SELECT t.ProductID,
@@ -108,12 +86,7 @@ BEGIN
 		(
 			SELECT p.bitmapOrder , 
 					RealProductID AS ProductID 
-			FROM
-				(SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 4, @SettingStatus) 
-				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 11, @SettingStatus) --NG2
-				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 13, @SettingStatus) --FW, BetradarVS, Keno Lottery
-				UNION SELECT RealProductID, sporttype, bettype FROM dbo.f_CustSetting_SportBetTypeSettingSelect (NULL, 21, @SettingStatus)
-				)c
+			FROM #SportBettypeFilter c
 				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
 					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
 		) t
@@ -184,6 +157,8 @@ BEGIN
 	ORDER BY d.OrderNo
 	
 	DROP TABLE #T
+	DROP TABLE #ProductSettingType
+	DROP TABLE #SportBettypeFilter
 END
 
  
