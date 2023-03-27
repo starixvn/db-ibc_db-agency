@@ -1,5 +1,5 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
-CREATE OR ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_SettingIns]
+ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_SettingIns]
 	@FromCustId		INT,
 	@ToCustIds		VARCHAR(4000),
 	@Creator		INT,
