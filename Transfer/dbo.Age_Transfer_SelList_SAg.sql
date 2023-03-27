@@ -47,6 +47,7 @@ Revisions:
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -369,6 +370,17 @@ SELECT  @SQL = 'SELECT CustID, ClosedReason
 INSERT INTO #ClosedReason (custid, ClosedReason)
 EXEC (@SQL)
 
+--TODO: Allow Auto Transfer
+DROP TABLE IF EXISTS #ClearBalanceCust_Setting;
+CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
+DECLARE @SQL_CBS NVARCHAR(MAX)
+SELECT  @SQL_CBS = 'SELECT FromCustID, ToCustID
+				FROM OPENQUERY(DBTXN, ''SELECT cbs.FromCustID, cbs.ToCustID
+										FROM bodb02.dbo.Age_ClearBalanceCust_Setting cbs WITH(NOLOCK)
+										WHERE cbs.FromCustID = ' + CONVERT(VARCHAR(30), @SAgID) + ''')'
+INSERT INTO #ClearBalanceCust_Setting (FromCustID, ToCustID)
+EXEC (@SQL_CBS)
+
 IF isnull(@IsYesterdayBalance,0) = 0
 BEGIN
 	SELECT * FROM 
@@ -390,11 +402,13 @@ BEGIN
 			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
 			c.lastname,
-			c.Locked
+			c.Locked,
+			IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer
 		FROM #tmp_customer c
 			INNER JOIN #credit credit ON c.custid = credit.mrecommend
 			LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
 			LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
+			LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @SAgID AND cbs.ToCustID = c.CustID
 	)a 
 	WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 	--Total
@@ -449,11 +463,13 @@ BEGIN
 			IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
 			c.firstname, 
 			c.lastname,
-			c.Locked
+			c.Locked,
+			IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer
 		FROM #tmp_customer c
 			INNER JOIN #credit credit ON c.custid = credit.mrecommend
 			LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
 			LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
+			LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @SAgID AND cbs.ToCustID = c.CustID
 		WHERE
 		    CASE 
 		        WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
