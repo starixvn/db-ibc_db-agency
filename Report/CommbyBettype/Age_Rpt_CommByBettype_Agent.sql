@@ -18,6 +18,7 @@ AS
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
+		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]  
 */
 
 BEGIN
@@ -86,7 +87,8 @@ BEGIN
 		
 	SELECT	pvt.recommend AS CustId,
 			c.username AS CustName, 
-			
+			c.FirstName,
+			c.LastName,
 			ISNULL([1],0) AS Comm1,
 			ISNULL([2],0) AS Comm2,
 			ISNULL([3],0) AS Comm3,
