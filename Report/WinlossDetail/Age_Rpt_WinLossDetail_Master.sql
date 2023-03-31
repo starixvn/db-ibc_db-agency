@@ -41,6 +41,7 @@ Revisions:
 	- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 	- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 	- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
+	- 20230331@Malcolm: Add first name, last name [RedmineID : #184752]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -447,6 +448,8 @@ BEGIN
 	BEGIN
 		SELECT	w.CustID AS CustId, 
 				c.UserName AS CustName, 
+				c.FirstName,
+				c.LastName,
 				SUM(TurnOver) as Turnover,
 				SUM(TurnoverNoDraw) as NetTurnover,
 				SUM(GrossComm) as GrossComm,
@@ -460,8 +463,8 @@ BEGIN
 				SUM(SAgComm) as SAgComm,
 				SUM(NoOfTicket) as NumberOfTickets
 		FROM #SAgWinLossDetails w 
-			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-		GROUP BY w.CustID, c.UserName
+			INNER JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+		GROUP BY w.CustID, c.UserName, c.FirstName,  c.LastName
 		ORDER BY c.Username;
 
 		SELECT	NULL AS CustId,
@@ -497,6 +500,8 @@ BEGIN
 		FROM (
 			SELECT	w.CustID AS CustId, 
 					c.UserName AS CustName, 
+					c.FirstName,
+					c.LastName,
 					SUM(TurnOver) as Turnover,
 					SUM(TurnoverNoDraw) as NetTurnover,
 					SUM(GrossComm) as GrossComm,
@@ -511,8 +516,8 @@ BEGIN
 					SUM(NoOfTicket) as NumberOfTickets,
 					ROW_NUMBER() over(order by c.UserName) as RowNum
 			FROM #SAgWinLossDetails w 
-				INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-			GROUP BY w.CustID, c.UserName
+				INNER JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+			GROUP BY w.CustID, c.UserName, c.FirstName, c.LastName
 		) wl
 		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
