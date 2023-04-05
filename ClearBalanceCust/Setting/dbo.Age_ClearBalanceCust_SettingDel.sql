@@ -32,7 +32,7 @@ BEGIN
 		@TrackingValue2 VARCHAR(8000),
 		@StartTime		DATETIME,
 		@duration		INT,
-		@LogActionID	INT = 95087,
+		@LogActionID	INT = 95086,
 		@AfftectedRows	INT;
 
 	SELECT @today	= GETDATE()
@@ -91,7 +91,7 @@ BEGIN
 	 )
 	 BEGIN
 		SELECT @ErrCode	= 104, 
-				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'The Auto Transfer is in progress. Please turn off the auto transfer after the process is done.'  
+				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'You cannot turn off Auto Transfer for this account because the Auto Transfer process is running. Please try again after the process is complete..'  
 								ELSE [dbo].[f_Get_MsgNamebyMsgID](500019,@Language)
 							END    
 		GOTO SP_END;
@@ -103,7 +103,7 @@ BEGIN
 		WITH CTE_Remove AS (
 			SELECT del.FromCustID, del.ToCustID 
 			FROM #tmpClearBalanceCust del
-			INNER JOIN [dbo].[Age_ClearBalanceCust_Setting] s (NOLOCK) 
+			INNER JOIN [dbo].[Age_ClearBalanceCust_Setting] s (NOLOCK)
 				ON s.FromCustID = del.FromCustID 
 				AND s.ToCustID = del.ToCustID
 		)
@@ -115,55 +115,7 @@ BEGIN
 		
 		SET @AfftectedRows = @@ROWCOUNT;
 		IF @AfftectedRows = 0
-			GOTO SP_END;
-
-		SET @duration  = DATEDIFF(MILLISECOND, @StartTime, CURRENT_TIMESTAMP);
-
-		-- TODO: Write log runSP
-		BEGIN TRY
-			SELECT @LogSPData = CAST(
-					(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 0 AS '@IsAllowAutoTransfer',
-						ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator'
-					FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
-				)
-				,@TrackingValue2 = CAST(
-					(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 1 AS '@IsAllowAutoTransfer',
-						ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator'
-					FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
-				);
-
-			EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-				@UserID = @Creator,
-				@CustID = @ToCustID,
-				@ActionID = @LogActionID,
-				@TrackingValue = @LogSPData,
-				@TrackingValue2 = @TrackingValue2,
-				@duration = @duration
-		END TRY
-		BEGIN CATCH
-			SELECT @LogSPData = CAST(
-					(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 0 AS '@IsAllowAutoTransfer',
-						ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator',
-						ERROR_NUMBER() AS '@ErrCode', ERROR_MESSAGE() AS '@ErrMsg'
-					FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
-				),
-				@TrackingValue2 = CAST(
-					(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 1 AS '@IsAllowAutoTransfer',
-						ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator',
-						ERROR_NUMBER() AS '@ErrCode', ERROR_MESSAGE() AS '@ErrMsg'
-					FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
-				);
-
-			EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
-				@UserID = @Creator,
-				@CustID = @ToCustID,
-				@ActionID = @LogActionID,
-				@TrackingValue = @LogSPData,
-				@TrackingValue2 = @TrackingValue2,
-				@duration = @duration
-
-		END CATCH
-
+			RETURN;
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode	= 105, 
@@ -171,6 +123,49 @@ BEGIN
 	END CATCH
 
 	SP_END:
-	RETURN;
+	SET @duration  = DATEDIFF(MILLISECOND, @StartTime, CURRENT_TIMESTAMP);
+	-- TODO: Write log runSP
+	BEGIN TRY
+		SELECT @LogSPData = CAST(
+				(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 0 AS '@IsAllowAutoTransfer',
+					ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator',
+					@ErrCode AS '@ErrCode', @ErrMsg AS '@ErrMsg'
+				FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
+			)
+			,@TrackingValue2 = CAST(
+				(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 1 AS '@IsAllowAutoTransfer'
+				FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
+			);
+
+		EXEC DBLOG.bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
+			@UserID = @Creator,
+			@CustID = @ToCustID,
+			@ActionID = @LogActionID,
+			@TrackingValue = @LogSPData,
+			@TrackingValue2 = @TrackingValue2,
+			@duration = @duration
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrMsg  = CONCAT(@ErrMsg, ERROR_NUMBER(),': ',ERROR_MESSAGE());
+		SELECT @LogSPData = CAST(
+				(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 0 AS '@IsAllowAutoTransfer',
+					ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator',
+					@ErrCode AS '@ErrCode', @ErrMsg AS '@ErrMsg'
+				FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
+			),
+			@TrackingValue2 = CAST(
+				(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', 1 AS '@IsAllowAutoTransfer'
+				FOR XML PATH('Age_ClearBalanceCust_SettingDel')) AS VARCHAR(8000)
+			);
+
+		EXEC bodb_CustomerLog.dbo.WriteLog_UserLog_RunSP 
+			@UserID = @Creator,
+			@CustID = @ToCustID,
+			@ActionID = @LogActionID,
+			@TrackingValue = @LogSPData,
+			@TrackingValue2 = @TrackingValue2,
+			@duration = @duration
+
+	END CATCH
 END
 GO
