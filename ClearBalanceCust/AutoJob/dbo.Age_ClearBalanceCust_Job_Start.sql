@@ -7,7 +7,6 @@ ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_Start]
 	@RunningMode	VARCHAR(15) = 'Normal' OUTPUT,
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
-
 AS
 /*
 	Created:20230227@Bobby
@@ -24,7 +23,9 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @SessionDate	SMALLDATETIME;
+	DECLARE @SessionDate	SMALLDATETIME,
+		@Creator INT = 8; --StarixIT
+	;
 
 	SELECT @SessionDate		= CAST(GETDATE() AS DATE),
 			@PairOfBatch	= ISNULL(@PairOfBatch, 200),
@@ -42,133 +43,32 @@ BEGIN
 	START_JOB:
 	BEGIN
 		SET @RunningMode = 'Normal';
+
 		--TODO: CLEANUP data
-		TRUNCATE TABLE dbo.Age_ClearBalanceCust_RunningSuper;
-		TRUNCATE TABLE dbo.Age_ClearBalanceCust_BatchLog;
-		TRUNCATE TABLE dbo.Age_ClearBalanceCust_Process;
+		DELETE dbo.Age_ClearBalanceCust_RunningSuper;
+		DELETE dbo.Age_ClearBalanceCust_BatchLog;
+		DELETE dbo.Age_ClearBalanceCust_Process;
 		
-		DECLARE @openExecSQL NVARCHAR(MAX), @Creator INT = 8;
-
-		DROP TABLE IF EXISTS #tmpSMACust;
-		CREATE TABLE #tmpSMACust(RoleId INT PRIMARY KEY, FromCustIds VARCHAR(8000));
-
-		DROP TABLE IF EXISTS #tmpCustSetting;
-		CREATE TABLE #tmpCustSetting (custid INT PRIMARY KEY, RoleId INT, TransferOption TINYINT, IsAllDayBalTransfer BIT)
-
 		DROP TABLE IF EXISTS #tmpClearBalanceCust
 		CREATE TABLE #tmpClearBalanceCust(FromCustId INT, ToCustId INT, RoleId TINYINT, SuperId INT, IsAllDayBalTransfer BIT
 			, INDEX CIX_SuperRole CLUSTERED (SuperId, RoleId)
 		);
 
-		INSERT INTO #tmpSMACust(RoleId, FromCustIds)
-		SELECT t.roleid, STRING_AGG(t.FromCustID, ',') As FromCustIds
-		FROM (
-			SELECT c.custid AS FromCustID, c.roleid
-			FROM dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
-			INNER JOIN CUSTDB.dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
-			WHERE s.EffectiveDate <= @SessionDate
-			GROUP BY c.custid, c.roleid
-		) AS t
-		GROUP BY t.roleid;
+		--TODO: get Snapshot from DBCUST
+		INSERT INTO #tmpClearBalanceCust (FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer)
+		SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer
+		FROM OPENQUERY(DBCUST, N'SELECT FromCustId, 
+				ToCustId, 
+				RoleId, 
+				SuperId, 
+				IsAllDayBalTransfer  
+			FROM CustDB.[dbo].[f_Age_ClearBalanceCust_Snapshot]()');
 
-		--select * from #tmpSMACust;
-
-		IF EXISTS(SELECT 1 FROM #tmpSMACust WHERE RoleId = 2)
-		BEGIN
-			SELECT @openExecSQL = N'\
-				INSERT INTO #tmpCustSetting (custid, RoleId, TransferOption, IsAllDayBalTransfer)
-				SELECT custid, 2, TransferOption, IsAllDayBalTransfer
-				FROM OPENQUERY(DBCUST,N''\
-				SELECT ca.custid, ca.TransferOption, cm.IsAllDayBalTransfer
-				FROM CustDB.dbo.CustAgent ca WITH (NOLOCK)
-				INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON c.custid = ca.custid
-				INNER JOIN CustDB.dbo.CustMaster cm WITH (NOLOCK) ON cm.custid = c.mrecommend
-					CROSS APPLY (
-						SELECT strTransferOption = CustDB.dbo.F_Decimal_Binary(ISNULL(ca.TransferOption,0))
-					) AS ck
-				WHERE ca.custid  IN ('+ t.FromCustIds +') \
-					AND 1 = CASE WHEN SUBSTRING(ck.strTransferOption, 8, 1) = 1 
-								AND SUBSTRING(ck.strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 0 THEN 1 
-						ELSE 0 END'')'
-			FROM #tmpSMACust t
-			WHERE t.RoleId = 2;
-
-			EXEC (@openExecSQL);
-		END
-
-		IF EXISTS(SELECT 1 FROM #tmpSMACust WHERE RoleId = 3)
-		BEGIN
-			SELECT @openExecSQL = N'\
-				INSERT INTO #tmpCustSetting (custid, RoleId, TransferOption, IsAllDayBalTransfer)
-				SELECT custid, 3, TransferOption, IsAllDayBalTransfer
-				FROM OPENQUERY(DBCUST,N''\
-				SELECT cm.custid, cm.TransferOption, cm.IsAllDayBalTransfer
-				FROM CustDB.dbo.CustMaster cm WITH (NOLOCK)
-				CROSS APPLY (
-						SELECT strTransferOption = CustDB.dbo.F_Decimal_Binary(ISNULL(cm.TransferOption,0))
-					) AS ck
-				WHERE cm.custid  IN ('+ t.FromCustIds +') \
-					AND 1 = CASE WHEN SUBSTRING(ck.strTransferOption, 8, 1) = 1 
-								AND SUBSTRING(ck.strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 0 THEN 1 
-						ELSE 0 END'')'
-			FROM #tmpSMACust t
-			WHERE t.RoleId = 3;
-
-			EXEC (@openExecSQL);
-		END
-
-		IF EXISTS(SELECT 1 FROM #tmpSMACust WHERE RoleId = 4)
-		BEGIN
-			SELECT @openExecSQL = N'\
-				INSERT INTO #tmpCustSetting (custid, RoleId, TransferOption, IsAllDayBalTransfer)
-				SELECT custid, 4, TransferOption, IsAllDayBalTransfer
-				FROM OPENQUERY(DBCUST,N''\
-				SELECT cs.custid, cs.TransferOption, cs.IsAllDayBalTransfer
-				FROM CustDB.dbo.CustSuper cs WITH (NOLOCK)
-					CROSS APPLY (
-						SELECT strTransferOption = CustDB.dbo.F_Decimal_Binary(ISNULL(cs.TransferOption,0))
-					) AS ck
-				WHERE cs.custid  IN ('+ t.FromCustIds +')'')'
-			FROM #tmpSMACust t
-			WHERE t.RoleId = 4;
-
-			EXEC (@openExecSQL);
-		END
-
-		--select * from #tmpCustSetting;
-
-		IF NOT EXISTS (SELECT 1 FROM #tmpCustSetting)
+		IF NOT EXISTS (SELECT TOP 1 1 FROM #tmpClearBalanceCust)
 			GOTO OUTPUT_JOB;
 
-		WITH CTE_ClearBalanceCust AS (
-			SELECT s.FromCustId, s.ToCustId, c.RoleId, c.srecommend AS SuperId, ISNULL(sma.IsAllDayBalTransfer, 0) AS IsAllDayBalTransfer
-			FROM dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
-				INNER JOIN CUSTDB.dbo.Customer c WITH(NOLOCK) ON c.custid = s.ToCustId AND c.recommend = s.FromCustId AND c.RoleId = 1
-				INNER JOIN #tmpCustSetting sma ON sma.custid = s.FromCustID
-			WHERE sma.RoleId = 2
-				AND s.EffectiveDate <= @SessionDate
 
-			UNION ALL
-			SELECT s.FromCustId, s.ToCustId, c.RoleId, c.srecommend, ISNULL(sma.IsAllDayBalTransfer, 0)
-			FROM dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
-				INNER JOIN CUSTDB.dbo.Customer c WITH(NOLOCK) ON c.custid = s.ToCustId AND c.mrecommend = s.FromCustId AND c.RoleId = 2
-				INNER JOIN #tmpCustSetting sma ON sma.custid = s.FromCustID
-			WHERE sma.RoleId = 3
-				AND s.EffectiveDate <= @SessionDate
-
-			UNION ALL
-			SELECT s.FromCustId, s.ToCustId, c.RoleId, c.srecommend, ISNULL(sma.IsAllDayBalTransfer, 0)
-			FROM dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
-				INNER JOIN CUSTDB.dbo.Customer c WITH(NOLOCK) ON c.custid = s.ToCustId AND c.srecommend = s.FromCustId AND c.RoleId = 3
-				INNER JOIN #tmpCustSetting sma ON sma.custid = s.FromCustID
-			WHERE sma.RoleId = 4
-				AND s.EffectiveDate <= @SessionDate
-		)
-		INSERT INTO #tmpClearBalanceCust
-		SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer
-		FROM CTE_ClearBalanceCust
-		
-
+		--TODO: Process batching
 		DROP TABLE IF EXISTS #tmpClearBalanceCust_RunningSuper;
 		DROP TABLE IF EXISTS #tmpClearBalanceCust_Process;
 		
@@ -178,7 +78,7 @@ BEGIN
 			,INDEX CIX_SuperBatch CLUSTERED (SuperId, BatchNo)
 		);
 
-
+		--TODO: Super order by TotalDownline
 		INSERT INTO #tmpClearBalanceCust_RunningSuper
 		SELECT SuperID, COUNT(1) AS TotalDownline
 		FROM #tmpClearBalanceCust
@@ -242,7 +142,7 @@ BEGIN
 	-- TODO: Reset data from current state
 	RESUM_JOB:
 	BEGIN
-		SET @RunningMode = 'Resum';
+		SET @RunningMode = 'Resume';
 		-- Update Waiting, Running to New if any
 		UPDATE p WITH(ROWLOCK, UPDLOCK)
 		SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP
@@ -259,7 +159,7 @@ BEGIN
 				SELECT ErrorType
 				FROM OPENJSON(p.Result)
 				WITH (
-					ErrorType VARCHAR(30) '$.ErrorType'
+					ErrorType VARCHAR(30) '$.ErrType'
 				)
 			) AS err
 		WHERE p.SessionDate = @SessionDate
@@ -270,6 +170,7 @@ BEGIN
 		GOTO OUTPUT_JOB;
 	END
 
+	
 	OUTPUT_JOB:
 	SELECT @TotalPair	= COUNT(1)
 		,@TotalBatch	= COUNT(DISTINCT BatchNo)

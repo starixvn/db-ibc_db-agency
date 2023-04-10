@@ -367,6 +367,18 @@ BEGIN
 	INSERT INTO #ClosedReason (custid, ClosedReason)
 	EXEC (@SQL)
 
+	--TODO: Allow Auto Transfer [182071]
+	DROP TABLE IF EXISTS #ClearBalanceCust_Setting;
+	CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
+	DECLARE @SQL_CBS NVARCHAR(MAX)
+	SELECT  @SQL_CBS = 'SELECT FromCustID, ToCustID
+					FROM OPENQUERY(DBCUST, ''SELECT cbs.FromCustID, cbs.ToCustID
+											FROM CustDB.dbo.Age_ClearBalanceCust_Setting cbs WITH(NOLOCK)
+											WHERE cbs.FromCustID = ' + CONVERT(VARCHAR(30), @custid) + ''')'
+	INSERT INTO #ClearBalanceCust_Setting (FromCustID, ToCustID)
+	EXEC (@SQL_CBS)
+
+
 	IF isnull(@IsYesterdayBalance,0) = 0
 	BEGIN 
 		SELECT * FROM
@@ -394,7 +406,7 @@ BEGIN
 				#tmp_customer c 
 				LEFT JOIN #result_balance as b on c.custid =b.custid 
 				LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
-				LEFT JOIN dbo.Age_ClearBalanceCust_Setting cbs WITH(NOLOCK) ON cbs.FromCustID = @custid AND cbs.ToCustID = c.CustID
+				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @custid AND cbs.ToCustID = c.CustID
 		)a  
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 		--Total
@@ -444,7 +456,7 @@ BEGIN
 				#tmp_customer c 
 				LEFT JOIN #result_balance as b on c.custid =b.custid 
 				LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
-				LEFT JOIN dbo.Age_ClearBalanceCust_Setting cbs WITH(NOLOCK) ON cbs.FromCustID = @custid AND cbs.ToCustID = c.CustID
+				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @custid AND cbs.ToCustID = c.CustID
 			WHERE
 				CASE 
 					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(b.YesterdayBalance, 0)

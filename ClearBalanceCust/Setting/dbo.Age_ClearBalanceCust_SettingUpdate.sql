@@ -1,8 +1,9 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_SettingUpdate]
+/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_SettingUpdate]
 	@FromCustId		INT,
 	@ToCustId		INT,
-	@IsAllowAutoTransfer BIT,
+	@IsAllowAutoTransfer	BIT,
+	@IsAutoJobRunning		BIT,
 	@Creator		INT,
 	@Language		VARCHAR(2)= 'E',
 	@IP				VARCHAR(45)='',
@@ -20,7 +21,7 @@ AS
 
 	Param's Explanation:
 		• @FromCustID: The direct UplineID
-		• @ToCustIDs: The list CustID(s) being to add auto config
+		• @ToCustID: The CustID is to add auto transfer
 
 */
 BEGIN
@@ -50,7 +51,7 @@ BEGIN
 
 	SELECT @RoleID = (SELECT TOP 1 RoleID FROM CustDB.dbo.customer WITH (NOLOCK) WHERE custid = @FromCustID);
 
-	IF @RoleID IS NULL 
+	IF @RoleID NOT IN (2,3,4)
 	BEGIN  
 		SELECT @ErrCode	= 102, 
 			@ErrMsg		= CASE WHEN @Language = 'E' THEN 'Customer does not exist.'  
@@ -86,15 +87,10 @@ BEGIN
 	END
 
 	--- CHECK for turn OFF AutoTransfer
-	IF @IsAllowAutoTransfer = 0
-		AND EXISTS (
-			SELECT TOP 1 1 AS HasRunning
-			FROM dbo.Age_ClearBalanceCust_Process WITH(NOLOCK)
-			WHERE SessionDate = @today
-				AND FromCustId = @FromCustID AND ToCustId = @ToCustID
-				AND [Status] IN ('New', 'Waiting', 'Running')
-				OR ([Status] = 'Failed' AND TryCount BETWEEN 1 AND 4)
-		)
+	IF (
+		@IsAllowAutoTransfer = 0
+		AND @IsAutoJobRunning = 1
+	)
 	BEGIN
 		SELECT @ErrCode	= 104, 
 				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'You cannot turn off Auto Transfer for this account because the Auto Transfer process is running. Please try again after the process is complete..'  
@@ -127,17 +123,11 @@ BEGIN
 			INTO @tmpResult (CustId,[EffectiveDate])
 			SELECT ins.FromCustID, cte.ToCustID
 				, GETDATE() AS [CreatedDate]
-				, CASE WHEN ck.HasRunning > 0 THEN @tomorrow ELSE @today END [EffectiveDate]
+				, CASE WHEN @IsAutoJobRunning = 1 THEN @tomorrow ELSE @today END [EffectiveDate]
 				, @Creator AS [Creator]
 			FROM #tmpClearBalanceCust ins
 			INNER JOIN CTE_Insert cte ON cte.ToCustID = ins.ToCustID
-			OUTER APPLY (
-				SELECT TOP 1 1 AS HasRunning
-				FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-				WHERE SessionDate = @today
-					AND [Status] IN ('New', 'Waiting', 'Running')
-					OR ([Status] = 'Failed' AND TryCount BETWEEN 1 AND 4)
-			) AS ck;
+			;
 
 			SET @AfftectedRows = @@ROWCOUNT;
 
@@ -181,6 +171,7 @@ BEGIN
 	BEGIN TRY
 		SELECT @LogSPData = CAST(
 				(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', @IsAllowAutoTransfer AS '@IsAllowAutoTransfer',
+					@IsAutoJobRunning AS '@IsAutoJobRunning', 
 					ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator',
 					@ErrCode AS '@ErrCode', @ErrMsg AS '@ErrMsg'
 				FOR XML PATH('SP_TEMPLATE')) AS VARCHAR(8000)
@@ -205,6 +196,7 @@ BEGIN
 		SELECT @ErrMsg  = CONCAT(@ErrMsg, ERROR_NUMBER(),': ',ERROR_MESSAGE());
 		SELECT @LogSPData = CAST(
 				(SELECT @FromCustID AS '@FromCustId', @ToCustId AS '@ToCustId', @IsAllowAutoTransfer AS '@IsAllowAutoTransfer',
+					@IsAutoJobRunning AS '@IsAutoJobRunning', 
 					ISNULL(@IP, SPACE(1)) AS '@IP', @Language AS '@Language', @Creator AS '@Creator',
 					@ErrCode AS '@ErrCode', @ErrMsg AS '@ErrMsg'
 				FOR XML PATH('SP_TEMPLATE')) AS VARCHAR(8000)
