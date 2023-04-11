@@ -33,6 +33,7 @@ AS
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		- 20230523@Danny: support scale out credit [Redmine: #181595]
 		- 20230705@Lewis: Allow to transfer YTB many times [Redmine: #186078]
+		- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 */
 
 BEGIN
@@ -58,6 +59,18 @@ BEGIN
 			,@ErrCode = @ErrCode OUTPUT
 			 
 	IF @ErrCode <> 0  -- the auto transfer job is running this custid
+	BEGIN		
+		RETURN		
+	END	
+
+	---- #2.1 CHECK Status is Waiting or Running THEN RAISE ERROR
+	EXEC bodb02.dbo.Age_ClearBalanceCust_CheckRunning  
+			@CustID = @CustID
+			,@Language = @Language
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+	IF @ErrCode <> 0  -- the auto transfer job is running for this line
 	BEGIN		
 		RETURN		
 	END	

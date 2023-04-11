@@ -13,8 +13,8 @@ RETURN
 */
 WITH CTE_Setting AS (
 	SELECT DISTINCT c.roleid, s.FromCustID, CAST(GETDATE() AS DATE) AS SessionDate
-	FROM dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
-	INNER JOIN CUSTDB.dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
+	FROM CustDB.dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
+	INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
 ),
 CTE_SMASetting AS (
 	SELECT tmp.SessionDate, ca.custid AS FromCustId, tmp.RoleId, ca.TransferOption,cm.IsAllDayBalTransfer
@@ -39,14 +39,15 @@ CTE_SMASetting AS (
 SELECT s.FromCustId, cs.ToCustID, s.roleid, ISNULL(s.IsAllDayBalTransfer, 0) AS IsAllDayBalTransfer
 	, c.srecommend AS SuperId
 FROM CTE_SMASetting s
-	INNER JOIN dbo.Customer c ON c.custid = s.FromCustId
-	INNER JOIN dbo.Age_ClearBalanceCust_Setting cs ON cs.FromCustID = s.FromCustId AND cs.EffectiveDate <= s.SessionDate
+	INNER JOIN CustDB.dbo.Customer c ON c.custid = s.FromCustId
+	INNER JOIN CustDB.dbo.Age_ClearBalanceCust_Setting cs ON cs.FromCustID = s.FromCustId AND cs.EffectiveDate <= s.SessionDate
 	CROSS APPLY (
-		SELECT strTransferOption = dbo.F_Decimal_Binary(ISNULL(s.TransferOption,0))
+		SELECT strTransferOption = CustDB.dbo.F_Decimal_Binary(ISNULL(s.TransferOption,0))
 	) AS ck
 WHERE 1 = CASE 
+			WHEN s.RoleId = 4 THEN 1
 			WHEN SUBSTRING(ck.strTransferOption, 8, 1) = 1 
-				AND SUBSTRING(ck.strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 0 THEN 1 
+				AND SUBSTRING(ck.strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 1 THEN 1
 			ELSE 0 
 		END
 GO

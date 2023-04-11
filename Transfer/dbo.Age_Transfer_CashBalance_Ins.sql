@@ -31,6 +31,7 @@ AS
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		- 20230523@Danny: support scale out credit [Redmine: #181595]
+		- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -63,6 +64,18 @@ BEGIN
 	BEGIN
 		RETURN		
 	END
+
+	---- #2.1 CHECK Status is Waiting or Running THEN RAISE ERROR
+	EXEC bodb02.dbo.Age_ClearBalanceCust_CheckRunning  
+			@CustID = @FromCustID
+			,@Language = @Language
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+	IF @ErrCode <> 0  -- the auto transfer job is running for this line
+	BEGIN		
+		RETURN		
+	END	
 	
 	DECLARE @winlostdate SMALLDATETIME, @yesterday SMALLDATETIME
 	SELECT  @winlostdate = CONVERT(DATE, GETDATE())

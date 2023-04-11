@@ -31,7 +31,7 @@ BEGIN
 		, @SuperCount		INT = 0
 		, @RoleCount		INT = 0
 		, @FromCustIdCount	INT = 0
-		, @Creator			INT = 8
+		, @Creator			INT = 8 -- StarixIT
 		, @IsAllDayBalTransfer	BIT = 1
 		, @IsAutoJobTransfer	BIT = 1;
 
@@ -68,131 +68,139 @@ BEGIN
 	GROUP BY IsAllDayBalTransfer;
 
 	IF @RoleCount > 1 OR @SuperCount >  1 OR @FromCustIdCount > 1
-		OR @RoleId NOT IN (1,2,3)
+		OR @RoleId NOT IN (2,3,4)
 		OR @TotalPairCount <> @TotalPairCheck
 	BEGIN
 		SELECT @ErrCode = 101,
 			@ErrMsg = 'INPUT: Invalid batch info.';
+		RETURN
 	END
 
-	IF @ErrCode = 0
-	BEGIN
-		DECLARE @procName VARCHAR(250), 
-			@commandExec VARCHAR(MAX);
+	--TODO: Process Transfering
+	DECLARE @procName VARCHAR(250), 
+		@commandExec NVARCHAR(MAX);
 	
+	BEGIN TRY
 		SELECT @procName = CASE 
-								WHEN @RoleID = 1 THEN 'dbo.Age_Transfer_InsClearBalance_Ag'
-								WHEN @RoleID = 2 THEN 'dbo.dbo.Age_Transfer_Ins_MAg'
-								WHEN @RoleID = 3 THEN 'dbo.dbo.Age_Transfer_Ins_SAg'
-								ELSE 'NA'
-							END;
-
-		--TODO: Age_AutoClearBalance_Log
+							WHEN @RoleID = 2 THEN 'dbo.Age_Transfer_InsClearBalance_Ag'
+							WHEN @RoleID = 3 THEN 'dbo.Age_Transfer_Ins_MAg'
+							WHEN @RoleID = 4 THEN 'dbo.Age_Transfer_Ins_SAg'
+							ELSE 'NA'
+						END;
 		SELECT @commandExec = CASE 
-									WHEN @RoleID = 1 THEN CONCAT('EXEC ', @procName, 
-											' @FromCustID=', @FromCustID,
-											', @ToCustIDs=''', @ToCustIDs, '''',
-											', @Creator=', @Creator,
-											', @IsAllDayBalTransfer=', @IsAllDayBalTransfer,
-											', @IsAutoJobTransfer=', @IsAutoJobTransfer
-										)
+								WHEN @RoleID = 2 THEN CONCAT('EXEC ', @procName, 
+										' @FromCustID=', @FromCustID,
+										', @ToCustIDs=''', @ToCustIDs, '''',
+										', @Creator=', @Creator,
+										', @IsAllDayBalTransfer=', @IsAllDayBalTransfer,
+										', @IsAutoTransfer=', @IsAutoJobTransfer
+									)
 
-									WHEN @RoleID = 2 THEN CONCAT('EXEC dbo.', @procName, ' @FromCustID=', @FromCustID,', @ToCustIDs=''', @ToCustIDs)
-									WHEN @RoleID = 3 THEN CONCAT('EXEC dbo.', @procName, ' @FromCustID=', @FromCustID,', @ToCustIDs=''', @ToCustIDs)
-									ELSE ''
-								END
+								WHEN @RoleID = 3 THEN CONCAT('EXEC ', @procName, 
+										' @MasterID=', @FromCustID,
+										', @ToCustIDs=''', @ToCustIDs, '''',
+										', @Creator=', @Creator,
+										', @FullTransfer=1',
+										', @IsAutoTransfer=', @IsAutoJobTransfer
+									)
+								WHEN @RoleID = 4 THEN CONCAT('EXEC ', @procName, 
+										' @SAgID=', @FromCustID,
+										', @ToCustIDs=''', @ToCustIDs, '''',
+										', @Creator=', @Creator,
+										', @FullTransfer=1',
+										', @IsAutoTransfer=', @IsAutoJobTransfer
+									)
+							END
 									
 	
-		BEGIN TRY
-
-			INSERT INTO dbo.Age_ClearBalanceCust_BatchLog(BatchNo, SuperId, Command, StartTime, BatchStatus, RunningMode)
-			SELECT @BatchNo AS BatchNo
-				, @SuperId AS SuperId
-				, @commandExec AS Command
-				, CURRENT_TIMESTAMP AS StartTime
-				, 'Running' AS BatchStatus
-				, @RunningMode AS RunningMode
+		INSERT INTO dbo.Age_ClearBalanceCust_BatchLog(BatchNo, SuperId, Command, StartTime, BatchStatus, RunningMode)
+		SELECT @BatchNo AS BatchNo
+			, @SuperId AS SuperId
+			, @commandExec AS Command
+			, CURRENT_TIMESTAMP AS StartTime
+			, 'Processing' AS BatchStatus
+			, @RunningMode AS RunningMode
 	
-			UPDATE rs WITH(ROWLOCK, UPDLOCK)
-			SET rs.RunningBatchNo = @BatchNo
-			FROM dbo.Age_ClearBalanceCust_RunningSuper rs
-			WHERE SuperId = @SuperId
+		UPDATE rs WITH(ROWLOCK, UPDLOCK)
+		SET rs.RunningBatchNo = @BatchNo
+		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
+		WHERE SuperId = @SuperId
 
-			--IF @RoleID = 1
-			--BEGIN
-			--	SELECT @commandExec AS [@commandExec]
-			--	--EXEC sys.sp_executesql @commandExec, N'@ErrCode INT OUT, @ErrMsg NVARCHAR(4000)',
-			--	--	@ErrCode OUT, @ErrMsg OUT
 
-			--	SELECT @ErrCode, @ErrMsg
-			--END
-			--ELSE
+		--TODO: EXEC Batch transfering
+		SELECT @ErrCode		= 0, 
+			@ErrMsg			= ''
+		;
+		EXEC sys.sp_executesql @commandExec, N'@ErrCode INT OUT, @ErrMsg NVARCHAR(4000) OUT',
+			@ErrCode OUT, @ErrMsg OUT
+
+		/**
+		--- Dummy transfer
+		BEGIN
+			DECLARE @rCount INT = 1;
+			WHILE @rCount <= @TotalPairCheck
 			BEGIN
-				DECLARE @rCount INT = 1;
-				WHILE @rCount <= @TotalPairCheck
-				BEGIN
 				
-					UPDATE p WITH(ROWLOCK, UPDLOCK)
-					SET p.[Status] = 'Running',
-						p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = CURRENT_TIMESTAMP
-					FROM dbo.Age_ClearBalanceCust_Process p
-					INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
-					WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
-						AND p.[Status] = 'Waiting'
-						AND ck.rIdx = @rCount
-					;
+				UPDATE p WITH(ROWLOCK, UPDLOCK)
+				SET p.[Status] = 'Processing',
+					p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = CURRENT_TIMESTAMP
+				FROM dbo.Age_ClearBalanceCust_Process p
+				INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
+				WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
+					AND p.[Status] = 'Waiting'
+					AND ck.rIdx = @rCount
+				;
 
-					WAITFOR DELAY '00:00:00.250'
+				WAITFOR DELAY '00:00:00.250'
 
-					UPDATE p WITH(ROWLOCK, UPDLOCK)
-					SET p.[Status] = 'Completed',
-						p.ModifiedTime = CURRENT_TIMESTAMP, p.EndTime = CURRENT_TIMESTAMP, 
-						p.Amount = CAST((RAND()*(10000-100)+100) AS MONEY)
-					FROM dbo.Age_ClearBalanceCust_Process p
-					INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
-					WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
-						AND p.[Status] = 'Running'
-						AND ck.rIdx = @rCount
-					;
+				UPDATE p WITH(ROWLOCK, UPDLOCK)
+				SET p.[Status] = 'Completed',
+					p.ModifiedTime = CURRENT_TIMESTAMP, p.EndTime = CURRENT_TIMESTAMP, 
+					p.Amount = CAST((RAND()*(10000-100)+100) AS MONEY)
+				FROM dbo.Age_ClearBalanceCust_Process p
+				INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
+				WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
+					AND p.[Status] = 'Processing'
+					AND ck.rIdx = @rCount
+				;
 
-					SET @rCount += 1;
-				END
+				SET @rCount += 1;
 			END
-			--- Check result
+		END
+		**/
+		--- Check result
 
-			SELECT @ErrCode = 103
-				,@ErrMsg	= 'Batch has FAILED pair(s).'
-			FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-			INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
-			WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
-				AND p.[Status] <> 'Completed'
-			; 
+		SELECT @ErrCode = @ErrCode
+			,@ErrMsg	= CONCAT('Batch has FAILED. ', @ErrMsg)
+		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
+		INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
+		WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
+			AND p.[Status] <> 'Completed'
+		; 
 
-			-- UPDATE Log:
-			UPDATE bl WITH(ROWLOCK, UPDLOCK)
-			SET bl.BatchStatus = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
-				,bl.EndTime = CURRENT_TIMESTAMP
-			FROM dbo.Age_ClearBalanceCust_BatchLog bl
-			WHERE bl.BatchNo = @BatchNo AND bl.SuperId = @SuperId
-			;
+		-- UPDATE Log:
+		UPDATE bl WITH(ROWLOCK, UPDLOCK)
+		SET bl.BatchStatus = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
+			,bl.EndTime = CURRENT_TIMESTAMP
+		FROM dbo.Age_ClearBalanceCust_BatchLog bl
+		WHERE bl.BatchNo = @BatchNo AND bl.SuperId = @SuperId
+		;
 
-			UPDATE rs WITH(ROWLOCK, UPDLOCK)
-			SET rs.RunningBatchNo = 0, RunningTotal = ISNULL(RunningTotal,0) + 1
-			FROM dbo.Age_ClearBalanceCust_RunningSuper rs
-			WHERE rs.SuperId = @SuperId
-			;
+		UPDATE rs WITH(ROWLOCK, UPDLOCK)
+		SET rs.RunningBatchNo = 0, RunningTotal = ISNULL(RunningTotal,0) + 1
+		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
+		WHERE rs.SuperId = @SuperId
+		;
 
-		END TRY
-		BEGIN CATCH
-			IF @@TRANCOUNT > 0
-				ROLLBACK;
+	END TRY
+	BEGIN CATCH
 
-			SELECT @ErrCode = 102
-				,@ErrMsg = ERROR_MESSAGE()
-		END CATCH
-	END
+		SELECT @ErrCode = 102
+			,@ErrMsg = ERROR_MESSAGE()
+	END CATCH
 
-	SELECT @ErrMsg AS [@ErrMsg]
+	SELECT @ErrCode AS ErrCode, 
+		@ErrMsg AS ErrMsg
 
 END
 GO
