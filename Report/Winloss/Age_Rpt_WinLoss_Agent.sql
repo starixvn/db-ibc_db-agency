@@ -26,6 +26,7 @@ AS
 		- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 		- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 		- 20230104@Bobby: Enhance GrossComm figure [RedmineID: #182155]
+		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]  
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -326,6 +327,8 @@ BEGIN
 
 	SELECT	w.CustID AS CustId,
 			c.UserName AS CustName,
+			c.FirstName,
+			c.LastName,
 			SUM(TurnOver) AS Turnover,
 			SUM(GrossComm) AS GrossComm,
 			SUM(AgTotal) AS AgTotal,
@@ -333,7 +336,7 @@ BEGIN
 			SUM(Comm) AS MAgComm
 	FROM  #MAgWinLoss w 
 		INNER JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-	GROUP BY w.CustID, c.UserName
+	GROUP BY w.CustID, c.UserName, c.FirstName, c.LastName
 	ORDER BY c.Username;
 
 	SET NOCOUNT OFF;

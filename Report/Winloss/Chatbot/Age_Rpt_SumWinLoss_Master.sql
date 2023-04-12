@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20180912@Alvin: Correct GrossComm column name - [Redmine: #95940]
 		- 20200909@Malcolm : Report Enhancement for Jackpot Product [RedmineID : #139575]
+		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]  
 		
 	Parameter's Explaination:
 		
@@ -29,6 +30,8 @@ BEGIN
 	CREATE TABLE #SuperWinLoss (
 		CustID INT
 		,CustName NVARCHAR(50)
+		,FirstName NVARCHAR(50)
+		,LastName NVARCHAR(50)
 		,Turnover MONEY
 		,GrossComm MONEY
 		,MAgTotal MONEY
