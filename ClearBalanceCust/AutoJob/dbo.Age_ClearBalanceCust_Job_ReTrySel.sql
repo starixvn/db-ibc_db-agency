@@ -19,7 +19,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @RunningMode	INT,
+	DECLARE @RunningMode	VARCHAR(15),
 		@TotalThread		INT;
 
 	SELECT @TotalThread = ISNULL(@NumOfThread, 4),
@@ -32,15 +32,15 @@ BEGIN
 	CREATE TABLE #tmpClearBalanceCust_BatchLog (SuperId INT, BatchNo INT PRIMARY KEY, RoleID TINYINT, FromCustId INT, ToCustIds VARCHAR(4000));
 
 	DROP TABLE IF EXISTS #tmpClearBalanceCust_ReTry;
-	CREATE TABLE #tmpClearBalanceCust_ReTry (SuperId INT, BatchNo INT PRIMARY KEY, RoleID TINYINT, FromCustId INT, ToCustId INT);
+	CREATE TABLE #tmpClearBalanceCust_ReTry (SuperId INT, BatchNo INT, RoleID TINYINT, FromCustId INT, ToCustId INT PRIMARY KEY);
 
 	--TODO: Check ReTry pair(s) IF any
 	INSERT INTO #tmpClearBalanceCust_ReTry (SuperId, BatchNo, RoleID, FromCustId, ToCustId)
 	SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, p.ToCustId
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 	WHERE p.[Status] = 'Failed' 
-		AND ISJSON(p.Result) > 0 AND JSON_VALUE(p.Result, '$.ErrType') IN ('DBIssue')
-		AND DATEDIFF(MINUTE, p.EndTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
+		AND ISJSON(p.Result) > 0 AND JSON_VALUE(p.Result, '$.ErrType') IN ('DBIssue','TransferUM')
+		AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
 		AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4
 
 	--TODO: Waiting Batch
@@ -64,7 +64,7 @@ BEGIN
 				, p.TryCount = ISNULL(p.TryCount, 0) + 1
 			FROM  dbo.Age_ClearBalanceCust_Process p
 			INNER JOIN #tmpClearBalanceCust_BatchLog bl ON bl.SuperId = p.SuperId AND bl.BatchNo = p.BatchNo
-			INNER JOIN #tmpClearBalanceCust_ReTry rt ON rt.SuperId = bl.SuperId AND rt.BatchNo = bl.BatchNo AND rt.FromCustId = p.FromCustId AND rt.ToCustId = rt.ToCustId
+			INNER JOIN #tmpClearBalanceCust_ReTry rt ON rt.SuperId = bl.SuperId AND rt.BatchNo = bl.BatchNo AND rt.FromCustId = p.FromCustId AND rt.ToCustId = p.ToCustId
 
 		END TRY
 		BEGIN CATCH

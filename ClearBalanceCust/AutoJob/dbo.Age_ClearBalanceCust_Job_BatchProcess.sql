@@ -131,9 +131,12 @@ BEGIN
 		SELECT @ErrCode		= 0, 
 			@ErrMsg			= ''
 		;
-		EXEC sys.sp_executesql @commandExec, N'@ErrCode INT OUT, @ErrMsg NVARCHAR(4000) OUT',
+		SET @commandExec  = @commandExec + ', @ErrCode = @ErrCode OUTPUT, @ErrMsg=@ErrMsg OUTPUT'
+		EXEC sys.sp_executesql @commandExec
+			, N'@ErrCode INT OUT, @ErrMsg NVARCHAR(4000) OUT',
 			@ErrCode OUT, @ErrMsg OUT
-
+		;
+		--SELECT @ErrCode AS [@ErrCode], @ErrMsg AS [@ErrMsg]
 		/**
 		--- Dummy transfer
 		BEGIN
@@ -200,8 +203,6 @@ BEGIN
 			,@ErrMsg = ERROR_MESSAGE()
 	END CATCH
 
-	SELECT @ErrCode AS ErrCode, 
-		@ErrMsg AS ErrMsg
-
+	--SELECT @ErrCode AS ErrCode, @ErrMsg AS ErrMsg
 END
 GO
