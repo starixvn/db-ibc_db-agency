@@ -57,12 +57,7 @@ BEGIN
 		--TODO: get Snapshot from DBCUST
 		INSERT INTO #tmpClearBalanceCust (FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer)
 		SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer
-		FROM OPENQUERY(DBCUST, N'SELECT FromCustId, 
-				ToCustId, 
-				RoleId, 
-				SuperId, 
-				IsAllDayBalTransfer  
-			FROM CustDB.[dbo].[f_Age_ClearBalanceCust_Snapshot]()');
+		FROM OPENQUERY(DBCUST, 'SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer FROM CustDB.dbo.f_Age_ClearBalanceCust_Snapshot()');
 
 		IF NOT EXISTS (SELECT TOP 1 1 FROM #tmpClearBalanceCust)
 			GOTO OUTPUT_JOB;

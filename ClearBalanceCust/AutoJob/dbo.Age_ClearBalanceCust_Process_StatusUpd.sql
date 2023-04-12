@@ -24,12 +24,18 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
+	DECLARE @currentStatus VARCHAR(15), @effectedRows INT;
+
 	DROP TABLE IF EXISTS #tmpDownline;
 	CREATE TABLE #tmpDownline(CustId INT PRIMARY KEY);
 
 	INSERT INTO #tmpDownline(CustId)
 	SELECT DISTINCT [Value]
 	FROM STRING_SPLIT(@ToCustIDs, ',');
+
+	SELECT @ErrCode = 0,
+		@ErrMsg		= ''
+	;
 
 	IF @Status IN ('Processing')
 	BEGIN
@@ -39,6 +45,24 @@ BEGIN
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
 		WHERE p.FromCustId = @FromCustID
+			AND p.[Status] = 'Waiting'
+		;
+
+		SET @effectedRows = @@ROWCOUNT;
+
+		IF @effectedRows = 0
+		BEGIN
+			SELECT @currentStatus = p.[Status]
+			FROM dbo.Age_ClearBalanceCust_Process p WITH(ROWLOCK)
+			INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+			WHERE p.FromCustId = @FromCustID
+
+			IF @currentStatus = 'Cancelled'
+				SELECT @ErrCode = 101
+					, @ErrMsg = 'This transfer has been ' + @currentStatus + '.'
+			RETURN
+		END
+
 	END
 	ELSE IF @Status IN ('Failed', 'Completed')
 	BEGIN
@@ -46,14 +70,6 @@ BEGIN
 		SET	p.Status = @Status
 			,p.ModifiedTime = CURRENT_TIMESTAMP, p.EndTime = CASE WHEN p.StartTime IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END
 			,p.Result = @Result
-		FROM dbo.Age_ClearBalanceCust_Process p
-		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
-		WHERE p.FromCustId = @FromCustID
-	END
-	ELSE IF @Status IN ('Cancelled')
-	BEGIN
-		UPDATE p WITH(ROWLOCK, UPDLOCK)
-		SET	p.Status = @Status, p.ModifiedTime = CURRENT_TIMESTAMP
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
 		WHERE p.FromCustId = @FromCustID

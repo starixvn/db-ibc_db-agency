@@ -493,10 +493,10 @@ BEGIN
 
 	/* Filtering input custids */
 	INSERT INTO #Member (custid, memberName, memberBalance, memberOutstanding, memberCredit, memberPendingTransfer3rd)
-	SELECT b.CustId, '', SUM(Balance), SUM(Outstanding), 0, SUM(ISNULL(PendingTransfer3rd, 0))
-	FROM #BalanceInfo b
-	INNER JOIN #custid c ON b.CustId = c.CustId
-	GROUP BY b.CustId
+	SELECT c.CustId, '', SUM(ISNULL(b.Balance,0)), SUM(ISNULL(b.Outstanding,0)), 0, SUM(ISNULL(PendingTransfer3rd, 0))
+	FROM #custid c
+	LEFT JOIN #BalanceInfo b ON b.CustId = c.CustId
+	GROUP BY c.CustId
 	/* End Filtering input custids */
 
 	IF NOT EXISTS (SELECT 1 FROM #Member WHERE memberBalance <> 0)
@@ -582,7 +582,18 @@ BEGIN
 			IF @IsAutoTransfer = 1
 			BEGIN
 				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
-					,@Status='Processing', @Amount=@Amount;
+					,@Status='Processing', @Amount=@Amount
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				;
+				-- CHECK: Cancelling
+				IF @ErrCode > 0
+				BEGIN
+					UPDATE @tblResultMember
+					SET ErrType = 'AutoTransfer', ErrMsg = @ErrMsg
+					WHERE CustId = @custid;	
+					GOTO NEXT_PAIR;
+				END
 			END
 
 

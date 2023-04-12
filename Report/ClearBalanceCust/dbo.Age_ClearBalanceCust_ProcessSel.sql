@@ -6,7 +6,8 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
 	@SortBy					TINYINT = 1,
 	@SortType				BIT = 0,
 	@PageIndex				INT = 1,
-	@PageSize				INT = 500
+	@PageSize				INT = 500,
+	@TotalRow				INT = 0 OUTPUT
 AS
 /*
 	Created:20230227@Bobby
@@ -21,6 +22,7 @@ AS
 			+ 1: Username
 			+ 2: Status
 			+ 3: Amount
+			+ 4: CompletedTime
 			
 
 */
@@ -39,7 +41,8 @@ BEGIN
 	SELECT @today			= GETDATE(),
 		@StatusCheck		= ISNULL(@ViewStatus, 'All'),
 		@UplineId			= @FromCustId,
-		@CheckName			= @Searchname
+		@CheckName			= @Searchname,
+		@TotalRow			= 0
 	;
 
 	DROP TABLE IF EXISTS #tmpDownline;
@@ -99,25 +102,39 @@ BEGIN
 	END
 	
 	-- TOTO: OUTPUT Result
-	SELECT c.UserName, c.FirstName, c.LastName,  
+	DROP TABLE IF EXISTS #pageResult;
+	CREATE TABLE #pageResult
+	(
+		rIdx			INT IDENTITY(1, 1) PRIMARY KEY,
+		CustId			INT,
+		UserName		VARCHAR(50),
+		FirstName		VARCHAR(50),
+		LastName		VARCHAR(50),
+		Amount			MONEY,
+		[Status]		VARCHAR(15),
+		Reason			NVARCHAR(4000),
+		CompletedTime	VARCHAR(100),
+		IsAllowCancel	BIT,
+		TotalRow		INT
+	);
+
+	INSERT INTO #pageResult (CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel, TotalRow)
+	SELECT c.custid, c.UserName, c.FirstName, c.LastName,  
 		CASE 
-			WHEN p.[Status] IN ('Processing', 'Completed', 'Failed') THEN p.Amount
+			WHEN p.StartTime IS NOT NULL THEN p.Amount
 			ELSE NULL
 		END AS Amount, 
 		p.[Status],
 		CASE 
 			WHEN p.[Status] = 'Failed' THEN ck.ErrMsg 
 		ELSE '' END AS Reason,
-		CASE 
-			WHEN p.[Status] IN ('Completed', 'Failed') THEN p.EndTime
-			WHEN p.[Status] IN ('Cancelled') THEN p.ModifiedTime 
-			ELSE NULL 
-		END AS CompletedTime,
+		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, '2023-01-01'), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
 		CASE 
 			WHEN p.[Status] IN ('Waiting', 'Processing') AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 15 THEN 1 
 			ELSE 0 
-		END AS IsAllowCancel
-		
+		END AS IsAllowCancel,
+		COUNT(1) OVER() AS TotalRow
+	
 	FROM bodb02.dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 		INNER JOIN @tmpStatus tmp ON tmp.[Status] = p.[Status]
 		INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.CustId = p.ToCustId
@@ -130,6 +147,14 @@ BEGIN
 				ErrMsg	NVARCHAR(4000) '$.ErrMsg'
 			)
 		) AS ck
+		OUTER APPLY (
+			SELECT CASE 
+				WHEN p.[Status] IN ('Completed', 'Failed') AND p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,'2023-01-01',p.EndTime)
+				WHEN p.[Status] IN ('Failed') AND p.StartTime IS NULL THEN DATEDIFF(SECOND,'2023-01-01',p.ModifiedTime)
+				WHEN p.[Status] IN ('Cancelled') THEN DATEDIFF(SECOND,'2023-01-01',p.ModifiedTime) 
+				ELSE 0 
+			END AS CompletedTimeSec
+		) AS ct
 	WHERE p.FromCustId = @FromCustId
 		--AND p.SessionDate = @today
 		AND (
@@ -146,6 +171,7 @@ BEGIN
 			END ASC,
 		CASE 
 			WHEN @SortType = 0 AND @SortBy = 3 THEN p.Amount
+			WHEN @SortType = 0 AND @SortBy = 4 THEN ct.CompletedTimeSec
 			ELSE 0
 			END ASC,
 		------------ DESC
@@ -156,10 +182,20 @@ BEGIN
 			END DESC,
 		CASE 
 			WHEN @SortType = 1 AND @SortBy = 3 THEN p.Amount
+			WHEN @SortType = 1 AND @SortBy = 4 THEN ct.CompletedTimeSec
 			ELSE 0
 			END DESC
 
 	OFFSET ((@PageIndex-1)*@PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY
+	;
+
+	SELECT TOP(1) @TotalRow = TotalRow
+	FROM #pageResult
+	;
+
+	SELECT CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel
+	FROM #pageResult
+	ORDER BY rIdx ASC
 	;
 END
 GO

@@ -168,9 +168,10 @@ BEGIN
 			END
 		END
 		**/
+		
 		--- Check result
-
-		SELECT @ErrCode = @ErrCode
+		SELECT TOP(1)
+			@ErrCode	= @ErrCode
 			,@ErrMsg	= CONCAT('Batch has FAILED. ', @ErrMsg)
 		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 		INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
@@ -183,7 +184,7 @@ BEGIN
 		SET bl.BatchStatus = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
 			,bl.EndTime = CURRENT_TIMESTAMP
 		FROM dbo.Age_ClearBalanceCust_BatchLog bl
-		WHERE bl.BatchNo = @BatchNo AND bl.SuperId = @SuperId
+		WHERE bl.BatchNo = @BatchNo AND bl.SuperId = @SuperId AND RunningMode = @RunningMode
 		;
 
 		UPDATE rs WITH(ROWLOCK, UPDLOCK)

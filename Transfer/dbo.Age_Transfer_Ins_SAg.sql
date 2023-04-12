@@ -415,9 +415,10 @@ BEGIN
 
  -- sum amount
  INSERT INTO #Master (custID, Amt, MAgUser)
- SELECT CustId, SUM(Balance), ''
- FROM #BalanceInfo
- GROUP BY CustId
+	SELECT m.custID, SUM(ISNULL(bal.Balance,0)), ''
+	FROM #mrecommend m
+	LEFT JOIN #BalanceInfo bal ON bal.CustId = m.CustId
+	GROUP BY m.custID
 
 	IF NOT EXISTS (SELECT 1 FROM #Master WHERE Amt <> 0)
 	BEGIN
@@ -486,7 +487,18 @@ BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @MAgentID
-				,@Status='Processing', @Amount=@Amount;
+				,@Status='Processing', @Amount=@Amount
+				,@ErrCode = @ErrCode OUTPUT
+				,@ErrMsg = @ErrMsg OUTPUT
+			;
+			-- CHECK: Cancelling
+			IF @ErrCode > 0
+			BEGIN
+				UPDATE @tblResultMember
+				SET ErrType = 'AutoTransfer', ErrMsg = @ErrMsg
+				WHERE CustId = @MAgentID;	
+				GOTO NEXT_PAIR;
+			END
 		END
 
 		BEGIN TRY

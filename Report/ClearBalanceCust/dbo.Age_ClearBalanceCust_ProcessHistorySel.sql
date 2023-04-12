@@ -8,7 +8,8 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessHistorySel]
 	@SortBy			TINYINT = 1,
 	@SortType		BIT = 0,
 	@PageIndex		INT = 1,
-	@PageSize		INT = 500
+	@PageSize		INT = 500,
+	@TotalRow		INT = 0 OUTPUT
 AS
 /*
 	Created:20230227@Bobby
@@ -102,20 +103,32 @@ BEGIN
 	END
 	
 	-- TOTO: OUTPUT Result
+	DROP TABLE IF EXISTS #pageResult;
+	CREATE TABLE #pageResult
+	(
+		rIdx			INT IDENTITY(1, 1) PRIMARY KEY,
+		UserName		VARCHAR(50),
+		FirstName		VARCHAR(50),
+		LastName		VARCHAR(50),
+		Amount			MONEY,
+		[Status]		VARCHAR(15),
+		Reason			NVARCHAR(4000),
+		CompletedTime	DATETIME,
+		TotalRow		INT
+	);
+
+	INSERT INTO #pageResult (UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, TotalRow)
 	SELECT c.UserName, c.FirstName, c.LastName,  
 		CASE 
-			WHEN p.[Status] IN ('Processing', 'Completed', 'Failed') THEN p.Amount
+			WHEN p.StartTime IS NOT NULL THEN p.Amount
 			ELSE NULL
 		END AS Amount, 
 		p.[Status],
 		CASE 
 			WHEN p.[Status] = 'Failed' THEN ck.ErrMsg 
 		ELSE '' END AS Reason,
-		CASE 
-			WHEN p.[Status] IN ('Completed', 'Failed') THEN p.EndTime
-			WHEN p.[Status] IN ('Cancelled') THEN p.ModifiedTime 
-			ELSE NULL 
-		END AS CompletedTime
+		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, '2023-01-01'), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
+		COUNT(1) OVER() AS TotalRow
 		
 	FROM bodb_Archive.dbo.Age_ClearBalanceCust_ProcessHistory p WITH(NOLOCK)
 		INNER JOIN @tmpStatus tmp ON tmp.[Status] = p.[Status]
@@ -129,6 +142,14 @@ BEGIN
 				ErrMsg	NVARCHAR(4000) '$.ErrMsg'
 			)
 		) AS ck
+		OUTER APPLY (
+			SELECT CASE 
+				WHEN p.[Status] IN ('Completed', 'Failed') AND p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,'2023-01-01',p.EndTime)
+				WHEN p.[Status] IN ('Failed') AND p.StartTime IS NULL THEN DATEDIFF(SECOND,'2023-01-01',p.ModifiedTime)
+				WHEN p.[Status] IN ('Cancelled') THEN DATEDIFF(SECOND,'2023-01-01',p.ModifiedTime) 
+				ELSE 0 
+			END AS CompletedTimeSec
+		) AS ct
 	WHERE p.FromCustId = @FromCustId
 		AND p.SessionDate BETWEEN @rptFromDate AND @rptToDate
 		AND (
@@ -145,6 +166,7 @@ BEGIN
 			END ASC,
 		CASE 
 			WHEN @SortType = 0 AND @SortBy = 3 THEN p.Amount
+			WHEN @SortType = 0 AND @SortBy = 4 THEN ct.CompletedTimeSec
 			ELSE 0
 			END ASC,
 		------------ DESC
@@ -155,10 +177,20 @@ BEGIN
 			END DESC,
 		CASE 
 			WHEN @SortType = 1 AND @SortBy = 3 THEN p.Amount
+			WHEN @SortType = 1 AND @SortBy = 4 THEN ct.CompletedTimeSec
 			ELSE 0
 			END DESC
 
 	OFFSET ((@PageIndex-1)*@PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY
+	;
+
+	SELECT TOP(1) @TotalRow = TotalRow
+	FROM #pageResult
+	;
+
+	SELECT UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime
+	FROM #pageResult
+	ORDER BY rIdx ASC
 	;
 
 END
