@@ -44,11 +44,11 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 101,
 				@ErrMsg = CASE 
-							WHEN @Status = 'Waiting' AND @currentStatus IN ('Processing') THEN 'Status change from Waiting to Processing'
-							WHEN @Status = 'Waiting' AND @currentStatus IN ('Completed') THEN 'Status change to Completed'
-							WHEN @Status = 'Waiting' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
-							WHEN @Status = 'Processing' AND @currentStatus IN ('Completed') THEN 'Status change to Completed'
-							WHEN @Status = 'Processing' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
+							WHEN @ViewStatus = 'Waiting' AND @currentStatus IN ('Processing') THEN 'Status change from Waiting to Processing'
+							WHEN @ViewStatus = 'Waiting' AND @currentStatus IN ('Completed') THEN 'Status change to Completed'
+							WHEN @ViewStatus = 'Waiting' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
+							WHEN @ViewStatus = 'Processing' AND @currentStatus IN ('Completed') THEN 'Status change to Completed'
+							WHEN @ViewStatus = 'Processing' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
 							ELSE ''
 						END
 		RETURN
