@@ -487,7 +487,7 @@ BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @MAgentID
-				,@Status='Processing', @Amount=@Amount
+				,@Status='Processing'
 				,@ErrCode = @ErrCode OUTPUT
 				,@ErrMsg = @ErrMsg OUTPUT
 			;
@@ -502,9 +502,6 @@ BEGIN
 		END
 
 		BEGIN TRY
-
-			EXEC Get_Refno_Transid @RefNo = @transcode OUTPUT
-	
 			--CHECK MASTER'S BALANCE
 			DECLARE @custBalance money 
 			SELECT @custBalance = @Amount 
@@ -528,16 +525,36 @@ BEGIN
 				-- INSERT AMOUNT INPUTED INTO BETTRANS 
 				SET @amount = @AmtTrans	
 			END 	
-	
-			BEGIN TRANSACTION
-	
-			-- All error messages are the same, so we set it here
+
+			-- All error messages are the same, so we set it here  
 			SELECT @ErrMsg = CASE @Language 
 								WHEN 'E' THEN 'Clear balance failed. Please try again.'
 								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
 								END
-		
-		
+
+			------------------Gen refno--------------------------------------------------------------- 
+			EXEC Get_Refno_Transid @RefNo = @transcode OUTPUT
+			
+			-- TODO: AutoTransfer - Check cancelled
+			IF @IsAutoTransfer = 1
+			BEGIN
+				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @MAgentID
+					,@Status='Processing', @Amount=@Amount
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				;
+				-- CHECK: Cancelling
+				IF @ErrCode > 0
+				BEGIN
+					UPDATE @tblResultMember
+					SET ErrType = 'TransferCancelled', ErrMsg = @ErrMsg
+					WHERE CustId = @MAgentID;	
+					GOTO NEXT_PAIR;
+				END
+			END
+
+			------------------Insert trans into transfer----------------------------------------------
+			BEGIN TRANSACTION
 			IF @amount >0
 			BEGIN
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT

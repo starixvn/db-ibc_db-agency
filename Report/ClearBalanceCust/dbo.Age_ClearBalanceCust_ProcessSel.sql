@@ -156,9 +156,9 @@ BEGIN
 			END AS CompletedTimeSec
 		) AS ct
 	WHERE p.FromCustId = @FromCustId
-		--AND p.SessionDate = @today
+		AND p.SessionDate = @today
 		AND (
-			@StatusCheck <> 'Failed'
+			p.[Status] <> 'Failed'
 			OR (p.[Status] = 'Failed' AND ck.ErrType IN ('DBIssue', 'TransferUM', 'AccTransfering', 'ProcessingTime', 'IsAllDayBalTransfer'))
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)

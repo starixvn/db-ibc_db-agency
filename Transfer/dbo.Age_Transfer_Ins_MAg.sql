@@ -464,7 +464,7 @@ BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @AgentID
-				,@Status='Processing', @Amount=@Amount
+				,@Status='Processing'
 				,@ErrCode = @ErrCode OUTPUT
 				,@ErrMsg = @ErrMsg OUTPUT
 			;
@@ -479,7 +479,6 @@ BEGIN
 		END
 
 		BEGIN TRY
-			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 	
 			--CHECK FOR TRANSFER AMOUNT @Phuong20080916
 			DECLARE @custBalance money 
@@ -505,9 +504,6 @@ BEGIN
 				-- INSERT AMOUNT INPUTED INTO BETTRANS 
 				SET @amount = @AmtTrans	
 			END 	
-				
-	
-			------------------Insert trans into DB---------------------------------------------------------------
 	
 			-- All error messages are the same, so we set it here
 			SELECT @ErrMsg = CASE @Language 
@@ -515,6 +511,28 @@ BEGIN
 								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
 						END
 
+			------------------Gen refno--------------------------------------------------------------- 
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
+
+			-- TODO: AutoTransfer - Check cancelled
+			IF @IsAutoTransfer = 1
+			BEGIN
+				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @AgentID
+					,@Status='Processing', @Amount=@Amount
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				;
+				-- CHECK: Cancelling
+				IF @ErrCode > 0
+				BEGIN
+					UPDATE @tblResultMember
+					SET ErrType = 'TransferCancelled', ErrMsg = @ErrMsg
+					WHERE CustId = @AgentID;	
+					GOTO NEXT_PAIR;
+				END
+			END
+
+			------------------Insert trans into DB---------------------------------------------------------------
 			IF @amount > 0
 			BEGIN
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT

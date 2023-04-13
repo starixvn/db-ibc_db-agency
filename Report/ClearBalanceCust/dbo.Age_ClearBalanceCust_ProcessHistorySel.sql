@@ -153,7 +153,7 @@ BEGIN
 	WHERE p.FromCustId = @FromCustId
 		AND p.SessionDate BETWEEN @rptFromDate AND @rptToDate
 		AND (
-			@StatusCheck <> 'Failed'
+			p.[Status] <> 'Failed'
 			OR (p.[Status] = 'Failed' AND ck.ErrType IN ('DBIssue'))
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)

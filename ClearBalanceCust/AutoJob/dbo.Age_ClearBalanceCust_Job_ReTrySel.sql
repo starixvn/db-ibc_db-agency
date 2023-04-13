@@ -39,7 +39,7 @@ BEGIN
 	SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, p.ToCustId
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 	WHERE p.[Status] = 'Failed' 
-		AND ISJSON(p.Result) > 0 AND JSON_VALUE(p.Result, '$.ErrType') IN ('DBIssue','TransferUM')
+		AND ISJSON(p.Result) > 0 AND JSON_VALUE(p.Result, '$.ErrType') IN ('DBIssue','TransferUM', 'BalanceZero')
 		AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
 		AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4
 

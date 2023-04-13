@@ -39,16 +39,30 @@ BEGIN
 
 	IF @Status IN ('Processing')
 	BEGIN
-		UPDATE p WITH(ROWLOCK, UPDLOCK)
-		SET	p.Status = @Status, p.Amount = @Amount
-			,p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = CURRENT_TIMESTAMP
-		FROM dbo.Age_ClearBalanceCust_Process p
-		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
-		WHERE p.FromCustId = @FromCustID
-			AND p.[Status] = 'Waiting'
-		;
-
-		SET @effectedRows = @@ROWCOUNT;
+		IF (ISNULL(@Amount,0)  = 0)
+		BEGIN
+			UPDATE p WITH(ROWLOCK, UPDLOCK)
+			SET	p.Status = @Status
+				,p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = CURRENT_TIMESTAMP
+			FROM dbo.Age_ClearBalanceCust_Process p
+			INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+			WHERE p.FromCustId = @FromCustID
+				AND p.[Status] = 'Waiting'
+			;
+			SET @effectedRows = @@ROWCOUNT;
+		END
+		ELSE IF (ISNULL(@Amount,0)  <> 0)
+		BEGIN
+			UPDATE p WITH(ROWLOCK, UPDLOCK)
+			SET	p.Amount = @Amount
+				,p.ModifiedTime = CURRENT_TIMESTAMP
+			FROM dbo.Age_ClearBalanceCust_Process p
+			INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+			WHERE p.FromCustId = @FromCustID
+				AND p.[Status] = 'Processing'
+			;
+			SET @effectedRows = @@ROWCOUNT;
+		END
 
 		IF @effectedRows = 0
 		BEGIN
@@ -73,6 +87,7 @@ BEGIN
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
 		WHERE p.FromCustId = @FromCustID
+			AND p.[Status] <> 'Cancelled'
 	END
 END
 GO

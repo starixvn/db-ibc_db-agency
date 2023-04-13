@@ -33,7 +33,8 @@ BEGIN
 		, @FromCustIdCount	INT = 0
 		, @Creator			INT = 8 -- StarixIT
 		, @IsAllDayBalTransfer	BIT = 1
-		, @IsAutoJobTransfer	BIT = 1;
+		, @IsAutoJobTransfer	BIT = 1
+		, @BatchLogIdIns		INT;
 
 	SELECT @SuperId		= 0,
 		@RoleID			= 0,
@@ -120,12 +121,14 @@ BEGIN
 			, CURRENT_TIMESTAMP AS StartTime
 			, 'Processing' AS BatchStatus
 			, @RunningMode AS RunningMode
+		;
+		SET @BatchLogIdIns = SCOPE_IDENTITY();
 	
 		UPDATE rs WITH(ROWLOCK, UPDLOCK)
 		SET rs.RunningBatchNo = @BatchNo
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
 		WHERE SuperId = @SuperId
-
+		;
 
 		--TODO: EXEC Batch transfering
 		SELECT @ErrCode		= 0, 
@@ -133,44 +136,9 @@ BEGIN
 		;
 		SET @commandExec  = @commandExec + ', @ErrCode = @ErrCode OUTPUT, @ErrMsg=@ErrMsg OUTPUT'
 		EXEC sys.sp_executesql @commandExec
-			, N'@ErrCode INT OUT, @ErrMsg NVARCHAR(4000) OUT',
-			@ErrCode OUT, @ErrMsg OUT
+			, N'@ErrCode INT OUTPUT, @ErrMsg NVARCHAR(4000) OUTPUT',
+			@ErrCode OUTPUT, @ErrMsg OUTPUT
 		;
-		--SELECT @ErrCode AS [@ErrCode], @ErrMsg AS [@ErrMsg]
-		/**
-		--- Dummy transfer
-		BEGIN
-			DECLARE @rCount INT = 1;
-			WHILE @rCount <= @TotalPairCheck
-			BEGIN
-				
-				UPDATE p WITH(ROWLOCK, UPDLOCK)
-				SET p.[Status] = 'Processing',
-					p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = CURRENT_TIMESTAMP
-				FROM dbo.Age_ClearBalanceCust_Process p
-				INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
-				WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
-					AND p.[Status] = 'Waiting'
-					AND ck.rIdx = @rCount
-				;
-
-				WAITFOR DELAY '00:00:00.250'
-
-				UPDATE p WITH(ROWLOCK, UPDLOCK)
-				SET p.[Status] = 'Completed',
-					p.ModifiedTime = CURRENT_TIMESTAMP, p.EndTime = CURRENT_TIMESTAMP, 
-					p.Amount = CAST((RAND()*(10000-100)+100) AS MONEY)
-				FROM dbo.Age_ClearBalanceCust_Process p
-				INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
-				WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
-					AND p.[Status] = 'Processing'
-					AND ck.rIdx = @rCount
-				;
-
-				SET @rCount += 1;
-			END
-		END
-		**/
 		
 		--- Check result
 		SELECT TOP(1)
@@ -187,7 +155,8 @@ BEGIN
 		SET bl.BatchStatus = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
 			,bl.EndTime = CURRENT_TIMESTAMP
 		FROM dbo.Age_ClearBalanceCust_BatchLog bl
-		WHERE bl.BatchNo = @BatchNo AND bl.SuperId = @SuperId AND RunningMode = @RunningMode
+		WHERE BatchLogId = @BatchLogIdIns 
+			--AND bl.BatchNo = @BatchNo AND bl.SuperId = @SuperId AND RunningMode = @RunningMode
 		;
 
 		UPDATE rs WITH(ROWLOCK, UPDLOCK)

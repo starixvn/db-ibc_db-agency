@@ -582,6 +582,36 @@ BEGIN
 			IF @IsAutoTransfer = 1
 			BEGIN
 				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
+					,@Status='Processing'
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				;
+				-- CHECK: Cancelling
+				IF @ErrCode > 0
+				BEGIN
+					UPDATE @tblResultMember
+					SET ErrType = 'TransferCancelled', ErrMsg = @ErrMsg
+					WHERE CustId = @custid;	
+					GOTO NEXT_PAIR;
+				END
+			END
+
+
+			     
+			-- All error messages are the same, so we set it here  
+			SELECT @ErrCode = 105, 
+					@ErrMsg = CASE 
+								WHEN @Language = 'E' THEN 'Clear balance failed. Please try again.'  
+        				ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
+        				END  
+
+			------------------Gen refno---------------------------------------------------------------  
+			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
+
+			-- TODO: AutoTransfer - Check cancelled
+			IF @IsAutoTransfer = 1
+			BEGIN
+				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
 					,@Status='Processing', @Amount=@Amount
 					,@ErrCode = @ErrCode OUTPUT
 					,@ErrMsg = @ErrMsg OUTPUT
@@ -590,26 +620,14 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET ErrType = 'AutoTransfer', ErrMsg = @ErrMsg
+					SET ErrType = 'TransferCancelled', ErrMsg = @ErrMsg
 					WHERE CustId = @custid;	
 					GOTO NEXT_PAIR;
 				END
 			END
-
-
-			----/---------------------------------------------------------------  
-
-			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
-			------------------Insert trans into DB---------------------------------------------------------------  
-     
-			-- All error messages are the same, so we set it here  
-			SELECT @ErrCode = 105  
-			SELECT @ErrMsg = CASE @Language   
-        				WHEN 'E' THEN 'Clear balance failed. Please try again.'  
-        				ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
-        				END  
-   
-			IF (@amount > 0)
+			
+			------------------Insert trans into transfer---------------------------------------------------------------  
+			IF (@amount > 0)  
 			BEGIN  
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 				INSERT INTO Transfer   
@@ -695,7 +713,7 @@ BEGIN
 				IF @FutureBetCredit < 0 
 				SELECT @LogData = @LogData + '. The agent decided to transfer after the warning so the bet credit of this member turned to negative value (' + convert(varchar(100), @FutureBetCredit, 2) + ') caused by having outstanding balance value ('+ convert(varchar(100), @outstanding, 2) +')  '
 			END  
-			ELSE IF(@amount<0)
+			ELSE IF(@amount < 0)  
 			BEGIN  
 
 				--SET @amount = abs(@amount)    
@@ -762,6 +780,7 @@ BEGIN
 		
 			END  
 			---------------------------------------------------------------------------------------------------
+
 			DECLARE @isResetYesterdayBalance BIT, @ErrCode_ResetYesterdayBalance BIT, @YesterdayBalance MONEY
 			-- reset yesterday balance for live casino				
 			EXEC Acc_BalanceGameResetYesterday @CustID = @CustID, @isResetYesterdayBalance = @isResetYesterdayBalance OUTPUT, @YesterdayBalance = @YesterdayBalance	 OUTPUT, @ErrCode = @ErrCode_ResetYesterdayBalance OUTPUT	

@@ -3,6 +3,9 @@ ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_ProcessCancel]
 	@FromCustID		INT, 
 	@ToCustID		INT,
 	@ViewStatus		VARCHAR(15),
+	@Creator		INT,
+	@Language		VARCHAR(2)= 'E',
+	@IP				VARCHAR(45)='',
 	@ErrCode		INT = 0 OUTPUT,  
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS  
@@ -41,6 +44,7 @@ BEGIN
 		@ErrMsg		= ''
 
 	IF @ViewStatus <> @currentStatus
+		OR @ViewStatus NOT IN ('Waiting', 'Processing')
 	BEGIN
 		SELECT @ErrCode = 101,
 				@ErrMsg = CASE 
@@ -49,7 +53,7 @@ BEGIN
 							WHEN @ViewStatus = 'Waiting' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
 							WHEN @ViewStatus = 'Processing' AND @currentStatus IN ('Completed') THEN 'Status change to Completed'
 							WHEN @ViewStatus = 'Processing' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
-							ELSE ''
+							ELSE 'Status is invalid.'
 						END
 		RETURN
 	END
@@ -57,6 +61,7 @@ BEGIN
 	-- TODO: Cancel transfer
 	UPDATE TOP(1) p WITH(ROWLOCK, UPDLOCK)
 	SET p.[Status] = 'Cancelled', p.ModifiedTime = CURRENT_TIMESTAMP
+		,p.Result = (SELECT @Creator AS [Creator], @IP AS [IP], @ViewStatus AS [CurrentStatus] FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 	FROM dbo.Age_ClearBalanceCust_Process p 
 	INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
 	WHERE p.FromCustId = @FromCustID
