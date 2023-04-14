@@ -169,7 +169,7 @@ BEGIN
 	BEGIN CATCH
 
 		SELECT @ErrCode = 102
-			,@ErrMsg = CONCAT('Ex:', ERROR_MESSAGE(), 'SP: ', ERROR_PROCEDURE(), ',Line: ', ERROR_LINE)
+			,@ErrMsg = CONCAT('Ex:', ERROR_MESSAGE(), 'SP: ', ERROR_PROCEDURE(), ',Line: ', ERROR_LINE())
 
 		UPDATE bl WITH(ROWLOCK, UPDLOCK)
 		SET bl.BatchStatus = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
