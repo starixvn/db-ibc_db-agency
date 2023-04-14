@@ -53,10 +53,11 @@ BEGIN
 	IF @RunningMode IN ('Normal', 'Resume')
 		AND NOT EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
 		AND (
-			@AutoTransfer_StartTime_Check IS NULL -- 1st Run
-			OR DATEDIFF(HOUR, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) > 24 -- daily Run
+			@AutoTransfer_StartTime_Check IS NULL -- 1st Schedule
+			OR DATEDIFF(HOUR, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) >= 24 -- daily Run
 		)
 	BEGIN
+		SET @RunningMode = 'Normal';
 
 		--TODO: CLEANUP data
 		DELETE dbo.Age_ClearBalanceCust_RunningSuper;
@@ -64,7 +65,7 @@ BEGIN
 		DELETE dbo.Age_ClearBalanceCust_Process;
 		
 		DROP TABLE IF EXISTS #tmpClearBalanceCust
-		CREATE TABLE #tmpClearBalanceCust(FromCustId INT, ToCustId INT, RoleId TINYINT, SuperId INT, IsAllDayBalTransfer BIT
+		CREATE TABLE #tmpClearBalanceCust(FromCustId INT, ToCustId INT PRIMARY KEY NONCLUSTERED, RoleId TINYINT, SuperId INT, IsAllDayBalTransfer BIT
 			, INDEX CIX_SuperRole CLUSTERED (SuperId, RoleId)
 		);
 
@@ -83,7 +84,7 @@ BEGIN
 		
 		CREATE TABLE #tmpClearBalanceCust_RunningSuper(SuperId INT PRIMARY KEY, TotalDownline INT)
 		CREATE TABLE #tmpClearBalanceCust_Process(
-			SuperId INT, FromCustId INT, ToCustId INT, RoleID TINYINT, IsAllDayBalTransfer BIT, BatchNo INT
+			SuperId INT, FromCustId INT, ToCustId INT PRIMARY KEY NONCLUSTERED, RoleID TINYINT, IsAllDayBalTransfer BIT, BatchNo INT
 			,INDEX CIX_SuperBatch CLUSTERED (SuperId, BatchNo)
 		);
 
@@ -168,80 +169,69 @@ BEGIN
 	END
 	ELSE IF @RunningMode = 'Normal'
 		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
+		AND @AutoTransfer_RunningModeCheck = 'Normal' --> Main Thread is running
+		AND DATEDIFF(MINUTE, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) < 5
 	BEGIN
 		-- TODO: Scaleout Threads
-		IF @AutoTransfer_RunningModeCheck = 'Normal' --> Main Thread
-			AND (
-				@AutoTransfer_StartTime_Check IS NULL
-				OR DATEDIFF(MINUTE, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) < 5
-			)
-		BEGIN
-			SET @RunningMode = 'Scaleout';
-			-- SET output
-			SELECT @TotalPair	= COUNT(1)
-				,@TotalBatch	= COUNT(DISTINCT BatchNo)
-				,@TotalSuper	= COUNT(DISTINCT SuperID)
-			FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
-			WHERE [Status] = 'New';
-		END
+		SET @RunningMode = 'Scaleout';
+		-- SET output
+		SELECT @TotalPair	= COUNT(1)
+			,@TotalBatch	= COUNT(DISTINCT BatchNo)
+			,@TotalSuper	= COUNT(DISTINCT SuperID)
+		FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
+		WHERE [Status] = 'New';
 	END
 	ELSE IF @RunningMode = 'Resume'
 		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
+		AND @AutoTransfer_RunningModeCheck = 'Normal' --> Main Thread stoped
+		AND DATEDIFF(DAY, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) = 0
 	BEGIN
-		-- TODO: Resume Threads
-		IF @AutoTransfer_RunningModeCheck = 'Normal'
-			AND (
-				@AutoTransfer_StartTime_Check IS NULL
-				OR DATEDIFF(DAY, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) = 0
-			) 
+		-- Update Waiting, Running to New if any
+		UPDATE p WITH(ROWLOCK, UPDLOCK)
+		SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = NULL, p.Amount = NULL
+		FROM dbo.[Age_ClearBalanceCust_Process] p
+		WHERE p.SessionDate = @SessionDate
+			AND [Status] IN ('Waiting', 'Processing')
+
+		-- Update Failed to New if any
+		UPDATE p WITH(ROWLOCK, UPDLOCK)
+		SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP
+			,p.TryCount = NULL, p.Result = NULL, p.StartTime = NULL, p.EndTime = NULL
+		FROM dbo.[Age_ClearBalanceCust_Process] p
+			CROSS APPLY (
+				SELECT ErrorType
+				FROM OPENJSON(p.Result)
+				WITH (
+					ErrorType VARCHAR(30) '$.ErrType'
+				)
+			) AS err
+		WHERE p.SessionDate = @SessionDate
+			AND p.[Status] = 'Failed'
+			AND p.TryCount BETWEEN 1 AND 4
+			AND err.ErrorType IN ('DBIssue', 'TransferUM', 'AccTransfering', 'ProcessingTime')
+		;
+
+
+		--TODO: Update Setting
+		SELECT @AutoJob_ClearBalance_VValue = (SELECT @AutoTransfer_StartTime AS StartTime, @RunningMode AS RunningMode FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
+		IF EXISTS (SELECT 1 FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = @AutoJob_ClearBalance_VName)
 		BEGIN
-			-- Update Waiting, Running to New if any
-			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP
-			FROM dbo.[Age_ClearBalanceCust_Process] p
-			WHERE p.SessionDate = @SessionDate
-				AND [Status] IN ('Waiting', 'Processing')
-
-			-- Update Failed to New if any
-			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP
-				,p.TryCount = NULL, p.Result = NULL, p.StartTime = NULL, p.EndTime = NULL
-			FROM dbo.[Age_ClearBalanceCust_Process] p
-				CROSS APPLY (
-					SELECT ErrorType
-					FROM OPENJSON(p.Result)
-					WITH (
-						ErrorType VARCHAR(30) '$.ErrType'
-					)
-				) AS err
-			WHERE p.SessionDate = @SessionDate
-				AND p.[Status] = 'Failed'
-				AND p.TryCount BETWEEN 1 AND 4
-				AND err.ErrorType IN ('DBIssue', 'TransferUM', 'AccTransfering', 'ProcessingTime')
-			;
-
-
-			--TODO: Update Setting
-			SELECT @AutoJob_ClearBalance_VValue = (SELECT @AutoTransfer_StartTime AS StartTime, @RunningMode AS RunningMode FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
-			IF EXISTS (SELECT 1 FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = @AutoJob_ClearBalance_VName)
-			BEGIN
-				UPDATE dbo.SystemSettings WITH(ROWLOCK, UPDLOCK)
-				SET VValue = @AutoJob_ClearBalance_VValue
-				WHERE VName = @AutoJob_ClearBalance_VName
-			END
-			ELSE
-			BEGIN
-				INSERT INTO dbo.SystemSettings(VName, VValue)
-				SELECT @AutoJob_ClearBalance_VName AS VName,@AutoJob_ClearBalance_VValue AS VValue
-			END
-
-			-- SET output
-			SELECT @TotalPair	= COUNT(1)
-				,@TotalBatch	= COUNT(DISTINCT BatchNo)
-				,@TotalSuper	= COUNT(DISTINCT SuperID)
-			FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
-			WHERE [Status] = 'New';
+			UPDATE dbo.SystemSettings WITH(ROWLOCK, UPDLOCK)
+			SET VValue = @AutoJob_ClearBalance_VValue
+			WHERE VName = @AutoJob_ClearBalance_VName
 		END
+		ELSE
+		BEGIN
+			INSERT INTO dbo.SystemSettings(VName, VValue)
+			SELECT @AutoJob_ClearBalance_VName AS VName,@AutoJob_ClearBalance_VValue AS VValue
+		END
+
+		-- SET output
+		SELECT @TotalPair	= COUNT(1)
+			,@TotalBatch	= COUNT(DISTINCT BatchNo)
+			,@TotalSuper	= COUNT(DISTINCT SuperID)
+		FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
+		WHERE [Status] = 'New';
 	END
 END
 GO
