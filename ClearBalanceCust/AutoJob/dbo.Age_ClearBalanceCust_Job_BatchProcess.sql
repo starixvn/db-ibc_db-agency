@@ -169,7 +169,22 @@ BEGIN
 	BEGIN CATCH
 
 		SELECT @ErrCode = 102
-			,@ErrMsg = ERROR_MESSAGE()
+			,@ErrMsg = CONCAT('Ex:', ERROR_MESSAGE(), 'SP: ', ERROR_PROCEDURE(), ',Line: ', ERROR_LINE)
+
+		UPDATE bl WITH(ROWLOCK, UPDLOCK)
+		SET bl.BatchStatus = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
+			,bl.EndTime = CURRENT_TIMESTAMP
+		FROM dbo.Age_ClearBalanceCust_BatchLog bl
+		WHERE BatchLogId = @BatchLogIdIns 
+
+		----------
+		UPDATE p WITH(ROWLOCK, UPDLOCK)
+		SET p.Status = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
+			,p.EndTime = ModifiedTime
+			,p.Result = (SELECT 'Exception' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+		FROM dbo.Age_ClearBalanceCust_Process p
+			INNER JOIN #tmpProcessCust c ON c.ToCustID = p.ToCustId
+		WHERE FromCustId = @FromCustID 
 	END CATCH
 
 	--SELECT @ErrCode AS ErrCode, @ErrMsg AS ErrMsg

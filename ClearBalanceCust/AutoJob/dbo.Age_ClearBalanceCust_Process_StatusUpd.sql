@@ -71,9 +71,9 @@ BEGIN
 			INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
 			WHERE p.FromCustId = @FromCustID
 
-			IF @currentStatus = 'Cancelled'
-				SELECT @ErrCode = 101
-					, @ErrMsg = 'This transfer has been ' + @currentStatus + '.'
+			-- Re-New/Cancelled
+			SELECT @ErrCode = 101
+				, @ErrMsg = 'This transfer''s status has been changed to' + @currentStatus + '.'
 			RETURN
 		END
 

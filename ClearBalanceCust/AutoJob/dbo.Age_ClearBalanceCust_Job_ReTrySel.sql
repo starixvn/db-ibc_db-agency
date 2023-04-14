@@ -3,6 +3,7 @@ ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ReTrySel]
 	@NumOfThread	INT = 4
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(4000) = '' OUTPUT
+	,@IsCompleted	BIT = 0 OUTPUT
 AS
 /*
 	Created:20230227@bobby
@@ -22,10 +23,11 @@ BEGIN
 	DECLARE @RunningMode	VARCHAR(15),
 		@TotalThread		INT;
 
-	SELECT @TotalThread = ISNULL(@NumOfThread, 4),
+	SELECT @TotalThread = ISNULL(@NumOfThread, 2),
 		@RunningMode	= 'ReTry',
 		@ErrCode		= 0,
-		@ErrMsg			= ''
+		@ErrMsg			= '',
+		@IsCompleted	= 1
 		;
 
 	DROP TABLE IF EXISTS #tmpClearBalanceCust_BatchLog;
@@ -39,7 +41,7 @@ BEGIN
 	SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, p.ToCustId
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 	WHERE p.[Status] = 'Failed' 
-		AND ISJSON(p.Result) > 0 AND JSON_VALUE(p.Result, '$.ErrType') IN ('DBIssue','TransferUM', 'BalanceZero')
+		AND ISJSON(p.Result) > 0 AND JSON_VALUE(p.Result, '$.ErrType') IN ('DBIssue','TransferUM', 'AccTransfering', 'ProcessingTime', 'BalanceZero')
 		AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
 		AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4
 
@@ -77,5 +79,13 @@ BEGIN
 		--, CONCAT('EXEC dbo.Age_ClearBalanceCust_Job_BatchProcess @BatchNo=', BatchNo, ', @FromCustId=', FromCustId, ', @ToCustIds=''', ToCustIds, ''', @RunningMode=''', @RunningMode, '''')
 	FROM #tmpClearBalanceCust_BatchLog bl
 	ORDER BY bl.BatchNo ASC;
+
+	-- CHECK: Finished or NOT
+	SELECT TOP(1) @IsCompleted = 0
+	FROM Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+	WHERE 
+		p.Status IN ('New', 'Waiting', 'Processing')	--> Main Thread running
+		OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
+
 END
 GO

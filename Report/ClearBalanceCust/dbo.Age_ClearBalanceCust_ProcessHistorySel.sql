@@ -154,7 +154,7 @@ BEGIN
 		AND p.SessionDate BETWEEN @rptFromDate AND @rptToDate
 		AND (
 			p.[Status] <> 'Failed'
-			OR (p.[Status] = 'Failed' AND ck.ErrType IN ('DBIssue'))
+			OR (p.[Status] = 'Failed' AND ck.ErrType IN ('DBIssue', 'TransferUM', 'AccTransfering', 'ProcessingTime', 'IsAllDayBalTransfer'))
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)
 	ORDER BY 

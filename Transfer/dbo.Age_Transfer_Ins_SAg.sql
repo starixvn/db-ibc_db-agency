@@ -495,7 +495,7 @@ BEGIN
 			IF @ErrCode > 0
 			BEGIN
 				UPDATE @tblResultMember
-				SET ErrType = 'AutoTransfer', ErrMsg = @ErrMsg
+				SET ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 				WHERE CustId = @MAgentID;	
 				GOTO NEXT_PAIR;
 			END
@@ -547,7 +547,7 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET ErrType = 'TransferCancelled', ErrMsg = @ErrMsg
+					SET ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @MAgentID;	
 					GOTO NEXT_PAIR;
 				END
@@ -659,7 +659,9 @@ BEGIN
 				SET RefNo = @transcode
 				WHERE CustID = @MAgentID;
 			END
+			--
 			COMMIT TRANSACTION
+
 			Select @ErrMsg = ''
 	
 			IF @SubAccID > 0

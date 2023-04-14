@@ -199,15 +199,14 @@ BEGIN
  
 	---Calculated Balance saved in Temp Table  @Phuong09152008
 	CREATE TABLE #Member (
-						custid int,
+						rIdx INT IDENTITY(1,1),
+						custid int PRIMARY KEY NONCLUSTERED,
 						memberName nvarchar(50),	
 						memberBalance money DEFAULT 0,
 						memberOutstanding money DEFAULT 0,
 						memberCredit money DEFAULT 0,
 						memberPendingTransfer3rd money DEFAULT 0,
-						rIdx INT IDENTITY(1,1),
-						INDEX CIX_rIDx CLUSTERED (rIdx),
-						CONSTRAINT PK_CustId PRIMARY KEY NONCLUSTERED (custid)
+						INDEX CIX_rIDx CLUSTERED (rIdx)
 					); 
  
 	DECLARE @WinlostDate datetime
@@ -590,7 +589,7 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET ErrType = 'TransferCancelled', ErrMsg = @ErrMsg
+					SET ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @custid;	
 					GOTO NEXT_PAIR;
 				END
@@ -620,11 +619,12 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET ErrType = 'TransferCancelled', ErrMsg = @ErrMsg
+					SET ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @custid;	
 					GOTO NEXT_PAIR;
 				END
 			END
+			
 			
 			------------------Insert trans into transfer---------------------------------------------------------------  
 			IF (@amount > 0)  
