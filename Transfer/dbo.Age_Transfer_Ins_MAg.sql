@@ -692,7 +692,7 @@ BEGIN
 		BEGIN CATCH
 			--Exception
 			UPDATE @tblResultMember
-			SET ErrType = 'Exception', ErrMsg = ERROR_MESSAGE()
+			SET ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 			WHERE CustID = @AgentID;
 		END CATCH
 

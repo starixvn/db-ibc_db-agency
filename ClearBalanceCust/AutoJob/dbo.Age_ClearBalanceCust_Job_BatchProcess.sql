@@ -31,7 +31,7 @@ BEGIN
 		, @SuperCount		INT = 0
 		, @RoleCount		INT = 0
 		, @FromCustIdCount	INT = 0
-		, @Creator			INT = 8 -- StarixIT
+		, @Creator			INT -- StarixIT
 		, @IsAllDayBalTransfer	BIT = 1
 		, @IsAutoJobTransfer	BIT = 1
 		, @BatchLogIdIns		INT;
@@ -40,6 +40,11 @@ BEGIN
 		@RoleID			= 0,
 		@ErrCode		= 0,
 		@ErrMsg			= '';
+
+	SELECT @Creator = custid
+	FROM CustDB.dbo.custInfo WITH(NOLOCK) 
+	WHERE username = 'StarixIT'
+	;
 
 	DROP TABLE IF EXISTS #tmpProcessCust;
 	CREATE TABLE #tmpProcessCust(rIdx INT IDENTITY(1,1), FromCustId INT, ToCustID INT PRIMARY KEY);

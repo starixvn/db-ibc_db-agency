@@ -82,7 +82,7 @@ BEGIN
 
 	-- CHECK: Finished or NOT
 	SELECT TOP(1) @IsCompleted = 0
-	FROM Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
 	WHERE 
 		p.Status IN ('New', 'Waiting', 'Processing')	--> Main Thread running
 		OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
