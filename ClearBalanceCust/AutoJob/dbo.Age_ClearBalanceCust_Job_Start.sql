@@ -59,10 +59,10 @@ BEGIN
 	-- TODO: INIT data from current setting
 	IF @RunningMode IN ('Normal', 'Resume')
 		AND NOT EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
-		AND (
-			@AutoTransfer_StartTime_Check IS NULL -- 1st Schedule
-			OR DATEDIFF(HOUR, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) >= 24 -- daily Run
-		)
+		--AND (
+		--	@AutoTransfer_StartTime_Check IS NULL -- 1st Schedule
+		--	OR DATEDIFF(HOUR, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) >= 24 -- daily Run
+		--)
 	BEGIN
 		SET @RunningMode = 'Normal';
 
@@ -215,17 +215,11 @@ BEGIN
 			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP
 				,p.TryCount = NULL, p.Result = NULL, p.StartTime = NULL, p.EndTime = NULL
 			FROM dbo.[Age_ClearBalanceCust_Process] p
-				CROSS APPLY (
-					SELECT ErrorType
-					FROM OPENJSON(p.Result)
-					WITH (
-						ErrorType VARCHAR(30) '$.ErrType'
-					)
-				) AS err
+				INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 			WHERE p.SessionDate = @SessionDate
 				AND p.[Status] = 'Failed'
 				AND p.TryCount BETWEEN 1 AND 4
-				AND err.ErrorType IN ('DBIssue', 'TransferUM', 'AccTransfering', 'ProcessingTime')
+				AND err.AllowReTry = 1
 			;
 
 

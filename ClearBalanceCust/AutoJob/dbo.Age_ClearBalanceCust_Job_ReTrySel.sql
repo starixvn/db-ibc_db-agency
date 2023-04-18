@@ -33,25 +33,30 @@ BEGIN
 	DROP TABLE IF EXISTS #tmpClearBalanceCust_BatchLog;
 	CREATE TABLE #tmpClearBalanceCust_BatchLog (SuperId INT, BatchNo INT PRIMARY KEY, RoleID TINYINT, FromCustId INT, ToCustIds VARCHAR(4000));
 
-	DROP TABLE IF EXISTS #tmpClearBalanceCust_ReTry;
-	CREATE TABLE #tmpClearBalanceCust_ReTry (SuperId INT, BatchNo INT, RoleID TINYINT, FromCustId INT, ToCustId INT PRIMARY KEY);
-
-	--TODO: Check ReTry pair(s) IF any
-	INSERT INTO #tmpClearBalanceCust_ReTry (SuperId, BatchNo, RoleID, FromCustId, ToCustId)
-	SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, p.ToCustId
-	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-	WHERE p.[Status] = 'Failed' 
-		AND ISJSON(p.Result) > 0 AND JSON_VALUE(p.Result, '$.ErrType') IN ('DBIssue','TransferUM', 'AccTransfering', 'ProcessingTime', 'BalanceZero')
-		AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
-		AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4
-
-	--TODO: Waiting Batch
+	-- TODO: Waiting/Running Batch
+	WITH CTE_ProcessingBatch AS (
+		SELECT p.SuperId
+		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
+		WHERE Status IN ('Waiting', 'Running')
+		GROUP BY p.SuperId
+	),
+	CTE_ClearBalanceCust_ReTry AS (
+		SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, p.ToCustId
+		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
+		INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
+		WHERE p.[Status] = 'Failed' 
+			AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
+			AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4
+			AND err.AllowReTry = 1
+	)
 	INSERT INTO #tmpClearBalanceCust_BatchLog
 	SELECT TOP(@NumOfThread) SuperId, BatchNo, RoleID, FromCustId, ToCustIds
 	FROM (
 		SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, STRING_AGG(p.ToCustId,',') AS ToCustIds
 			,ROW_NUMBER() OVER (PARTITION BY p.SuperID ORDER BY p.BatchNo ASC) AS runIdx
-		FROM #tmpClearBalanceCust_ReTry p
+		FROM CTE_ClearBalanceCust_ReTry p
+		LEFT JOIN CTE_ProcessingBatch cte ON cte.SuperId = p.SuperId
+		WHERE cte.SuperId IS NULL -- NOT RUNNING Super
 		GROUP BY p.SuperId, p.BatchNo, p.RoleID, p.FromCustId
 	) AS t
 	WHERE t.runIdx = 1

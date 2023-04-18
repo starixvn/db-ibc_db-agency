@@ -139,14 +139,7 @@ BEGIN
 		INNER JOIN @tmpStatus tmp ON tmp.[Status] = p.[Status]
 		INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.CustId = p.ToCustId
 		LEFT JOIN #tmpDownline cte ON cte.custId = p.ToCustId
-		OUTER APPLY (
-			SELECT ErrType, ErrMsg
-			FROM OPENJSON(p.Result)
-			WITH (
-				ErrType VARCHAR(15) '$.ErrType',
-				ErrMsg	NVARCHAR(4000) '$.ErrMsg'
-			)
-		) AS ck
+		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
 			SELECT CASE 
 				WHEN p.[Status] IN ('Completed', 'Failed') AND p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,'2023-01-01',p.EndTime)
@@ -159,7 +152,7 @@ BEGIN
 		AND p.SessionDate = @today
 		AND (
 			p.[Status] <> 'Failed'
-			OR (p.[Status] = 'Failed' AND ck.ErrType IN ('DBIssue', 'TransferUM', 'AccTransfering', 'ProcessingTime', 'IsAllDayBalTransfer'))
+			OR (p.[Status] = 'Failed' AND err.IsHowHistory = 1)
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)
 	ORDER BY 
