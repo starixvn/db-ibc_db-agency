@@ -93,8 +93,8 @@ BEGIN
 	)
 	BEGIN
 		SELECT @ErrCode	= 104, 
-				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'You cannot turn off Auto Transfer for this account because the Auto Transfer process is running. Please try again after the process is complete..'  
-								ELSE [dbo].[f_Get_MsgNamebyMsgID](500019,@Language)
+				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'You cannot disable Auto Transfer for this account because the Auto Transfer process is in progress. Please try again after the process has been completed.'  
+								ELSE [dbo].[f_Get_MsgNamebyMsgID](50019,@Language)
 							END    
 		GOTO SP_END;
 	END
@@ -134,8 +134,8 @@ BEGIN
 			IF EXISTS (SELECT 1 FROM @tmpResult WHERE EffectiveDate > @today)
 			BEGIN
 				SELECT @ErrCode	= 0, 
-						@ErrMsg	= CASE WHEN @Language = 'E' THEN 'The Auto Transfer is running now. This account will be auto transferred at the next schedule of your transfer condition.'  
-										ELSE [dbo].[f_Get_MsgNamebyMsgID](500020,@Language)
+						@ErrMsg	= CASE WHEN @Language = 'E' THEN 'Auto Transfer process is in progress. This account will be auto-transferred at the next scheduled time according to your transfer condition.'  
+										ELSE [dbo].[f_Get_MsgNamebyMsgID](50018,@Language)
 									END    
 			END
 		END

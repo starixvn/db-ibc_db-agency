@@ -44,7 +44,9 @@ BEGIN
 		SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, p.ToCustId
 		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 		INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
-		WHERE p.[Status] = 'Failed' 
+		LEFT JOIN CTE_ProcessingBatch cte ON cte.SuperId = p.SuperId
+		WHERE cte.SuperId IS NULL -- NOT RUNNING Super
+			AND p.[Status] = 'Failed' 
 			AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
 			AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4
 			AND err.AllowReTry = 1
@@ -55,8 +57,6 @@ BEGIN
 		SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, STRING_AGG(p.ToCustId,',') AS ToCustIds
 			,ROW_NUMBER() OVER (PARTITION BY p.SuperID ORDER BY p.BatchNo ASC) AS runIdx
 		FROM CTE_ClearBalanceCust_ReTry p
-		LEFT JOIN CTE_ProcessingBatch cte ON cte.SuperId = p.SuperId
-		WHERE cte.SuperId IS NULL -- NOT RUNNING Super
 		GROUP BY p.SuperId, p.BatchNo, p.RoleID, p.FromCustId
 	) AS t
 	WHERE t.runIdx = 1
@@ -71,7 +71,11 @@ BEGIN
 				, p.TryCount = ISNULL(p.TryCount, 0) + 1
 			FROM  dbo.Age_ClearBalanceCust_Process p
 			INNER JOIN #tmpClearBalanceCust_BatchLog bl ON bl.SuperId = p.SuperId AND bl.BatchNo = p.BatchNo
-			INNER JOIN #tmpClearBalanceCust_ReTry rt ON rt.SuperId = bl.SuperId AND rt.BatchNo = bl.BatchNo AND rt.FromCustId = p.FromCustId AND rt.ToCustId = p.ToCustId
+			CROSS APPLY (
+				SELECT TOP 1 1 AS IsExist FROM STRING_SPLIT(bl.ToCustIds, ',') AS t 
+				WHERE p.FromCustId = bl.FromCustId
+					AND p.ToCustId = t.value
+			) AS ck
 
 		END TRY
 		BEGIN CATCH

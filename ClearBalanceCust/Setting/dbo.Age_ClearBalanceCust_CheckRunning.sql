@@ -37,8 +37,8 @@ BEGIN
 					AND s.[Status] IN ('Waiting', 'Processing')
 		)
 	BEGIN
-		SELECT @ErrCode = 500018
-		SELECT @ErrMsg = bodb02.dbo.f_Get_MsgNamebyMsgID (500018,@Language)
+		SELECT @ErrCode = 50020
+		SELECT @ErrMsg = bodb02.dbo.f_Get_MsgNamebyMsgID (50020,@Language)
 		 
 	END
 

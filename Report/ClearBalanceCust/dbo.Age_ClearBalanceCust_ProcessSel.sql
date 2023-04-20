@@ -1,13 +1,14 @@
 /*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
-	@FromCustId				INT,
-	@ViewStatus				VARCHAR(1000) = 'All',
-	@Searchname				VARCHAR(50) = NULL,
-	@SortBy					TINYINT = 1,
-	@SortType				BIT = 0,
-	@PageIndex				INT = 1,
-	@PageSize				INT = 500,
-	@TotalRow				INT = 0 OUTPUT
+	@FromCustId		INT,
+	@Language		VARCHAR(2)= 'E', 
+	@ViewStatus		VARCHAR(1000) = 'All',
+	@Searchname		VARCHAR(50) = NULL,
+	@SortBy			TINYINT = 1,
+	@SortType		BIT = 0,
+	@PageIndex		INT = 1,
+	@PageSize		INT = 500,
+	@TotalRow		INT = 0 OUTPUT
 AS
 /*
 	Created:20230227@Bobby
@@ -126,7 +127,7 @@ BEGIN
 		END AS Amount, 
 		p.[Status],
 		CASE 
-			WHEN p.[Status] = 'Failed' THEN ck.ErrMsg 
+			WHEN p.[Status] = 'Failed' THEN [dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
 		ELSE '' END AS Reason,
 		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, '2023-01-01'), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
 		CASE 
@@ -152,7 +153,7 @@ BEGIN
 		AND p.SessionDate = @today
 		AND (
 			p.[Status] <> 'Failed'
-			OR (p.[Status] = 'Failed' AND err.IsHowHistory = 1)
+			OR (p.[Status] = 'Failed' AND err.IsShowHistory = 1)
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)
 	ORDER BY 

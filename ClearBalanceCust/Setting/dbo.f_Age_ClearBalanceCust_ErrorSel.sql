@@ -13,13 +13,13 @@ RETURN
 */
 SELECT ErrType, AllowReTry, IsShowHistory
 FROM (
-	VALUES ('TransferOption', 0, 1),
-		('ProcessingTime', 0, 1),
+	VALUES ('TransferOption', 0, 0),
+		('ProcessingTime', 0, 0),
 		('NotFound', 0, 0),
 		('TransferUM', 1, 0),
-		('AccTransfering', 0, 1),
+		('AccTransfering', 0, 0),
 		('BalanceZero', 0, 0),
-		('TransferStatus', 0, 1),
+		('TransferStatus', 0, 0),
 		('IsAllDayBalTransfer', 0, 1),
 		('DBIssue', 1, 1)
 ) AS t (ErrType, AllowReTry, IsShowHistory)

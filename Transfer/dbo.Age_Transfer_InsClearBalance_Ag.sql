@@ -88,7 +88,7 @@ BEGIN
 	DECLARE @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
 
 	-- TODO: support auto clear balance
-	DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
+	DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), MsgId INT, ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
 	INSERT INTO @tblResultMember(CustId)
 	SELECT DISTINCT t.value
 	FROM STRING_SPLIT(@ToCustIDs, ',') AS t;
@@ -103,7 +103,7 @@ BEGIN
 	BEGIN  
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT @ErrCode AS MsgId, 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIds
 				,@Status='Failed', @Result = @Result;
 		END
@@ -120,7 +120,7 @@ BEGIN
 
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT 'NotFound' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT 40014 AS MsgId, 'NotFound' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
 				,@Status='Failed', @Result = @Result;
 		END
@@ -140,7 +140,7 @@ BEGIN
 	BEGIN	
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT 'TransferUM' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT @ErrCode AS MsgId,'TransferUM' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
 				,@Status='Failed', @Result = @Result;
 		END
@@ -158,7 +158,7 @@ BEGIN
 	BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT 'AccTransfering' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT @ErrCode AS MsgId, 'AccTransfering' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
 				,@Status='Failed', @Result = @Result;
 		END
@@ -508,7 +508,7 @@ BEGIN
 			;
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT 'BalanceZero' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT 50002 AS MsgId, 'BalanceZero' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
 				,@Status='Failed', @Result = @Result;
 		END
@@ -572,7 +572,7 @@ BEGIN
 			IF (@amount = 0)
 			BEGIN
 				UPDATE @tblResultMember
-				SET ErrType = 'BalanceZero', ErrMsg = 'Cannot transfer because balance is 0!'
+				SET MsgId = 50002, ErrType = 'BalanceZero', ErrMsg = 'Cannot transfer because balance is 0!'
 				WHERE CustId = @custid;	
 				GOTO NEXT_PAIR;
 			END
@@ -589,7 +589,7 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+					SET MsgId = 50003, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @custid;	
 					GOTO NEXT_PAIR;
 				END
@@ -619,7 +619,7 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+					SET MsgId = 50003, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @custid;	
 					GOTO NEXT_PAIR;
 				END
@@ -646,7 +646,7 @@ BEGIN
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @custid;
 
 					GOTO NEXT_PAIR;
@@ -665,7 +665,7 @@ BEGIN
 
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET ErrType = 'DBIssue', ErrMsg = CONCAT('Dot_BalanceDebitUpd @ErrCode=', @ErrCode)
+					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = CONCAT('Dot_BalanceDebitUpd @ErrCode=', @ErrCode)
 					WHERE CustID = @custid;
 
 					GOTO NEXT_PAIR;
@@ -694,7 +694,7 @@ BEGIN
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @custid;
 
 					GOTO NEXT_PAIR;
@@ -734,7 +734,7 @@ BEGIN
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @custid;
 
 					GOTO NEXT_PAIR;
@@ -760,7 +760,7 @@ BEGIN
 
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @custid;
 
 					GOTO NEXT_PAIR;
@@ -823,14 +823,14 @@ BEGIN
 		BEGIN CATCH
 			--Exception
 			UPDATE @tblResultMember
-			SET ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+			SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 			WHERE CustID = @custid;
 		END CATCH
 
 		NEXT_PAIR:
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SELECT @Result = (SELECT ErrType, ErrMsg, RefNo FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+			SELECT @Result = (SELECT MsgId, ErrType, ErrMsg, RefNo FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
 				@PairStatus = CASE WHEN RefNo > 0 THEN 'Completed' ELSE 'Failed' END
 			FROM @tblResultMember 
 			WHERE CustId=@CustId

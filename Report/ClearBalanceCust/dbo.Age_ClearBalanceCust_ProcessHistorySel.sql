@@ -3,6 +3,7 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessHistorySel]
 	@FromCustId		INT,
 	@FromDate		DATE,
 	@ToDate			DATE,
+	@Language		VARCHAR(2)= 'E', 
 	@ViewStatus		VARCHAR(1000) = 'All',
 	@Searchname		VARCHAR(50) = NULL,
 	@SortBy			TINYINT = 1,
@@ -125,7 +126,7 @@ BEGIN
 		END AS Amount, 
 		p.[Status],
 		CASE 
-			WHEN p.[Status] = 'Failed' THEN ck.ErrMsg 
+			WHEN p.[Status] = 'Failed' THEN [dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
 		ELSE '' END AS Reason,
 		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, '2023-01-01'), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
 		COUNT(1) OVER() AS TotalRow
