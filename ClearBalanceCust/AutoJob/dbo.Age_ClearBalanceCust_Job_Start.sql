@@ -29,7 +29,9 @@ BEGIN
 		@AutoTransfer_StartTime			DATETIME,
 		@AutoJob_ClearBalance_VValue	VARCHAR(200),
 		@AutoTransfer_StartTime_Check	DATETIME,
-		@AutoTransfer_RunningModeCheck	VARCHAR(15)
+		@AutoTransfer_RunningModeCheck	VARCHAR(15),
+		@SiteDBGroupID					SMALLINT,
+		@commandExec					NVARCHAR(MAX)
 	;
 
 	SELECT @AutoTransfer_StartTime = CURRENT_TIMESTAMP,
@@ -64,7 +66,8 @@ BEGIN
 		--	OR DATEDIFF(HOUR, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) >= 24 -- daily Run
 		--)
 	BEGIN
-		SET @RunningMode = 'Normal';
+		SELECT @RunningMode = 'Normal',
+			@SiteDBGroupID	= [dbo].[f_Get_SiteDBGroupID]();
 
 		BEGIN TRY
 			--TODO: CLEANUP data
@@ -78,9 +81,11 @@ BEGIN
 			);
 
 			--TODO: get Snapshot from DBCUST
-			INSERT INTO #tmpClearBalanceCust (FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer)
-			SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer
-			FROM OPENQUERY(DBCUST, 'SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer FROM CustDB.dbo.f_Age_ClearBalanceCust_Snapshot()');
+			SET @commandExec  = N'INSERT INTO #tmpClearBalanceCust (FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer)
+				SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer
+				FROM OPENQUERY(DBCUST, ''SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer FROM CustDB.dbo.f_Age_ClearBalanceCust_Snapshot('+ CAST(@SiteDBGroupID AS VARCHAR(10))+')'');'
+			;
+			EXEC sys.sp_executesql @commandExec;
 
 			IF NOT EXISTS (SELECT TOP 1 1 FROM #tmpClearBalanceCust)
 			BEGIN

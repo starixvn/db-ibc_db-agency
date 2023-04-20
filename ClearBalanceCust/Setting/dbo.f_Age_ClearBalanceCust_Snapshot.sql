@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CustDB" selecters="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
-ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot() 
+ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot(@SiteDBGroupID SMALLINT) 
 RETURNS TABLE
 RETURN
 /*
@@ -44,7 +44,9 @@ FROM CTE_SMASetting s
 	CROSS APPLY (
 		SELECT strTransferOption = CustDB.dbo.F_Decimal_Binary(ISNULL(s.TransferOption,0))
 	) AS ck
-WHERE 1 = CASE 
+	INNER JOIN CustDB.dbo.CustSuper si WITH(NOLOCK) ON si.custid = c.srecommend
+WHERE si.SiteDBGroupID = @SiteDBGroupID
+	AND 1 = CASE 
 			WHEN s.RoleId = 4 THEN 1
 			WHEN SUBSTRING(ck.strTransferOption, 8, 1) = 1 
 				AND SUBSTRING(ck.strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 1 THEN 1
