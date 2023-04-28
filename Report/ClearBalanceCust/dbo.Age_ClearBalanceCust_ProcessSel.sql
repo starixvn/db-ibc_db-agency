@@ -30,6 +30,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
+	DECLARE @BASELINE_DATE	DATETIME = '2023-01-01';
 	DECLARE @today		DATE,
 		@RoleId			TINYINT,
 		@UplineId		INT,
@@ -127,9 +128,9 @@ BEGIN
 		END AS Amount, 
 		p.[Status],
 		CASE 
-			WHEN p.[Status] = 'Failed' THEN [dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
+			WHEN p.[Status] = 'Failed' THEN bodb02.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
 		ELSE '' END AS Reason,
-		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, '2023-01-01'), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
+		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, @BASELINE_DATE), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
 		CASE 
 			WHEN p.[Status] IN ('Waiting', 'Processing') AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 15 THEN 1 
 			ELSE 0 
@@ -143,9 +144,9 @@ BEGIN
 		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
 			SELECT CASE 
-				WHEN p.[Status] IN ('Completed', 'Failed') AND p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,'2023-01-01',p.EndTime)
-				WHEN p.[Status] IN ('Failed') AND p.StartTime IS NULL THEN DATEDIFF(SECOND,'2023-01-01',p.ModifiedTime)
-				WHEN p.[Status] IN ('Cancelled') THEN DATEDIFF(SECOND,'2023-01-01',p.ModifiedTime) 
+				WHEN p.[Status] IN ('Completed', 'Failed') AND p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.EndTime)
+				WHEN p.[Status] IN ('Failed') AND p.StartTime IS NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime)
+				WHEN p.[Status] IN ('Cancelled') THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime) 
 				ELSE 0 
 			END AS CompletedTimeSec
 		) AS ct

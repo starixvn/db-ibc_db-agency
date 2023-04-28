@@ -56,19 +56,14 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM #tmpClearBalanceCust_BatchLog)
 	BEGIN
 		BEGIN TRY
-			BEGIN TRAN 
 			UPDATE p WITH(ROWLOCK, UPDLOCK)
 			SET p.[Status] = 'Waiting'
 				, p.ModifiedTime = CURRENT_TIMESTAMP
 			FROM  dbo.Age_ClearBalanceCust_Process p
 			INNER JOIN #tmpClearBalanceCust_BatchLog bl ON bl.SuperId = p.SuperID AND bl.BatchNo = p.BatchNo
 
-			COMMIT;
 		END TRY
 		BEGIN CATCH
-			IF @@TRANCOUNT > 0
-				ROLLBACK;
-
 			SELECT @ErrCode = 101
 				,@ErrMsg = ERROR_MESSAGE()
 		END CATCH
