@@ -43,6 +43,7 @@ Revisions:
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 	- 20210910@Elodie: Alpha - Enhance customer's experience with auto clear given credit - [Redmine: #160429]
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -97,7 +98,8 @@ BEGIN
 		custid		INT PRIMARY KEY,
 		outstanding MONEY,		
 		balance		MONEY,
-		yesterdaybalance	MONEY
+		yesterdaybalance	MONEY,
+		PendingTransfer3rd	MONEY
 	)
 
 	;WITH rt AS
@@ -105,7 +107,8 @@ BEGIN
 		SELECT mrecommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE 0 END),0) AS outstanding,
 			ISNULL(SUM(mwinlost+acomm-comm), 0) AS balance,
-			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END),0) AS yesterdaybalance 
+			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END),0) AS yesterdaybalance,
+			0 AS PendingTransfer3rd
 		FROM  bettrans WITH (NOLOCK)
 		WHERE srecommend = @CustID
 			AND	(
@@ -124,8 +127,10 @@ BEGIN
 		UNION ALL
 		SELECT mrecommend AS custid,
 			0 AS outstanding,
-			ISNULL(SUM(CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END), 0) AS balance,
-			ISNULL(SUM(CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END), 0) AS yesterdaybalance
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END END), 0) AS balance,
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END END), 0) AS yesterdaybalance,
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) AS PendingTransfer3rd
+
 		FROM  Transfer t WITH (NOLOCK)
 		WHERE srecommend = @CustID
 			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
@@ -135,7 +140,8 @@ BEGIN
 		SELECT mrecommend AS custid,
 			ISNULL(SUM(ABS(actual_stake) * mpositiontaking), 0) AS outstanding,
 			0 balance,
-			0 yesterdaybalance
+			0 yesterdaybalance,
+			0 AS PendingTransfer3rd
 		FROM  translog WITH(NOLOCK)
 		WHERE srecommend = @CustID
 			AND statusid IN (0,1)
@@ -147,7 +153,8 @@ BEGIN
 			mrecommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE  0 END),0) outstanding,
 			ISNULL(SUM(CASE WHEN statusID > 1 THEN mwinlost+acomm-comm ELSE  0 END),0) AS balance,
-			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE  0 END),0) AS yesterdaybalance
+			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE  0 END),0) AS yesterdaybalance,
+			0 AS PendingTransfer3rd
 		FROM  bettransRNG WITH (NOLOCK)
 		WHERE srecommend = @CustID
 			AND (
@@ -162,7 +169,8 @@ BEGIN
 			mrecommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * mpositiontaking ELSE  0 END),0) outstanding,
 			ISNULL(SUM(CASE WHEN statusID > 1 THEN mwinlost+acomm-comm ELSE  0 END),0) AS balance,
-			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END),0) AS yesterdaybalance
+			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END),0) AS yesterdaybalance,
+			0 AS PendingTransfer3rd
 		FROM  bettransLC WITH (NOLOCK)
 		WHERE srecommend = @CustID
 			AND (
@@ -171,11 +179,12 @@ BEGIN
 				)
 		GROUP BY mrecommend
 	)
-	INSERT INTO #balance
+	INSERT INTO #balance(custid, outstanding, balance, yesterdaybalance, PendingTransfer3rd)
 	SELECT custid,
 		SUM(outstanding),
 		SUM(balance),
-		SUM(yesterdaybalance)
+		SUM(yesterdaybalance),
+		SUM(PendingTransfer3rd)
 	FROM rt
 	GROUP BY custid
 	    
@@ -283,7 +292,8 @@ BEGIN
 			isnull(c.credit,0) credit,		
 			CONVERT(nvarchar(30), c.lastlogged, 121) AS lastlogged,
 			c.Locked,
-			c.CreatedDate
+			c.CreatedDate,
+			ISNULL(balance.PendingTransfer3rd,0) PendingTransfer3rd		
 		FROM #tmp_customer c 
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid 
 	)a
