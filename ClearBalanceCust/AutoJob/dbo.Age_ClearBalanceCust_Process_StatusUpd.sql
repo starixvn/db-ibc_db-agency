@@ -73,7 +73,7 @@ BEGIN
 
 			-- Re-New/Cancelled
 			SELECT @ErrCode = 101
-				, @ErrMsg = 'This transfer''s status has been changed to' + @currentStatus + '.'
+				, @ErrMsg = 'This transfer''s status has been changed to ' + @currentStatus + '.'
 			RETURN
 		END
 

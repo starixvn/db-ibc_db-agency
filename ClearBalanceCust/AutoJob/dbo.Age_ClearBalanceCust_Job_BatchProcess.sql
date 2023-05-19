@@ -176,6 +176,12 @@ BEGIN
 		SELECT @ErrCode = 102
 			,@ErrMsg = CONCAT('Ex:', ERROR_MESSAGE(), 'SP: ', ERROR_PROCEDURE(), ',Line: ', ERROR_LINE())
 
+		UPDATE rs WITH(ROWLOCK, UPDLOCK)
+		SET rs.RunningBatchNo = 0
+		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
+		WHERE rs.SuperId = @SuperId
+		;
+
 		UPDATE bl WITH(ROWLOCK, UPDLOCK)
 		SET bl.BatchStatus = CASE WHEN @ErrCode > 0 THEN 'Failed' ELSE 'Completed' END
 			,bl.EndTime = CURRENT_TIMESTAMP
@@ -189,7 +195,7 @@ BEGIN
 			,p.Result = (SELECT 'Exception' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 		FROM dbo.Age_ClearBalanceCust_Process p
 			INNER JOIN #tmpProcessCust c ON c.ToCustID = p.ToCustId
-		WHERE FromCustId = @FromCustID 
+		WHERE p.FromCustId = @FromCustID 
 	END CATCH
 
 	--SELECT @ErrCode AS ErrCode, @ErrMsg AS ErrMsg

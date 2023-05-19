@@ -19,8 +19,8 @@ FROM (
 		('TransferUM', 1, 0),
 		('AccTransfering', 0, 0),
 		('BalanceZero', 0, 0),
-		('TransferStatus', 0, 0),
-		('IsAllDayBalTransfer', 0, 1),
+		('TransferStatus', 0, 1),
+		('IsAllDayBalTransfer', 0, 0),
 		('DBIssue', 1, 1)
 ) AS t (ErrType, AllowReTry, IsShowHistory)
 GO
