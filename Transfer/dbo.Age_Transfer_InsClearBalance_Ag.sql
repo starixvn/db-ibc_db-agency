@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_InsClearBalance_Ag]
 	@FromCustID int, --Agent ID here  
 	@ToCustIDs varchar(4000),   
@@ -65,6 +65,7 @@ Revisions:
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+	- 20230523@Danny: support scale out credit [Redmine: #181595]
 
 Param's Explanation:
 • @FromCustID: list from custid
@@ -76,12 +77,12 @@ Param's Explanation:
 
 SET NOCOUNT ON  
 
-Declare @LogData nvarchar(500)  
-Declare @agentid int, @custid int  
-DECLARE @currency int, @actualrate float, @currName nvarchar(10)    
-DECLARE @agUser nvarchar(50), @User nvarchar(50)  
-Declare @RefNo bigint, @ToCustID int, @Amount float, @Recommend1 int, @MRecommend1 int, @Recommend2 int, @MRecommend2 int, @grefno BIGINT, @srecommend1 int, @TransID BIGINT  
-Declare @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
+DECLARE @LogData NVARCHAR(500)  
+DECLARE @agentid INT, @custid int  
+DECLARE @currency INT, @actualrate FLOAT, @currName NVARCHAR(10)    
+DECLARE @agUser NVARCHAR(50), @User NVARCHAR(50)  
+DECLARE @RefNo BIGINT, @ToCustID INT, @Amount FLOAT, @Recommend1 INT, @MRecommend1 INT, @Recommend2 INT, @MRecommend2 INT, @grefno BIGINT, @srecommend1 INT, @TransID BIGINT  
+DECLARE @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
 
 EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption   
  @CustID = @FromCustID,  
@@ -89,17 +90,17 @@ EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
  @ErrCode = @ErrCode OUTPUT,  
  @Language = @Language  
    
-if @ErrCode > 0  
+IF @ErrCode > 0  
 BEGIN  
-  return  
+  RETURN  
 END
 
- if not exists (select 1 FROM CustDB.dbo.customer with (NOLOCK) where custid = @FromCustID)  
+ IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.customer WITH (NOLOCK) WHERE custid = @FromCustID)  
  BEGIN  
 	 select @ErrCode = 102  
 	 Select @ErrMsg = case @Language   
 		   when 'E' then 'Customer does not exist.'  
-		   ELSE [dbo].[f_Get_MsgNamebyMsgID](40014,@Language)
+		   ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(40014,@Language)
 		  end    
 	 return  
  END  
@@ -448,12 +449,12 @@ END
 
  DELETE FROM #Member WHERE memberBalance = 0
 
- if not exists (select 1 from #Member)
+ IF NOT EXISTS (select 1 from #Member)
  BEGIN
-	Select @ErrMsg = case @Language   
-		when 'E' then 'Cannot transfer because all downlines'' balance is 0!' 
-		ELSE [dbo].[f_Get_MsgNamebyMsgID](50002,@Language)
-	end, @ErrCode = 103     
+	SELECT @ErrMsg = CASE @Language   
+		WHEN 'E' THEN 'Cannot transfer because all downlines'' balance is 0!' 
+		ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50002,@Language)
+	END, @ErrCode = 103     
  
 	RETURN	
  END
@@ -511,11 +512,11 @@ END
     ------------------Insert trans into DB---------------------------------------------------------------  
      
    -- All error messages are the same, so we set it here  
-		select @ErrCode = 105  
-		Select @ErrMsg = case @Language   
-        when 'E' then 'Clear balance failed. Please try again.'  
-        ELSE [dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
-        end  
+		SELECT @ErrCode = 105  
+		SELECT @ErrMsg = CASE @Language   
+        WHEN 'E' THEN 'Clear balance failed. Please try again.'  
+        ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
+        END  
    
 	IF (@amount > 0 and @SkipTransfer = 0)  
     BEGIN  
@@ -529,7 +530,10 @@ END
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
-			DELETE FROM Transfer where refno = @RefNo			
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
+			
 			RETURN  
 		END  
 		
@@ -539,7 +543,10 @@ END
 		IF @ErrCode <> 0
 		BEGIN
 			--Manually rollback
-			DELETE FROM Transfer where refno = @RefNo			
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
+			
 			RETURN 
 		END
 		
@@ -556,7 +563,9 @@ END
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
-			DELETE FROM Transfer where refno = @RefNo 
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
 			-- rollback balance
 			--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @amount  
 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @amount, @type = 2
@@ -569,8 +578,8 @@ END
 		
 		SET @FutureBetCredit = @credit - @outstanding - @PendingTransfer3rd
 		
-		if @FutureBetCredit < 0 
-		Select @LogData = @LogData + '. The agent decided to transfer after the warning so the bet credit of this member turned to negative value (' + convert(varchar(100), @FutureBetCredit, 2) + ') caused by having outstanding balance value ('+ convert(varchar(100), @outstanding, 2) +')  '
+		IF @FutureBetCredit < 0 
+		SELECT @LogData = @LogData + '. The agent decided to transfer after the warning so the bet credit of this member turned to negative value (' + convert(varchar(100), @FutureBetCredit, 2) + ') caused by having outstanding balance value ('+ convert(varchar(100), @outstanding, 2) +')  '
     END  
 	ELSE IF(@amount<0 and @SkipTransfer = 0)  
     BEGIN  
@@ -586,7 +595,10 @@ END
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
-			DELETE FROM Transfer where refno = @RefNo
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
+
 			RETURN  
 		END  
 
@@ -603,7 +615,10 @@ END
 		IF @@Error <> 0  
 		BEGIN  
 			--Manually rollback
-			DELETE FROM Transfer where refno = @RefNo
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
+
 			RETURN  
 		END 
 		
@@ -611,7 +626,7 @@ END
 		SELECT @ABSamount = abs(@amount)  
 		--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSamount	
 		EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @ABSamount, @type = 2
-    --Add writelog for each amt transfered - Vinh 20080629  
+		--Add writelog for each amt transfered - Vinh 20080629  
 		SELECT @LogData = 'Transfer from Agent ' + @agUser + ' to Customer ' + @User + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @RefNo) 
 		
     END  
@@ -663,13 +678,13 @@ END
  DEALLOCATE CUR  
  
  DROP TABLE #Member  
- if @ErrItems <> ''  
+ IF @ErrItems <> ''  
  BEGIN  
-	select @ErrCode = 104  
-	select @ErrItems = LEFT(@ErrItems, len(@ErrItems)-1)  
-	Select @ErrMsg = case @Language   
-       when 'E' then N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s):' + ' ' + @ErrItems + '_' + @isSucc  
-       ELSE [dbo].[f_Get_MsgNamebyMsgID](50004,@Language) + ' ' + @ErrItems + '_' + @isSucc  
-      end  
+	SELECT @ErrCode = 104  
+	SELECT @ErrItems = LEFT(@ErrItems, len(@ErrItems)-1)  
+	SELECT @ErrMsg = CASE @Language   
+       WHEN 'E' THEN N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s):' + ' ' + @ErrItems + '_' + @isSucc  
+       ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50004,@Language) + ' ' + @ErrItems + '_' + @isSucc  
+      END  
  END
 GO
