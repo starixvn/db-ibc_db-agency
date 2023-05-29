@@ -266,7 +266,7 @@ BEGIN
 			FROM bettrans WITH(NOLOCK) WHERE custid = @custid
 			UNION ALL
 			SELECT MAX(transdate) AS transdate
-			FROM dbo.Transfer WITH(NOLOCK) WHERE custid = @custid
+			FROM dbo.Transfer WITH(NOLOCK) WHERE custid = @custid AND winlostdate >= @balanceUpDay
 		) x
 
 	if @CashBalance > 0 

@@ -497,6 +497,7 @@ END
 			  WHERE CustId=@custid AND Bettype in (21003, 21004)   
 			  AND (TransDate BETWEEN convert(varchar(10), current_timestamp, 120) AND convert(varchar(10), current_timestamp, 120) + ' 23:59:59')  
 			  AND ISNULL(ti.IsDel,0) = 0
+			  AND t.winlostdate >= @balanceUpDay
 		 ) 
 		BEGIN 
 			SELECT @SkipTransfer = 1  

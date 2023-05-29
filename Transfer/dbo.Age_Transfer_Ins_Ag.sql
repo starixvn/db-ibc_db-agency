@@ -141,6 +141,16 @@ Select @AgentID = @ToCustID, @CustID = @FromCustID
 Declare @today DATETIME
 set @today = cast(datediff(dd,0,getdate()) as datetime)
 
+-- get move bet date
+DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
+DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
+DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
+
+INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
+EXEC bodb02.dbo.Age_SelBalanceUpDay
+	
+SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+
 IF @IsAllDayBalTransfer = 0
 BEGIN
 	IF EXISTS (	SELECT TOP 1 1	
@@ -148,6 +158,7 @@ BEGIN
 				WHERE t.CustId=@custid AND
 					t.Bettype in (21003, 21004) AND
 					CONVERT(DATE, t.TransDate) = @today AND
+					t.winlostdate >= @balanceUpDay AND
 					ISNULL(ti.IsDel,0) = 0 )
 	BEGIN
 		Select @ErrMsg = case @Language 
@@ -172,16 +183,6 @@ SELECT @WinlostDate = convert(nvarchar(10), current_timestamp,120)
 
 DECLARE @yesterday SMALLDATETIME
 SELECT  @yesterday = DATEADD(DAY, -1, CONVERT(DATE, GETDATE()))
-
--- get move bet date
-DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
-
-INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-EXEC bodb02.dbo.Age_SelBalanceUpDay
-	
-SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
 -- Get bettype --
 DECLARE @isTest BIT = 0
