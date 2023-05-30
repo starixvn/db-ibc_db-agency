@@ -30,7 +30,7 @@ BEGIN
 		@ErrMsg			= CONCAT('Hey guys, the item on process auto transfer clear balance on server (', @@SERVERNAME ,') has been running for too long time (table Age_ClearBalanceCust_Process). Please check!!!')
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(ROWLOCK)
 	WHERE SessionDate = @SessionDate
-		AND p.Status IN ('Waiting', 'Processing')
+		AND p.Status IN ('Waiting', 'Processing', 'Pending')
 		AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) > 15 --> long running since 15 minutes
 
 	IF @ErrCode > 0

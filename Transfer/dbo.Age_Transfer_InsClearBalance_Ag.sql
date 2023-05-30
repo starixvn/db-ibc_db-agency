@@ -103,7 +103,7 @@ BEGIN
 	BEGIN  
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT @ErrCode AS MsgId, 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT 50007 AS MsgId, 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIds
 				,@Status='Failed', @Result = @Result;
 		END
@@ -130,19 +130,22 @@ BEGIN
 	SELECT @AgentID = @FromCustID  
  
 	---- #1 CHECK UM TRANSFER FUNCTION
+	DECLARE @ToTimeConfig DATETIME;
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
 		@CustID = @AgentID
 		,@Language = @Language
 		,@ErrMsg = @ErrMsg OUTPUT 
 		,@ErrCode = @ErrCode OUTPUT
+		,@ToTimeConfig = @ToTimeConfig OUTPUT
 	 
 	IF @ErrCode <> 0  -- Function Transfer is under UM 
 	BEGIN	
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT @ErrCode AS MsgId,'TransferUM' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT 90015 AS MsgId,'TransferUM' AS ErrType, @ErrMsg AS ErrMsg, 
+				@ToTimeConfig AS ToTime FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-				,@Status='Failed', @Result = @Result;
+				,@Status='Pending', @Result = @Result;
 		END
 		RETURN
 	END		

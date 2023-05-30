@@ -89,5 +89,16 @@ BEGIN
 		WHERE p.FromCustId = @FromCustID
 			AND p.[Status] <> 'Cancelled'
 	END
+	ELSE IF @Status IN ('Pending')
+	BEGIN
+		UPDATE p WITH(ROWLOCK, UPDLOCK)
+		SET	p.Status = @Status
+			,p.ModifiedTime = CURRENT_TIMESTAMP
+			,p.Result = @Result
+		FROM dbo.Age_ClearBalanceCust_Process p
+		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+		WHERE p.FromCustId = @FromCustID
+			AND p.[Status] = 'Waiting'
+	END
 END
 GO

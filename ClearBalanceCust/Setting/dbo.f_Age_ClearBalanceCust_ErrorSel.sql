@@ -13,10 +13,10 @@ RETURN
 */
 SELECT ErrType, AllowReTry, IsShowHistory
 FROM (
-	VALUES ('TransferOption', 0, 0),
+	VALUES ('TransferOption', 0, 1),
 		('ProcessingTime', 0, 0),
 		('NotFound', 0, 0),
-		('TransferUM', 1, 0),
+		('TransferUM', 1, 1),
 		('AccTransfering', 0, 0),
 		('BalanceZero', 0, 0),
 		('TransferStatus', 0, 1),

@@ -46,10 +46,14 @@ BEGIN
 		INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		LEFT JOIN CTE_ProcessingBatch cte ON cte.SuperId = p.SuperId
 		WHERE cte.SuperId IS NULL -- NOT RUNNING Super
-			AND p.[Status] = 'Failed' 
+			AND p.[Status] IN ('Failed', 'Pending') 
 			AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
-			AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4
 			AND err.AllowReTry = 1
+			AND 1 = CASE 
+						WHEN err.ErrType = 'TransferUM' AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 59 THEN 1 
+						WHEN ISNULL(p.TryCount, 1) BETWEEN 1 AND 4 THEN 1
+						ELSE 0
+					END
 	)
 	INSERT INTO #tmpClearBalanceCust_BatchLog
 	SELECT TOP(@NumOfThread) SuperId, BatchNo, RoleID, FromCustId, ToCustIds
@@ -93,8 +97,8 @@ BEGIN
 	SELECT TOP(1) @IsCompleted = 0
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
 	WHERE 
-		p.Status IN ('New', 'Waiting', 'Processing')	--> Main Thread running
+		p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
 		OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
-
+		OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
 END
 GO

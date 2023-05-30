@@ -34,7 +34,7 @@ BEGIN
 						s.FromCustID IN (@Recommend, @MRecommend, @SRecommend )
 						AND s.ToCustID IN (@CustID, @Recommend, @MRecommend)	
 					)
-					AND s.[Status] IN ('Waiting', 'Processing')
+					AND s.[Status] IN ('Waiting', 'Processing', 'Pending')
 		)
 	BEGIN
 		SELECT @ErrCode = 50020

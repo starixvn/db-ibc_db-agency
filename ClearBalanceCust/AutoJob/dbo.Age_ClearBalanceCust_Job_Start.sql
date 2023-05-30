@@ -61,10 +61,6 @@ BEGIN
 	-- TODO: INIT data from current setting
 	IF @RunningMode IN ('Normal', 'Resume')
 		AND NOT EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
-		--AND (
-		--	@AutoTransfer_StartTime_Check IS NULL -- 1st Schedule
-		--	OR DATEDIFF(HOUR, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) >= 24 -- daily Run
-		--)
 	BEGIN
 		SELECT @RunningMode = 'Normal',
 			@SiteDBGroupID	= [dbo].[f_Get_SiteDBGroupID]();
@@ -191,7 +187,6 @@ BEGIN
 	ELSE IF @RunningMode = 'Normal'
 		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
 		AND @AutoTransfer_RunningModeCheck = 'Normal' --> Main Thread is running
-		AND DATEDIFF(MINUTE, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) < 5
 	BEGIN
 		-- TODO: Scaleout Threads -- parallisym threads at the same time
 		SET @RunningMode = 'Scaleout';
@@ -205,7 +200,6 @@ BEGIN
 	ELSE IF @RunningMode = 'Resume'
 		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
 		AND @AutoTransfer_RunningModeCheck = 'Normal' --> Main Thread stoped
-		AND DATEDIFF(DAY, @AutoTransfer_StartTime_Check, @AutoTransfer_StartTime) = 0
 	BEGIN
 		BEGIN TRY
 			-- Update Waiting, Running to New if any
@@ -222,9 +216,12 @@ BEGIN
 			FROM dbo.[Age_ClearBalanceCust_Process] p
 				INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 			WHERE p.SessionDate = @SessionDate
-				AND p.[Status] = 'Failed'
-				AND p.TryCount BETWEEN 1 AND 4
+				AND p.[Status] IN ('Failed', 'Pending')
 				AND err.AllowReTry = 1
+				AND 1 = CASE 
+							WHEN err.ErrType = 'TransferUM' AND p.TryCount BETWEEN 1 AND 59 THEN 1 
+							WHEN p.TryCount BETWEEN 1 AND 4 THEN 1 
+						ELSE 0 END
 			;
 
 

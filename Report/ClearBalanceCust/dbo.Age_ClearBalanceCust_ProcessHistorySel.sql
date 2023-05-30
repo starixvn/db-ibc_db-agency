@@ -59,7 +59,7 @@ BEGIN
 	)
 	INSERT INTO @tmpStatus([Status])
 	SELECT t.[Value]
-	FROM STRING_SPLIT('New,Waiting,Processing,Completed,Failed,Cancelled', ',') AS t
+	FROM STRING_SPLIT('New,Waiting,Processing,Completed,Failed,Cancelled,Pending', ',') AS t
 	LEFT JOIN CTE_Status cte ON cte.[Status] = t.[Value]
 	WHERE @StatusCheck = 'All'
 		OR cte.[Status] IS NOT NULL
@@ -127,8 +127,8 @@ BEGIN
 		END AS Amount, 
 		p.[Status],
 		CASE 
-			WHEN p.[Status] = 'Failed' THEN bodb02.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
-		ELSE '' END AS Reason,
+			WHEN p.[Status] IN ('Pending') THEN REPLACE(ct.Reason, '<TO_TIME>', ct.ToTimeText)
+			ELSE ct.Reason END AS Reason,
 		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, @BASELINE_DATE), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
 		COUNT(1) OVER() AS TotalRow
 		
@@ -140,16 +140,20 @@ BEGIN
 		OUTER APPLY (
 			SELECT CASE 
 				WHEN p.[Status] IN ('Completed', 'Failed') AND p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.EndTime)
-				WHEN p.[Status] IN ('Failed') AND p.StartTime IS NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime)
+				WHEN p.[Status] IN ('Failed', 'Pending') AND p.StartTime IS NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime)
 				WHEN p.[Status] IN ('Cancelled') THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime) 
 				ELSE 0 
-			END AS CompletedTimeSec
+			END AS CompletedTimeSec,
+			CASE 
+				WHEN p.[Status] IN ('Failed', 'Pending') THEN bodb02.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
+				ELSE '' END AS Reason,
+				ISNULL(FORMAT(CAST(JSON_VALUE(p.Result, '$.ToTime') AS DATETIME), 'MM/dd/yyyy HH:mm:ss tt'), '') AS ToTimeText
 		) AS ct
 	WHERE p.FromCustId = @FromCustId
 		AND p.SessionDate BETWEEN @rptFromDate AND @rptToDate
 		AND (
 			p.[Status] <> 'Failed'
-			OR (p.[Status] = 'Failed' AND err.IsShowHistory = 1)
+			OR (p.[Status] IN ('Failed', 'Pending') AND err.IsShowHistory = 1)
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)
 	ORDER BY 

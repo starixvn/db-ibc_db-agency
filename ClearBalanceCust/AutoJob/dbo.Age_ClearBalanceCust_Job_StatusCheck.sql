@@ -42,6 +42,7 @@ BEGIN
 			AND (
 				p.[Status] IN ('New', 'Waiting', 'Processing')
 				OR (p.[Status] = 'Failed' AND p.TryCount BETWEEN 1 AND 4)
+				OR (p.[Status] = 'Pending' AND p.TryCount BETWEEN 1 AND 59)
 			)
 		UNION ALL
 
@@ -53,6 +54,7 @@ BEGIN
 			AND (
 				p.[Status] IN ('New', 'Waiting', 'Processing')
 				OR ([Status] = 'Failed' AND p.TryCount BETWEEN 1 AND 4)
+				OR ([Status] = 'Pending' AND p.TryCount BETWEEN 1 AND 59)
 			)
 	) AS ck
 END
