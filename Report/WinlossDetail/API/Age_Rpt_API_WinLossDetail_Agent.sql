@@ -1,6 +1,8 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Rpt_API_WinLossDetail_Agent] 
 	@CustID			 INT = NULL --mrecommend
+	,@FromDate		 SMALLDATETIME
+	,@ToDate		 SMALLDATETIME
 	,@ProductIds	 VARCHAR(MAX)
 	,@ProductDetails NVARCHAR(MAX) = 'All'
 	,@BalanceUpDay	 SMALLDATETIME
@@ -14,6 +16,7 @@ DB: DBAGE/bodb02
 
 Revisions:
 	- 20221128@Eddie: Change from SP "Age_Rpt_WinLossDetail_Agent" [RedmineID: #171247]
+	- 20230511@Eddie: Enhance data range [RedmineID: #188033]
 	
 Param's Explanation:
 	
@@ -22,11 +25,8 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON
 	
-	DECLARE @CurrentDate SMALLDATETIME, @DateLimit SMALLDATETIME
+	DECLARE @DateLimit SMALLDATETIME, @CurrentDate SMALLDATETIME
 	SET @CurrentDate = CAST(GETDATE() AS DATE)
-	
-	DECLARE @ToDate		SMALLDATETIME = @CurrentDate
-	DECLARE @FromDate	SMALLDATETIME = DATEADD(MONTH, -1, @ToDate)
 	
 	SELECT @DateLimit = ISNULL(MinDate, DATEADD(DAY, - 1 * LimitDays, @CurrentDate))
 	FROM dbo.Age_CustDateLimit l WITH (NOLOCK)
@@ -37,8 +37,6 @@ BEGIN
 	BEGIN
 		SELECT @FromDate = @DateLimit
 	END
-
-	DECLARE @RowStart INT, @RowEnd INT
 
 	CREATE TABLE #MAgWinLossDetails
 	(
@@ -198,6 +196,7 @@ BEGIN
 		(
 			SELECT @FDate AS winlostdate, SportType, BetType, LeagueGroupID, TicketType
 			FROM #TmpCondSumWL
+			WHERE @FDate <= @TDate
 			UNION ALL
 			SELECT DATEADD(DAY, 1, winlostdate), SportType, BetType, LeagueGroupID, TicketType
 			FROM CTE_Winlostdate
