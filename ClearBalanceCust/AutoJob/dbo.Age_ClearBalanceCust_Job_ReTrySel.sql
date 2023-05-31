@@ -31,22 +31,21 @@ BEGIN
 		;
 
 	DROP TABLE IF EXISTS #tmpClearBalanceCust_BatchLog;
-	CREATE TABLE #tmpClearBalanceCust_BatchLog (SuperId INT, BatchNo INT PRIMARY KEY, RoleID TINYINT, FromCustId INT, ToCustIds VARCHAR(4000));
+	CREATE TABLE #tmpClearBalanceCust_BatchLog (BatchNo INT, FromCustId INT, ToCustId INT, INDEX IDX CLUSTERED (BatchNo, FromCustId));
 
-	-- TODO: Waiting/Running Batch
+	--TODO: NOT Running Super
 	WITH CTE_ProcessingBatch AS (
-		SELECT p.SuperId
-		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-		WHERE Status IN ('Waiting', 'Running')
-		GROUP BY p.SuperId
+		SELECT rs.SuperId
+		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(ROWLOCK)
+		WHERE rs.RunningBatchNo = 0 ---> NOT running
+			AND rs.RunningTotal > 0 ---> 1 batch at least
 	),
 	CTE_ClearBalanceCust_ReTry AS (
-		SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, p.ToCustId
-		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-		INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
-		LEFT JOIN CTE_ProcessingBatch cte ON cte.SuperId = p.SuperId
-		WHERE cte.SuperId IS NULL -- NOT RUNNING Super
-			AND p.[Status] IN ('Failed', 'Pending') 
+		SELECT p.SuperId, p.BatchNo, p.FromCustId, p.ToCustId
+		FROM dbo.Age_ClearBalanceCust_Process p WITH(ROWLOCK)
+			INNER JOIN CTE_ProcessingBatch cte ON cte.SuperId = p.SuperId
+			INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
+		WHERE p.[Status] IN ('Failed', 'Pending') 
 			AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 1 -- 1 minute delay time
 			AND err.AllowReTry = 1
 			AND 1 = CASE 
@@ -54,43 +53,31 @@ BEGIN
 						WHEN ISNULL(p.TryCount, 1) BETWEEN 1 AND 4 THEN 1
 						ELSE 0
 					END
+	),
+	CTE_RetryBatch AS (
+		SELECT TOP(@NumOfThread) SuperId, BatchNo
+		FROM (
+			SELECT p.SuperId, p.BatchNo
+				,ROW_NUMBER() OVER (PARTITION BY p.SuperID ORDER BY p.BatchNo ASC) AS runIdx
+			FROM CTE_ClearBalanceCust_ReTry p
+			GROUP BY p.SuperId, p.BatchNo
+		) AS t
+		WHERE t.runIdx = 1
 	)
-	INSERT INTO #tmpClearBalanceCust_BatchLog
-	SELECT TOP(@NumOfThread) SuperId, BatchNo, RoleID, FromCustId, ToCustIds
-	FROM (
-		SELECT p.SuperId, p.BatchNo, p.RoleID, p.FromCustId, STRING_AGG(p.ToCustId,',') AS ToCustIds
-			,ROW_NUMBER() OVER (PARTITION BY p.SuperID ORDER BY p.BatchNo ASC) AS runIdx
-		FROM CTE_ClearBalanceCust_ReTry p
-		GROUP BY p.SuperId, p.BatchNo, p.RoleID, p.FromCustId
-	) AS t
-	WHERE t.runIdx = 1
-	ORDER BY t.BatchNo ASC;
+	UPDATE p WITH(ROWLOCK, UPDLOCK)
+		SET p.[Status] = 'Waiting'
+			, p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = NULL, p.EndTime = NULL, p.Amount = NULL
+			, p.TryCount = ISNULL(p.TryCount, 0) + 1
+		OUTPUT INSERTED.BatchNo, INSERTED.FromCustId, INSERTED.ToCustId
+		INTO #tmpClearBalanceCust_BatchLog (BatchNo, FromCustId, ToCustId)
+	FROM  dbo.Age_ClearBalanceCust_Process p
+	INNER JOIN CTE_RetryBatch bl ON bl.SuperId = p.SuperId AND bl.BatchNo = p.BatchNo
+	INNER JOIN CTE_ClearBalanceCust_ReTry rt ON rt.FromCustId = p.FromCustId AND rt.ToCustId = p.ToCustId
 
-	IF EXISTS (SELECT 1 FROM #tmpClearBalanceCust_BatchLog)
-	BEGIN
-		BEGIN TRY
-			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET p.[Status] = 'Waiting'
-				, p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = NULL, p.EndTime = NULL, p.Amount = NULL
-				, p.TryCount = ISNULL(p.TryCount, 0) + 1
-			FROM  dbo.Age_ClearBalanceCust_Process p
-			INNER JOIN #tmpClearBalanceCust_BatchLog bl ON bl.SuperId = p.SuperId AND bl.BatchNo = p.BatchNo
-			CROSS APPLY (
-				SELECT TOP 1 1 AS IsExist FROM STRING_SPLIT(bl.ToCustIds, ',') AS t 
-				WHERE p.FromCustId = bl.FromCustId
-					AND p.ToCustId = t.value
-			) AS ck
-
-		END TRY
-		BEGIN CATCH
-			SELECT @ErrCode = 101
-				,@ErrMsg = ERROR_MESSAGE()
-		END CATCH
-	END
-
-	SELECT bl.BatchNo, bl.FromCustId, bl.ToCustIds, @RunningMode AS RunningMode
-		--, CONCAT('EXEC dbo.Age_ClearBalanceCust_Job_BatchProcess @BatchNo=', BatchNo, ', @FromCustId=', FromCustId, ', @ToCustIds=''', ToCustIds, ''', @RunningMode=''', @RunningMode, '''')
+	--OUTPUT
+	SELECT bl.BatchNo, bl.FromCustId, STRING_AGG(bl.ToCustId, ',') AS ToCustIds, @RunningMode AS RunningMode
 	FROM #tmpClearBalanceCust_BatchLog bl
+	GROUP BY bl.BatchNo, bl.FromCustId
 	ORDER BY bl.BatchNo ASC;
 
 	-- CHECK: Finished or NOT

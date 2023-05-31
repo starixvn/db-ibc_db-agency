@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ConfigSel]
 AS
 /*
@@ -16,7 +16,7 @@ BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE
-		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance',
+		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance_Config',
 		@AutoJob_ClearBalance_VValue	VARCHAR(200)
 	;
 
