@@ -25,7 +25,7 @@ BEGIN
 
 	DECLARE @SessionDate	SMALLDATETIME,
 		@Creator			INT, --StarixIT
-		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance',
+		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
 		@AutoTransfer_StartTime			DATETIME,
 		@AutoJob_ClearBalance_VValue	VARCHAR(200),
 		@AutoTransfer_StartTime_Check	DATETIME,
@@ -62,8 +62,7 @@ BEGIN
 	IF @RunningMode IN ('Normal', 'Resume')
 		AND NOT EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
 	BEGIN
-		SELECT @RunningMode = 'Normal',
-			@SiteDBGroupID	= [dbo].[f_Get_SiteDBGroupID]();
+		SELECT @SiteDBGroupID	= [dbo].[f_Get_SiteDBGroupID]();
 
 		BEGIN TRY
 			--TODO: CLEANUP data
@@ -169,7 +168,7 @@ BEGIN
 				ELSE
 				BEGIN
 					INSERT INTO dbo.SystemSettings(VName, VValue)
-					SELECT @AutoJob_ClearBalance_VName AS VName,@AutoJob_ClearBalance_VValue AS VValue
+					VALUES (@AutoJob_ClearBalance_VName, @AutoJob_ClearBalance_VValue)
 				END
 
 				-- SET output
@@ -186,7 +185,6 @@ BEGIN
 	END
 	ELSE IF @RunningMode = 'Normal'
 		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
-		AND @AutoTransfer_RunningModeCheck = 'Normal' --> Main Thread is running
 	BEGIN
 		-- TODO: Scaleout Threads -- parallisym threads at the same time
 		SET @RunningMode = 'Scaleout';
@@ -199,19 +197,19 @@ BEGIN
 	END
 	ELSE IF @RunningMode = 'Resume'
 		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
-		AND @AutoTransfer_RunningModeCheck = 'Normal' --> Main Thread stoped
 	BEGIN
 		BEGIN TRY
-			-- Update Waiting, Running to New if any
+			-- Update Waiting, Processing to New if any
 			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = NULL, p.Amount = NULL
+			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP, p.Amount = NULL
+				,p.TryCount = NULL, p.Result = NULL, p.StartTime = NULL, p.EndTime = NULL
 			FROM dbo.[Age_ClearBalanceCust_Process] p
 			WHERE p.SessionDate = @SessionDate
 				AND [Status] IN ('Waiting', 'Processing')
 
-			-- Update Failed to New if any
+			-- Update Failed, Pending to New if any
 			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP
+			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP, p.Amount = NULL
 				,p.TryCount = NULL, p.Result = NULL, p.StartTime = NULL, p.EndTime = NULL
 			FROM dbo.[Age_ClearBalanceCust_Process] p
 				INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')

@@ -29,14 +29,14 @@ BEGIN
 		;
 
 	DROP TABLE IF EXISTS #tmpClearBalanceCust_BatchLog;
-	CREATE TABLE #tmpClearBalanceCust_BatchLog (BatchNo INT, FromCustId INT, ToCustId INT, INDEX IDX CLUSTERED (BatchNo, FromCustId));
+	CREATE TABLE #tmpClearBalanceCust_BatchLog (SuperId INT, BatchNo INT, FromCustId INT, ToCustId INT, INDEX IDX CLUSTERED (BatchNo, FromCustId));
 
 	--TODO: NOT Running Super
 	WITH CTE_ProcessingBatch AS (
-		SELECT TOP(@NumOfThread) rs.SuperId
+		SELECT rs.SuperId
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(ROWLOCK)
 		WHERE rs.RunningBatchNo = 0
-		ORDER BY rs.TotalDownline DESC
+			AND rs.RunningTotal < rs.TotalBatch
 	),
 	CTE_SuperBatch AS (
 		SELECT TOP(@NumOfThread) SuperId, BatchNo
@@ -53,10 +53,21 @@ BEGIN
 	UPDATE p WITH(ROWLOCK, UPDLOCK)
 		SET p.[Status] = 'Waiting'
 			, p.ModifiedTime = CURRENT_TIMESTAMP
-		OUTPUT INSERTED.BatchNo, INSERTED.FromCustId, INSERTED.ToCustId
-		INTO #tmpClearBalanceCust_BatchLog (BatchNo, FromCustId, ToCustId)
-	FROM  dbo.Age_ClearBalanceCust_Process p
+		OUTPUT INSERTED.SuperId, INSERTED.BatchNo, INSERTED.FromCustId, INSERTED.ToCustId
+		INTO #tmpClearBalanceCust_BatchLog (SuperId, BatchNo, FromCustId, ToCustId)
+	FROM dbo.Age_ClearBalanceCust_Process p
 	INNER JOIN CTE_SuperBatch bl ON bl.SuperId = p.SuperID AND bl.BatchNo = p.BatchNo
+
+	--TODO: SET Running Super
+	;WITH CTE_Super AS (
+		SELECT DISTINCT SuperId, BatchNo
+		FROM #tmpClearBalanceCust_BatchLog
+	)
+	UPDATE rs WITH(ROWLOCK, UPDLOCK)
+	SET rs.RunningBatchNo = cte.BatchNo
+	FROM dbo.Age_ClearBalanceCust_RunningSuper rs
+	INNER JOIN CTE_Super cte ON cte.SuperId = rs.SuperId
+	;
 
 	--- OUTPUT
 	SELECT bl.BatchNo, bl.FromCustId, STRING_AGG(bl.ToCustId, ',') AS ToCustIds, @RunningMode AS RunningMode

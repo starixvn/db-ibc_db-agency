@@ -87,6 +87,7 @@ BEGIN
 		@commandExec NVARCHAR(MAX);
 	
 	BEGIN TRY
+		
 		SELECT @procName = CASE 
 							WHEN @RoleID = 2 THEN 'dbo.Age_Transfer_InsClearBalance_Ag'
 							WHEN @RoleID = 3 THEN 'dbo.Age_Transfer_Ins_MAg'
@@ -118,7 +119,6 @@ BEGIN
 									)
 							END
 									
-	
 		INSERT INTO dbo.Age_ClearBalanceCust_BatchLog(BatchNo, SuperId, Command, StartTime, BatchStatus, RunningMode)
 		SELECT @BatchNo AS BatchNo
 			, @SuperId AS SuperId
@@ -129,12 +129,6 @@ BEGIN
 		;
 		SET @BatchLogIdIns = SCOPE_IDENTITY();
 	
-		UPDATE rs WITH(ROWLOCK, UPDLOCK)
-		SET rs.RunningBatchNo = @BatchNo
-		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
-		WHERE SuperId = @SuperId
-		;
-
 		--TODO: EXEC Batch transfering
 		SELECT @ErrCode		= 0, 
 			@ErrMsg			= ''
@@ -161,13 +155,14 @@ BEGIN
 			,bl.EndTime = CURRENT_TIMESTAMP
 		FROM dbo.Age_ClearBalanceCust_BatchLog bl
 		WHERE BatchLogId = @BatchLogIdIns 
-			--AND bl.BatchNo = @BatchNo AND bl.SuperId = @SuperId AND RunningMode = @RunningMode
 		;
 
 		UPDATE rs WITH(ROWLOCK, UPDLOCK)
-		SET rs.RunningBatchNo = 0, RunningTotal = ISNULL(RunningTotal,0) + 1
+		SET rs.RunningBatchNo = 0, 
+			rs.RunningTotal = CASE WHEN @RunningMode = 'Normal' THEN ISNULL(rs.RunningTotal,0) + 1 ELSE rs.RunningTotal END
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
 		WHERE rs.SuperId = @SuperId
+			
 		;
 
 	END TRY

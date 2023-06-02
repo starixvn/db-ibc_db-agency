@@ -150,7 +150,7 @@ BEGIN
 				ELSE 0 
 			END AS CompletedTimeSec,
 			CASE 
-				WHEN p.[Status] IN ('Failed', 'Pending') THEN bodb02.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
+				WHEN p.[Status] IN ('Failed', 'Pending') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
 				ELSE '' END AS Reason,
 				ISNULL(FORMAT(CAST(JSON_VALUE(p.Result, '$.ToTime') AS DATETIME), 'MM/dd/yyyy HH:mm:ss tt'), '') AS ToTimeText
 		) AS ct

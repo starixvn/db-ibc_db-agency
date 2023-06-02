@@ -30,7 +30,7 @@ BEGIN
 	;
 
 	IF @RunningMode NOT IN ('Normal', 'Resume')
-		OR LEN(ISNULL(@DefaultTime,'')) <> 8 ---> 'hh:mm:ss'
+		OR LEN(ISNULL(@DefaultTime,'')) <> 5 ---> 'hh:mm'
 	BEGIN
 		SELECT @ErrCode = 101,
 			@ErrMsg		= 'Invalid input values'
