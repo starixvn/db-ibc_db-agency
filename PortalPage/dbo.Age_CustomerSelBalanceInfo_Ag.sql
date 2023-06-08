@@ -15,6 +15,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd to Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20220429@Malcolm: Offer telegram bot service - [Redmine: #167819]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 
 BEGIN
@@ -63,7 +64,7 @@ BEGIN
 		memberCash,		yesterdayMemberCash,
 		PendingTransfer3rd
 	)
-	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId, @MoveBetDay = @moveBetDay
+	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId, @MoveBetDay = @moveBetDay, @BUDate = @balanceUpDay
 
 	-- winloss
 	INSERT INTO #BalanceInfo

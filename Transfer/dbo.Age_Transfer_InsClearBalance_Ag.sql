@@ -64,6 +64,7 @@ Revisions:
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
+	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 
 Param's Explanation:
 • @FromCustID: list from custid
@@ -91,22 +92,6 @@ EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
 if @ErrCode > 0  
 BEGIN  
   return  
-END
-
-DECLARE @EndProcessingTime DATETIME, @RemainingTime VARCHAR(30)
-EXEC dbo.Acc_CheckProcessingData @EndProcessingTime = @EndProcessingTime OUTPUT
-
-IF @EndProcessingTime IS NOT NULL
-BEGIN
-	SELECT
-		@ErrCode = 101,
-		@ErrMsg = CASE @Language WHEN 'E' THEN 'To ensure the accuracy of data while being processed, all transfer transaction cannot be executed. The expected time to finish is {expandedtime} (GMT +8). We are sorry for any inconvenience caused.'
-								ELSE dbo.f_Get_MsgNamebyMsgID(50010, @Language)	END,
-		@RemainingTime = CONVERT(VARCHAR(8), DATEADD(HOUR, 12, @EndProcessingTime), 114) + ' ' + CONVERT(VARCHAR(10), DATEADD(HOUR, 12, @EndProcessingTime), 101) --convert time to GMT +8
-
-	SELECT @ErrMsg = REPLACE(@ErrMsg, '{expandedtime}', @RemainingTime)
-	
-	RETURN
 END
 
  if not exists (select 1 FROM CustDB.dbo.customer with (NOLOCK) where custid = @FromCustID)  
@@ -149,7 +134,7 @@ END
 -- get move bet date
 DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-DECLARE @IsDiff BIT = 0, @NewMoveBetDate SMALLDATETIME = NULL
+DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
 
 INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
 EXEC bodb02.dbo.Age_SelBalanceUpDay
@@ -272,43 +257,9 @@ END
 		AND b.ruben = 0
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 	GROUP BY custid
-
-	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
-	SELECT
-		custid,
-		ISNULL(SUM( winlost-actual_stake+playercomm ), 0),
-		0,
-		0,
-		'tblBettrans'
-	FROM dbo.bettrans b WITH(NOLOCK)
-	WHERE b.recommend = @AgentID
-		AND b.bettype < 19999
-		AND b.statusID IN (111, 112, 113)
-		AND (
-			b.winlostdate < @yesterday
-			OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-		)
-		AND winlostdate > @moveBetsDay
-	GROUP BY custid
-
-	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
-	SELECT
-		custid,
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
-		0,
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0),
-		'tblTransfer'
-	FROM dbo.Transfer b WITH(NOLOCK)
-	WHERE b.recommend = @AgentID
-		AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
-	GROUP BY custid
-
-	----check move bet date again to make sure it is not changed
-	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
-
-	IF (@IsDiff = 1)
+	
+	WHILE (@IsDiff = 1)
 	BEGIN
-
 		DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
 
 		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
@@ -320,13 +271,12 @@ END
 			'tblBettrans'
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @AgentID
-			AND b.bettype < 19999
 			AND b.statusID IN (111, 112, 113)
 			AND (
 				b.winlostdate < @yesterday
 				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 			)
-			AND winlostdate > @NewMoveBetDate
+			AND winlostdate > @moveBetsDay
 		GROUP BY custid
 
 		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
@@ -338,9 +288,30 @@ END
 			'tblTransfer'
 		FROM dbo.Transfer b WITH(NOLOCK)
 		WHERE b.recommend = @AgentID
-			AND ((bettype = 19999 and winlostdate <= @NewMoveBetDate) OR bettype > 19999)
+					AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+												WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+												WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+										ELSE 1 END
 		GROUP BY custid
+		
+		----check MB date, BU date again to make sure it is not changed
+		SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+		EXEC dbo.Acc_ReCheck_MBUDate 
+			@MBDate = @moveBetsDay,
+			@BUDate = @balanceUpDay,
+			@IsDiff = @IsDiff OUTPUT,
+			@NewMBDate = @NewMoveBetDate OUTPUT,
+			@NewBUDate = @NewBalanceUpDate OUTPUT
 
+		IF @IsDiff = -1 
+			BEGIN
+				RETURN	
+			END
+				
+		IF @IsDiff = 1 
+		BEGIN
+			SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+		END
 	END
 
  END 
@@ -398,47 +369,7 @@ END
 		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 	GROUP BY custid
 
-	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
-	SELECT
-		custid,
-		ISNULL(SUM(winlost-actual_stake+playercomm ), 0),
-		0,
-		0,
-		'tblBettrans'
-	FROM dbo.bettrans b WITH(NOLOCK)
-	WHERE b.recommend = @AgentID
-		AND b.bettype < 19999
-		AND b.statusID IN (111, 112, 113)
-		AND (
-			b.winlostdate < @yesterday
-			OR (
-				winlostdate = @yesterday
-				AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-			)
-		)
-		AND winlostdate > @moveBetsDay
-	GROUP BY custid
-
-	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
-		SELECT
-			custid,
-			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
-			0,
-			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0),
-			'tblTransfer'
-		FROM dbo.Transfer b WITH(NOLOCK)
-		WHERE b.recommend = @AgentID
-			AND (
-				b.winlostdate <= @yesterday
-				OR b.bettype > 20000
-			)
-			AND ((bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999)
-		GROUP BY custid
-
-	----check move bet date again to make sure it is not changed
-	EXEC bodb02.dbo.Acc_Transfer_CheckMoveBetDate @moveBetsDay, @IsDiff = @IsDiff OUTPUT, @NewMoveBetDate = @NewMoveBetDate OUTPUT
-
-	IF (@IsDiff = 1)
+	WHILE (@IsDiff = 1)
 	BEGIN
 
 		DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
@@ -452,7 +383,6 @@ END
 			'tblBettrans'
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @AgentID
-			AND b.bettype < 19999
 			AND b.statusID IN (111, 112, 113)
 			AND (
 				b.winlostdate < @yesterday
@@ -461,7 +391,7 @@ END
 					AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 				)
 			)
-			AND winlostdate > @NewMoveBetDate
+			AND winlostdate > @moveBetsDay
 		GROUP BY custid
 
 		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
@@ -477,8 +407,30 @@ END
 					b.winlostdate <= @yesterday
 					OR b.bettype > 20000
 				)
-				AND ((bettype = 19999 and winlostdate <= @NewMoveBetDate) OR bettype > 19999)
+				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+										WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+										WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+								ELSE 1 END
 			GROUP BY custid
+		
+		----check MB date, BU date again to make sure it is not changed
+		SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+		EXEC dbo.Acc_ReCheck_MBUDate 
+			@MBDate = @moveBetsDay,
+			@BUDate = @balanceUpDay,
+			@IsDiff = @IsDiff OUTPUT,
+			@NewMBDate = @NewMoveBetDate OUTPUT,
+			@NewBUDate = @NewBalanceUpDate OUTPUT
+    
+    IF @IsDiff = -1 
+			BEGIN
+				RETURN	
+			END
+			
+		IF @IsDiff = 1 
+		BEGIN
+			SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+		END
 
 	END
 
@@ -545,6 +497,7 @@ END
 			  WHERE CustId=@custid AND Bettype in (21003, 21004)   
 			  AND (TransDate BETWEEN convert(varchar(10), current_timestamp, 120) AND convert(varchar(10), current_timestamp, 120) + ' 23:59:59')  
 			  AND ISNULL(ti.IsDel,0) = 0
+			  AND t.winlostdate >= @balanceUpDay
 		 ) 
 		BEGIN 
 			SELECT @SkipTransfer = 1  

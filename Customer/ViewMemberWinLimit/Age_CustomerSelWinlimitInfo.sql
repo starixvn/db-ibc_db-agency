@@ -24,6 +24,7 @@ AS
 		- 20210729@Elodie: Change use CustProductStatus.CloseInfo instead of CustInfo.closed [Redmine: #148600]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	Param's Explanation:
 		- @CustID: SAgentID
 */
@@ -148,14 +149,16 @@ BEGIN
 				INNER LOOP JOIN bodb02.dbo.bettrans b WITH(NOLOCK) ON c.CustId = b.CustId
 				LEFT JOIN #SportBettype s ON s.bettype = b.Bettype
 			WHERE b.statusID IN (111,112,113)
-					AND b.bettype < 19999
 					AND b.winlostdate > @moveBetsDay
 			--get data from Transfer
 			UNION ALL
 			SELECT c.custid, winlost - actual_stake + playercomm AS Balance
 			FROM #Cust_tmp c WITH(NOLOCK)
 				INNER LOOP JOIN bodb02.dbo.Transfer b WITH(NOLOCK) ON c.CustId = b.CustId
-			WHERE (bettype = 19999 and winlostdate <= @moveBetsDay) OR bettype > 19999
+			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
 			--get data from bettransRnG table within 2 days: today & yesterday
 			UNION ALL
 			SELECT c.custid, winlost - actual_stake + playercomm AS Balance
@@ -178,6 +181,7 @@ BEGIN
 	FROM #Cust_tmp c  
 	INNER LOOP JOIN bodb02.dbo.Transfer b WITH(NOLOCK) ON c.CustId = b.CustId
 	WHERE b.Bettype IN (21008, 21009)
+		AND winlostdate >= @balanceUpDay
 	GROUP BY b.CustId
 
 	--Calc total rows

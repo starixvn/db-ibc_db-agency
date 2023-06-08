@@ -14,6 +14,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210817@Sol: Allow more time to transfer (phase 2) - [RedmineID: #160019]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 */
 
 BEGIN
@@ -55,8 +56,7 @@ BEGIN
 			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
 		FROM dbo.bettrans b WITH (NOLOCK)
 			INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-		WHERE bettype < 19999 
-			AND winlostdate > @moveBetsDay 
+		WHERE winlostdate > @moveBetsDay 
 		GROUP BY
 			b.winlostdate, b.bettype, b.statusId,
 			b.custid
@@ -71,7 +71,11 @@ BEGIN
 			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
 		FROM dbo.Transfer b WITH (NOLOCK)
 			INNER JOIN @tblrecommend r ON b.recommend = r.recommend
-		WHERE (b.bettype = 19999 and b.winlostdate <= @moveBetsDay) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
+		WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
+			AND bettype NOT IN (21008, 21009)
 		GROUP BY
 			b.winlostdate, b.bettype, 
 			b.custid
@@ -149,7 +153,6 @@ BEGIN
 			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
 		FROM dbo.bettrans b WITH (NOLOCK)
 		WHERE b.recommend = @CustId
-			AND bettype < 19999
 			AND winlostdate > @moveBetsDay
 		GROUP BY
 			b.winlostdate, b.bettype, b.statusId,
@@ -166,9 +169,11 @@ BEGIN
 			b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
 		FROM dbo.Transfer b WITH (NOLOCK)
 		WHERE b.recommend = @CustId
-			AND (
-					(b.bettype = 19999 and b.winlostdate <= @moveBetsDay) OR (b.bettype > 19999 and b.bettype NOT IN (21008, 21009))
-				)
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
+			AND bettype NOT IN (21008, 21009)
 		GROUP BY
 			b.winlostdate, b.bettype, 
 			b.custid

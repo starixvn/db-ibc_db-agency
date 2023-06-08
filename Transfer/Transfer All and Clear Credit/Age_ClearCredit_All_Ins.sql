@@ -21,6 +21,7 @@ AS
 	Revisions:
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20181102@Johnson: Apply service broker for logging [Redmine: #103547]
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 */
 
 BEGIN
@@ -68,23 +69,7 @@ BEGIN
 			SELECT 1, dbo.f_Get_MsgNamebyMsgID(40036, @Language)
 		END
 
-		-- 2. Check processing data
-		EXEC DBTXN.bodb02.dbo.Acc_Core_IsMainProcessRunning
-				@CustId				= @DownlineCustId,
-				@UplineId			= @CustId,
-				@IsDepositMember	= 0,
-				@ErrCode			= @ErrCode OUTPUT,
-				@ErrMsg				= @ErrMsg OUTPUT
-
-		IF @ErrCode <> 0
-		BEGIN
-			INSERT INTO @ErrTable (Id, Content)
-			SELECT 2, @ErrMsg
-
-			SELECT @ErrCode = 0, @ErrMsg = ''
-		END
-
-		-- 3. Nagative given credit
+		-- 2. Nagative given credit
 		IF @RoleId = 4
 		BEGIN
 			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
@@ -102,7 +87,7 @@ BEGIN
 			END
 		END
 
-		-- 4. Nagative bet credit -- calculate amount part
+		-- 3. Nagative bet credit -- calculate amount part
 	END
 
 	-- List of Agents
@@ -201,71 +186,59 @@ BEGIN
 
 			WHILE @@FETCH_STATUS = 0
 			BEGIN
-				SELECT @ErrCode = 0
+				
+				UPDATE c WITH (ROWLOCK, UPDLOCK)
+				SET c.credit = t.newCredit
+					OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
+				FROM dbo.CustInfo c
+					INNER JOIN #tblMember t ON c.custid = t.custid
+				WHERE c.recommend = @recommend
 
-				-- Prevent user from decreasing given credit due to processing data
-				EXEC DBTXN.bodb02.dbo.Acc_Core_IsMainProcessRunning
-						@CustId				= 0,
-						@UplineId			= @recommend,
-						@IsDepositMember	= 0,
-						@ErrCode			= @ErrCode OUTPUT,
-						@ErrMsg				= @ErrMsg OUTPUT
-
-				IF @ErrCode = 0
+				IF @@ERROR <> 0
 				BEGIN
-					UPDATE c WITH (ROWLOCK, UPDLOCK)
-					SET c.credit = t.newCredit
-						OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
-					FROM dbo.CustInfo c
-						INNER JOIN #tblMember t ON c.custid = t.custid
-					WHERE c.recommend = @recommend
-
-					IF @@ERROR <> 0
-					BEGIN
-						SELECT @ErrCode = 111
-						RETURN
-					END
-
-					SELECT @ClearedCreditMember = @ClearedCreditMember + SUM(oldCredit - newCredit) FROM @UpdCredit
-
-					-- for log
-					SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
-
-					IF @SubAccID > 0
-						SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
-					
-					SELECT @log = '', @SB_Error = 0
-					
-					SELECT @log = (
-						SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID, getdate() as LogDate
-						FROM @UpdCredit
-						FOR XML RAW('Row')
-					)
-
-					EXEC bodb_CustomerLog.sb.CustomerLog_SendMessage @xml = @log, 
-																	@MessageType='MessageType_CustomerLog_UserLog_Credit', 
-																	@functionName = 'UserLog_Others',
-																	@SB_Error = @SB_Error out
-
-					--if ssb error
-					IF @SB_Error = 1
-					BEGIN
-						-- Write log
-						BEGIN TRY
-							INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
-							SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-							FROM	@UpdCredit 
-						END TRY
-						BEGIN CATCH
-							SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
-		
-							INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
-							SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
-							FROM	@UpdCredit 
-						END CATCH						
-					END	
-					DELETE @UpdCredit
+					SELECT @ErrCode = 111
+					RETURN
 				END
+
+				SELECT @ClearedCreditMember = @ClearedCreditMember + SUM(oldCredit - newCredit) FROM @UpdCredit
+
+				-- for log
+				SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
+
+				IF @SubAccID > 0
+					SELECT @LogData = 'SubAccount:' + COALESCE(@SubAccName, SPACE(1)) + ' - ' + @LogData
+				
+				SELECT @log = '', @SB_Error = 0
+				
+				SELECT @log = (
+					SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID, getdate() as LogDate
+					FROM @UpdCredit
+					FOR XML RAW('Row')
+				)
+
+				EXEC bodb_CustomerLog.sb.CustomerLog_SendMessage @xml = @log, 
+																@MessageType='MessageType_CustomerLog_UserLog_Credit', 
+																@functionName = 'UserLog_Others',
+																@SB_Error = @SB_Error out
+
+				--if ssb error
+				IF @SB_Error = 1
+				BEGIN
+					-- Write log
+					BEGIN TRY
+						INSERT INTO DBLOG.bodb_CustomerLog.dbo.Userlog_Credit (userid, custid, OldValue, NewValue, ip, doing, ActionID)
+						SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+						FROM	@UpdCredit 
+					END TRY
+					BEGIN CATCH
+						SELECT @LogData = @LogData + ' ErrMsg=' + ERROR_MESSAGE()
+	
+						INSERT INTO bodb_CustomerLog.dbo.userlog_Credit(userid, custid, OldValue, NewValue, ip, doing, ActionID)
+						SELECT	@UserID, custid, oldCredit, newCredit, @ip, @LogData, @ActionId 
+						FROM	@UpdCredit 
+					END CATCH						
+				END	
+				DELETE @UpdCredit
 
 				FETCH NEXT FROM CS_agent
 					INTO @recommend
