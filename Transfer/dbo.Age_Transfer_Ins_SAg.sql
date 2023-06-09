@@ -159,12 +159,6 @@ BEGIN
 	
 	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
-		IF @IsAutoTransfer = 1
-		BEGIN
-			SET @Result = (SELECT 50010 AS MsgId, 'ProcessingTime' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-				,@Status='Failed', @Result = @Result;
-		END
 	DECLARE @WinlostDate datetime
 	SELECT  @WinlostDate = convert(varchar(10), CURRENT_TIMESTAMP, 120)
 
@@ -250,65 +244,79 @@ BEGIN
 			AND winlostdate >= @yesterday
 		GROUP BY mrecommend
 
-	WHILE (@IsDiff = 1)
-	BEGIN
+		WHILE (@IsDiff = 1)
+		BEGIN
 
-		DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
+			DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
 
-		-- bettrans
-		INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-		SELECT 
-			mrecommend,
-			ISNULL(SUM(mwinlost+acomm-comm), 0)
-				+ ISNULL(SUM(awinlost+comm-playercomm), 0)
-				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0),
-			'tblBettrans'
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-			AND b.statusID IN (111, 112, 113)
-			AND winlostdate > @moveBetsDay
-			AND (
-					b.winlostdate < @yesterday
-					OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-				)
-					AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-											WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-											WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-									ELSE 1 END
-					AND bettype NOT IN (21008, 21009)
-		INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-		SELECT 
-			mrecommend,
-			ISNULL(SUM(winlost-actual_stake), 0),
-			'tblTransfer'
-		FROM dbo.Transfer b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #mrecommend m WHERE b.custid = m.CustId)
-					AND 1 = CASE WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+			-- bettrans
+			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+			SELECT 
+				mrecommend,
+				ISNULL(SUM(mwinlost+acomm-comm), 0)
+					+ ISNULL(SUM(awinlost+comm-playercomm), 0)
+					+ ISNULL(SUM(winlost-actual_stake+playercomm), 0),
+				'tblBettrans'
+			FROM dbo.bettrans b WITH(NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
+				AND b.statusID IN (111, 112, 113)
+				AND winlostdate > @moveBetsDay
+				AND (
+						b.winlostdate < @yesterday
+						OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+					)
+			GROUP BY mrecommend
+
+			-- Transfer
+			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+			SELECT 
+				mrecommend,
+				ISNULL(SUM(mwinlost+acomm-comm), 0)
+					+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
+					+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+				'tblTransfer'
+			FROM dbo.Transfer b WITH(NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
+						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+												WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 												WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 										ELSE 1 END
-					AND bettype NOT IN (21008, 21009)
-		GROUP BY mrecommend
-
-
-		----check MB date, BU date again to make sure it is not changed
-		SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
-		EXEC dbo.Acc_ReCheck_MBUDate 
-			@MBDate = @moveBetsDay,
-			@BUDate = @balanceUpDay,
-			@IsDiff = @IsDiff OUTPUT,
-			@NewMBDate = @NewMoveBetDate OUTPUT,
-			@NewBUDate = @NewBalanceUpDate OUTPUT
-
-		IF @IsDiff = -1 
-			BEGIN
-				RETURN	
-			END
+						AND bettype NOT IN (21008, 21009)
+			GROUP BY mrecommend
 			
-		IF @IsDiff = 1 
-		BEGIN
-			SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+			SELECT 
+				mrecommend,
+				ISNULL(SUM(winlost-actual_stake), 0),
+				'tblTransfer'
+			FROM dbo.Transfer b WITH(NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #mrecommend m WHERE b.custid = m.CustId)
+						AND 1 = CASE WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+													WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+											ELSE 1 END
+						AND bettype NOT IN (21008, 21009)
+			GROUP BY mrecommend
+
+
+			----check MB date, BU date again to make sure it is not changed
+			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+			EXEC dbo.Acc_ReCheck_MBUDate 
+				@MBDate = @moveBetsDay,
+				@BUDate = @balanceUpDay,
+				@IsDiff = @IsDiff OUTPUT,
+				@NewMBDate = @NewMoveBetDate OUTPUT,
+				@NewBUDate = @NewBalanceUpDate OUTPUT
+
+			IF @IsDiff = -1 
+				BEGIN
+					RETURN	
+				END
+			
+			IF @IsDiff = 1 
+			BEGIN
+				SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+			END
 		END
-	END
 
 	 END
 	 -- YESTERDAY TRANSFER 
@@ -340,84 +348,85 @@ BEGIN
 			AND winlostdate = @yesterday
 		GROUP BY mrecommend
 
-	WHILE (@IsDiff = 1)
-	BEGIN
-
-		DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
-		
-		-- bettrans
-		INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-		SELECT 
-			mrecommend,
-			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END), 0)
-				+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0)
-				+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-			'tblBettrans'
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-			AND b.statusID IN (111, 112, 113)
-			AND winlostdate > @moveBetsDay
-			AND (
-					b.winlostdate < @yesterday
-					OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-				)
-		GROUP BY mrecommend
-
-		-- Transfer
-		INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-		SELECT 
-			mrecommend,
-			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END), 0)
-				+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ), 0)
-				+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ), 0),
-			'tblTransfer'
-		FROM dbo.Transfer b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-					AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-										WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-										WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-								ELSE 1 END
-					AND bettype NOT IN (21008, 21009)
-		GROUP BY mrecommend
-
-		INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-		SELECT 
-			mrecommend,
-			ISNULL(SUM(winlost-actual_stake), 0),
-			'tblTransfer'
-		FROM dbo.Transfer b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #mrecommend m WHERE b.custid = m.CustId)
-			AND bettype NOT IN (21008, 21009)
-			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-				ELSE 1 END
-		GROUP BY mrecommend
-
-		----check MB date, BU date again to make sure it is not changed
-		SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
-		EXEC dbo.Acc_ReCheck_MBUDate 
-			@MBDate = @moveBetsDay,
-			@BUDate = @balanceUpDay,
-			@IsDiff = @IsDiff OUTPUT,
-			@NewMBDate = @NewMoveBetDate OUTPUT,
-			@NewBUDate = @NewBalanceUpDate OUTPUT
-
-		IF @IsDiff = -1 
-			BEGIN
-				RETURN	
-			END
-
-		IF @IsDiff = 1 
+		WHILE (@IsDiff = 1)
 		BEGIN
-			SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+
+			DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
+		
+			-- bettrans
+			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+			SELECT 
+				mrecommend,
+				ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END), 0)
+					+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0)
+					+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+				'tblBettrans'
+			FROM dbo.bettrans b WITH(NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
+				AND b.statusID IN (111, 112, 113)
+				AND winlostdate > @moveBetsDay
+				AND (
+						b.winlostdate < @yesterday
+						OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+					)
+			GROUP BY mrecommend
+
+			-- Transfer
+			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+			SELECT 
+				mrecommend,
+				ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END), 0)
+					+ ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ), 0)
+					+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ), 0),
+				'tblTransfer'
+			FROM dbo.Transfer b WITH(NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
+						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+											WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+											WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+									ELSE 1 END
+						AND bettype NOT IN (21008, 21009)
+			GROUP BY mrecommend
+
+			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+			SELECT 
+				mrecommend,
+				ISNULL(SUM(winlost-actual_stake), 0),
+				'tblTransfer'
+			FROM dbo.Transfer b WITH(NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #mrecommend m WHERE b.custid = m.CustId)
+				AND bettype NOT IN (21008, 21009)
+				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
+			GROUP BY mrecommend
+
+
+			----check MB date, BU date again to make sure it is not changed
+			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+			EXEC dbo.Acc_ReCheck_MBUDate 
+				@MBDate = @moveBetsDay,
+				@BUDate = @balanceUpDay,
+				@IsDiff = @IsDiff OUTPUT,
+				@NewMBDate = @NewMoveBetDate OUTPUT,
+				@NewBUDate = @NewBalanceUpDate OUTPUT
+
+			IF @IsDiff = -1 
+				BEGIN
+					RETURN	
+				END
+
+			IF @IsDiff = 1 
+			BEGIN
+				SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+			END
 		END
-	END
 
- END
+	 END
 
- -- sum amount
- INSERT INTO #Master (custID, Amt, MAgUser)
+	-- sum amount
+	INSERT INTO #Master (custID, Amt, MAgUser)
 	SELECT m.custID, SUM(ISNULL(bal.Balance,0)), ''
 	FROM #mrecommend m
 	LEFT JOIN #BalanceInfo bal ON bal.CustId = m.CustId
