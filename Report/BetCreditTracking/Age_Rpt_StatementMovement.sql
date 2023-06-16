@@ -1,5 +1,5 @@
 /*<info serverAlias="DBBAH-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
-ALTER PROCEDURE Age_Rpt_StatementMovement
+ALTER PROC dbo.Age_Rpt_StatementMovement
 (
 	@FromDate DATETIME,
 	@Todate DATETIME,
@@ -19,6 +19,7 @@ AS
 	Revisions:  
 		- 20220222@Sol: Initialize sp - [RedmineID: #167296] 
 		- 20220531@Sol: Alpha - Limit date range on Bet Credit Tracking - [RedmineID: #173447]
+		- 20230615@Lewis: Alpha - Excluding SUM on MemberWinLoss, MemberComm, MemberTotal columns - [RedmineID: #189725]
 	
 */
 BEGIN
@@ -100,17 +101,6 @@ BEGIN
 			,Bettype SMALLINT
 		)
 
-		CREATE TABLE #SumAmount
-		(
-			CustId INT
-			,TransId BIGINT
-			,MemberWinloss MONEY
-			,MemberComm MONEY
-			,MemberTotal MONEY
-			,IsMultipleMoved BIT
-		)
-		CREATE CLUSTERED INDEX IX_SumAmount ON #SumAmount(CustId, TransId)
-
 		CREATE TABLE #Custids (CustId INT)
 
 		CREATE TABLE #tblFinalResult (RowNumber INT, Custid INT, Username VARCHAR(30), TransId BIGINT, OldWinlostDate DATETIME, WinlostDate DATETIME, MemberWinloss MONEY, MemberComm MONEY, MemberTotal MONEY, IsMultipleMoved BIT)
@@ -180,16 +170,6 @@ BEGIN
 	----delete parlay, outright have old winlostdate > new winlostdate
 	DELETE FROM #DataDetail WHERE Bettype IN (10, 29) AND OldWinlostDate >= WinlostDate
 
-	----sum data by transid
-	INSERT INTO #SumAmount(CustId, TransId, MemberWinloss, MemberComm, MemberTotal, IsMultipleMoved)
-	SELECT d.CustId, d.TransId, 
-		SUM(d.Winlost - d.ActualStake) AS MemberWinloss, 
-		SUM(d.PlayerComm) AS MemberComm, 
-		SUM(d.Winlost - d.ActualStake + d.PlayerComm) AS MemberTotal,
-		CASE WHEN COUNT(d.TransId) > 1 THEN 1 ELSE 0 END AS IsMultipleMoved
-	FROM #DataDetail d
-	GROUP BY d.CustId, d.TransId
-
 	----paging
 	DECLARE @RowStart INT , @RowEnd INT
 	SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
@@ -198,13 +178,21 @@ BEGIN
 	INSERT INTO #tblFinalResult (RowNumber, Custid, Username, TransId, OldWinlostDate, WinlostDate, MemberWinloss, MemberComm, MemberTotal, IsMultipleMoved)
 	SELECT 
 		ROW_NUMBER() OVER (ORDER BY c.username, d.TransId, d.OldWinlostDate) AS RowNumber,
-		c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, s.MemberWinloss, s.MemberComm, s.MemberTotal, s.IsMultipleMoved
+		c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, 
+		d.Winlost - d.ActualStake AS MemberWinloss, 
+		d.PlayerComm AS MemberComm, 
+		d.Winlost - d.ActualStake + d.PlayerComm AS MemberTotal,
+		s.IsMultipleMoved
 	FROM #DataDetail d WITH(NOLOCK)
-		INNER JOIN #SumAmount s WITH(NOLOCK)
+		INNER JOIN (
+						SELECT CustId,TransId,CASE WHEN COUNT(TransId) > 1 THEN 1 ELSE 0 END AS IsMultipleMoved 
+						FROM #DataDetail (NOLOCK)
+						GROUP BY CustId,TransId
+					) s 
 			ON d.CustId = s.CustId AND d.TransId = s.TransId
 		INNER JOIN dbo.Customer c WITH(NOLOCK)
 			ON c.custid= d.CustId AND c.roleid = 1
-
+	
 	--get total row
 	SELECT @TotalRows = COUNT(1) FROM #tblFinalResult fr WITH(NOLOCK)
 	
@@ -218,7 +206,6 @@ BEGIN
 	----remove temp tables
 	DROP TABLE #SportBettype
 	DROP TABLE #DataDetail
-	DROP TABLE #SumAmount
 	DROP TABLE #Custids
 	DROP TABLE #tblFinalResult
 
