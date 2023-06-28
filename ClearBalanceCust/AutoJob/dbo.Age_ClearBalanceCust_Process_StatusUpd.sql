@@ -89,7 +89,7 @@ BEGIN
 		WHERE p.FromCustId = @FromCustID
 			AND p.[Status] <> 'Cancelled'
 	END
-	ELSE IF @Status IN ('Pending')
+	ELSE IF @Status IN ('Pending', 'Ignored')
 	BEGIN
 		UPDATE p WITH(ROWLOCK, UPDLOCK)
 		SET	p.Status = @Status

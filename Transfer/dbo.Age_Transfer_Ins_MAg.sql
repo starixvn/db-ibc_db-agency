@@ -101,7 +101,7 @@ BEGIN
 	BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT @ErrCode AS MsgId, 'TransferUM' AS ErrType, @ErrMsg AS ErrMsg,
+			SET @Result = (SELECT 50024 AS MsgId, 'TransferUM' AS ErrType, @ErrMsg AS ErrMsg,
 				@ToTimeConfig AS ToTime FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
 				,@Status='Pending', @Result = @Result;
@@ -120,7 +120,7 @@ BEGIN
 	BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT @ErrCode AS MsgId, 'AccTransfering' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT 50026 AS MsgId, 'AccTransfering' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
 				,@Status='Failed', @Result = @Result;
 		END	
@@ -157,19 +157,13 @@ BEGIN
 	 BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT @ErrCode AS MsgId, 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT 50023 AS MsgId, 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIds
 				,@Status='Failed', @Result = @Result;
 		END
 		RETURN
 	 END
 
-		IF @IsAutoTransfer = 1
-		BEGIN
-			SET @Result = (SELECT 50010 AS MsgId, 'ProcessingTime' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-				,@Status='Failed', @Result = @Result;
-		END
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
@@ -413,9 +407,9 @@ BEGIN
 		
 		IF @IsAutoTransfer = 1
 		BEGIN
-			SET @Result = (SELECT 50002 AS MsgId, 'BalanceZero' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			SET @Result = (SELECT 50025 AS MsgId, 'BalanceZero' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-				,@Status='Failed', @Result = @Result;
+				,@Status='Ignored', @Result = @Result;
 		END
 		RETURN	
 	END
@@ -458,7 +452,7 @@ BEGIN
 		IF (@Amount = 0)
 		BEGIN
 			UPDATE @tblResultMember
-			SET MsgId = 50002, ErrType = 'BalanceZero', ErrMsg = 'Cannot transfer because balance is 0!'
+			SET MsgId = 50025, ErrType = 'BalanceZero', ErrMsg = 'Cannot transfer because balance is 0!'
 			WHERE CustId = @AgentID;	
 			GOTO NEXT_PAIR;
 		END
@@ -557,7 +551,7 @@ BEGIN
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @AgentID;
 
 					GOTO NEXT_PAIR;
@@ -584,7 +578,7 @@ BEGIN
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @AgentID;
 
 					GOTO NEXT_PAIR;
@@ -621,7 +615,7 @@ BEGIN
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @AgentID;
 
 					GOTO NEXT_PAIR;
@@ -649,7 +643,7 @@ BEGIN
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
-					SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 					WHERE CustID = @AgentID;
 
 					GOTO NEXT_PAIR;
@@ -703,7 +697,9 @@ BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
 			SELECT @Result = (SELECT MsgId, ErrType, ErrMsg, RefNo FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-				@PairStatus = CASE WHEN RefNo > 0 THEN 'Completed' ELSE 'Failed' END
+				@PairStatus = CASE WHEN RefNo > 0 THEN 'Completed' ELSE 
+					CASE WHEN ErrType = 'BalanceZero' THEN 'Ignored' ELSE 'Failed' END 
+				END
 			FROM @tblResultMember 
 			WHERE CustId=@AgentID
 			;

@@ -2,7 +2,7 @@
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ConfigUpd]
 	@DefaultTime	VARCHAR(8),
 	@RunningMode	VARCHAR(10),
-	@ManualTime		SMALLDATETIME NULL,
+	@ManualTime		SMALLDATETIME = NULL,
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS

@@ -34,7 +34,7 @@ BEGIN
 	--TODO: NOT Running Super
 	WITH CTE_ProcessingBatch AS (
 		SELECT rs.SuperId
-		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(ROWLOCK)
+		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(UPDLOCK)
 		WHERE rs.RunningBatchNo = 0
 			AND rs.RunningTotal < rs.TotalBatch
 	),
@@ -43,7 +43,7 @@ BEGIN
 		FROM (
 			SELECT p.SuperId, p.BatchNo
 				,ROW_NUMBER() OVER (PARTITION BY p.SuperID ORDER BY p.BatchNo ASC) AS runIdx
-			FROM dbo.Age_ClearBalanceCust_Process p WITH(ROWLOCK)
+			FROM dbo.Age_ClearBalanceCust_Process p WITH(UPDLOCK)
 				INNER JOIN CTE_ProcessingBatch rs ON rs.SuperId = p.SuperID
 			WHERE p.[Status] = 'New'
 			GROUP BY p.SuperId, p.BatchNo
@@ -57,6 +57,7 @@ BEGIN
 		INTO #tmpClearBalanceCust_BatchLog (SuperId, BatchNo, FromCustId, ToCustId)
 	FROM dbo.Age_ClearBalanceCust_Process p
 	INNER JOIN CTE_SuperBatch bl ON bl.SuperId = p.SuperID AND bl.BatchNo = p.BatchNo
+	WHERE p.[Status] = 'New'
 
 	--TODO: SET Running Super
 	;WITH CTE_Super AS (

@@ -159,10 +159,9 @@ BEGIN
 
 		UPDATE rs WITH(ROWLOCK, UPDLOCK)
 		SET rs.RunningBatchNo = 0, 
-			rs.RunningTotal = CASE WHEN @RunningMode = 'Normal' THEN ISNULL(rs.RunningTotal,0) + 1 ELSE rs.RunningTotal END
+			rs.RunningTotal = CASE WHEN @RunningMode <> 'ReTry' THEN ISNULL(rs.RunningTotal,0) + 1 ELSE rs.RunningTotal END
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
 		WHERE rs.SuperId = @SuperId
-			
 		;
 
 	END TRY

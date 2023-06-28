@@ -58,8 +58,8 @@ BEGIN
 		WHERE @StatusCheck <> 'All'
 	)
 	INSERT INTO @tmpStatus([Status])
-	SELECT t.[Value]
-	FROM STRING_SPLIT('New,Waiting,Processing,Completed,Failed,Cancelled,Pending', ',') AS t
+	SELECT DISTINCT t.[Value]
+	FROM STRING_SPLIT('New,Waiting,Processing,Completed,Failed,Cancelled,Pending,Ignored', ',') AS t
 	LEFT JOIN CTE_Status cte ON cte.[Status] = t.[Value]
 	WHERE @StatusCheck = 'All'
 		OR cte.[Status] IS NOT NULL
@@ -139,21 +139,20 @@ BEGIN
 		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
 			SELECT CASE 
-				WHEN p.[Status] IN ('Completed', 'Failed') AND p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.EndTime)
-				WHEN p.[Status] IN ('Failed', 'Pending') AND p.StartTime IS NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime)
-				WHEN p.[Status] IN ('Cancelled') THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime) 
+				WHEN p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.EndTime)
+				WHEN p.StartTime IS NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime)
 				ELSE 0 
 			END AS CompletedTimeSec,
 			CASE 
-				WHEN p.[Status] IN ('Failed', 'Pending') THEN bodb02.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
+				WHEN err.ErrType IS NOT NULL THEN bodb02.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
 				ELSE '' END AS Reason,
-				ISNULL(FORMAT(CAST(JSON_VALUE(p.Result, '$.ToTime') AS DATETIME), 'MM/dd/yyyy HH:mm:ss tt'), '') AS ToTimeText
+				ISNULL(FORMAT(DATEADD(HOUR, 12, CAST(JSON_VALUE(p.Result, '$.ToTime') AS DATETIME)), 'MM/dd/yyyy HH:mm:ss tt'), '') AS ToTimeText
 		) AS ct
 	WHERE p.FromCustId = @FromCustId
 		AND p.SessionDate BETWEEN @rptFromDate AND @rptToDate
 		AND (
-			p.[Status] <> 'Failed'
-			OR (p.[Status] IN ('Failed', 'Pending') AND err.IsShowHistory = 1)
+			err.ErrType IS NULL
+			OR (err.ErrType IS NOT NULL AND err.IsShowHistory = 1)
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)
 	ORDER BY 

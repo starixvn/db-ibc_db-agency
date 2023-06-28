@@ -36,13 +36,13 @@ BEGIN
 	--TODO: NOT Running Super
 	WITH CTE_ProcessingBatch AS (
 		SELECT rs.SuperId
-		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(ROWLOCK)
+		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(UPDLOCK)
 		WHERE rs.RunningBatchNo = 0 ---> NOT running
 			AND rs.RunningTotal > 0 ---> 1 batch at least
 	),
 	CTE_ClearBalanceCust_ReTry AS (
 		SELECT p.SuperId, p.BatchNo, p.FromCustId, p.ToCustId
-		FROM dbo.Age_ClearBalanceCust_Process p WITH(ROWLOCK)
+		FROM dbo.Age_ClearBalanceCust_Process p WITH(UPDLOCK)
 			INNER JOIN CTE_ProcessingBatch cte ON cte.SuperId = p.SuperId
 			INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		WHERE p.[Status] IN ('Failed', 'Pending') 
