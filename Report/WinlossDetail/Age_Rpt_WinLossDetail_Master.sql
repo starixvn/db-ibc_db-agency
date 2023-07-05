@@ -9,7 +9,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Master]
 	@MoveBetsDay	SMALLDATETIME,
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
-	@TotalRecords	INT = 0 OUTPUT
+	@TotalRecords	INT = 0 OUTPUT,
+	@UserName		VARCHAR(30) = ''
 AS
 
 /*
@@ -41,6 +42,8 @@ Revisions:
 	- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
 	- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 	- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
+	- 20230331@Malcolm: Add first name, last name [RedmineID : #184752]
+	- 20230526@Lewis: Add Search by Username [RedmineID : #184752 - Phase 2]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -69,6 +72,17 @@ Revisions:
 
 BEGIN
 	SET NOCOUNT ON;
+
+	DECLARE @UserName_CustId INT
+
+	IF @Username <> ''	--@USERNAME IS NOT NULL		=> -1: No Data || >0: Exactly Username
+	BEGIN
+		SET @UserName_CustId = (SELECT ISNULL(Custid,-1) FROM Customer WITH (NOLOCK) WHERE username = @UserName)
+	END
+	ELSE				--@USERNAME IS NULL			=> Run all
+	BEGIN
+		SET @UserName_CustId = 0
+	END
 
 	DECLARE @RowStart	INT,
 			@RowEnd		INT
@@ -447,6 +461,8 @@ BEGIN
 	BEGIN
 		SELECT	w.CustID AS CustId, 
 				c.UserName AS CustName, 
+				c.FirstName,
+				c.LastName,
 				SUM(TurnOver) as Turnover,
 				SUM(TurnoverNoDraw) as NetTurnover,
 				SUM(GrossComm) as GrossComm,
@@ -460,8 +476,9 @@ BEGIN
 				SUM(SAgComm) as SAgComm,
 				SUM(NoOfTicket) as NumberOfTickets
 		FROM #SAgWinLossDetails w 
-			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-		GROUP BY w.CustID, c.UserName
+			INNER JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+		WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
+		GROUP BY w.CustID, c.UserName, c.FirstName,  c.LastName
 		ORDER BY c.Username;
 
 		SELECT	NULL AS CustId,
@@ -478,7 +495,8 @@ BEGIN
 				SUM(SAgWinlost) as SAgWinLoss,
 				SUM(SAgComm) as SAgComm,
 				SUM(NoOfTicket) as NumberOfTickets
-		FROM #SAgWinLossDetails;
+		FROM #SAgWinLossDetails
+		WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
 	END
 	ELSE
 	BEGIN
@@ -488,15 +506,17 @@ BEGIN
 			FROM (
 				SELECT CustID
 				FROM #SAgWinLossDetails
+				WHERE @UserName_CustId = 0 OR custid = @UserName_CustId
 				GROUP BY CustID
 			) tmp;
- 
 		END
 
 		SELECT wl.*
 		FROM (
 			SELECT	w.CustID AS CustId, 
 					c.UserName AS CustName, 
+					c.FirstName,
+					c.LastName,
 					SUM(TurnOver) as Turnover,
 					SUM(TurnoverNoDraw) as NetTurnover,
 					SUM(GrossComm) as GrossComm,
@@ -511,8 +531,9 @@ BEGIN
 					SUM(NoOfTicket) as NumberOfTickets,
 					ROW_NUMBER() over(order by c.UserName) as RowNum
 			FROM #SAgWinLossDetails w 
-				INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-			GROUP BY w.CustID, c.UserName
+				INNER JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
+			GROUP BY w.CustID, c.UserName, c.FirstName, c.LastName
 		) wl
 		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
@@ -530,7 +551,8 @@ BEGIN
 				SUM(SAgWinlost) as SAgWinLoss,
 				SUM(SAgComm) as SAgComm,
 				SUM(NoOfTicket) as NumberOfTickets
-		FROM #SAgWinLossDetails;
+		FROM #SAgWinLossDetails
+		WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
 	END
 
 	DROP TABLE #SAgWinLossDetails;
