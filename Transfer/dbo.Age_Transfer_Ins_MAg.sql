@@ -439,7 +439,10 @@ BEGIN
 	 SET @rCount = 1;
 	 WHILE EXISTS (SELECT 1 FROM #Agent WHERE rIdx = @rCount)
 	 BEGIN
-	
+		-- Reset error for each pair
+		SELECT @ErrCode = 0,
+			@ErrMsg = '';
+		
 		SELECT @AgentID = CustId, @Amount = Amt, @AgUser = agUser
 		FROM #Agent 
 		WHERE rIdx = @rCount;
@@ -501,13 +504,11 @@ BEGIN
 				-- INSERT AMOUNT INPUTED INTO BETTRANS 
 				SET @amount = @AmtTrans	
 			END 	
-	
-			-- All error messages are the same, so we set it here
+
 			SELECT @ErrMsg = CASE @Language 
 								WHEN 'E' THEN 'Clear balance failed. Please try again.'
 								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
 						END
-
 			------------------Gen refno--------------------------------------------------------------- 
 			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 

@@ -557,6 +557,10 @@ BEGIN
 			memberCredit money DEFAULT 0,
 			memberPendingTransfer3rd money DEFAULT 0,
 		**/
+		-- Reset error for each pair
+		SELECT @ErrCode = 0,
+			@ErrMsg = '';
+
 		BEGIN TRY
 			SELECT TOP(1)
 				@custID					= custid
@@ -600,14 +604,7 @@ BEGIN
 			END
 
 
-			     
-			-- All error messages are the same, so we set it here  
-			SELECT @ErrCode = 105, 
-					@ErrMsg = CASE 
-								WHEN @Language = 'E' THEN 'Clear balance failed. Please try again.'  
-        				ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
-        				END  
-
+			
 			------------------Gen refno---------------------------------------------------------------  
 			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
