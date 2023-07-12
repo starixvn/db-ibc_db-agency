@@ -82,7 +82,7 @@ BEGIN
 	BEGIN
 		UPDATE p WITH(ROWLOCK, UPDLOCK)
 		SET	p.Status = @Status
-			,p.ModifiedTime = CURRENT_TIMESTAMP, p.EndTime = CASE WHEN p.StartTime IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END
+			,p.EndTime = CURRENT_TIMESTAMP
 			,p.Result = @Result
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId

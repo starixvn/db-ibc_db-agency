@@ -60,7 +60,7 @@ BEGIN
 
 	-- TODO: Cancel transfer
 	UPDATE TOP(1) p WITH(ROWLOCK, UPDLOCK)
-	SET p.[Status] = 'Cancelled', p.ModifiedTime = CURRENT_TIMESTAMP
+	SET p.[Status] = 'Cancelled', p.EndTime = CURRENT_TIMESTAMP
 		,p.Result = (SELECT @Creator AS [Creator], @IP AS [IP], @ViewStatus AS [CurrentStatus] FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 	FROM dbo.Age_ClearBalanceCust_Process p 
 	INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId

@@ -47,9 +47,10 @@ FROM CTE_SMASetting s
 	INNER JOIN CustDB.dbo.CustSuper si WITH(NOLOCK) ON si.custid = c.srecommend
 WHERE si.SiteDBGroupID = @SiteDBGroupID
 	AND 1 = CASE 
-			WHEN s.RoleId = 4 THEN 1
-			WHEN SUBSTRING(ck.strTransferOption, 8, 1) = 1 
-				AND SUBSTRING(ck.strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 1 THEN 1
+			WHEN s.RoleId = 4 THEN 1 -- by pass cheking super vs master 
+			WHEN s.TransferOption = 0 THEN 1 -- Daily mode
+			WHEN SUBSTRING(ck.strTransferOption, 8, 1) = 1 -- Weekly mode
+				AND SUBSTRING(ck.strTransferOption, DATEPART(WEEKDAY, CURRENT_TIMESTAMP), 1) = 1 THEN 1 -- WEEKDAY enabled
 			ELSE 0 
 		END
 GO

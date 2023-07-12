@@ -144,8 +144,7 @@ BEGIN
 		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
 			SELECT CASE 
-				WHEN p.StartTime IS NOT NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.EndTime)
-				WHEN p.StartTime IS NULL THEN DATEDIFF(SECOND,@BASELINE_DATE,p.ModifiedTime)
+				WHEN p.Status IN ('Completed','Failed','Cancelled') THEN DATEDIFF(SECOND,@BASELINE_DATE, ISNULL(p.EndTime, p.ModifiedTime))
 				ELSE 0 
 			END AS CompletedTimeSec,
 			CASE 
