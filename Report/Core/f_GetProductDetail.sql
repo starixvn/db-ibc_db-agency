@@ -17,6 +17,7 @@ AS
 		- 20221004@Eddie: Add Tournament Prize [RedmineID: #178335]
 		- 20221207@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 		- 20221215@Eddie: Change Tournament Prize to Promotion Prize [RedmineID: #181578]
+		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
 		
 */
 RETURN
@@ -56,11 +57,13 @@ RETURN
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '14' AS ResourceId, 1 AS ProductId, 50 AS Sporttype, 0 AS Bettype, 14 AS [Order], 42 AS LeagueGroupID,  0 AS TicketType -- SABA Cricket
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '15' AS ResourceId, 1 AS ProductId, 1 AS Sporttype, 0 AS Bettype, 15 AS [Order], 113 AS LeagueGroupID,  0 AS TicketType -- SABA Soccer PinGoal
+	SELECT 'ProductDetail' AS RefId, '20' AS ResourceId, 1 AS ProductId, 5 AS Sporttype, 0 AS Bettype, 15 AS [Order], 42 AS LeagueGroupID,  0 AS TicketType -- SABA Tennis
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '16' AS ResourceId, 1 AS ProductId, 2 AS Sporttype, 0 AS Bettype, 16 AS [Order], 122 AS LeagueGroupID,  0 AS TicketType -- SABA Basketball PinGoal
+	SELECT 'ProductDetail' AS RefId, '15' AS ResourceId, 1 AS ProductId, 1 AS Sporttype, 0 AS Bettype, 16 AS [Order], 113 AS LeagueGroupID,  0 AS TicketType -- SABA Soccer PinGoal
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '19' AS ResourceId, 1 AS ProductId, 43 AS Sporttype, 0 AS Bettype, 19 AS [Order], 151 AS LeagueGroupID,  0 AS TicketType -- SABA ESports PinGoal
+	SELECT 'ProductDetail' AS RefId, '16' AS ResourceId, 1 AS ProductId, 2 AS Sporttype, 0 AS Bettype, 17 AS [Order], 122 AS LeagueGroupID,  0 AS TicketType -- SABA Basketball PinGoal
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '19' AS ResourceId, 1 AS ProductId, 43 AS Sporttype, 0 AS Bettype, 20 AS [Order], 151 AS LeagueGroupID,  0 AS TicketType -- SABA ESports PinGoal
 	
 	--- MG RNG
 	UNION ALL 
