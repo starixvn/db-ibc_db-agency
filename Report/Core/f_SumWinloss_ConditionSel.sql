@@ -58,6 +58,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20221215@Eddie: Change Tournament Prize to Promotion Prize [RedmineID: #181578]
 		- 20230206@Eddie: Add Jili product [RedmineID: #182860]
 		- 20230511@Eddie: Add YeeBet product [RedmineID: #186480]
+		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -72,6 +73,7 @@ RETURN
 				(1, 1, 0, 108, 0), -- SABA Soccer,
 				(1, 2, 0, 42, 0), -- SABA Basketball,
 				(1, 50, 0, 42, 0), -- SABA Cricket,
+				(1, 5, 0, 42, 0), -- SABA Tennis,
 				(1, 1, 0, 113, 0), -- SABA Soccer PinGoal,
 				(1, 2, 0, 122, 0), -- SABA Basketball PinGoal,
 				(1, 43, 0, 151, 0), -- SABA ESports PinGoal
