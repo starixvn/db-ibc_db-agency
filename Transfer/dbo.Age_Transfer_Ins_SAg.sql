@@ -502,7 +502,7 @@ BEGIN
 		IF @IsAutoTransfer = 1
 		BEGIN
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @MAgentID
-				,@Status='Processing'
+				,@Status='Processing', @Amount=@Amount
 				,@ErrCode = @ErrCode OUTPUT
 				,@ErrMsg = @ErrMsg OUTPUT
 			;
@@ -552,7 +552,7 @@ BEGIN
 			IF @IsAutoTransfer = 1
 			BEGIN
 				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @MAgentID
-					,@Status='Processing', @Amount=@Amount
+					,@Status='Processing'
 					,@ErrCode = @ErrCode OUTPUT
 					,@ErrMsg = @ErrMsg OUTPUT
 				;

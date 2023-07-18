@@ -14,7 +14,9 @@ RETURN
 WITH CTE_Setting AS (
 	SELECT DISTINCT c.roleid, s.FromCustID, CAST(GETDATE() AS DATE) AS SessionDate
 	FROM CustDB.dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
-	INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
+		INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
+		INNER JOIN CustDB.dbo.CustSuper cs WITH(NOLOCK) ON cs.custid = c.srecommend
+	WHERE cs.SiteDBGroupID = @SiteDBGroupID
 ),
 CTE_SMASetting AS (
 	SELECT tmp.SessionDate, ca.custid AS FromCustId, tmp.RoleId, ca.TransferOption,cm.IsAllDayBalTransfer
@@ -44,9 +46,7 @@ FROM CTE_SMASetting s
 	CROSS APPLY (
 		SELECT strTransferOption = CustDB.dbo.F_Decimal_Binary(ISNULL(s.TransferOption,0))
 	) AS ck
-	INNER JOIN CustDB.dbo.CustSuper si WITH(NOLOCK) ON si.custid = c.srecommend
-WHERE si.SiteDBGroupID = @SiteDBGroupID
-	AND 1 = CASE 
+WHERE 1 = CASE 
 			WHEN s.RoleId = 4 THEN 1 -- by pass cheking super vs master 
 			WHEN s.TransferOption = 0 THEN 1 -- Daily mode
 			WHEN SUBSTRING(ck.strTransferOption, 8, 1) = 1 -- Weekly mode

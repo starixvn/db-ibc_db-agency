@@ -520,10 +520,10 @@ BEGIN
 	END
  
 	--Update member credit of table #Member
-	Update #Member 
+	UPDATE #Member 
 	SET #Member.memberCredit = c.credit, #Member.memberName = c.username 
-	FROM #Member INNER JOIN DBCUST.CustDB.dbo.custinfo c with (nolock) ON #Member.custid = c.custid
-	WHERE #Member.memberBalance <> 0
+	FROM #Member 
+	INNER JOIN DBCUST.CustDB.dbo.custinfo c WITH (NOLOCK) ON #Member.custid = c.custid
  
 	DECLARE @procName VARCHAR(100)
 	SELECT  @procName = OBJECT_NAME(@@PROCID)
@@ -589,7 +589,7 @@ BEGIN
 			IF @IsAutoTransfer = 1
 			BEGIN
 				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
-					,@Status='Processing'
+					,@Status='Processing', @Amount=@Amount
 					,@ErrCode = @ErrCode OUTPUT
 					,@ErrMsg = @ErrMsg OUTPUT
 				;
@@ -612,7 +612,7 @@ BEGIN
 			IF @IsAutoTransfer = 1
 			BEGIN
 				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
-					,@Status='Processing', @Amount=@Amount
+					,@Status='Processing'
 					,@ErrCode = @ErrCode OUTPUT
 					,@ErrMsg = @ErrMsg OUTPUT
 				;
@@ -850,5 +850,8 @@ BEGIN
  
 	DROP TABLE #Member  
 
-		end  
+
+		SELECT @ErrMsg = CASE @Language   
+								WHEN 'E' then N'Clear balance failed for the following user(s):' + ' ' + @ErrItems
+							END 
 GO

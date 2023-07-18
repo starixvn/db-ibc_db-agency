@@ -39,30 +39,16 @@ BEGIN
 
 	IF @Status IN ('Processing')
 	BEGIN
-		IF (ISNULL(@Amount,0)  = 0)
-		BEGIN
-			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET	p.Status = @Status
-				,p.ModifiedTime = CURRENT_TIMESTAMP, p.StartTime = CURRENT_TIMESTAMP
-			FROM dbo.Age_ClearBalanceCust_Process p
-			INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
-			WHERE p.FromCustId = @FromCustID
-				AND p.[Status] = 'Waiting'
-			;
-			SET @effectedRows = @@ROWCOUNT;
-		END
-		ELSE IF (ISNULL(@Amount,0)  <> 0)
-		BEGIN
-			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET	p.Amount = @Amount
-				,p.ModifiedTime = CURRENT_TIMESTAMP
-			FROM dbo.Age_ClearBalanceCust_Process p
-			INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
-			WHERE p.FromCustId = @FromCustID
-				AND p.[Status] = 'Processing'
-			;
-			SET @effectedRows = @@ROWCOUNT;
-		END
+		UPDATE p WITH(ROWLOCK, UPDLOCK)
+		SET	p.Status = @Status
+			,p.Amount = ISNULL(@Amount, p.Amount)
+			,p.ModifiedTime = CURRENT_TIMESTAMP
+		FROM dbo.Age_ClearBalanceCust_Process p
+		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+		WHERE p.FromCustId = @FromCustID
+			AND p.[Status] IN ('Waiting', 'Processing')
+		;
+		SET @effectedRows = @@ROWCOUNT;
 
 		IF @effectedRows = 0
 		BEGIN
@@ -92,11 +78,16 @@ BEGIN
 	ELSE IF @Status IN ('Pending', 'Ignored')
 	BEGIN
 		UPDATE p WITH(ROWLOCK, UPDLOCK)
-		SET	p.Status = @Status
-			,p.ModifiedTime = CURRENT_TIMESTAMP
+		SET	p.[Status] = IIF(ck.IsReachPending = 1, 'Failed', @Status)
+			,p.ModifiedTime = IIF(ck.IsReachPending = 0, CURRENT_TIMESTAMP, p.ModifiedTime)
+			,p.EndTime = IIF(ck.IsReachPending = 1, CURRENT_TIMESTAMP, p.EndTime)
 			,p.Result = @Result
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+			OUTER APPLY ( 
+				SELECT 
+					CASE WHEN @Status = 'Pending' AND p.TryCount = 60 THEN 1 ELSE 0 END AS IsReachPending
+			) AS ck
 		WHERE p.FromCustId = @FromCustID
 			AND p.[Status] = 'Waiting'
 	END
