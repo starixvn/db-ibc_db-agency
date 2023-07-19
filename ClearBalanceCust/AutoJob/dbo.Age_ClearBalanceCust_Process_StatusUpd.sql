@@ -40,8 +40,9 @@ BEGIN
 	IF @Status IN ('Processing')
 	BEGIN
 		UPDATE p WITH(ROWLOCK, UPDLOCK)
-		SET	p.Status = @Status
-			,p.Amount = ISNULL(@Amount, p.Amount)
+		SET	p.Status		= @Status
+			,p.StartTime	= IIF(p.StartTime IS NULL, CURRENT_TIMESTAMP, p.StartTime)
+			,p.Amount		= ISNULL(@Amount, p.Amount)
 			,p.ModifiedTime = CURRENT_TIMESTAMP
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId

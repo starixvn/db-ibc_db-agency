@@ -568,6 +568,12 @@ BEGIN
 
 			------------------Insert trans into transfer----------------------------------------------
 			BEGIN TRANSACTION
+			-- All error messages are the same, so we set it here
+			Select @ErrMsg = case @Language 
+							when 'E' then 'Clear balance failed. Please try again.'
+							ELSE [dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
+							end
+
 			IF @amount >0
 			BEGIN
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
@@ -675,7 +681,8 @@ BEGIN
 			--
 			COMMIT TRANSACTION
 
-			Select @ErrMsg = ''
+			SELECT @ErrCode = 0, 
+				@ErrMsg		= ''
 	
 			IF @SubAccID > 0
 				SET @LogData = 'SubAccount:' + coalesce(cast(@SubAccName as varchar(30)),space(1)) + ' - ' + @LogData
@@ -721,6 +728,13 @@ BEGIN
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @MAgentID
 				,@Status=@PairStatus, @Result = @Result;
 		END
+		ELSE
+		BEGIN
+			--TODO: Check FAILED break for MANUAL transfer
+			IF @ErrCode > 0
+				RETURN
+		END
+
 		SET @rCount += 1;
 	END
  

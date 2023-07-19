@@ -539,13 +539,6 @@ BEGIN
     
 	SELECT @isSucc='false'  
   
-	--DECLARE CUR Cursor FOR SELECT custid, memberName, memberBalance, memberOutstanding, memberCredit, memberPendingTransfer3rd
-	--					FROM #Member  
-	--OPEN CUR  
-   
-	--FETCH NEXT FROM CUR INTO @custID,@user,@amount, @Outstanding, @credit, @PendingTransfer3rd
-	--WHILE @@FETCH_STATUS = 0  
-
 	DECLARE @rCount INT = 1;
 	WHILE EXISTS(SELECT 1 FROM #Member WHERE rIdx = @rCount)
 	BEGIN  
@@ -626,7 +619,13 @@ BEGIN
 				END
 			END
 			
-			
+			--TODO: Set default ERROR for MANUAL transfer
+			SELECT @ErrCode		= 105
+					,@ErrMsg	= CASE @Language
+									WHEN 'E'
+										THEN 'Clear balance failed. Please try again.'
+									ELSE [dbo].[f_Get_MsgNamebyMsgID](50003, @Language)
+								END
 			------------------Insert trans into transfer---------------------------------------------------------------  
 			IF (@amount > 0)  
 			BEGIN  
@@ -841,17 +840,17 @@ BEGIN
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
 				,@Status=@PairStatus, @Result = @Result;
 		END
+		ELSE 
+		BEGIN
+			--TODO: Check FAILED break for MANUAL transfer
+			IF @ErrCode > 0
+				RETURN;
+		END
 		SET @rCount += 1;
-		--CUR_NEXT:
-		--FETCH NEXT FROM CUR INTO @custID,@user,@amount,@Outstanding,@credit, @PendingTransfer3rd
 	END  
-	--CLOSE CUR  
-	--DEALLOCATE CUR  
  
 	DROP TABLE #Member  
 
 
-		SELECT @ErrMsg = CASE @Language   
-								WHEN 'E' then N'Clear balance failed for the following user(s):' + ' ' + @ErrItems
-							END 
+		
 GO

@@ -530,6 +530,12 @@ BEGIN
 				END
 			END
 
+			-- All error messages are the same, so we set it here
+			SELECT @ErrMsg = case @Language 
+								when 'E' then 'Clear balance failed. Please try again.'
+								ELSE [dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
+						end
+
 			------------------Insert trans into DB---------------------------------------------------------------
 			IF @amount > 0
 			BEGIN
@@ -659,7 +665,8 @@ BEGIN
 				WHERE CustID = @AgentID;
 			END
 			---------------------------------------------------------------------------------------------------
-			Select @ErrMsg = ''
+			SELECT @ErrMsg	= '',
+				@ErrCode	= 0
 	
 			if @SubAccID > 0
 			begin
@@ -706,6 +713,12 @@ BEGIN
 			;
 			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @AgentID
 				,@Status=@PairStatus, @Result = @Result;
+		END
+		ELSE 
+		BEGIN
+			--TODO: Check FAILED break for MANUAL transfer
+			IF @ErrCode > 0
+				RETURN;
 		END
 		SET @rCount += 1;
 	END

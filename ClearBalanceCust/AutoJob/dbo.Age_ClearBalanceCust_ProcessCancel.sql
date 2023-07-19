@@ -43,19 +43,27 @@ BEGIN
 	SELECT @ErrCode = 0,
 		@ErrMsg		= ''
 
-	IF @ViewStatus <> @currentStatus
-		OR @ViewStatus NOT IN ('Waiting', 'Processing')
+	IF @ViewStatus NOT IN ('Waiting', 'Processing', 'Pending')
 	BEGIN
 		SELECT @ErrCode = 101,
-				@ErrMsg = CASE 
-							WHEN @ViewStatus = 'Waiting' AND @currentStatus IN ('Processing') THEN 'Status change from Waiting to Processing'
-							WHEN @ViewStatus = 'Waiting' AND @currentStatus IN ('Completed') THEN 'Status change to Completed'
-							WHEN @ViewStatus = 'Waiting' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
-							WHEN @ViewStatus = 'Processing' AND @currentStatus IN ('Completed') THEN 'Status change to Completed'
-							WHEN @ViewStatus = 'Processing' AND @currentStatus IN ('Failed') THEN 'Status change to Failed'
-							ELSE 'Status is invalid.'
+				@ErrMsg = 'Invalid Auto Transfer process status.'
+		RETURN;
+	END
+
+	IF ( @ViewStatus <> @currentStatus)
+	BEGIN
+		--ERROR: Auto Transfer process status has changed to (Processing|Completed|Failed|Waiting|Pending). Please refresh the page.
+		SELECT @ErrCode = 102,
+				@ErrMsg = 
+						CASE 
+							WHEN @currentStatus IN ('Processing') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50028, @Language) 
+							WHEN @currentStatus IN ('Completed') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50029, @Language)
+							WHEN @currentStatus IN ('Failed') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50030, @Language)
+							WHEN @currentStatus IN ('Waiting') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50031, @Language)
+							WHEN @currentStatus IN ('Pending') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50032, @Language)
+							ELSE 'Unknown Auto Transfer process status.'
 						END
-		RETURN
+		RETURN;
 	END
 
 	-- TODO: Cancel transfer
