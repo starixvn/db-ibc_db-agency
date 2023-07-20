@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_BatchSel]
 	@NumOfThread	INT = 4
 	,@RunningMode	VARCHAR(15) = 'Normal'
@@ -8,7 +8,7 @@ AS
 /*
 	Created:20230227@bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]

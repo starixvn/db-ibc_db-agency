@@ -1,11 +1,11 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_Job_ProcessExport]
 	@PageSize				INT = 5000
 AS
 /*
 	Created:20230227@Bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]

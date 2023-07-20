@@ -1,18 +1,18 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_Monitor]
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 
 AS
 /*
-Created:20230227@Bobby
-Task: 182071 - Auto Transfer/ Multiple Transfer	
-DB: DBTXN/bodb02
+	Created:20230227@Bobby
+	Task: 182071 - Auto Transfer/ Multiple Transfer	
+	DB: DBSIC-bodb02,DBCTG-bodb02
 
-Revisions:
-	- 20230227@bobby: INIT [RedmineID: #182071]
+	Revisions:
+		- 20230227@bobby: INIT [RedmineID: #182071]
 
-Param's Explanation:
+	Param's Explanation:
 
 */
 BEGIN

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_ProcessCancel]
 	@FromCustID		INT, 
 	@ToCustID		INT,
@@ -12,7 +12,7 @@ AS
 /*
 	Created:20230227@bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
@@ -52,7 +52,7 @@ BEGIN
 
 	IF ( @ViewStatus <> @currentStatus)
 	BEGIN
-		--ERROR: Auto Transfer process status has changed to (Processing|Completed|Failed|Waiting|Pending). Please refresh the page.
+		--ERROR: Auto Transfer process status has changed to (Processing|Completed|Failed|Waiting|Pending|Ignored|New). Please refresh the page.
 		SELECT @ErrCode = 102,
 				@ErrMsg = 
 						CASE 
@@ -61,7 +61,7 @@ BEGIN
 							WHEN @currentStatus IN ('Failed') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50030, @Language)
 							WHEN @currentStatus IN ('Waiting') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50031, @Language)
 							WHEN @currentStatus IN ('Pending') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50032, @Language)
-							ELSE 'Unknown Auto Transfer process status.'
+							ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50033, @Language)
 						END
 		RETURN;
 	END

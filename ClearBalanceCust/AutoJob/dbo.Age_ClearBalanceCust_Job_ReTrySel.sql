@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ReTrySel]
 	@NumOfThread	INT = 4
 	,@ErrCode		INT = 0 OUTPUT
@@ -8,7 +8,7 @@ AS
 /*
 	Created:20230227@bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
@@ -21,7 +21,8 @@ BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE @RunningMode	VARCHAR(15),
-		@TotalThread		INT;
+		@TotalThread		INT
+	;
 
 	SELECT @TotalThread = ISNULL(@NumOfThread, 2),
 		@RunningMode	= 'ReTry',
@@ -91,12 +92,35 @@ BEGIN
 	GROUP BY bl.BatchNo, bl.FromCustId
 	ORDER BY bl.BatchNo ASC;
 
-	-- CHECK: Finished or NOT
+	-- CHECK: Completed or NOT
 	SELECT TOP(1) @IsCompleted = 0
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
 	WHERE 
 		p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
 		OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
 		OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
+
+	-- TODO: Update AutoJob CompletedTime
+	DECLARE 
+		@AutoJob_ClearBalance_VName_Runtime		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
+		@AutoJob_ClearBalance_VValue_Runtime	VARCHAR(200)
+	;
+
+	IF @IsCompleted = 1
+	BEGIN
+		SELECT TOP(1) @AutoJob_ClearBalance_VValue_Runtime = VValue
+		FROM dbo.SystemSettings (NOLOCK)
+		WHERE VName = @AutoJob_ClearBalance_VName_Runtime
+		;
+
+		SELECT @AutoJob_ClearBalance_VValue_Runtime = JSON_MODIFY(@AutoJob_ClearBalance_VValue_Runtime, '$.CompletedTime', FORMAT(GETDATE(), 'yyyy-MM-dd hh:mm:ss'))
+
+		UPDATE TOP(1) s
+		SET VValue = @AutoJob_ClearBalance_VValue_Runtime
+		FROM dbo.SystemSettings s WITH(ROWLOCK, UPDLOCK)
+		WHERE VName = @AutoJob_ClearBalance_VName_Runtime
+		;
+
+	END
 END
 GO

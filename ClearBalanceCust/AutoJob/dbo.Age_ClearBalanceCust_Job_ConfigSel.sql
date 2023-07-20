@@ -1,10 +1,10 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ConfigSel]
 AS
 /*
 	Created:20230227@bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBAGE/bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
@@ -14,21 +14,32 @@ AS
 */
 BEGIN
 	SET NOCOUNT ON;
-
 	DECLARE
-		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance_Config',
-		@AutoJob_ClearBalance_VValue	VARCHAR(200)
+		@AutoJob_ClearBalance_VName_Config		VARCHAR(50)  = 'AutoJob_ClearBalance_Config',
+		@AutoJob_ClearBalance_VValue_Config		VARCHAR(200),
+		@AutoJob_ClearBalance_VName_Runtime		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
+		@AutoJob_ClearBalance_VValue_Runtime	VARCHAR(200),
+		@StartTime DATETIME,
+		@CompletedTime DATETIME
 	;
 
 	--TODO: Check setting
-	SELECT TOP(1) @AutoJob_ClearBalance_VValue = VValue
+	SELECT @AutoJob_ClearBalance_VValue_Config = IIF(VName = @AutoJob_ClearBalance_VName_Config, VValue, @AutoJob_ClearBalance_VValue_Config)
+		, @AutoJob_ClearBalance_VValue_Runtime = IIF(VName = @AutoJob_ClearBalance_VName_Runtime, VValue, @AutoJob_ClearBalance_VValue_Runtime)
 	FROM dbo.SystemSettings (NOLOCK)
-	WHERE VName = @AutoJob_ClearBalance_VName
+	WHERE VName IN ( @AutoJob_ClearBalance_VName_Config, @AutoJob_ClearBalance_VName_Runtime)
+	;
+
+	SELECT @CompletedTime	= CAST(JSON_VALUE(@AutoJob_ClearBalance_VValue_Runtime, '$.CompletedTime') AS DATETIME),
+			@StartTime		= CAST(JSON_VALUE(@AutoJob_ClearBalance_VValue_Runtime, '$.StartTime') AS DATETIME)
 	;
 
 	SELECT 
-		DefaultTime	= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue, '$.dt'), '00:00:00'),
-		ManualTime	= CAST(JSON_VALUE(@AutoJob_ClearBalance_VValue, '$.mt') AS SMALLDATETIME),
-		RunningMode	= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue, '$.rm'), 'Normal')
+		DefaultTime		= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.dt'), '00:00:00'),
+		ManualTime		= CAST(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.mt') AS SMALLDATETIME),
+		RunningMode		= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.rm'), 'Normal'),
+		StartTime		= @StartTime,
+		CompletedTime	= @CompletedTime
+	;
 END
 GO

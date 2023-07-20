@@ -1,11 +1,11 @@
-/*<info serverAlias="DBTXN-bodb02,DBARC-bodb_Archive" selecters="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02,DBARC-bodb_Archive" selecters="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.f_Age_ClearBalanceCust_ErrorSel() 
 RETURNS TABLE
 RETURN
 /*
 	Created:20230227@Bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02,DBARC-bodb_Archive
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
