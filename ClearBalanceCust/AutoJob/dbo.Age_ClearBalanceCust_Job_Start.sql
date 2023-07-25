@@ -222,6 +222,10 @@ BEGIN
 						ELSE 0 END
 			;
 
+			-- TODO: Age_ClearBalanceCust_RunningSuper
+			UPDATE u WITH(ROWLOCK, UPDLOCK)
+			SET u.RunningBatchNo = 0
+			FROM dbo.Age_ClearBalanceCust_RunningSuper u
 
 			--TODO: Update Setting
 			SELECT @AutoJob_ClearBalance_VValue = (SELECT @AutoTransfer_StartTime AS StartTime, @RunningMode AS RunningMode FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);

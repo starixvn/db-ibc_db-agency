@@ -64,6 +64,7 @@ BEGIN
 			GROUP BY p.SuperId, p.BatchNo
 		) AS t
 		WHERE t.runIdx = 1
+		ORDER BY t.BatchNo ASC
 	)
 	UPDATE p WITH(ROWLOCK, UPDLOCK)
 		SET p.[Status] = 'Waiting'

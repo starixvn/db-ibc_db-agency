@@ -38,7 +38,9 @@ BEGIN
 		@AfftectedRows	INT,
 		@RunSPNameLog	VARCHAR(100);
 
-	SELECT @today	= GETDATE()
+	SELECT @ErrCode	= 0
+		,@ErrMsg = ''
+		,@today	= GETDATE()
 		,@tomorrow	= DATEADD(DAY, 1, @today)
 		,@StartTime = CURRENT_TIMESTAMP
 		,@IsAllowAutoTransfer_Old = IIF(@IsAllowAutoTransfer = 0, 1, 0)
@@ -53,7 +55,7 @@ BEGIN
 
 	IF @RoleID NOT IN (2,3,4)
 	BEGIN  
-		SELECT @ErrCode	= 102, 
+		SELECT @ErrCode	= 101, 
 			@ErrMsg		= CASE WHEN @Language = 'E' THEN 'Customer does not exist.'  
 								ELSE [dbo].[f_Get_MsgNamebyMsgID](40014,@Language)
 								END    
@@ -79,7 +81,7 @@ BEGIN
 
 	IF @batchCount <> @pairCount
 	BEGIN  
-		SELECT @ErrCode	= 103, 
+		SELECT @ErrCode	= 102, 
 				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'Downline does not match.'  
 								ELSE [dbo].[f_Get_MsgNamebyMsgID](40014,@Language)
 							END    
@@ -92,7 +94,7 @@ BEGIN
 		AND @IsAutoJobRunning = 1
 	)
 	BEGIN
-		SELECT @ErrCode	= 104, 
+		SELECT @ErrCode	= 103, 
 				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'You cannot disable Auto Transfer for this account because the Auto Transfer process is in progress. Please try again after the process has been completed.'  
 								ELSE [dbo].[f_Get_MsgNamebyMsgID](50019,@Language)
 							END    
@@ -133,7 +135,7 @@ BEGIN
 
 			IF EXISTS (SELECT 1 FROM @tmpResult WHERE EffectiveDate > @today)
 			BEGIN
-				SELECT @ErrCode	= 0, 
+				SELECT @ErrCode	= 0,  -- just information NOT Error
 						@ErrMsg	= CASE WHEN @Language = 'E' THEN 'Auto Transfer process is in progress. This account will be auto-transferred at the next scheduled time according to your transfer condition.'  
 										ELSE [dbo].[f_Get_MsgNamebyMsgID](50018,@Language)
 									END    
@@ -166,6 +168,12 @@ BEGIN
 	END CATCH
 
 	SP_END:
+	IF @ErrCode > 0
+	BEGIN
+		-- NOT write log with error cases
+		RETURN;
+	END
+
 	SET @duration  = DATEDIFF(MILLISECOND, @StartTime, CURRENT_TIMESTAMP);
 	-- TODO: Write log runSP
 	BEGIN TRY

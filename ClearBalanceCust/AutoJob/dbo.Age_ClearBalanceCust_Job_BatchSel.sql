@@ -36,7 +36,7 @@ BEGIN
 		SELECT rs.SuperId
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(UPDLOCK)
 		WHERE rs.RunningBatchNo = 0
-			AND rs.RunningTotal < rs.TotalBatch
+			--AND rs.RunningTotal < rs.TotalBatch --> ignore in cases resume many times
 	),
 	CTE_SuperBatch AS (
 		SELECT TOP(@NumOfThread) SuperId, BatchNo
@@ -49,6 +49,7 @@ BEGIN
 			GROUP BY p.SuperId, p.BatchNo
 		) AS t
 		WHERE t.runIdx = 1
+		ORDER BY t.BatchNo ASC
 	)
 	UPDATE p WITH(ROWLOCK, UPDLOCK)
 		SET p.[Status] = 'Waiting'

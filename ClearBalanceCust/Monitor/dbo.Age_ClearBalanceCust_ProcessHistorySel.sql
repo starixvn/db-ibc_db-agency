@@ -34,18 +34,20 @@ BEGIN
 		@CheckName		VARCHAR(50),
 		@StatusCheck	VARCHAR(1000),
 		@rptFromDate	SMALLDATETIME,
-		@rptToDate		SMALLDATETIME
+		@rptToDate		SMALLDATETIME,
+		@Last3Months	SMALLDATETIME
 	;
 
 	DECLARE @tmpStatus	TABLE([Status] VARCHAR(15));
 
 	SELECT @today			= GETDATE(),
 		@yesterday			= DATEADD(DAY, -1, @today),
+		@Last3Months		= DATEADD(MONTH, -3, @today),
 		@StatusCheck		= ISNULL(@ViewStatus, 'All'),
 		@UplineId			= @FromCustId,
 		@CheckName			= @Searchname,
-		@rptFromDate		= @FromDate,
-		@rptToDate			= IIF(@ToDate >= @today, @yesterday, @ToDate)
+		@rptToDate			= IIF(@ToDate >= @today, @yesterday, @ToDate),
+		@rptFromDate		= IIF(@FromDate < @Last3Months, @Last3Months, @FromDate)
 	;
 
 	DROP TABLE IF EXISTS #tmpDownline;

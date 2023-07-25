@@ -2,8 +2,8 @@
 ALTER PROCEDURE dbo.Age_ClearBalanceCust_CheckRunning
 	@CustID			INT
 	,@Language		VARCHAR(2)= 'E'
-	,@ErrMsg		INT = 0 OUTPUT 
-	,@ErrCode		NVARCHAR(4000) = '' OUTPUT
+	,@ErrCode		INT = 0 OUTPUT 
+	,@ErrMsg		NVARCHAR(4000) = '' OUTPUT
 AS
 /*
 	Created:20230227@Bobby
@@ -29,16 +29,13 @@ BEGIN
 	IF EXISTS (
 				SELECT 	TOP 1 1  
 				FROM 	bodb02.dbo.Age_ClearBalanceCust_Process s WITH(NOLOCK)
-				WHERE 	--- check upline is processing or not
-					(
-						s.FromCustID IN (@Recommend, @MRecommend, @SRecommend )
-						AND s.ToCustID IN (@CustID, @Recommend, @MRecommend)	
-					)
+				WHERE 	--- check SMA is processing or not
+					s.FromCustID IN (@CustID, @Recommend, @MRecommend, @SRecommend)
 					AND s.[Status] IN ('Waiting', 'Processing', 'Pending')
 		)
 	BEGIN
 		SELECT @ErrCode = 50020
-		SELECT @ErrMsg = bodb02.dbo.f_Get_MsgNamebyMsgID (50020,@Language)
+		SELECT @ErrMsg = CustDB.dbo.f_Get_MsgNamebyMsgID (50020,@Language)
 		 
 	END
 
