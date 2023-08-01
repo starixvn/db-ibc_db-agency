@@ -80,7 +80,7 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON  
 
-	DECLARE @LogData NVARCHAR(500)  
+	DECLARE @LogData NVARCHAR(500), @PairStatus VARCHAR(15), @Result nvarchar(4000);
 	DECLARE @agentid INT, @custid int  
 	DECLARE @currency INT, @actualrate FLOAT, @currName NVARCHAR(10)    
 	DECLARE @agUser NVARCHAR(50), @User NVARCHAR(50)  

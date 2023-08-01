@@ -59,9 +59,8 @@ BEGIN
 							WHEN @currentStatus IN ('Processing') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50028, @Language) 
 							WHEN @currentStatus IN ('Completed') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50029, @Language)
 							WHEN @currentStatus IN ('Failed') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50030, @Language)
-							WHEN @currentStatus IN ('Waiting') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50031, @Language)
-							WHEN @currentStatus IN ('Pending') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50032, @Language)
-							ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50033, @Language)
+							WHEN @currentStatus IN ('Pending') THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](50031, @Language)
+							ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50032, @Language)
 						END
 		RETURN;
 	END

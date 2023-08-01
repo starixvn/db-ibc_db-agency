@@ -189,7 +189,8 @@ BEGIN
 			,p.Result = (SELECT 'Exception' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 		FROM dbo.Age_ClearBalanceCust_Process p
 			INNER JOIN #tmpProcessCust c ON c.ToCustID = p.ToCustId
-		WHERE p.FromCustId = @FromCustID 
+		WHERE p.FromCustId = @FromCustID
+			AND p.Result IS NULL  ---> NOT touch by transfer processing
 	END CATCH
 
 	--SELECT @ErrCode AS ErrCode, @ErrMsg AS ErrMsg
