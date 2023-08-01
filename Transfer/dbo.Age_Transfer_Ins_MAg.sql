@@ -472,7 +472,7 @@ BEGIN
 			IF @ErrCode > 0
 			BEGIN
 				UPDATE @tblResultMember
-				SET MsgId = 50003, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+				SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 				WHERE CustId = @AgentID;	
 				GOTO NEXT_PAIR;
 			END
@@ -524,17 +524,11 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET MsgId = 50003, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+					SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @AgentID;	
 					GOTO NEXT_PAIR;
 				END
 			END
-
-			-- All error messages are the same, so we set it here
-			SELECT @ErrMsg = case @Language 
-								when 'E' then 'Clear balance failed. Please try again.'
-								ELSE [dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
-						end
 
 			------------------Insert trans into DB---------------------------------------------------------------
 			IF @amount > 0
@@ -697,7 +691,7 @@ BEGIN
 		BEGIN CATCH
 			--Exception
 			UPDATE @tblResultMember
-			SET MsgId = 50003, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+			SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
 			WHERE CustID = @AgentID;
 		END CATCH
 

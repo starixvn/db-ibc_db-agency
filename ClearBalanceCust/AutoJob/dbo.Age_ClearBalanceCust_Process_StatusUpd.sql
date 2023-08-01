@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Process_StatusUpd]
 	@FromCustID		INT, 
 	@ToCustIDs		VARCHAR(4000),
@@ -49,21 +49,8 @@ BEGIN
 		WHERE p.FromCustId = @FromCustID
 			AND p.[Status] IN ('Waiting', 'Processing')
 		;
+
 		SET @effectedRows = @@ROWCOUNT;
-
-		IF @effectedRows = 0
-		BEGIN
-			SELECT @currentStatus = p.[Status]
-			FROM dbo.Age_ClearBalanceCust_Process p WITH(ROWLOCK)
-			INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
-			WHERE p.FromCustId = @FromCustID
-
-			-- Re-New/Cancelled
-			SELECT @ErrCode = 101
-				, @ErrMsg = 'This transfer''s status has been changed to ' + @currentStatus + '.'
-			RETURN
-		END
-
 	END
 	ELSE IF @Status IN ('Failed', 'Completed')
 	BEGIN
@@ -74,7 +61,9 @@ BEGIN
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
 		WHERE p.FromCustId = @FromCustID
-			AND p.[Status] <> 'Cancelled'
+			AND p.[Status] <> 'Cancelled';
+
+		SET @effectedRows = @@ROWCOUNT;
 	END
 	ELSE IF @Status IN ('Pending', 'Ignored')
 	BEGIN
@@ -90,7 +79,16 @@ BEGIN
 					CASE WHEN @Status = 'Pending' AND p.TryCount = 60 THEN 1 ELSE 0 END AS IsReachPending
 			) AS ck
 		WHERE p.FromCustId = @FromCustID
-			AND p.[Status] = 'Waiting'
+			AND p.[Status] = 'Waiting';
+
+		SET @effectedRows = @@ROWCOUNT;
+	END
+
+	IF @effectedRows = 0
+	BEGIN
+		-- Re-New/Cancelled
+		SELECT @ErrCode = 50033
+			, @ErrMsg = CustDB.[dbo].[f_Get_MsgNamebyMsgID](50033, @Language)
 	END
 END
 GO

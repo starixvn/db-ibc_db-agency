@@ -506,7 +506,7 @@ BEGIN
 	BEGIN
 		SELECT @ErrMsg = CASE @Language   
 							WHEN 'E' THEN 'Cannot transfer because all downlines'' balance is 0!' 
-		ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50002,@Language)
+							ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50002,@Language)
 							END, 
 						@ErrCode = 103
 			;
@@ -590,7 +590,7 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET MsgId = 50003, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+					SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @custid;	
 					GOTO NEXT_PAIR;
 				END
@@ -613,7 +613,7 @@ BEGIN
 				IF @ErrCode > 0
 				BEGIN
 					UPDATE @tblResultMember
-					SET MsgId = 50003, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+					SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
 					WHERE CustId = @custid;	
 					GOTO NEXT_PAIR;
 				END
@@ -624,7 +624,7 @@ BEGIN
 					,@ErrMsg	= CASE @Language
 									WHEN 'E'
 										THEN 'Clear balance failed. Please try again.'
-									ELSE [dbo].[f_Get_MsgNamebyMsgID](50003, @Language)
+									ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50003, @Language)
 								END
 			------------------Insert trans into transfer---------------------------------------------------------------  
 			IF (@amount > 0)  

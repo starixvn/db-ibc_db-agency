@@ -81,9 +81,9 @@ BEGIN
 	DECLARE @agUser nvarchar(50), @ABSamount MONEY
 	DECLARE @SubAccName VARCHAR(30) = ''
 
-SELECT @ToCustID = null
-SELECT @ToCustID = CustID FROM CustDB.dbo.customer WITH (NOLOCK) WHERE username = @ToUserName
-IF @ToCustID is NULL or @ToCustID = 0
+	SELECT @ToCustID = null
+	SELECT @ToCustID = CustID FROM CustDB.dbo.customer WITH (NOLOCK) WHERE username = @ToUserName
+	IF @ToCustID is NULL or @ToCustID = 0
 	BEGIN
 		SELECT @ErrMsg = CASE @Language 
 			WHEN 'E' THEN 'Customer does not exist' + ': ' + @ToUserName			
