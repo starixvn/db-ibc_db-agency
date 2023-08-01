@@ -1,10 +1,12 @@
 /*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
+CREATE PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
 	@SuperIDsTransferTotal	NVARCHAR(50) = '',
 	@IsAllDayTransfer		BIT = 0,
-	@Language				VARCHAR(2) = 'E'
+	@Language				VARCHAR(2) = 'E',
+	@DownlineNetPosition	XML,
+	@DownlineCustID			INT
 AS
 
 /*
@@ -18,6 +20,13 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20230526@Danny: Scale out dbtrans [RedmineID: #181595]
+
+	Param's Explanation:
+		- @DownlineNetPosition : 
+					  '<root>
+						  <r custId="" netPosition=""/>
+					  </root>'
 */
 
 BEGIN
@@ -28,8 +37,6 @@ BEGIN
 
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
-	DECLARE @DownlineCustId INT, @DownlineRoleId TINYINT
-
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
@@ -38,15 +45,6 @@ BEGIN
 	EXEC bodb02.dbo.Age_SelBalanceUpDay
 
 	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
-
-	IF @RoleId = 4
-		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId
-		FROM	dbo.custInfo WITH (NOLOCK)
-		WHERE	srecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
-	ELSE IF @RoleId = 3
-		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId
-		FROM	dbo.custInfo WITH (NOLOCK)
-		WHERE	mrecommend = @CustId AND username = @DownlineUsername AND roleId = @RoleId - 1
 
 	-- super/master only -- invalid downline
 	IF @RoleId NOT IN (3,4) OR @DownlineCustId IS NULL
@@ -532,11 +530,20 @@ BEGIN
 		-- Calculate credit
 		BEGIN
 			CREATE TABLE #NetPosition (custid INT, netPosition MONEY)
-
-			INSERT INTO #NetPosition (custId, netPosition)
-			EXEC DBTXN.bodb02.dbo.Age_GetCustomerNetPosition
-				@CustId = @DownlineCustId,
-				@RoleId = @DownlineRoleId
+			BEGIN TRY
+				INSERT INTO #NetPosition (custId, netPosition)
+					SELECT 
+					t.c.value('@custId', 'INT')	AS custId
+					,t.c.value('@netPosition', 'MONEY')	AS netPosition
+				FROM @DownlineNetPosition.nodes('ROOT/r') t(c)
+				OPTION (OPTIMIZE FOR (@DownlineNetPosition = NULL))
+			END TRY
+			BEGIN CATCH
+				INSERT INTO #NetPosition (custId, netPosition)
+				SELECT custId, netPosition
+				FROM (VALUES (0, 0)) AS t(custId, netPosition)
+				WHERE 1 = 0
+			END CATCH
 
 			-- Back to check rule before calculate
 			-- 2. Nagative bet credit after transfer

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_SAg]
 	@SAgID int,
 	@SuperIDsTransferTotal VARCHAR(50)='', 
@@ -59,6 +59,7 @@ Revisions:
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+	- 20230523@Danny: support scale out credit [Redmine: #181595]
 	
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -391,7 +392,7 @@ WHERE c.roleid = 2
  BEGIN
 	Select @ErrMsg = case @Language   
 		when 'E' then 'Cannot transfer because all downlines'' balance is 0!' 
-		ELSE [dbo].[f_Get_MsgNamebyMsgID](50002,@Language)
+		ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50002,@Language)
 	end
 		, @ErrCode = 103     
  
@@ -432,18 +433,18 @@ WHERE c.roleid = 2
 	--CHECK MASTER'S BALANCE
 	DECLARE @custBalance money 
 	SELECT @custBalance = @Amount 
-	if @FullTransfer = 0
+	IF @FullTransfer = 0
 	BEGIN
-		if @AmtTrans = 0
-				or (@CustBalance >= 0 AND (@AmtTrans <= 0 or @AmtTrans > @CustBalance))
-				or (@CustBalance < 0 AND (@AmtTrans >= 0 or @AmtTrans < @CustBalance))
+		IF @AmtTrans = 0
+				OR (@CustBalance >= 0 AND (@AmtTrans <= 0 or @AmtTrans > @CustBalance))
+				OR (@CustBalance < 0 AND (@AmtTrans >= 0 or @AmtTrans < @CustBalance))
 			BEGIN
-				Select @ErrMsg = case @Language 
-										when 'E' then 'Amount to transfer must be between 0 and' + ' ' + convert(varchar(100), -@CustBalance, 2) + '.'
-										ELSE [dbo].[f_Get_MsgNamebyMsgID](50005,@Language) + ' ' + convert(varchar(100), -@CustBalance, 2) + '.'
-									end		
-				select @ErrCode = 104
-				return
+				SELECT @ErrMsg = CASE @Language 
+										WHEN 'E' THEN 'Amount to transfer must be between 0 and' + ' ' + CONVERT(VARCHAR(100), -@CustBalance, 2) + '.'
+										ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50005,@Language) + ' ' + CONVERT(VARCHAR(100), -@CustBalance, 2) + '.'
+									END		
+				SELECT @ErrCode = 104
+				RETURN
 			END	
 		-- INSERT AMOUNT INPUTED INTO BETTRANS 
 		SET @amount = @AmtTrans	
@@ -452,10 +453,10 @@ WHERE c.roleid = 2
 	BEGIN TRANSACTION
 	
 		-- All error messages are the same, so we set it here
-		Select @ErrMsg = case @Language 
-								when 'E' then 'Clear balance failed. Please try again.'
-								ELSE [dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
-								end
+		SELECT @ErrMsg = CASE @Language 
+								WHEN 'E' THEN 'Clear balance failed. Please try again.'
+								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
+								END
 		
 		
 		IF @amount >0
@@ -466,11 +467,11 @@ WHERE c.roleid = 2
 				 winlostdate, currency, actualrate,currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, RepUpdateTime)
 			VALUES (@transid, @creator, @SAgID, @SAUser, @transcode, current_timestamp, 21003, 'From Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END,
 				@amount, 0,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131,SYSDATETIME())
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN
-				select @ErrCode = 103
+				SELECT @ErrCode = 103
 				ROLLBACK TRANSACTION
-				return
+				RETURN
 			END
 
 			DECLARE @TotalCashMaster MONEY 
@@ -482,18 +483,18 @@ WHERE c.roleid = 2
 				winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance, RepUpdateTime)
 			VALUES (@TransID, @creator, @Magentid, @MAgUser, @transcode, current_timestamp, 21003, 'To Customer ::: ' + @saUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 				@amount, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131, @TotalCashMaster,SYSDATETIME())
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN
 				select @ErrCode = 104
 				ROLLBACK TRANSACTION
-				return
+				RETURN
 			END
 
 			--Add writelog for each amt transfered - Vinh 20080629
-			Select @LogData = 'Transfer from Master ' + @MagUser + ' to Super ' + @saUser + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @transcode)			
+			SELECT @LogData = 'Transfer from Master ' + @MagUser + ' to Super ' + @saUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @transcode)			
 			
 		END
-		ELSE if @amount<0
+		ELSE IF @amount<0
 		BEGIN
 			--SET @amount = abs(@amount)
 
@@ -507,7 +508,7 @@ WHERE c.roleid = 2
 			BEGIN
 				select @ErrCode = 105
 				ROLLBACK TRANSACTION
-				return
+				RETURN
 			END
 
 			DECLARE @TotalCashMasterNev MONEY 
@@ -521,19 +522,19 @@ WHERE c.roleid = 2
 				abs(@amount), 0, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131, @TotalCashMasterNev,SYSDATETIME())
 			if @@Error <> 0
 			BEGIN
-				select @ErrCode = 106
+				SELECT @ErrCode = 106
 				ROLLBACK TRANSACTION
-				return
+				RETURN
 			END
 			
 			--Add writelog for each amt transfered - Vinh 20080629
-			Select @LogData = 'Transfer from Super ' + @saUser + ' to Master ' + @MagUser + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @transcode)			
+			SELECT @LogData = 'Transfer from Super ' + @saUser + ' to Master ' + @MagUser + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @transcode)			
 			
 		END
 	COMMIT TRANSACTION
 	Select @ErrMsg = ''
 	
-	if @SubAccID > 0
+	IF @SubAccID > 0
 		SET @LogData = 'SubAccount:' + coalesce(cast(@SubAccName as varchar(30)),space(1)) + ' - ' + @LogData
 
 	SELECT @LogData = @LogData + ' SPName: ' + @procName

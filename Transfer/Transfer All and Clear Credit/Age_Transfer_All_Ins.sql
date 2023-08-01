@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Transfer_All_Ins]
 	@UserId					INT,
 	@CustId					INT,
@@ -31,6 +31,7 @@ AS
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20230523@Danny: support scale out credit [Redmine: #181595]
 */
 
 BEGIN
@@ -94,7 +95,7 @@ BEGIN
 	IF @RoleId NOT IN (3,4) OR @DownlineCustId IS NULL
 	BEGIN
 		SELECT  @ErrCode = 100,
-				@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE dbo.f_Get_MsgNamebyMsgID (40014, @Language) END
+				@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(40014, @Language) END
 		
 		RETURN
 	END
@@ -133,7 +134,7 @@ BEGIN
 			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 2, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+				SELECT 2, CustDB.dbo.f_Get_MsgNamebyMsgID(40037, @Language)
 			END
 		END
 		ELSE IF @RoleId = 3
@@ -142,7 +143,7 @@ BEGIN
 			IF EXISTS (SELECT 1 FROM DBCUST.CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 2, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+				SELECT 2,  CustDB.dbo.f_Get_MsgNamebyMsgID(40037, @Language)
 			END
 		END
 
@@ -172,7 +173,7 @@ BEGIN
 				)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 4, dbo.f_Get_MsgNamebyMsgID(50013, @Language)
+				SELECT 4, CustDB.dbo.f_Get_MsgNamebyMsgID(50013, @Language)
 			END
 		END
 
@@ -192,14 +193,14 @@ BEGIN
 				
 			IF @ErrCode <> 0
 			BEGIN
-				SELECT @ErrMsg = dbo.f_Get_MsgNamebyMsgID(50014, @Language)
-							+	CASE WHEN SUBSTRING(@strTransferOption, 2, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90002,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 3, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90003,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 4, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90004,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 5, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90005,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 6, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90006,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 7, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90007,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 1, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90008,@Language) + ' - ' ELSE '' END
+				SELECT @ErrMsg = CustDB.dbo.f_Get_MsgNamebyMsgID(50014, @Language)
+							+	CASE WHEN SUBSTRING(@strTransferOption, 2, 1) = 1 THEN CustDB.dbo.f_Get_MsgNamebyMsgID(90002,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 3, 1) = 1 THEN CustDB.dbo.f_Get_MsgNamebyMsgID(90003,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 4, 1) = 1 THEN CustDB.dbo.f_Get_MsgNamebyMsgID(90004,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 5, 1) = 1 THEN CustDB.dbo.f_Get_MsgNamebyMsgID(90005,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 6, 1) = 1 THEN CustDB.dbo.f_Get_MsgNamebyMsgID(90006,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 7, 1) = 1 THEN CustDB.dbo.f_Get_MsgNamebyMsgID(90007,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 1, 1) = 1 THEN CustDB.dbo.f_Get_MsgNamebyMsgID(90008,@Language) + ' - ' ELSE '' END
 				SELECT @ErrMsg = LEFT(@ErrMsg, LEN(@ErrMsg) - 2)
 
 				INSERT INTO @ErrTable (Id, Content)
@@ -485,7 +486,7 @@ BEGIN
 	IF @@ROWCOUNT <> 0
 	BEGIN
 		INSERT INTO @ErrTable (Id, Content)
-		SELECT 3, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+		SELECT 3, CustDB.dbo.f_Get_MsgNamebyMsgID(50012, @Language)
 	END
 
 	DROP TABLE #MemberNagativeBetCredit
@@ -638,10 +639,11 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@agentId, @memberId)
-						AND bettype IN (21003, 21004)
-						AND refno = @refno
+							AND bettype IN (21003, 21004)
+							AND refno = @refno
 
 					SELECT @ErrCode = 101
 
@@ -654,10 +656,11 @@ BEGIN
 				IF @ErrCode <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@agentId, @memberId)
-						AND bettype IN (21003, 21004)
-						AND refno = @refno
+							AND bettype IN (21003, 21004)
+							AND refno = @refno
 
 					SELECT @ErrCode = 102
 
@@ -676,10 +679,11 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@agentId, @memberId)
-						AND bettype IN (21003, 21004)
-						AND refno = @refno
+							AND bettype IN (21003, 21004)
+							AND refno = @refno
 
 					SELECT @ErrCode = 101
 
@@ -749,10 +753,11 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@agentId, @memberId)
-						AND bettype IN (21003, 21004)
-						AND refno = @refno
+							AND bettype IN (21003, 21004)
+							AND refno = @refno
 
 					SELECT @ErrCode = 103
 
@@ -771,10 +776,11 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@agentId, @memberId)
-						AND bettype IN (21003, 21004)
-						AND refno = @refno
+							AND bettype IN (21003, 21004)
+							AND refno = @refno
 
 					SELECT @ErrCode = 104
 
@@ -890,7 +896,9 @@ BEGIN
 
 				IF @@ERROR <> 0
 				BEGIN
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@masterId, @agentId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -913,7 +921,8 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@masterId, @agentId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -967,7 +976,8 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@masterId, @agentId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -989,7 +999,8 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@masterId, @agentId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -1070,7 +1081,8 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@superId, @masterId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -1092,7 +1104,8 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@superId, @masterId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -1146,7 +1159,8 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@superId, @masterId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno
@@ -1168,7 +1182,8 @@ BEGIN
 				IF @@ERROR <> 0
 				BEGIN
 					-- rollback
-					DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK)
+					UPDATE dbo.Transfer WITH(ROWLOCK)
+					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE custid IN (@superId, @masterId)
 						AND bettype IN (21003, 21004)
 						AND refno = @refno

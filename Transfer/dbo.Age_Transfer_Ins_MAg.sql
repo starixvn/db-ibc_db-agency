@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_MAg]
 	@MasterID int,
 	@ToCustIDs varchar(4000),
@@ -55,6 +55,7 @@ Revisions:
 	- 20220315@Evan: SQL Server Upgrade STRING_SPLIT [Redmine: #168783]
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+	- 20230523@Danny: support scale out credit [Redmine: #181595]
 
 Param's Explanation:
 • @AmtTrans: amount of money
@@ -356,7 +357,7 @@ GROUP BY CustId
  BEGIN
 	Select @ErrMsg = case @Language   
 		when 'E' then 'Cannot transfer because all downlines'' balance is 0!' 
-		ELSE [dbo].[f_Get_MsgNamebyMsgID](50002,@Language)
+		ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50002,@Language)
 	end, @ErrCode = 103     
  
 	RETURN	
@@ -395,17 +396,16 @@ GROUP BY CustId
 	--CHECK FOR TRANSFER AMOUNT @Phuong20080916
 	DECLARE @custBalance money 
 	SELECT @custBalance = @Amount 
-	print @CustBalance
-select * from #Agent
+
 	if @FullTransfer = 0
 	BEGIN
-		if @AmtTrans = 0
-				or (@CustBalance >= 0 AND (@AmtTrans <= 0 or @AmtTrans > @CustBalance))
-				or (@CustBalance < 0 AND (@AmtTrans >= 0 or @AmtTrans < @CustBalance))
+		IF @AmtTrans = 0
+				OR (@CustBalance >= 0 AND (@AmtTrans <= 0 or @AmtTrans > @CustBalance))
+				OR (@CustBalance < 0 AND (@AmtTrans >= 0 or @AmtTrans < @CustBalance))
 			BEGIN
-				Select @ErrMsg = case @Language 
-										when 'E' then 'Amount to transfer must be between 0 and' + ' ' + convert(varchar(100), -@CustBalance, 2) +'.'
-										ELSE [dbo].[f_Get_MsgNamebyMsgID](50005,@Language) + ' ' + convert(varchar(100), -@CustBalance, 2) + '.'
+				SELECT @ErrMsg = CASE @Language 
+										WHEN 'E' THEN 'Amount to transfer must be between 0 and' + ' ' + convert(VARCHAR(100), -@CustBalance, 2) +'.'
+										ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50005,@Language) + ' ' + convert(VARCHAR(100), -@CustBalance, 2) + '.'
 									end		
 				select @ErrCode = 104
 				return
@@ -418,12 +418,11 @@ select * from #Agent
 	------------------Insert trans into DB---------------------------------------------------------------
 	
 	-- All error messages are the same, so we set it here
-		Select @ErrMsg = case @Language 
-								when 'E' then 'Clear balance failed. Please try again.'
-								ELSE [dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
-						end
+		SELECT @ErrMsg = CASE @Language 
+								WHEN 'E' THEN 'Clear balance failed. Please try again.'
+								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
+						END
 
-		
 		IF @amount > 0
 		BEGIN
 			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
@@ -435,12 +434,15 @@ select * from #Agent
 			   (@TransID ,@creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				@amount, 0, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
 				0, 0,@ip,131,SYSDATETIME())
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN								
-				select @ErrCode = 102
+				SELECT @ErrCode = 102
 				--Manually rollback
-				DELETE FROM Transfer where refno = @RefNo
-				return
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+				WHERE refno = @RefNo
+
+				RETURN
 			END
 
 			DECLARE @TotalCashAgent MONEY 
@@ -454,19 +456,22 @@ select * from #Agent
 			   (@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @maUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				0, @amount, @WinlostDate, @currency, @actualrate,@currName, @agentid, @masterid, @srecommend, 
 				0, 0,@ip,131, @TotalCashAgent,SYSDATETIME())
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN						
-				select @ErrCode = 103
+				SELECT @ErrCode = 103
 				--Manually rollback
-				DELETE FROM Transfer where refno = @RefNo
-				return
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+				WHERE refno = @RefNo
+
+				RETURN
 			END
 
 			--Add writelog for each amt transfered - Vinh 20080629
-			Select @LogData = 'Transfer from Agent ' + @agUser + ' to Master ' + @maUser + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @RefNo)
+			SELECT @LogData = 'Transfer from Agent ' + @agUser + ' to Master ' + @maUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
 			
 		END
-		ELSE if @amount<0
+		ELSE IF @amount<0
 		BEGIN
 			--SET @amount = abs(@amount)
 			EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
@@ -482,7 +487,9 @@ select * from #Agent
 			BEGIN						
 				select @ErrCode = 107
 				--Manually rollback
-				DELETE FROM Transfer where refno = @RefNo
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+				WHERE refno = @RefNo
 				return
 			END
 
@@ -498,16 +505,19 @@ select * from #Agent
 			   (@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @maUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				abs(@amount), 0,@WinlostDate, @currency, @actualrate, @currName, @agentid, @masterid, @srecommend, 
 				0, 0,@ip,131, @TotalCashAgentNev,SYSDATETIME())
-			if @@Error <> 0
+			IF @@Error <> 0
 			BEGIN
-				select @ErrCode = 104
+				SELECT @ErrCode = 104
 				--Manually rollback
-				DELETE FROM Transfer where refno = @RefNo
-				return
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+				WHERE refno = @RefNo
+
+				RETURN
 			END
 			
 			--Add writelog for each amt transfered - Vinh 20080629
-			Select @LogData = 'Transfer from Master ' + @maUser + ' to Agent ' + @agUser + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @RefNo)
+			SELECT @LogData = 'Transfer from Master ' + @maUser + ' to Agent ' + @agUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
 			
 
 		END

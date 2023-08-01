@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Bonus_ConfirmPayment]
 	@UserId			INT
 	,@SubAccId		INT = NULL
@@ -19,6 +19,7 @@ DB: DBTXN/bodb02
 
 Revisions:
 	- 20210104@Malcolm: Set up Bonus feature for IBCIndo [RedmineID: #147430]
+	- 20230627@Danny: Change Meta data  [Redmine: #189515]
 
 */
 

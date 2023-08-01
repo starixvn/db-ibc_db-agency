@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_Ins]
 	@FromCustID		INT,
 	@ToCustID		INT,
@@ -30,6 +30,7 @@ AS
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20230523@Danny: support scale out credit [Redmine: #181595]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -88,7 +89,7 @@ BEGIN
 	BEGIN
 		SELECT
 			@ErrCode = 101,
-			@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE [dbo].[f_Get_MsgNamebyMsgID](40014, @Language) END
+			@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(40014, @Language) END
 		RETURN
 	END
 
@@ -113,7 +114,7 @@ BEGIN
 	BEGIN
 		SELECT
 			@ErrCode = 101,
-			@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE [dbo].[f_Get_MsgNamebyMsgID](40014, @Language) END
+			@ErrMsg = CASE @Language WHEN 'E' THEN 'Customer does not exist' ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(40014, @Language) END
 		RETURN
 	END
 
@@ -471,7 +472,7 @@ BEGIN
 	BEGIN
 		SELECT
 			@ErrCode = 105,
-			@ErrMsg = CASE @Language WHEN 'E' THEN 'Amount to transfer must be between 0 and ' ELSE [dbo].[f_Get_MsgNamebyMsgID](50005, @Language) END
+			@ErrMsg = CASE @Language WHEN 'E' THEN 'Amount to transfer must be between 0 and ' ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50005, @Language) END
 						+ CASE WHEN @ToAmountValue = 0 THEN '0' ELSE CONVERT(VARCHAR(100), @ToAmountValue) END
 
 		IF @FromAmountValue <> 0
@@ -481,7 +482,7 @@ BEGIN
 	END
 
 	-- All error messages are the same, so we set it here
-	SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'Clear balance failed. Please try again.' ELSE [dbo].[f_Get_MsgNamebyMsgID](50003, @Language) END
+	SELECT @ErrMsg = CASE @Language WHEN 'E' THEN 'Clear balance failed. Please try again.' ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003, @Language) END
 
 	EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
@@ -507,7 +508,9 @@ BEGIN
 			SELECT @ErrCode = 102
 				
 			-- Manually rollback
-			DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK) WHERE RefNo = @RefNo
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
 				
 			RETURN
 		END
@@ -522,7 +525,9 @@ BEGIN
 				SELECT @ErrCode = 104
 			
 				-- Manually rollback
-				DELETE FROM Transfer where refno = @RefNo
+				UPDATE dbo.Transfer WITH(ROWLOCK)
+				SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+				WHERE refno = @RefNo
 			
 				RETURN
 			END
@@ -549,7 +554,9 @@ BEGIN
 			SELECT @ErrCode = 102
 
 			-- Manually rollback
-			DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK) WHERE RefNo = @RefNo
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
 
 			-- rollback balance
 			IF @RoleId = 1
@@ -587,7 +594,9 @@ BEGIN
 			SELECT @ErrCode = 107
 
 			--Manually rollback
-			DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK) WHERE RefNo = @RefNo
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
 					
 			RETURN
 		END
@@ -612,7 +621,9 @@ BEGIN
 			SELECT @ErrCode = 107
 
 			--Manually rollback
-			DELETE dbo.Transfer WITH (ROWLOCK, UPDLOCK) WHERE RefNo = @RefNo
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
+			WHERE refno = @RefNo
 					
 			RETURN
 		END
