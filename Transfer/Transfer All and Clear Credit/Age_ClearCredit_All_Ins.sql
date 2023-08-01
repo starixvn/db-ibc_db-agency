@@ -1,7 +1,4 @@
 /*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet" viewers="" isFunction="0" isNested="0"></info>*/
-USE [CustDB]
-GO
-
 ALTER PROCEDURE [dbo].[Age_ClearCredit_All_Ins]
 	@UserId				INT,
 	@CustId				INT,
@@ -10,7 +7,8 @@ ALTER PROCEDURE [dbo].[Age_ClearCredit_All_Ins]
 	@IP					NVARCHAR(20) = '',
 	@Language			VARCHAR(2) = 'E',
 	@ErrCode			INT = 0 OUTPUT,
-	@ErrMsg				NVARCHAR(4000) = '' OUTPUT
+	@ErrMsg				NVARCHAR(4000) = '' OUTPUT,
+	@MemberAmountXML	VARCHAR(MAX) = NULL --XML Member Amount
 AS
 
 /*
@@ -22,6 +20,14 @@ AS
 		- 20180801@Percy: Initialize SP [RedmineID: #92142]
 		- 20181102@Johnson: Apply service broker for logging [Redmine: #103547]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20230510@Eden: Scale out DBTRANS for Credit [Redmine: #181595]
+
+	Param's Explanation:`
+		@MemberAmountXML = '<ROOT>
+					  <R ID="1290" AM="2483.0000" />
+					  <R ID="1309" AM="65.0000" />
+					  <R ID="1311" AM="50.0000" />
+					</ROOT>'
 */
 
 BEGIN
@@ -69,7 +75,7 @@ BEGIN
 			SELECT 1, dbo.f_Get_MsgNamebyMsgID(40036, @Language)
 		END
 
-		-- 2. Nagative given credit
+		-- 3. Nagative given credit
 		IF @RoleId = 4
 		BEGIN
 			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
@@ -124,12 +130,26 @@ BEGIN
 		*/
 
 		DECLARE @recommend INT
-
+		DECLARE @DocHandler INT	
 		CREATE TABLE #MemberAmount (custId INT, amount MONEY)
 		CREATE TABLE #tblMember (custId INT, recommend INT, credit MONEY, betCredit MONEY, newCredit MONEY)
 
-		INSERT INTO #MemberAmount (custId, amount)
-		EXEC DBTXN.bodb02.dbo.Age_Customer_TotalAmount_Sel @custId = @DownlineCustId, @RoleId = @DownlineRoleId
+		IF ISNULL(@MemberAmountXML,'') <> ''
+		BEGIN
+			-- For read xml					
+			EXEC sp_xml_preparedocument @DocHandler OUTPUT, @MemberAmountXML
+
+			INSERT INTO #MemberAmount(custId,amount)
+			SELECT ID,AM
+			FROM OPENXML (@DocHandler, '/ROOT/R',1) 
+			WITH (
+				ID INT, 
+				AM MONEY
+			) AS Data
+
+			EXEC sp_xml_removedocument @DocHandler
+			-- end read xml	
+		END		
 
 		IF @RoleId = 4
 		BEGIN
@@ -186,7 +206,6 @@ BEGIN
 
 			WHILE @@FETCH_STATUS = 0
 			BEGIN
-				
 				UPDATE c WITH (ROWLOCK, UPDLOCK)
 				SET c.credit = t.newCredit
 					OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
