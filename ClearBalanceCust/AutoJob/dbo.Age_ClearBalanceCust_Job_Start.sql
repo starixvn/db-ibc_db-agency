@@ -193,21 +193,6 @@ BEGIN
 			WHERE p.SessionDate = @SessionDate
 				AND [Status] IN ('Waiting', 'Processing')
 
-			-- Update Failed, Pending to New if any
-			UPDATE p WITH(ROWLOCK, UPDLOCK)
-			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP, p.Amount = NULL
-				,p.TryCount = NULL, p.Result = NULL, p.StartTime = NULL, p.EndTime = NULL
-			FROM dbo.[Age_ClearBalanceCust_Process] p
-				INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
-			WHERE p.SessionDate = @SessionDate
-				AND p.[Status] IN ('Failed', 'Pending')
-				AND err.AllowReTry = 1
-				AND 1 = CASE 
-							WHEN err.ErrType = 'TransferUM' AND p.TryCount BETWEEN 1 AND 59 THEN 1 
-							WHEN p.TryCount BETWEEN 1 AND 4 THEN 1 
-						ELSE 0 END
-			;
-
 			-- TODO: Age_ClearBalanceCust_RunningSuper
 			UPDATE u WITH(ROWLOCK, UPDLOCK)
 			SET u.RunningBatchNo = 0

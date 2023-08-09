@@ -94,12 +94,22 @@ BEGIN
 	ORDER BY bl.BatchNo ASC;
 
 	-- CHECK: Completed or NOT
-	SELECT TOP(1) @IsCompleted = 0
-	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
-	WHERE 
-		p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
-		OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
-		OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
+	SELECT @IsCompleted = MAX(IsCompletedCheck)
+	FROM (
+		SELECT TOP(1) IsCompletedCheck = 0
+		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+		WHERE 
+			p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
+			OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
+			OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
+	
+		UNION ALL -- CHECK: Today snapshot COMPLETED OR NOT
+		SELECT 0
+		WHERE NOT EXISTS (
+			SELECT TOP 1 1
+			FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+		)
+	) AS ck;
 
 	-- TODO: Update AutoJob CompletedTime
 	IF @IsCompleted = 1

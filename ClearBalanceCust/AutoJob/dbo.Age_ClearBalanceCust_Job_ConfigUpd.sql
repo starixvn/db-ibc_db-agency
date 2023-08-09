@@ -2,6 +2,7 @@
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ConfigUpd]
 	@DefaultTime	VARCHAR(8),
 	@RunningMode	VARCHAR(10),
+	@IsActive		BIT,
 	@ManualTime		SMALLDATETIME = NULL,
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
@@ -45,7 +46,8 @@ BEGIN
 			SELECT 
 				@DefaultTime	AS dt,
 				@ManualTime		AS mt,
-				@RunningMode	AS rm
+				@RunningMode	AS rm,
+				@IsActive		As ia
 			FOR JSON PATH, WITHOUT_ARRAY_WRAPPER 
 		);
 

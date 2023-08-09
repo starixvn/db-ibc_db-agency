@@ -38,6 +38,7 @@ BEGIN
 		DefaultTime		= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.dt'), '00:00:00'),
 		ManualTime		= CAST(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.mt') AS SMALLDATETIME),
 		RunningMode		= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.rm'), 'Normal'),
+		IsActive		= CAST(ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.ia'), 0) AS BIT),
 		StartTime		= @StartTime,
 		CompletedTime	= @CompletedTime
 	;
