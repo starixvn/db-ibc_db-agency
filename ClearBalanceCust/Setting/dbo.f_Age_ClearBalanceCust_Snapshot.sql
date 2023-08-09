@@ -5,7 +5,7 @@ RETURN
 /*
 	Created:20230227@Bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBCUST/CustDB
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]

@@ -27,9 +27,6 @@ BEGIN
 		@Creator			INT, --StarixIT
 		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
 		@AutoTransfer_StartTime			DATETIME,
-		@AutoJob_ClearBalance_VValue	VARCHAR(200),
-		@AutoTransfer_StartTime_Check	DATETIME,
-		@AutoTransfer_RunningModeCheck	VARCHAR(15),
 		@SiteDBGroupID					SMALLINT,
 		@commandExec					NVARCHAR(MAX)
 	;
@@ -48,15 +45,6 @@ BEGIN
 	FROM CustDB.dbo.custInfo WITH(NOLOCK) 
 	WHERE username = 'StarixIT'
 	;
-
-	--TODO: Check setting
-	SELECT @AutoJob_ClearBalance_VValue = VValue
-	FROM SystemSettings (NOLOCK)
-	WHERE VName = @AutoJob_ClearBalance_VName
-	;
-
-	SELECT @AutoTransfer_StartTime_Check	= CAST(JSON_VALUE(@AutoJob_ClearBalance_VValue, '$.StartTime') AS DATETIME),
-		@AutoTransfer_RunningModeCheck		= JSON_VALUE(@AutoJob_ClearBalance_VValue, '$.RunningMode')
 
 	-- TODO: INIT data from current setting
 	IF @RunningMode IN ('Normal', 'Resume')
@@ -86,6 +74,12 @@ BEGIN
 			BEGIN
 				SELECT @ErrCode = 101
 					,@ErrMsg	= 'There is no data to process.'
+
+				--TODO: Update StartTime & CompletedTime
+				EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
+					@StartTime = @AutoTransfer_StartTime,
+					@RunningMode = @RunningMode,
+					@IsCompleted = 1
 				RETURN;
 			END
 
@@ -157,26 +151,18 @@ BEGIN
 					,@Creator AS Creator
 				FROM #tmpClearBalanceCust_Process p;
 
-				--TODO: Update Setting
-				SELECT @AutoJob_ClearBalance_VValue = (SELECT @AutoTransfer_StartTime AS StartTime, @RunningMode AS RunningMode FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
-				IF EXISTS (SELECT 1 FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = @AutoJob_ClearBalance_VName)
-				BEGIN
-					UPDATE dbo.SystemSettings WITH(ROWLOCK, UPDLOCK)
-					SET VValue = @AutoJob_ClearBalance_VValue
-					WHERE VName = @AutoJob_ClearBalance_VName
-				END
-				ELSE
-				BEGIN
-					INSERT INTO dbo.SystemSettings(VName, VValue)
-					VALUES (@AutoJob_ClearBalance_VName, @AutoJob_ClearBalance_VValue)
-				END
-
 				-- SET output
 				SELECT @TotalPair	= COUNT(1)
 					,@TotalBatch	= COUNT(DISTINCT BatchNo)
 					,@TotalSuper	= COUNT(DISTINCT SuperID)
 				FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
 				WHERE [Status] = 'New';
+
+				--TODO: Update StartTime & CompletedTime
+				EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
+					@StartTime = @AutoTransfer_StartTime,
+					@RunningMode = @RunningMode,
+					@IsCompleted = 0
 		END TRY
 		BEGIN CATCH 
 			SELECT @ErrCode = 102
@@ -227,26 +213,21 @@ BEGIN
 			SET u.RunningBatchNo = 0
 			FROM dbo.Age_ClearBalanceCust_RunningSuper u
 
-			--TODO: Update Setting
-			SELECT @AutoJob_ClearBalance_VValue = (SELECT @AutoTransfer_StartTime AS StartTime, @RunningMode AS RunningMode FOR JSON PATH, WITHOUT_ARRAY_WRAPPER);
-			IF EXISTS (SELECT 1 FROM dbo.SystemSettings WITH(NOLOCK) WHERE VName = @AutoJob_ClearBalance_VName)
-			BEGIN
-				UPDATE dbo.SystemSettings WITH(ROWLOCK, UPDLOCK)
-				SET VValue = @AutoJob_ClearBalance_VValue
-				WHERE VName = @AutoJob_ClearBalance_VName
-			END
-			ELSE
-			BEGIN
-				INSERT INTO dbo.SystemSettings(VName, VValue)
-				SELECT @AutoJob_ClearBalance_VName AS VName,@AutoJob_ClearBalance_VValue AS VValue
-			END
-
 			-- SET output
 			SELECT @TotalPair	= COUNT(1)
 				,@TotalBatch	= COUNT(DISTINCT BatchNo)
 				,@TotalSuper	= COUNT(DISTINCT SuperID)
 			FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
 			WHERE [Status] = 'New';
+
+			--TODO: Update Setting - Resume Mode
+			IF (@TotalBatch > 0)
+			BEGIN
+				EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
+					@StartTime = @AutoTransfer_StartTime,
+					@RunningMode = @RunningMode,
+					@IsCompleted = 0
+			END
 		END TRY
 		BEGIN CATCH 
 			SELECT @ErrCode = 103

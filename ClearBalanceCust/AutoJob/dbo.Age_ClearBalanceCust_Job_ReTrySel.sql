@@ -102,26 +102,9 @@ BEGIN
 		OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
 
 	-- TODO: Update AutoJob CompletedTime
-	DECLARE 
-		@AutoJob_ClearBalance_VName_Runtime		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
-		@AutoJob_ClearBalance_VValue_Runtime	VARCHAR(200)
-	;
-
 	IF @IsCompleted = 1
 	BEGIN
-		SELECT TOP(1) @AutoJob_ClearBalance_VValue_Runtime = VValue
-		FROM dbo.SystemSettings (NOLOCK)
-		WHERE VName = @AutoJob_ClearBalance_VName_Runtime
-		;
-
-		SELECT @AutoJob_ClearBalance_VValue_Runtime = JSON_MODIFY(@AutoJob_ClearBalance_VValue_Runtime, '$.CompletedTime', FORMAT(GETDATE(), 'yyyy-MM-dd hh:mm:ss'))
-
-		UPDATE TOP(1) s
-		SET VValue = @AutoJob_ClearBalance_VValue_Runtime
-		FROM dbo.SystemSettings s WITH(ROWLOCK, UPDLOCK)
-		WHERE VName = @AutoJob_ClearBalance_VName_Runtime
-		;
-
+		EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd] @IsCompleted = 1
 	END
 END
 GO
