@@ -94,7 +94,7 @@ BEGIN
 	ORDER BY bl.BatchNo ASC;
 
 	-- CHECK: Completed or NOT
-	SELECT @IsCompleted = MAX(IsCompletedCheck)
+	SELECT @IsCompleted = ISNULL(MAX(IsCompletedCheck), @IsCompleted)
 	FROM (
 		SELECT TOP(1) IsCompletedCheck = 0
 		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
