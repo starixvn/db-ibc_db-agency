@@ -793,31 +793,31 @@ BEGIN
 			SELECT @ErrMsg = ''  
      
 
-				set @isSucc='true'
-				--Select @LogData = @LogData + '[' + convert(varchar(20),@ToCustID) + ', ' + convert(varchar(20), @amount) + ']'      
-				IF @SubAccID > 0  
-					SET @LogData = 'SubAccount:' +  coalesce(cast(@SubAccName as varchar(30)),space(1)) + ' - ' + @LogData  
+			set @isSucc='true'
+			--Select @LogData = @LogData + '[' + convert(varchar(20),@ToCustID) + ', ' + convert(varchar(20), @amount) + ']'      
+			IF @SubAccID > 0  
+				SET @LogData = 'SubAccount:' +  coalesce(cast(@SubAccName as varchar(30)),space(1)) + ' - ' + @LogData  
 
-				SELECT @LogData = @LogData + ' SPName: ' + @procName
+			SELECT @LogData = @LogData + ' SPName: ' + @procName
 		
-				BEGIN TRY	
-					EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-											@UserID		= @creator, 
-											@FromCustID = @FromCustID, 
-											@ToCustID	= @custID, 
-											@IP			= @IP, 
-											@Doing		= @LogData 
-				END TRY
-				BEGIN CATCH
-					SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
-			
-					EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+			BEGIN TRY	
+				EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
 										@UserID		= @creator, 
 										@FromCustID = @FromCustID, 
 										@ToCustID	= @custID, 
 										@IP			= @IP, 
-										@Doing		= @LogData
-				END CATCH
+										@Doing		= @LogData 
+			END TRY
+			BEGIN CATCH
+				SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
+			
+				EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+									@UserID		= @creator, 
+									@FromCustID = @FromCustID, 
+									@ToCustID	= @custID, 
+									@IP			= @IP, 
+									@Doing		= @LogData
+			END CATCH
 	  
 		END TRY
 		BEGIN CATCH
@@ -851,6 +851,5 @@ BEGIN
  
 	DROP TABLE #Member  
 
-
-		
+END		
 GO
