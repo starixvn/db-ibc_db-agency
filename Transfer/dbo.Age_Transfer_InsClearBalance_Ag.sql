@@ -66,6 +66,7 @@ Revisions:
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230523@Danny: support scale out credit [Redmine: #181595]
+	- 20230705@Lewis: Allow to transfer YTB many times [Redmine: #186078]
 
 Param's Explanation:
 • @FromCustID: list from custid
@@ -469,9 +470,7 @@ END
 
  DECLARE CUR Cursor FOR SELECT custid, memberName, memberBalance, memberOutstanding, memberCredit, memberPendingTransfer3rd
 						FROM #Member  
- 
- DECLARE @ErrItems nvarchar(4000)  
- DECLARE @SkipTransfer bit  
+
  DECLARE @isSucc varchar(10), @SubAccName varchar(30)
  
  --- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
@@ -480,31 +479,14 @@ END
  WHERE SubAccID = @SubAccID
 
     
- SELECT @isSucc='false'  
- SELECT @ErrItems = ''  
+ SELECT @isSucc='false'
   
  OPEN CUR  
    
  FETCH NEXT FROM CUR INTO @custID,@user,@amount, @Outstanding, @credit, @PendingTransfer3rd
  WHILE @@FETCH_STATUS = 0  
  BEGIN  
-	SELECT @SkipTransfer = 0
-	
-  --Check for existing transfer (allow only one transfer per day) - Tho@09062008  
-    IF @IsAllDayBalTransfer = 0
-		BEGIN
-		IF EXISTS(  
-			  SELECT TOP 1 1 FROM Transfer t WITH (NOLOCK) LEFT JOIN TransferInfo ti WITH(NOLOCK) ON t.TransId = ti.TransId 
-			  WHERE CustId=@custid AND Bettype in (21003, 21004)   
-			  AND (TransDate BETWEEN convert(varchar(10), current_timestamp, 120) AND convert(varchar(10), current_timestamp, 120) + ' 23:59:59')  
-			  AND ISNULL(ti.IsDel,0) = 0
-			  AND t.winlostdate >= @balanceUpDay
-		 ) 
-		BEGIN 
-			SELECT @SkipTransfer = 1  
-			SELECT @ErrItems = @ErrItems + @User + ', '  
-		END
-	END
+
   ----/---------------------------------------------------------------  
 
     EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
@@ -518,7 +500,7 @@ END
         ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
         END  
    
-	IF (@amount > 0 and @SkipTransfer = 0)  
+	IF (@amount > 0)
     BEGIN  
 		EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 		INSERT INTO Transfer   
@@ -581,7 +563,7 @@ END
 		IF @FutureBetCredit < 0 
 		SELECT @LogData = @LogData + '. The agent decided to transfer after the warning so the bet credit of this member turned to negative value (' + convert(varchar(100), @FutureBetCredit, 2) + ') caused by having outstanding balance value ('+ convert(varchar(100), @outstanding, 2) +')  '
     END  
-	ELSE IF(@amount<0 and @SkipTransfer = 0)  
+	ELSE IF(@amount<0)
     BEGIN  
 
 		--SET @amount = abs(@amount)    
@@ -643,8 +625,7 @@ END
 	SELECT @ErrCode = 0  
     SELECT @ErrMsg = ''  
      
-	IF(@SkipTransfer = 0)   
-    BEGIN  
+
 		set @isSucc='true'
         --Select @LogData = @LogData + '[' + convert(varchar(20),@ToCustID) + ', ' + convert(varchar(20), @amount) + ']'      
 		IF @SubAccID > 0  
@@ -670,7 +651,7 @@ END
 								@IP			= @IP, 
 								@Doing		= @LogData
 		END CATCH
-    END  	  
+	  
   
     FETCH NEXT FROM CUR INTO @custID,@user,@amount,@Outstanding,@credit, @PendingTransfer3rd
  END  
@@ -678,13 +659,5 @@ END
  DEALLOCATE CUR  
  
  DROP TABLE #Member  
- IF @ErrItems <> ''  
- BEGIN  
-	SELECT @ErrCode = 104  
-	SELECT @ErrItems = LEFT(@ErrItems, len(@ErrItems)-1)  
-	SELECT @ErrMsg = CASE @Language   
-       WHEN 'E' THEN N'Clear balance failed: Allow only one transfer per day. Failed for the following user(s):' + ' ' + @ErrItems + '_' + @isSucc  
-       ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50004,@Language) + ' ' + @ErrItems + '_' + @isSucc  
-      END  
- END
+
 GO

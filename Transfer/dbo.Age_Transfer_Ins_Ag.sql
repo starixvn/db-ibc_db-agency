@@ -65,6 +65,7 @@ Revisions:
 	- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230523@Danny: support scale out credit [Redmine: #181595]
+	- 20230705@Lewis: Allow to transfer YTB many times [Redmine: #186078]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -152,24 +153,6 @@ EXEC bodb02.dbo.Age_SelBalanceUpDay
 	
 SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
 
-IF @IsAllDayBalTransfer = 0
-BEGIN
-	IF EXISTS (	SELECT TOP 1 1	
-				FROM Transfer t WITH (NOLOCK) LEFT JOIN TransferInfo ti WITH(NOLOCK) ON t.TransId = ti.TransId
-				WHERE t.CustId=@custid AND
-					t.Bettype in (21003, 21004) AND
-					CONVERT(DATE, t.TransDate) = @today AND
-					t.winlostdate >= @balanceUpDay AND
-					ISNULL(ti.IsDel,0) = 0 )
-	BEGIN
-		SELECT @ErrMsg = CASE @Language 
-			WHEN 'E' THEN 'You can only transfer one per everyday!'
-			ELSE  CustDB.dbo.f_Get_MsgNamebyMsgID(50009,@Language)
-		END, @ErrCode = 105
-		RETURN		
-	END
-END
- 
 DECLARE @CustBalance MONEY 
 DECLARE @CustOutstanding MONEY
 DECLARE @PendingTransfer3rd MONEY
