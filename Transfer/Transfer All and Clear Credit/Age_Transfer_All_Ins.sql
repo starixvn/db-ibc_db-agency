@@ -32,6 +32,7 @@ AS
 		- 20220721@Danny: get transid and refno with new generation [Redmine: #175670]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		- 20230523@Danny: support scale out credit [Redmine: #181595]
+		- 20230705@Lewis: Allow to transfer YTB many times [Redmine: #186078]
 */
 
 BEGIN
@@ -150,32 +151,6 @@ BEGIN
 		-- 3. Nagative bet credit after transfer -- calculate balance part
 
 		-- 4.Transferred to member
-		DECLARE @tblcustId TABLE (custid INT)
-		
-		IF @IsAllDayTransfer = 0
-		BEGIN
-			IF @RoleId = 4
-				INSERT INTO @tblcustId (custid)
-				SELECT custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 1
-			ELSE IF @RoleId = 3
-				INSERT INTO @tblcustId (custid)
-				SELECT custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND roleId = 1
-
-			IF EXISTS (
-					SELECT TOP 1 1
-					FROM @tblcustId c
-						CROSS APPLY (
-							SELECT TOP 1 1 AS t FROM dbo.Transfer b WITH (NOLOCK)
-							WHERE b.custid = c.custid
-								AND b.bettype IN (21003, 21004)
-								AND b.transdate >= CONVERT(DATE, GETDATE()) AND b.transdate < DATEADD(DAY, 1, CONVERT(DATE, GETDATE()))
-						) AS b
-				)
-			BEGIN
-				INSERT INTO @ErrTable (Id, Content)
-				SELECT 4, CustDB.dbo.f_Get_MsgNamebyMsgID(50013, @Language)
-			END
-		END
 
 		-- 5. Condition transfer (Exclude Super)
 		IF @RoleId = 3
@@ -500,7 +475,6 @@ BEGIN
 	-- Calculate transfer amount
 	CREATE TABLE #Member (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT, memberName VARCHAR(50), agentName VARCHAR(50), memberBalance MONEY DEFAULT 0)
 	CREATE TABLE #Agent  (recommend	INT PRIMARY KEY, mrecommend INT, srecommend INT, agentName VARCHAR(50), masterName VARCHAR(50), agentBalance MONEY DEFAULT 0)
-	CREATE TABLE #SkippedMember (custid INT PRIMARY KEY, recommend INT, mrecommend INT, srecommend INT)
 
 	DECLARE @TransferredMember MONEY = 0, @TransferredAgent MONEY = 0
 
@@ -614,20 +588,7 @@ BEGIN
 
 			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
-			IF @IsAllDayTransfer = 0
-				AND EXISTS (
-					SELECT 1
-					FROM dbo.Transfer WITH (NOLOCK)
-					WHERE custid = @memberId
-						AND bettype IN (21003, 21004)
-						AND winlostdate >= @balanceUpDay
-						AND transdate BETWEEN CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120) AND CONVERT(VARCHAR(10), CURRENT_TIMESTAMP, 120) + ' 23:59:59'
-				)
-			BEGIN
-				INSERT INTO #SkippedMember (custid, recommend, mrecommend, srecommend)
-				VALUES (@memberId, @agentId, @masterId, @superId)
-			END
-			ELSE IF @memberBalance > 0
+			IF @memberBalance > 0
 			BEGIN
 				-- for agent
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
@@ -855,20 +816,6 @@ BEGIN
 		/*
 			============================== End Member - Agent ==============================
 		*/
-
-		-- If exists transfered members, skip transfer upline
-		IF EXISTS (SELECT 1 FROM #SkippedMember)
-		BEGIN
-			IF @RoleId = 3
-				RETURN
-			
-			DELETE #Agent
-			WHERE recommend IN (SELECT recommend FROM #SkippedMember)
-			
-			SET @masterBalance = 0
-		END
-
-		DROP TABLE #SkippedMember
 
 		/*
 			============================== Start Agent - Master ==============================
