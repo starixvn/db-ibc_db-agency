@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02,DBBOF-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GroupBettype] ()
 RETURNS TABLE
 RETURN
@@ -19,6 +19,7 @@ RETURN
 		- 20190805@Sophia: PHAIO 4B, Bettype 470 -> 497, Change GroupTypeId of 11, 199 [RedmineID: #115231]
 		- 20191118@Percy: BMAIO - Add bet type 1302 (703) [RedmineID: #118622]
 		- 20191226@Percy: Apply column DisplayedTypeId on bettype table [RedmineID: #125126]
+		- 20230807@Danny: deploy SP in DBBOF [RedmineID: #191715]
 
 	Remark: Sportsbook only
 */
