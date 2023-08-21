@@ -156,7 +156,7 @@ BEGIN
 		AND p.SessionDate = @today
 		AND (
 			err.ErrType IS NULL
-			OR (err.ErrType IS NOT NULL AND err.IsShowHistory = 1)
+			OR err.IsShowHistory = 1
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)
 	ORDER BY 

@@ -192,6 +192,7 @@ BEGIN
 			FROM dbo.[Age_ClearBalanceCust_Process] p
 			WHERE p.SessionDate = @SessionDate
 				AND [Status] IN ('Waiting', 'Processing')
+				AND p.TryCount IS NULL -- NOT touch on ReTry thread
 
 			-- TODO: Age_ClearBalanceCust_RunningSuper
 			UPDATE u WITH(ROWLOCK, UPDLOCK)

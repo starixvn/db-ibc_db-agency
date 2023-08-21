@@ -42,7 +42,7 @@ BEGIN
 
 	SELECT @today			= GETDATE(),
 		@yesterday			= DATEADD(DAY, -1, @today),
-		@Last3Months		= DATEADD(MONTH, -3, @today),
+		@Last3Months		= DATEADD(MONTH, -3, @yesterday),
 		@StatusCheck		= ISNULL(@ViewStatus, 'All'),
 		@UplineId			= @FromCustId,
 		@CheckName			= @Searchname,
@@ -153,7 +153,7 @@ BEGIN
 		AND p.SessionDate BETWEEN @rptFromDate AND @rptToDate
 		AND (
 			err.ErrType IS NULL
-			OR (err.ErrType IS NOT NULL AND err.IsShowHistory = 1)
+			OR err.IsShowHistory = 1
 		)
 		AND (@CheckName IS NULL OR cte.CustId > 0)
 	ORDER BY 

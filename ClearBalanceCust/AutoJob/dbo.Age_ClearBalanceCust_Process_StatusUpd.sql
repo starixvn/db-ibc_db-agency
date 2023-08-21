@@ -87,8 +87,8 @@ BEGIN
 	IF @effectedRows = 0
 	BEGIN
 		-- Re-New/Cancelled
-		SELECT @ErrCode = 50033
-			, @ErrMsg = CustDB.[dbo].[f_Get_MsgNamebyMsgID](50033, 'E')
+		SELECT @ErrCode = 50032
+			, @ErrMsg = CustDB.[dbo].[f_Get_MsgNamebyMsgID](50032, 'E')
 	END
 END
 GO
