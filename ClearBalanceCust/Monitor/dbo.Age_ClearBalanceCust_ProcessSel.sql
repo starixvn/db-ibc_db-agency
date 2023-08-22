@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
 	@FromCustId		INT,
 	@Language		VARCHAR(2)= 'E', 
 	@ViewStatus		VARCHAR(1000) = 'All',
-	@Searchname		VARCHAR(50) = NULL,
+	@Searchname		NVARCHAR(50) = NULL,
 	@SortBy			TINYINT = 1,
 	@SortType		BIT = 0,
 	@PageIndex		INT = 1,
@@ -17,6 +17,7 @@ AS
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20230822@Bobby: Support unicode FirstName/LastName [RedmineID: #193017]
 
 	Param's Explanation:
 		- @SortBy:
@@ -34,7 +35,7 @@ BEGIN
 	DECLARE @today		DATE,
 		@RoleId			TINYINT,
 		@UplineId		INT,
-		@CheckName		VARCHAR(50),
+		@CheckName		NVARCHAR(50),
 		@StatusCheck	VARCHAR(1000)
 	;
 
@@ -109,9 +110,9 @@ BEGIN
 	(
 		rIdx			INT IDENTITY(1, 1) PRIMARY KEY,
 		CustId			INT,
-		UserName		VARCHAR(50),
-		FirstName		VARCHAR(50),
-		LastName		VARCHAR(50),
+		UserName		VARCHAR(30),
+		FirstName		NVARCHAR(50),
+		LastName		NVARCHAR(50),
 		Amount			MONEY,
 		[Status]		VARCHAR(15),
 		Reason			NVARCHAR(4000),
@@ -144,13 +145,14 @@ BEGIN
 		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
 			SELECT CASE 
-				WHEN p.Status IN ('Completed','Failed','Cancelled') THEN DATEDIFF(SECOND,@BASELINE_DATE, ISNULL(p.EndTime, p.ModifiedTime))
+				WHEN p.Status IN ('Completed','Failed','Cancelled','Ignored') THEN DATEDIFF(SECOND,@BASELINE_DATE, ISNULL(p.EndTime, p.ModifiedTime))
 				ELSE 0 
 			END AS CompletedTimeSec,
 			CASE 
 				WHEN err.ErrType IS NOT NULL THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](JSON_VALUE(p.Result, '$.MsgId'), @Language)
 				ELSE '' END AS Reason,
 				ISNULL(FORMAT(DATEADD(HOUR, 12, CAST(JSON_VALUE(p.Result, '$.ToTime') AS DATETIME)), 'MM/dd/yyyy HH:mm:ss'), '') AS ToTimeText
+
 		) AS ct
 	WHERE p.FromCustId = @FromCustId
 		AND p.SessionDate = @today

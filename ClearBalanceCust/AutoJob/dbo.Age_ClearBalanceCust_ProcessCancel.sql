@@ -10,12 +10,13 @@ ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_ProcessCancel]
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS  
 /*
-	Created:20230227@bobby
+	Created:20230227@Bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
 	DB: DBSIC-bodb02,DBCTG-bodb02
 
 	Revisions:
-		- 20230227@bobby: INIT [RedmineID: #182071]
+		- 20230227@Bobby: INIT [RedmineID: #182071]
+		- 20230822@Bobby: Enhance checking cross level [RedmineID: #193021]
 
 	Param's Explanation:
 		• @FromCustID: S/M/A's custid
@@ -25,7 +26,7 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @currentStatus VARCHAR(15), @effectedRows INT;
+	DECLARE @currentStatus VARCHAR(15), @effectedRows INT, @RoleID INT;
 
 	DROP TABLE IF EXISTS #tmpDownline;
 	CREATE TABLE #tmpDownline(CustId INT PRIMARY KEY);
@@ -34,19 +35,29 @@ BEGIN
 	SELECT @ToCustID
 	;
 
+	SELECT @RoleID = (SELECT TOP 1 RoleID FROM CustDB.dbo.customer WITH (NOLOCK) WHERE custid = @FromCustID);
+
 	STATUS_CHECK:
 	SELECT @currentStatus = p.[Status]
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(ROWLOCK)
-	INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+		INNER JOIN CustDB.dbo.customer ck WITH (NOLOCK) ON ck.CustId = c.CustId
 	WHERE p.FromCustId = @FromCustID
+		AND 1 = CASE 
+					WHEN @RoleID = 2 AND ck.RoleID = 1 AND ck.recommend = p.FromCustID THEN 1
+					WHEN @RoleID = 3 AND ck.RoleID = 2 AND ck.mrecommend = p.FromCustID THEN 1
+					WHEN @RoleID = 4 AND ck.RoleID = 3 AND ck.srecommend = p.FromCustID THEN 1
+					ELSE 0
+				END
 
 	SELECT @ErrCode = 0,
 		@ErrMsg		= ''
 
 	IF @ViewStatus NOT IN ('Waiting', 'Processing', 'Pending')
+		OR @currentStatus IS NULL
 	BEGIN
 		SELECT @ErrCode = 101,
-				@ErrMsg = 'Invalid Auto Transfer process status.'
+				@ErrMsg = 'Invalid Auto Transfer process request.'
 		RETURN;
 	END
 
@@ -72,7 +83,7 @@ BEGIN
 	FROM dbo.Age_ClearBalanceCust_Process p 
 	INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
 	WHERE p.FromCustId = @FromCustID
-		AND p.[Status] = @ViewStatus
+		AND p.[Status] = @currentStatus
 	;
 	SET @effectedRows = @@ROWCOUNT;
 

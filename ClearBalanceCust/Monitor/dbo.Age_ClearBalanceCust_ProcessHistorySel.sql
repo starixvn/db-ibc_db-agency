@@ -1,11 +1,11 @@
-/*<info serverAlias="DBARC-bodb_Archive" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessHistorySel]
 	@FromCustId		INT,
 	@FromDate		DATE,
 	@ToDate			DATE,
 	@Language		VARCHAR(2)= 'E', 
 	@ViewStatus		VARCHAR(1000) = 'All',
-	@Searchname		VARCHAR(50) = NULL,
+	@Searchname		NVARCHAR(50) = NULL,
 	@SortBy			TINYINT = 1,
 	@SortType		BIT = 0,
 	@PageIndex		INT = 1,
@@ -15,10 +15,11 @@ AS
 /*
 	Created:20230227@Bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBLOG/bodb_CustomerLog
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20230822@Bobby: Support unicode FirstName/LastName [RedmineID: #193017]
 
 	Param's Explanation:
 
@@ -31,7 +32,7 @@ BEGIN
 		@yesterday		DATE,
 		@RoleId			TINYINT,
 		@UplineId		INT,
-		@CheckName		VARCHAR(50),
+		@CheckName		NVARCHAR(50),
 		@StatusCheck	VARCHAR(1000),
 		@rptFromDate	SMALLDATETIME,
 		@rptToDate		SMALLDATETIME,
@@ -111,9 +112,9 @@ BEGIN
 	CREATE TABLE #pageResult
 	(
 		rIdx			INT IDENTITY(1, 1) PRIMARY KEY,
-		UserName		VARCHAR(50),
-		FirstName		VARCHAR(50),
-		LastName		VARCHAR(50),
+		UserName		VARCHAR(30),
+		FirstName		NVARCHAR(50),
+		LastName		NVARCHAR(50),
 		Amount			MONEY,
 		[Status]		VARCHAR(15),
 		Reason			NVARCHAR(4000),
@@ -134,14 +135,14 @@ BEGIN
 		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, @BASELINE_DATE), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
 		COUNT(1) OVER() AS TotalRow
 		
-	FROM bodb_Archive.dbo.Age_ClearBalanceCust_ProcessHistory p WITH(NOLOCK)
+	FROM dbo.Age_ClearBalanceCust_ProcessHistory p WITH(NOLOCK)
 		INNER JOIN @tmpStatus tmp ON tmp.[Status] = p.[Status]
 		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.CustId = p.ToCustId
 		LEFT JOIN #tmpDownline cte ON cte.custId = p.ToCustId
 		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
 			SELECT CASE 
-				WHEN p.Status IN ('Completed','Failed','Cancelled') THEN DATEDIFF(SECOND,@BASELINE_DATE, ISNULL(p.EndTime, p.ModifiedTime))
+				WHEN p.Status IN ('Completed','Failed','Cancelled','Ignored') THEN DATEDIFF(SECOND,@BASELINE_DATE, ISNULL(p.EndTime, p.ModifiedTime))
 				ELSE 0 
 			END AS CompletedTimeSec,
 			CASE 
