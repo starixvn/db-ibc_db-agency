@@ -19,15 +19,18 @@ AS
 		- 20200810@Sophia: Exclude these Products: Pragmatic, Card Club, Spadegaming of of Macau Games [Redmine: #137767]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20201124@Malcolm: Add Virtual Sports 3 [redmine: #131375]
+		- 20230713@Lewis: Add Virtual Sports 3 (New) - Leap Gaming [RedmineID: #189207]
 */
 
 RETURN
-	-- Virtual Sports: Betradar Virtual Sports, Virtual Sports
+	-- Virtual Sports: Betradar Virtual Sports, Virtual Sports, VS3-LeapGamingVS(New)
 	SELECT 5 AS ProductId, 5 AS GroupProductId
 	UNION ALL
 	SELECT 27, 5
 	UNION ALL
 	SELECT 49, 5
+	UNION ALL
+	SELECT 77, 5
 
 	
 	/*
