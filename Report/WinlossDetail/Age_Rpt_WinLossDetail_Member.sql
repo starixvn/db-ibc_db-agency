@@ -77,7 +77,7 @@ BEGIN
 
 	IF @Username <> ''	--@USERNAME IS NOT NULL		=> -1: No Data || >0: Exactly Username
 	BEGIN
-		SET @UserName_CustId = (SELECT ISNULL(Custid,-1) FROM Customer WITH (NOLOCK) WHERE username = @UserName)
+		SET @UserName_CustId = ISNULL((SELECT Custid FROM Customer WITH (NOLOCK) WHERE username = @UserName),-1)
 	END
 	ELSE				--@USERNAME IS NULL			=> Run all
 	BEGIN

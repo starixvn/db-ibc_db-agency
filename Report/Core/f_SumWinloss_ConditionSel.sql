@@ -59,12 +59,13 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20230206@Eddie: Add Jili product [RedmineID: #182860]
 		- 20230511@Eddie: Add YeeBet product [RedmineID: #186480]
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
+		- 20230713@Lewis: Add Virtual Sports 3 (New) - Leap Gaming [RedmineID: #189207]
 	Paramters Explanation:
  		@ProductID: list of products
 */
 RETURNS TABLE
 RETURN
-	SELECT ProductID, SportType, BetType, LeagueGroupID, TicketType
+	SELECT ProductID, SportType, BetType, LeagueGroupID, TicketType 
 	FROM (
 		VALUES	(1, 0, 0, 0, 0), -- Normal Sportsbook,
 				(1, 0, 0, 0, 1), -- CashOut,
@@ -112,7 +113,7 @@ RETURN
 				(56, 234, 0, 0, 0), -- Joker
 				(51, 233, 0, 0, 0), -- WM
 				(59, 236, 0, 0, 0), -- GDG
-				(49, 231, 0, 0, 0), -- Virtual Sports 3
+				(49, 231, 0, 0, 0), -- Virtual Sports 3 (Old)
 				(57, 239, 0, 0, 0), -- BG
 				(60, 237, 0, 0, 0), -- MaxGame
 				(37, 246, 0, 0, 0), -- Saba Promotion
@@ -129,7 +130,8 @@ RETURN
 				(73, 155, 0, 0, 0),  -- Microgaming
 				(73, 155, 8695, 0, 0),  -- Microgaming Promotion Prize
 				(75, 158, 0, 0, 0),  -- Jili
-				(76, 159, 0, 0, 0)  -- YeeBet
+				(76, 159, 0, 0, 0),  -- YeeBet
+				(77, 178, 0, 0, 0) --VS3-LeapGaming(New)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
