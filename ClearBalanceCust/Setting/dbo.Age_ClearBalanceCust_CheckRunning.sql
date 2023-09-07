@@ -30,10 +30,10 @@ BEGIN
 	
 	IF EXISTS (
 				SELECT 	TOP 1 1  
-				FROM 	bodb02.dbo.Age_ClearBalanceCust_Process s WITH(NOLOCK)
+				FROM dbo.Age_ClearBalanceCust_Process s WITH(NOLOCK)
 				WHERE 	--- check current Upline is processing or not
 					s.FromCustID IN (@CustID)
-					AND s.[Status] IN ('Waiting', 'Processing', 'Pending')
+					AND s.[Status] IN ('New', 'Waiting', 'Processing', 'Pending')
 		)
 	BEGIN
 		SELECT @ErrCode = 50020

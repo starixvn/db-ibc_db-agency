@@ -69,6 +69,7 @@ Revisions:
 	- 20230523@Danny: support scale out credit [Redmine: #181595]
 	- 20230705@Lewis: Allow to transfer YTB many times [Redmine: #186078]
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
+	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
 
 Param's Explanation:
 	• @FromCustID: list from custid
@@ -596,8 +597,6 @@ BEGIN
 				END
 			END
 
-
-			
 			------------------Gen refno---------------------------------------------------------------  
 			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
@@ -620,12 +619,19 @@ BEGIN
 			END
 			
 			--TODO: Set default ERROR for MANUAL transfer
+			DECLARE @extraTransDesc VARCHAR(100);
 			SELECT @ErrCode		= 105
 					,@ErrMsg	= CASE @Language
 									WHEN 'E'
 										THEN 'Clear balance failed. Please try again.'
 									ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50003, @Language)
 								END
+					, @extraTransDesc = CASE 
+											WHEN @IsAutoTransfer = 1 THEN '(added via the Auto Transfer process)'
+											WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')'
+											ELSE ''
+										END
+
 			------------------Insert trans into transfer---------------------------------------------------------------  
 			IF (@amount > 0)  
 			BEGIN  
@@ -634,7 +640,7 @@ BEGIN
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 						winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)  
 				VALUES 
-					(@TransID, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User + @extraTransDesc, 
 						@amount, 0, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131, SYSDATETIME())  
 				IF @@Error <> 0  
 				BEGIN  
@@ -679,7 +685,7 @@ BEGIN
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 						winlostdate, currency, actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance, RepUpdateTime)  
 				VALUES 
-					(@TransID, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @agUser + @extraTransDesc, 
 						0, @amount,  @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131, @TotalCash1, SYSDATETIME())  
 				IF @@Error <> 0  
 				BEGIN  
@@ -722,7 +728,7 @@ BEGIN
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 						winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)  
 				VALUES 
-					(@TransID, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID, @creator, @agentid, @agUser, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User + @extraTransDesc, 
 						0, abs(@amount),@WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131, SYSDATETIME())  
 				IF @@Error <> 0  
 				BEGIN  
@@ -748,7 +754,7 @@ BEGIN
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake,   
 						winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance, RepUpdateTime)  
 				VALUES 
-					(@TransID, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @agUser + @extraTransDesc, 
 						abs(@amount), 0, @WinlostDate, @currency, @actualrate, @currName, @agentid, @MRecommend1, @srecommend1, 0, 0,@ip,131, @TotalCash3, SYSDATETIME())  
 				IF @@Error <> 0  
 				BEGIN  
