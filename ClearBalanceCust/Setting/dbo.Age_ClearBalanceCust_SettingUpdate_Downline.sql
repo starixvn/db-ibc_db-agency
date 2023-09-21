@@ -46,7 +46,8 @@ BEGIN
 		,@StartTime = CURRENT_TIMESTAMP
 		,@IsAllowAutoTransfer = 0
 		,@IsAllowAutoTransfer_Old = 1
-		,@RunSPNameLog = 'Age_ClearBalanceCust_SettingUpdate_Downline';
+		,@RunSPNameLog = '<Age_ClearBalanceCust_SettingUpdate_Downline' --> write log UserLog_RunSP ORIG version
+	;
 
 	SELECT @roleId		= RoleId
 		,@mrecommend	= mrecommend
@@ -152,9 +153,8 @@ BEGIN
 			SELECT 
 				tb.ToCustId AS '@cid',
 				CASE 
-					WHEN RoleId = 4 THEN 95097 -- view log master
-					WHEN RoleId = 3 THEN 95098 -- view log agent
-					WHEN RoleId = 2 THEN 95099 -- view log member
+					WHEN @roleId = 4 THEN 95097 -- view log master
+					WHEN @roleId = 3 THEN 95098 -- view log agent/member
 					ELSE 0 END AS '@aid'
 			FROM @tmpBatch tb
 			FOR XML PATH('r')

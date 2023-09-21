@@ -20,7 +20,7 @@ WITH CTE_Setting AS (
 	WHERE cs.SiteDBGroupID = @SiteDBGroupID
 ),
 CTE_SMASetting AS (
-	SELECT tmp.SessionDate, ca.custid AS FromCustId, tmp.RoleId, ca.TransferOption,cm.IsAllDayBalTransfer, tmp.SuperId
+	SELECT tmp.SessionDate, ca.custid AS FromCustId, tmp.RoleId, ca.TransferOption, ISNULL(cm.IsAllDayBalTransfer, 0) AS IsAllDayBalTransfer, tmp.SuperId
 	FROM dbo.CustAgent ca WITH (NOLOCK)
 		INNER JOIN CTE_Setting tmp ON tmp.FromCustId = ca.custid
 		INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.custid = ca.custid
@@ -28,19 +28,19 @@ CTE_SMASetting AS (
 	WHERE tmp.RoleId = 2
 
 	UNION ALL
-	SELECT tmp.SessionDate, cm.custid, tmp.RoleId, cm.TransferOption, cm.IsAllDayBalTransfer, tmp.SuperId
+	SELECT tmp.SessionDate, cm.custid, tmp.RoleId, cm.TransferOption, ISNULL(cm.IsAllDayBalTransfer, 0), tmp.SuperId
 	FROM dbo.CustMaster cm WITH (NOLOCK)
 		INNER JOIN CTE_Setting tmp ON tmp.FromCustId = cm.custid
 	WHERE tmp.RoleId = 3
 
 	UNION ALL
-	SELECT tmp.SessionDate, cs.custid, tmp.RoleId, cs.TransferOption, cs.IsAllDayBalTransfer, tmp.SuperId
+	SELECT tmp.SessionDate, cs.custid, tmp.RoleId, cs.TransferOption, ISNULL(cs.IsAllDayBalTransfer, 0), tmp.SuperId
 	FROM dbo.CustSuper cs WITH (NOLOCK)
 		INNER JOIN CTE_Setting tmp ON tmp.FromCustId = cs.custid
 	WHERE tmp.RoleId = 4
 )
 SELECT s.FromCustId, cs.ToCustID
-	,s.roleid, ISNULL(s.IsAllDayBalTransfer, 0) AS IsAllDayBalTransfer, s.SuperId
+	,s.roleid, s.IsAllDayBalTransfer, s.SuperId
 	,s.TransferOption
 FROM CTE_SMASetting s
 	INNER JOIN dbo.Age_ClearBalanceCust_Setting cs ON cs.FromCustID = s.FromCustId
@@ -59,4 +59,5 @@ WHERE cs.EffectiveDate <= s.SessionDate
 				WHEN s.roleid = 4 AND c.roleid = 3 and c.srecommend = s.FromCustId THEN 1	--direct super/master
 				ELSE 0
 			END
+	AND s.IsAllDayBalTransfer = 0 -- NOT support Cash model
 GO

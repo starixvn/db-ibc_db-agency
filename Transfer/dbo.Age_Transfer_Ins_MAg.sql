@@ -534,7 +534,7 @@ BEGIN
 								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
 						END
 						, @extraTransDesc = CASE 
-											WHEN @IsAutoTransfer = 1 THEN '(added via the Auto Transfer process)'
+											WHEN @IsAutoTransfer = 1 THEN ' (added via the Auto Transfer process)'
 											WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')'
 											ELSE ''
 										END

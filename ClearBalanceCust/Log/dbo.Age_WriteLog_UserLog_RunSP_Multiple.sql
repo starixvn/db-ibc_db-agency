@@ -51,8 +51,8 @@ BEGIN
 		@SPName AS SPName,
 		NULL AS Doing,
 		ActionId,
-		REPLACE(tv.TrackingValue, 'SP_TEMPLATE', @SPName)	AS TrackingValue,
-		REPLACE(tv.TrackingValue2, 'SP_TEMPLATE', @SPName)	AS TrackingValue2,
+		REPLACE(tv.TrackingValue, '<SP_TEMPLATE', @SPName)	AS TrackingValue,
+		REPLACE(tv.TrackingValue2, '<SP_TEMPLATE', @SPName)	AS TrackingValue2,
 		@Duration AS Duration
 	FROM CTE_Log l
 	CROSS APPLY (
