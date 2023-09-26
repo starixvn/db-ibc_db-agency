@@ -48,7 +48,7 @@ BEGIN
 	SELECT 
 		@UserID AS UserId,
 		CustId,
-		@SPName AS SPName,
+		REPLACE(@SPName, '<', '') AS SPName,
 		NULL AS Doing,
 		ActionId,
 		REPLACE(tv.TrackingValue, '<SP_TEMPLATE', @SPName)	AS TrackingValue,

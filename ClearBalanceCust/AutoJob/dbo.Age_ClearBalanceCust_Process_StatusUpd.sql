@@ -15,6 +15,7 @@ AS
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
+		- 20230926@bobby: Fix bug TryCount [RedmineID: #194490]
 
 	Param's Explanation:
 		• @FromCustID: S/M/A's custid
@@ -58,8 +59,17 @@ BEGIN
 		SET	p.Status = @Status
 			,p.EndTime = CURRENT_TIMESTAMP
 			,p.Result = @Result
+			,p.TryCount = CASE 
+								WHEN @Status = 'Failed' AND ISNULL(err.AllowReTry, 0) = 0 THEN NULL --> reset TryCount
+								ELSE p.TryCount 
+							END
 		FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIN #tmpDownline c ON c.CustId = p.ToCustId
+		OUTER APPLY (
+			SELECT AllowReTry 
+			FROM dbo.f_Age_ClearBalanceCust_ErrorSel() err 
+			WHERE err.ErrType = JSON_VALUE(@Result, '$.ErrType')
+		) AS err
 		WHERE p.FromCustId = @FromCustID
 			AND p.[Status] <> 'Cancelled';
 
