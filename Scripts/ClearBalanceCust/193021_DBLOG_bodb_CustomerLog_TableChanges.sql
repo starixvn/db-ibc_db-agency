@@ -8,6 +8,8 @@
 -- DBLOG
 use bodb_CustomerLog;
 GO
+
+/**
 insert into [LogAction] (ActionID,ActionTypeID,	SPName,	ActionNameEN, ActionNameTH, ActionNameCS, ActionNameCN, ActionNameCH)
 VALUES
 (95097,	4, 'Age_ClearBalanceCust_SettingUpdate_Downline',
@@ -31,3 +33,22 @@ UPDATE [LogAction] WITH(ROWLOCK, UPDLOCK)
 SET ActionNameKO = ActionNameEN,
 	ActionNameJP = ActionNameEN
 WHERE ActionID IN (95097, 95098)
+**/
+
+
+-- DBLOG
+use bodb_CustomerLog;
+GO
+--TODO: Update TH translation
+--Super level
+UPDATE la WITH(ROWLOCK, UPDLOCK)
+SET ActionNameTH = N'ระบบโอนอัตโนมัติจะปิดใช้งาน เมื่อโหมดการโอนยอดคงเหลือตลอดทั้งวันของซุปเปอร์เปิดใช้งานอยู่'
+FROM LogAction la
+WHERE ActionID IN (95097)
+GO
+
+--Master level
+UPDATE la WITH(ROWLOCK, UPDLOCK)
+SET ActionNameTH = N'ระบบโอนอัตโนมัติจะปิดใช้งาน เมื่อโหมดการโอนยอดคงเหลือตลอดทั้งวันของมาสเตอร์เปิดใช้งานอยู่'
+FROM LogAction la
+WHERE ActionID IN (95098)
