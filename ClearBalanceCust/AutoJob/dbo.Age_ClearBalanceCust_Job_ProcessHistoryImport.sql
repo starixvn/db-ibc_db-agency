@@ -1,4 +1,4 @@
-/*<info serverAlias="DBARC-bodb_Archive" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_Job_ProcessHistoryImport]
 	@RowData	VARCHAR(MAX) = '',
 	@ErrCode	INT = 0 OUTPUT,
@@ -7,7 +7,7 @@ AS
 /*
 	Created:20230227@Bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBARC/bodb_Archive
+	DB: DBLOG/bodb_CustomerLog
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]

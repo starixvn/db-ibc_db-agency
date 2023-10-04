@@ -58,6 +58,7 @@ Revisions:
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230523@Danny: support scale out credit [Redmine: #181595]
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
+	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
 
 Param's Explanation:
 	• @AmtTrans: amount of money
@@ -505,10 +506,6 @@ BEGIN
 				SET @amount = @AmtTrans	
 			END 	
 
-			SELECT @ErrMsg = CASE @Language 
-								WHEN 'E' THEN 'Clear balance failed. Please try again.'
-								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
-						END
 			------------------Gen refno--------------------------------------------------------------- 
 			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
@@ -530,6 +527,18 @@ BEGIN
 				END
 			END
 
+			--TODO: Set default ERROR for MANUAL transfer
+			DECLARE @extraTransDesc VARCHAR(100);
+			SELECT @ErrMsg = CASE @Language 
+								WHEN 'E' THEN 'Clear balance failed. Please try again.'
+								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
+						END
+						, @extraTransDesc = CASE 
+											WHEN @IsAutoTransfer = 1 THEN ' (added via the Auto Transfer process)'
+											WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')'
+											ELSE ''
+										END
+
 			------------------Insert trans into DB---------------------------------------------------------------
 			IF @amount > 0
 			BEGIN
@@ -539,7 +548,7 @@ BEGIN
 					winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 					scomm, swinlost,ip,statusID, RepUpdateTime)
 				VALUES 
-					(@TransID ,@creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID ,@creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @agUser + @extraTransDesc, 
 					@amount, 0, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
 					0, 0,@ip,131,SYSDATETIME())
 				IF @@Error <> 0
@@ -566,7 +575,7 @@ BEGIN
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance, RepUpdateTime)
 				VALUES 
-					(@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @maUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @maUser + @extraTransDesc, 
 					0, @amount, @WinlostDate, @currency, @actualrate,@currName, @agentid, @masterid, @srecommend, 
 					0, 0,@ip,131, @TotalCashAgent,SYSDATETIME())
 				IF @@Error <> 0
@@ -603,7 +612,7 @@ BEGIN
 					winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 					scomm, swinlost,ip,statusID, RepUpdateTime)
 				VALUES 
-					(@TransID, @creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @agUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID, @creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @agUser + @extraTransDesc, 
 					0, abs(@amount),  @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
 					0, 0,@ip,131,SYSDATETIME())
 				if @@Error <> 0
@@ -631,7 +640,7 @@ BEGIN
 					winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, 
 					scomm, swinlost,ip,statusID, balance, RepUpdateTime)
 				VALUES 
-					(@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @maUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					(@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @maUser + @extraTransDesc, 
 					abs(@amount), 0,@WinlostDate, @currency, @actualrate, @currName, @agentid, @masterid, @srecommend, 
 					0, 0,@ip,131, @TotalCashAgentNev,SYSDATETIME())
 				IF @@Error <> 0

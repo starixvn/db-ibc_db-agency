@@ -62,6 +62,7 @@ Revisions:
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230523@Danny: support scale out credit [Redmine: #181595]
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
+	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
 	
 Param's Explanation:
 	• @AmtTrans: amount of money
@@ -541,10 +542,6 @@ BEGIN
 				SET @amount = @AmtTrans	
 			END 	
 
-			SELECT @ErrMsg = CASE @Language 
-								WHEN 'E' THEN 'Clear balance failed. Please try again.'
-								ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(50003,@Language)
-								END
 			------------------Gen refno--------------------------------------------------------------- 
 			EXEC Get_Refno_Transid @RefNo = @transcode OUTPUT
 			
@@ -566,21 +563,27 @@ BEGIN
 				END
 			END
 
+			--TODO: Set default ERROR for MANUAL transfer
+			DECLARE @extraTransDesc VARCHAR(100);
+			SELECT @ErrMsg = case @Language 
+								when 'E' then 'Clear balance failed. Please try again.'
+								ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
+							end
+							, @extraTransDesc = CASE 
+											WHEN @IsAutoTransfer = 1 THEN ' (added via the Auto Transfer process)'
+											WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')'
+											ELSE ''
+										END
+
 			------------------Insert trans into transfer----------------------------------------------
 			BEGIN TRANSACTION
-			-- All error messages are the same, so we set it here
-			Select @ErrMsg = case @Language 
-							when 'E' then 'Clear balance failed. Please try again.'
-							ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50003,@Language)
-							end
-
 			IF @amount >0
 			BEGIN
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 				INSERT INTO Transfer 
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 						winlostdate, currency, actualrate,currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, RepUpdateTime)
-				VALUES (@transid, @creator, @SAgID, @SAUser, @transcode, current_timestamp, 21003, 'From Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END,
+				VALUES (@transid, @creator, @SAgID, @SAUser, @transcode, current_timestamp, 21003, 'From Customer ::: ' + @MagUser + @extraTransDesc,
 					@amount, 0,@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131,SYSDATETIME())
 				IF @@Error <> 0
 				BEGIN
@@ -602,7 +605,7 @@ BEGIN
 				INSERT INTO Transfer
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance, RepUpdateTime)
-				VALUES (@TransID, @creator, @Magentid, @MAgUser, @transcode, current_timestamp, 21003, 'To Customer ::: ' + @saUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				VALUES (@TransID, @creator, @Magentid, @MAgUser, @transcode, current_timestamp, 21003, 'To Customer ::: ' + @saUser + @extraTransDesc, 0, 
 					@amount, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131, @TotalCashMaster,SYSDATETIME())
 				IF @@Error <> 0
 				BEGIN
@@ -633,7 +636,7 @@ BEGIN
 				INSERT INTO Transfer 
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					winlostdate, currency, actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, RepUpdateTime)
-				VALUES (@transid,@creator, @SAgID, @SAUser, @transcode, current_timestamp, 21003, 'To Customer ::: ' + @MagUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+				VALUES (@transid,@creator, @SAgID, @SAUser, @transcode, current_timestamp, 21003, 'To Customer ::: ' + @MagUser + @extraTransDesc, 0, 
 					abs(@amount),@WinlostDate, @currency, @actualrate, @currName, 0, @SAgID, 0, 0, 0,@ip,131,SYSDATETIME())
 				if @@Error <> 0
 				BEGIN
@@ -655,7 +658,7 @@ BEGIN
 				INSERT INTO Transfer
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					winlostdate, currency,actualrate, currencyName, mrecommend, srecommend, scomm, swinlost, recommend,ip,statusID, balance, RepUpdateTime)
-				VALUES (@transid, @creator, @Magentid, @MAgUser, @transcode, current_timestamp, 21003, 'From Customer ::: ' + @saUser + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+				VALUES (@transid, @creator, @Magentid, @MAgUser, @transcode, current_timestamp, 21003, 'From Customer ::: ' + @saUser + @extraTransDesc, 
 					abs(@amount), 0, @WinlostDate, @currency, @actualrate, @currName, @Magentid, @SAgID, 0, 0, 0,@ip,131, @TotalCashMasterNev,SYSDATETIME())
 				if @@Error <> 0
 				BEGIN

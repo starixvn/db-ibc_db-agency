@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20230822@Bobby: Enhance checking direct upline [RedmineID: #193017]
 
 	Param's Explanation:
 
@@ -22,16 +23,17 @@ BEGIN
 	DECLARE @Recommend INT, @MRecommend INT, @SRecommend INT
 	SELECT @ErrMsg = '', @ErrCode = 0 
 
+	-- TODO: Check exists cust upline
 	SELECT 	@CustID = CustID, @Recommend = Recommend, @MRecommend = MRecommend, @SRecommend = SRecommend
 	FROM 	CUSTDB.dbo.customer c WITH(NOLOCK)
 	WHERE 	CustID = @CustID
 	
 	IF EXISTS (
 				SELECT 	TOP 1 1  
-				FROM 	bodb02.dbo.Age_ClearBalanceCust_Process s WITH(NOLOCK)
-				WHERE 	--- check SMA is processing or not
-					s.FromCustID IN (@CustID, @Recommend, @MRecommend, @SRecommend)
-					AND s.[Status] IN ('Waiting', 'Processing', 'Pending')
+				FROM dbo.Age_ClearBalanceCust_Process s WITH(NOLOCK)
+				WHERE 	--- check current Upline is processing or not
+					s.FromCustID IN (@CustID)
+					AND s.[Status] IN ('New', 'Waiting', 'Processing', 'Pending')
 		)
 	BEGIN
 		SELECT @ErrCode = 50020

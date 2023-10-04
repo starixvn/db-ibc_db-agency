@@ -9,54 +9,42 @@ RETURN
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20230822@Bobby: Enhance checking cross level [RedmineID: #193021]
 
 */
 WITH CTE_Setting AS (
 	SELECT DISTINCT c.roleid, s.FromCustID, CAST(GETDATE() AS DATE) AS SessionDate, cs.custid AS SuperId
-	FROM CustDB.dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
-		INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
-		INNER JOIN CustDB.dbo.CustSuper cs WITH(NOLOCK) ON cs.custid = c.srecommend
+	FROM dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
+		INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
+		INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON cs.custid = c.srecommend
 	WHERE cs.SiteDBGroupID = @SiteDBGroupID
 ),
 CTE_SMASetting AS (
-	SELECT tmp.SessionDate, ca.custid AS FromCustId, tmp.RoleId, ca.TransferOption,cm.IsAllDayBalTransfer, tmp.SuperId
-	FROM CustDB.dbo.CustAgent ca WITH (NOLOCK)
+	SELECT tmp.SessionDate, ca.custid AS FromCustId, tmp.RoleId, ca.TransferOption, ISNULL(cm.IsAllDayBalTransfer, 0) AS IsAllDayBalTransfer, tmp.SuperId
+	FROM dbo.CustAgent ca WITH (NOLOCK)
 		INNER JOIN CTE_Setting tmp ON tmp.FromCustId = ca.custid
-		INNER JOIN CustDB.dbo.Customer c WITH (NOLOCK) ON c.custid = ca.custid
-		INNER JOIN CustDB.dbo.CustMaster cm WITH (NOLOCK) ON cm.custid = c.mrecommend
+		INNER JOIN dbo.Customer c WITH (NOLOCK) ON c.custid = ca.custid
+		INNER JOIN dbo.CustMaster cm WITH (NOLOCK) ON cm.custid = c.mrecommend
 	WHERE tmp.RoleId = 2
 
 	UNION ALL
-	SELECT tmp.SessionDate, cm.custid, tmp.RoleId, cm.TransferOption, cm.IsAllDayBalTransfer, tmp.SuperId
-	FROM CustDB.dbo.CustMaster cm WITH (NOLOCK)
+	SELECT tmp.SessionDate, cm.custid, tmp.RoleId, cm.TransferOption, ISNULL(cm.IsAllDayBalTransfer, 0), tmp.SuperId
+	FROM dbo.CustMaster cm WITH (NOLOCK)
 		INNER JOIN CTE_Setting tmp ON tmp.FromCustId = cm.custid
 	WHERE tmp.RoleId = 3
 
 	UNION ALL
-	SELECT tmp.SessionDate, cs.custid, tmp.RoleId, cs.TransferOption, cs.IsAllDayBalTransfer, tmp.SuperId
-	FROM CustDB.dbo.CustSuper cs WITH (NOLOCK)
+	SELECT tmp.SessionDate, cs.custid, tmp.RoleId, cs.TransferOption, ISNULL(cs.IsAllDayBalTransfer, 0), tmp.SuperId
+	FROM dbo.CustSuper cs WITH (NOLOCK)
 		INNER JOIN CTE_Setting tmp ON tmp.FromCustId = cs.custid
 	WHERE tmp.RoleId = 4
 )
 SELECT s.FromCustId, cs.ToCustID
-	,s.roleid, ISNULL(s.IsAllDayBalTransfer, 0) AS IsAllDayBalTransfer, s.SuperId
+	,s.roleid, s.IsAllDayBalTransfer, s.SuperId
 	,s.TransferOption
 FROM CTE_SMASetting s
-	INNER JOIN CustDB.dbo.Age_ClearBalanceCust_Setting cs ON cs.FromCustID = s.FromCustId
-	--CROSS APPLY (
-	--		SELECT 
-	--			--strTransferOption = dbo.f_Decimal_Binary(ISNULL(s.TransferOption,0))
-	--			strTransferOption = CONCAT(
-	--				(ISNULL(s.TransferOption,0)/POWER(2*1, 7)% 2) --SUN
-	--				,(ISNULL(s.TransferOption,0)/POWER(2*1, 6)% 2) --MON
-	--				,(ISNULL(s.TransferOption,0)/POWER(2*1, 5)% 2) --WEN
-	--				,(ISNULL(s.TransferOption,0)/POWER(2*1, 4)% 2) --TUE
-	--				,(ISNULL(s.TransferOption,0)/POWER(2*1, 3)% 2) --THUR
-	--				,(ISNULL(s.TransferOption,0)/POWER(2*1, 2)% 2) --FRI
-	--				,(ISNULL(s.TransferOption,0)/POWER(2*1, 1)% 2) --SAT
-	--				,(ISNULL(s.TransferOption,0)/POWER(2*1, 0)% 2) --IsWeekly
-	--			)
-	--	) AS ck
+	INNER JOIN dbo.Age_ClearBalanceCust_Setting cs ON cs.FromCustID = s.FromCustId
+	INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid =  cs.ToCustID
 WHERE cs.EffectiveDate <= s.SessionDate
 	AND 1 = CASE 
 			WHEN s.RoleId = 4 THEN 1 -- by pass cheking super vs master 
@@ -65,4 +53,11 @@ WHERE cs.EffectiveDate <= s.SessionDate
 				AND ((ISNULL(s.TransferOption,0)/POWER(2*1, 8-DATEPART(WEEKDAY, CURRENT_TIMESTAMP)))% 2) = 1 THEN 1 -- WEEKDAY enabled
 			ELSE 0 
 		END
+	AND 1 = CASE 
+				WHEN s.roleid = 2 AND c.roleid = 1 and c.recommend = s.FromCustId THEN 1	--direct agent/member
+				WHEN s.roleid = 3 AND c.roleid = 2 and c.mrecommend = s.FromCustId THEN 1	--direct master/agent
+				WHEN s.roleid = 4 AND c.roleid = 3 and c.srecommend = s.FromCustId THEN 1	--direct super/master
+				ELSE 0
+			END
+	AND s.IsAllDayBalTransfer = 0 -- NOT support Cash model
 GO

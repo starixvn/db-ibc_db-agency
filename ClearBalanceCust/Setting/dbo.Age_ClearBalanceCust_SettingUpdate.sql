@@ -14,10 +14,11 @@ AS
 /*
 	Created:20230227@Bobby
 	Task: 182071 - Auto Transfer/ Multiple Transfer	
-	DB: DBTXN/bodb02
+	DB: DBCUST-CustDB
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20230822@Bobby: Enhance checking cross level [RedmineID: #193021]
 
 	Param's Explanation:
 		• @FromCustID: The direct UplineID
@@ -69,12 +70,12 @@ BEGIN
 
 	SELECT @pairCount = (
 		SELECT COUNT(1) AS PairCount
-			FROM CustDB.dbo.customer c WITH (NOLOCK) 
+			FROM dbo.customer c WITH (NOLOCK) 
 			INNER JOIN #tmpClearBalanceCust cbs ON cbs.ToCustID = c.custid
 		WHERE 1 = CASE 
-				WHEN @RoleID = 2 AND c.recommend = @FromCustID THEN 1
-				WHEN @RoleID = 3 AND c.mrecommend = @FromCustID THEN 1
-				WHEN @RoleID = 4 AND c.srecommend = @FromCustID THEN 1
+				WHEN @RoleID = 2 AND c.recommend = @FromCustID AND c.RoleID = 1 THEN 1 -- direct agent/member
+				WHEN @RoleID = 3 AND c.mrecommend = @FromCustID AND c.RoleID = 2 THEN 1 --direct master/agent
+				WHEN @RoleID = 4 AND c.srecommend = @FromCustID AND c.RoleID = 3 THEN 1 --direct super/master
 				ELSE 0
 			END
 	);
@@ -95,9 +96,7 @@ BEGIN
 	)
 	BEGIN
 		SELECT @ErrCode	= 103, 
-				@ErrMsg	= CASE WHEN @Language = 'E' THEN 'You cannot disable Auto Transfer for this account because the Auto Transfer process is in progress. Please try again after the process has been completed.'  
-								ELSE [dbo].[f_Get_MsgNamebyMsgID](50019,@Language)
-							END    
+				@ErrMsg	= [dbo].[f_Get_MsgNamebyMsgID](50019,@Language) 
 		GOTO SP_END;
 	END
 
@@ -136,9 +135,7 @@ BEGIN
 			IF EXISTS (SELECT 1 FROM @tmpResult WHERE EffectiveDate > @today)
 			BEGIN
 				SELECT @ErrCode	= 0,  -- just information NOT Error
-						@ErrMsg	= CASE WHEN @Language = 'E' THEN 'Auto Transfer process is in progress. This account will be auto-transferred at the next scheduled time according to your transfer condition.'  
-										ELSE [dbo].[f_Get_MsgNamebyMsgID](50018,@Language)
-									END    
+						@ErrMsg	= [dbo].[f_Get_MsgNamebyMsgID](50018,@Language)
 			END
 		END
 		ELSE
