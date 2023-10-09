@@ -19,6 +19,7 @@ AS
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230822@Bobby: Enhance checking cross level [RedmineID: #193021]
+		- 20231009@Bobby: Enhance constraint temp table [RedmineID: #195213]
 
 	Param's Explanation:
 		• @FromCustID: The direct UplineID
@@ -48,9 +49,7 @@ BEGIN
 		,@RunSPNameLog = '<Age_ClearBalanceCust_SettingUpdate';
 
 	DROP TABLE IF EXISTS #tmpClearBalanceCust;
-	CREATE TABLE #tmpClearBalanceCust (FromCustID INT, ToCustID INT, CreatedDate DATETIME, EffectedDate DATE, 
-		CONSTRAINT  PK_CustPair_Del PRIMARY KEY (FromCustID, ToCustID) 
-	);
+	CREATE TABLE #tmpClearBalanceCust (FromCustID INT, ToCustID INT PRIMARY KEY, CreatedDate DATETIME, EffectedDate DATE);
 
 	SELECT @RoleID = (SELECT TOP 1 RoleID FROM CustDB.dbo.customer WITH (NOLOCK) WHERE custid = @FromCustID);
 
