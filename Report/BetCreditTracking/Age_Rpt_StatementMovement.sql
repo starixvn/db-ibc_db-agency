@@ -9,7 +9,8 @@ ALTER PROC dbo.Age_Rpt_StatementMovement
 	@PageSize INT = 100,
 	@TotalRows INT = 0 OUTPUT,
 	@ErrorCode INT = 0 OUTPUT,
-	@ErrorMess VARchar(1000) = '' OUTPUT
+	@ErrorMess VARchar(1000) = '' OUTPUT,
+	@IsVariance BIT = 0
 )
 AS
 /*
@@ -20,6 +21,10 @@ AS
 		- 20220222@Sol: Initialize sp - [RedmineID: #167296] 
 		- 20220531@Sol: Alpha - Limit date range on Bet Credit Tracking - [RedmineID: #173447]
 		- 20230615@Lewis: Alpha - Excluding SUM on MemberWinLoss, MemberComm, MemberTotal columns - [RedmineID: #189725]
+		- 20230922@Lewis: Alpha - Enhance Move Statement History RPT - [RedmineID: #193722]
+
+	Description:
+		@IsVariance : 0 view Main rpt -- 1 view Variance rpt
 	
 */
 BEGIN
@@ -104,6 +109,8 @@ BEGIN
 		CREATE TABLE #Custids (CustId INT)
 
 		CREATE TABLE #tblFinalResult (RowNumber INT, Custid INT, Username VARCHAR(30), TransId BIGINT, OldWinlostDate DATETIME, WinlostDate DATETIME, MemberWinloss MONEY, MemberComm MONEY, MemberTotal MONEY, IsMultipleMoved BIT)
+
+		CREATE TABLE #DataGrid (CustId INT, MemberWinloss MONEY, MemberComm MONEY, MemberTotal MONEY, OldWLD DATETIME, WLD DATETIME)
 	END
 	----end temp table
 
@@ -174,39 +181,130 @@ BEGIN
 	DECLARE @RowStart INT , @RowEnd INT
 	SELECT @PageIndex = @PageIndex - 1, @RowStart =  @PageIndex * @PageSize + 1, @RowEnd = @RowStart + @PageSize - 1
 
-	----final result to return to UI
-	INSERT INTO #tblFinalResult (RowNumber, Custid, Username, TransId, OldWinlostDate, WinlostDate, MemberWinloss, MemberComm, MemberTotal, IsMultipleMoved)
-	SELECT 
-		ROW_NUMBER() OVER (ORDER BY c.username, d.TransId, d.OldWinlostDate) AS RowNumber,
-		c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, 
-		d.Winlost - d.ActualStake AS MemberWinloss, 
-		d.PlayerComm AS MemberComm, 
-		d.Winlost - d.ActualStake + d.PlayerComm AS MemberTotal,
-		s.IsMultipleMoved
-	FROM #DataDetail d WITH(NOLOCK)
-		INNER JOIN (
-						SELECT CustId,TransId,CASE WHEN COUNT(TransId) > 1 THEN 1 ELSE 0 END AS IsMultipleMoved 
-						FROM #DataDetail (NOLOCK)
-						GROUP BY CustId,TransId
-					) s 
-			ON d.CustId = s.CustId AND d.TransId = s.TransId
-		INNER JOIN dbo.Customer c WITH(NOLOCK)
-			ON c.custid= d.CustId AND c.roleid = 1
-	
-	--get total row
-	SELECT @TotalRows = COUNT(1) FROM #tblFinalResult fr WITH(NOLOCK)
-	
-	SELECT
-		rs.RowNumber, rs.Custid, rs.Username, rs.TransId, rs.OldWinlostDate, rs.WinlostDate, rs.MemberWinloss, rs.MemberComm, rs.MemberTotal,
-		rs.IsMultipleMoved
-	FROM #tblFinalResult AS rs
-	WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)
-	ORDER BY rs.username, rs.TransId, rs.OldWinlostDate
+	--@IsVariance
+	IF @IsVariance = 0
+	BEGIN
+		----final result to return to UI
+		INSERT INTO #tblFinalResult (RowNumber, Custid, Username, TransId, OldWinlostDate, WinlostDate, MemberWinloss, MemberComm, MemberTotal, IsMultipleMoved)
+		SELECT 
+			ROW_NUMBER() OVER (ORDER BY c.username, d.TransId, d.OldWinlostDate) AS RowNumber,
+			c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, 
+			d.Winlost - d.ActualStake AS MemberWinloss, 
+			d.PlayerComm AS MemberComm, 
+			d.Winlost - d.ActualStake + d.PlayerComm AS MemberTotal,
+			s.IsMultipleMoved
+		FROM #DataDetail d WITH(NOLOCK)
+			INNER JOIN (
+							SELECT CustId,TransId,CASE WHEN COUNT(TransId) > 1 THEN 1 ELSE 0 END AS IsMultipleMoved 
+							FROM #DataDetail (NOLOCK)
+							GROUP BY CustId,TransId
+						) s 
+				ON d.CustId = s.CustId AND d.TransId = s.TransId
+			INNER JOIN dbo.Customer c WITH(NOLOCK)
+				ON c.custid= d.CustId AND c.roleid = 1
 
+		--get total row
+		SELECT @TotalRows = COUNT(1) FROM #tblFinalResult fr WITH(NOLOCK)
+	
+		SELECT
+			rs.RowNumber, rs.Custid, rs.Username, rs.TransId, rs.OldWinlostDate, rs.WinlostDate, rs.MemberWinloss, rs.MemberComm, rs.MemberTotal,
+			rs.IsMultipleMoved
+		FROM #tblFinalResult AS rs
+		WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)
+		ORDER BY rs.username, rs.TransId, rs.OldWinlostDate
+
+		-- Data Grid
+		INSERT INTO #DataGrid (CustId, MemberWinloss, MemberComm, MemberTotal, OldWLD, WLD)
+		SELECT A.Custid, A.MemberWinloss, A.MemberComm, A.MemberTotal, A.OldWinlostDate, A.WinlostDate
+		FROM #tblFinalResult A 
+		INNER JOIN (
+						SELECT 
+							rs.Custid,rs.TransId,MAX(rs.WinlostDate) WinlostDate
+						FROM #tblFinalResult as rs
+						WHERE rs.IsMultipleMoved = 1
+						GROUP BY  rs.Custid,rs.TransId
+					) B
+		ON B.Custid = A.Custid AND B.TransId = A.TransId AND B.WinlostDate = A.WinlostDate
+		UNION ALL
+		SELECT rs.Custid, rs.MemberWinloss, rs.MemberComm, rs.MemberTotal, rs.OldWinlostDate, rs.WinlostDate  
+		FROM #tblFinalResult AS rs
+		WHERE IsMultipleMoved = 0
+
+		SELECT CustId, SUM(MemberWinloss) MemberWinloss, SUM(MemberComm) MemberComm, SUM(MemberTotal) MemberTotal
+		FROM #DataGrid
+		GROUP BY CustId
+
+		--Data Summary Section
+		SELECT 
+			COUNT(DISTINCT CustId) TotalMembers,
+			SUM(MemberWinloss) MemberWinloss,
+			SUM(MemberComm) MemberComm,
+			SUM(MemberTotal) MemberTotal,
+			SUM(CASE 
+					WHEN OldWLD = @InternalToDate AND WLD > @InternalToDate THEN MemberTotal
+					ELSE 0 
+				END) AS Variance
+		FROM #DataGrid
+		
+	END
+	ELSE
+	BEGIN
+		----final result to return to UI
+		INSERT INTO #tblFinalResult (RowNumber, Custid, Username, TransId, OldWinlostDate, WinlostDate, MemberWinloss, MemberComm, MemberTotal, IsMultipleMoved)
+		SELECT 
+			ROW_NUMBER() OVER (ORDER BY c.username, d.TransId, d.OldWinlostDate) AS RowNumber,
+			c.Custid, c.Username, d.TransId, d.OldWinlostDate, d.WinlostDate, 
+			d.Winlost - d.ActualStake AS MemberWinloss, 
+			d.PlayerComm AS MemberComm, 
+			d.Winlost - d.ActualStake + d.PlayerComm AS MemberTotal,
+			s.IsMultipleMoved
+		FROM #DataDetail d WITH(NOLOCK)
+			INNER JOIN (
+							SELECT CustId,TransId,CASE WHEN COUNT(TransId) > 1 THEN 1 ELSE 0 END AS IsMultipleMoved 
+							FROM #DataDetail (NOLOCK)
+							GROUP BY CustId,TransId
+						) s 
+				ON d.CustId = s.CustId AND d.TransId = s.TransId
+			INNER JOIN dbo.Customer c WITH(NOLOCK)
+				ON c.custid= d.CustId AND c.roleid = 1
+		WHERE d.OldWinlostDate = @InternalToDate									
+		AND d.WinlostDate > @InternalToDate									
+		
+		SELECT @TotalRows = COUNT(1) FROM #tblFinalResult fr WITH(NOLOCK)
+
+		--Detail Variance									
+		SELECT									
+			rs.RowNumber, rs.Custid, rs.Username, rs.TransId, rs.OldWinlostDate, rs.WinlostDate, rs.MemberWinloss, rs.MemberComm, rs.MemberTotal, rs.IsMultipleMoved								
+		FROM #tblFinalResult AS rs									
+		WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)								
+		ORDER BY rs.username, rs.TransId, rs.OldWinlostDate
+		
+		--Data Grid Variance
+		INSERT INTO #DataGrid (CustId, MemberWinloss, MemberComm, MemberTotal, OldWLD, WLD)
+		SELECT A.Custid, A.MemberWinloss, A.MemberComm, A.MemberTotal, A.OldWinlostDate, A.WinlostDate
+		FROM #tblFinalResult A 
+		INNER JOIN (
+						SELECT 
+							rs.Custid,rs.TransId,MAX(rs.WinlostDate) WinlostDate
+						FROM #tblFinalResult as rs
+						WHERE rs.IsMultipleMoved = 1
+						GROUP BY  rs.Custid,rs.TransId
+					) B
+		ON B.Custid = A.Custid AND B.TransId = A.TransId AND B.WinlostDate = A.WinlostDate
+		UNION ALL
+		SELECT rs.Custid, rs.MemberWinloss, rs.MemberComm, rs.MemberTotal, rs.OldWinlostDate, rs.WinlostDate  
+		FROM #tblFinalResult AS rs
+		WHERE IsMultipleMoved = 0
+
+		SELECT CustId, SUM(MemberWinloss) MemberWinloss, SUM(MemberComm) MemberComm, SUM(MemberTotal) MemberTotal
+		FROM #DataGrid
+		GROUP BY CustId
+	END
 	----remove temp tables
 	DROP TABLE #SportBettype
 	DROP TABLE #DataDetail
 	DROP TABLE #Custids
 	DROP TABLE #tblFinalResult
+	DROP TABLE #DataGrid
 
 END
