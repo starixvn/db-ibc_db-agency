@@ -33,6 +33,7 @@ AS
 		- 20221121@Eden: Unify RNG Lottery Customer Settings [RedmineID: #180640]
 		- 20230323@Eden: Migrate NG and Keno to DCS structure [Redmine: #179711]
 		- 20230731@Eden: Simplify Live Casino Customer Setting - [Redmine: #189389]
+		- 20230928@Luke: Modify SPs to adapt in-house replication setup [Redmine: #194414]
 		
 	Param's Explanation:
 
@@ -129,7 +130,7 @@ BEGIN
 	SELECT mt.RealProductId,p.SportType,p.Bettype
 	FROM dbo.f_CustSetting_ProductSettingDetailSel(@SettingStatus) p
 		INNER JOIN #ProductSettingType t ON p.SettingType = t.SettingType
-		INNER JOIN SportBettypeSettingMatrix mt WITH(NOLOCK) ON mt.SportType = p.SportType AND mt.BetType = p.BetType AND mt.isLicensee = 0 AND mt.Site = 'ALL'
+		INNER JOIN SportBettypeSettingMatrix mt WITH(NOLOCK) ON mt.SportType = p.SportType AND mt.BetType = p.BetType AND mt.isLicensee = 0 AND mt.Site = 'ALL' AND mt.isDeleted = 0
 	WHERE SettingName IN('Bet Setting','Stake Level')
 		AND p.ProductID IN (41) --Live Casino
 		AND EXISTS( SELECT 1 FROM #T dm WHERE p.ProductID = dm.ProductID AND dm.IsHide = 0)
