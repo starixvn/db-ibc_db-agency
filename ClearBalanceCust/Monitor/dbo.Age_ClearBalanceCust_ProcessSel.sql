@@ -8,7 +8,8 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
 	@SortType		BIT = 0,
 	@PageIndex		INT = 1,
 	@PageSize		INT = 500,
-	@TotalRow		INT = 0 OUTPUT
+	@TotalRow		INT = 0 OUTPUT,
+	@IsCancelAll	BIT = 0 OUTPUT
 AS
 /*
 	Created:20230227@Bobby
@@ -18,6 +19,7 @@ AS
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230822@Bobby: Support unicode FirstName/LastName [RedmineID: #193017]
+		- 20231018@Bobby: Support cancel ALL [RedmineID: #195443]
 
 	Param's Explanation:
 		- @SortBy:
@@ -184,17 +186,20 @@ BEGIN
 			WHEN @SortType = 1 AND @SortBy = 4 THEN ct.CompletedTimeSec
 			ELSE 0
 			END DESC
-
-	OFFSET ((@PageIndex-1)*@PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY
 	;
 
 	SELECT TOP(1) @TotalRow = TotalRow
 	FROM #pageResult
 	;
 
+	SELECT TOP(1) @IsCancelAll = 1
+	FROM #pageResult
+	WHERE IsAllowCancel = 1;
+
 	SELECT CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel
 	FROM #pageResult
 	ORDER BY rIdx ASC
+	OFFSET ((@PageIndex-1)*@PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY
 	;
 END
 GO
