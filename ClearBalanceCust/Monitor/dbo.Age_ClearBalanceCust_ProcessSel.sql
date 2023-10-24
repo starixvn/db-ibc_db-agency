@@ -9,7 +9,7 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
 	@PageIndex		INT = 1,
 	@PageSize		INT = 500,
 	@TotalRow		INT = 0 OUTPUT,
-	@IsCancelAll	BIT = 0 OUTPUT
+	@TotalCancelAll	INT = 0 OUTPUT
 AS
 /*
 	Created:20230227@Bobby
@@ -47,7 +47,8 @@ BEGIN
 		@StatusCheck		= ISNULL(@ViewStatus, 'All'),
 		@UplineId			= @FromCustId,
 		@CheckName			= @Searchname,
-		@TotalRow			= 0
+		@TotalRow			= 0,
+		@TotalCancelAll		= 0
 	;
 
 	DROP TABLE IF EXISTS #tmpDownline;
@@ -192,7 +193,7 @@ BEGIN
 	FROM #pageResult
 	;
 
-	SELECT TOP(1) @IsCancelAll = 1
+	SELECT @TotalCancelAll = COUNT(1)
 	FROM #pageResult
 	WHERE IsAllowCancel = 1;
 
