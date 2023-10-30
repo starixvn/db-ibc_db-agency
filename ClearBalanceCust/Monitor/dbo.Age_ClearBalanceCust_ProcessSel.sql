@@ -9,7 +9,10 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
 	@PageIndex		INT = 1,
 	@PageSize		INT = 500,
 	@TotalRow		INT = 0 OUTPUT,
-	@TotalCancelAll	INT = 0 OUTPUT
+	@TotalCancelAll	INT = 0 OUTPUT,
+	@TotalPending	INT = 0 OUTPUT,
+	@TotalProcessing	INT = 0 OUTPUT,
+	@TotalFailed	INT = 0 OUTPUT
 AS
 /*
 	Created:20230227@Bobby
@@ -48,7 +51,10 @@ BEGIN
 		@UplineId			= @FromCustId,
 		@CheckName			= @Searchname,
 		@TotalRow			= 0,
-		@TotalCancelAll		= 0
+		@TotalCancelAll		= 0,
+		@TotalPending		= 0,
+		@TotalProcessing	= 0,
+		@TotalFailed		= 0
 	;
 
 	DROP TABLE IF EXISTS #tmpDownline;
@@ -193,9 +199,26 @@ BEGIN
 	FROM #pageResult
 	;
 
-	SELECT @TotalCancelAll = COUNT(1)
-	FROM #pageResult
-	WHERE IsAllowCancel = 1;
+	-- GET total by StatusCount
+	WITH CTE_CountInfo AS (
+		SELECT 
+			CASE 
+				WHEN p.[Status] IN ('Waiting', 'Processing', 'Pending') AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 15 THEN 'Cancel' 
+				WHEN p.[Status] IN ('Pending') THEN 'Pending'
+				WHEN p.[Status] IN ('New', 'Waiting', 'Processing', 'Pending') THEN 'Processing'
+				WHEN p.[Status] IN ('Failed') AND err.AllowReTry = 1 AND p.TryCount IN (5, 60) THEN 'Failed'
+			END AS StatusCount
+		FROM bodb02.dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
+			LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
+		WHERE p.FromCustId = @FromCustId
+			AND p.SessionDate = @today
+	)
+	SELECT 
+		@TotalCancelAll		= SUM(CASE WHEN StatusCount = 'Cancel' THEN 1 ELSE 0 END)
+		,@TotalPending		= SUM(CASE WHEN StatusCount = 'Pending' THEN 1 ELSE 0 END)
+		,@TotalProcessing	= SUM(CASE WHEN StatusCount = 'Processing' THEN 1 ELSE 0 END)
+		,@TotalFailed		= SUM(CASE WHEN StatusCount = 'Failed' THEN 1 ELSE 0 END)
+	FROM CTE_CountInfo;
 
 	SELECT CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel
 	FROM #pageResult
