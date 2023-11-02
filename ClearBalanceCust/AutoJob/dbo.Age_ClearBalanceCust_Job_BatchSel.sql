@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
 		• @NumOfBatch: Number of thread(s) are being run by WEB

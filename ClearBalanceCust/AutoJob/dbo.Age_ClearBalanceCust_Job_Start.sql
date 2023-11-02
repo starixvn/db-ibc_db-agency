@@ -16,6 +16,7 @@ AS
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
 		• @PairOfBatch: The number pairs of batch
@@ -26,12 +27,11 @@ BEGIN
 
 	DECLARE @SessionDate			SMALLDATETIME,
 		@Creator					INT, --StarixIT
-		@AutoJob_VName_Config		VARCHAR(50),
-		@AutoJob_VValue_Config		VARCHAR(200),
+		@AutoJob_VName_ConfigUAT	VARCHAR(50),
+		@AutoJob_VValue_ConfigUAT	VARCHAR(200),
 		@AutoTransfer_StartTime		DATETIME,
 		@SiteDBGroupID				SMALLINT,
 		@commandExec				NVARCHAR(MAX),
-		@EnvironmentCheck			VARCHAR(10),
 		@TestSuperIds				VARCHAR(200)
 	;
 
@@ -43,8 +43,7 @@ BEGIN
 			@TotalSuper				= 0,
 			@ErrCode				= 0,
 			@ErrMsg					= '',
-			@EnvironmentCheck		= IIF(@Environment = 'PRO', '', @Environment),
-			@AutoJob_VName_Config	= CONCAT('AutoJob_ClearBalance_Config', @EnvironmentCheck)
+			@AutoJob_VName_ConfigUAT	= 'AutoJob_ClearBalance_ConfigUAT'
 	;
 
 	SELECT @Creator = custid
@@ -52,9 +51,9 @@ BEGIN
 	WHERE username = 'StarixIT'
 	;
 
-	SELECT @AutoJob_VValue_Config = VValue
+	SELECT @AutoJob_VValue_ConfigUAT = VValue
 	FROM dbo.SystemSettings (NOLOCK)
-	WHERE VName = @AutoJob_VName_Config
+	WHERE VName = @AutoJob_VName_ConfigUAT
 	;
 
 	-- TODO: INIT data from current setting
@@ -62,9 +61,8 @@ BEGIN
 		AND NOT EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate AND Environment = @Environment)
 	BEGIN
 		SELECT @SiteDBGroupID	= [dbo].[f_Get_SiteDBGroupID]()
-			,@TestSuperIds		= ISNULL(JSON_VALUE(@AutoJob_VValue_Config, '$.sids'), '')
+			,@TestSuperIds		= ISNULL(JSON_VALUE(@AutoJob_VValue_ConfigUAT, '$.sids'), '')
 		;
-		SET @TestSuperIds = IIF(@EnvironmentCheck <> '' AND LEN(@TestSuperIds)=0, '-1', @TestSuperIds);
 
 		BEGIN TRY
 			--TODO: CLEANUP data
@@ -80,7 +78,7 @@ BEGIN
 			--TODO: get Snapshot from DBCUST
 			SET @commandExec  = N'INSERT INTO #tmpClearBalanceCust (FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer)
 				SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer
-				FROM OPENQUERY(DBCUST, ''SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer FROM CustDB.dbo.f_Age_ClearBalanceCust_Snapshot('+ CAST(@SiteDBGroupID AS VARCHAR(10))+','''+@TestSuperIds+''')'');'
+				FROM OPENQUERY(DBCUST, ''SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer FROM CustDB.dbo.f_Age_ClearBalanceCust_Snapshot('+ CAST(@SiteDBGroupID AS VARCHAR(10))+','''''+@TestSuperIds+''''','''''+ @Environment +''''')'');'
 			;
 			EXEC sys.sp_executesql @commandExec;
 

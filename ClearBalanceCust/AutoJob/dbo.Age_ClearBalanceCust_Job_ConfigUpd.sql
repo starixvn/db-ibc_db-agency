@@ -70,6 +70,8 @@ BEGIN
 			SET VValue = @AutoJob_ClearBalance_VValue
 			FROM dbo.SystemSettings s WITH(ROWLOCK, UPDLOCK)
 			WHERE VName = @AutoJob_ClearBalance_VName
+
+			
 		END
 		ELSE
 		BEGIN

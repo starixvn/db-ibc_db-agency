@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet,bodbadminnet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbExtAccNet,bodbDownlineNet,bodbadminnet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_Job_StatusCheck]
 	@IsAllowAutoTransfer	BIT,
 	@FromCustId				INT = NULL,
@@ -16,6 +16,7 @@ AS
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230906@Bobby: Enhance ADBT config [RedmineID: #193017]
+		- 20231101@Bobby: Enhance TransferOption config [RedmineID: #195135]
 
 	Param's Explanation:
 

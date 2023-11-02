@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CustDB" selecters="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
-ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot(@SiteDBGroupID SMALLINT, @TestSuperIds VARCHAR(200)) 
+ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot(@SiteDBGroupID SMALLINT, @TestSuperIds VARCHAR(200), @Environment VARCHAR(10)) 
 RETURNS TABLE
 RETURN
 /*
@@ -21,8 +21,8 @@ WITH CTE_Setting AS (
 		LEFT JOIN STRING_SPLIT(@TestSuperIds, ',') AS test ON test.[value] = cs.custid
 	WHERE cs.SiteDBGroupID = @SiteDBGroupID
 		AND 1 = CASE 
-					WHEN LEN(ISNULL(@TestSuperIds,'')) = 0 THEN 1
-					WHEN test.[value] > 0 THEN 1
+					WHEN @Environment = 'PRO' AND test.[value] IS NULL THEN 1
+					WHEN @Environment = 'UAT' AND test.[value] > 0 THEN 1
 					ELSE 0
 				END
 ),
