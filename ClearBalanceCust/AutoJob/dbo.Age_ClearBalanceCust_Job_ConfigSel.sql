@@ -1,5 +1,6 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet,bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ConfigSel]
+	@Environment VARCHAR(10)
 AS
 /*
 	Created:20230227@bobby
@@ -8,20 +9,29 @@ AS
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
+		-@Environment:
+			+ PRO
+			+ UAT
 
 */
 BEGIN
 	SET NOCOUNT ON;
 	DECLARE
-		@AutoJob_ClearBalance_VName_Config		VARCHAR(50)  = 'AutoJob_ClearBalance_Config',
+		@AutoJob_ClearBalance_VName_Config		VARCHAR(50),
 		@AutoJob_ClearBalance_VValue_Config		VARCHAR(200),
-		@AutoJob_ClearBalance_VName_Runtime		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
+		@AutoJob_ClearBalance_VName_Runtime		VARCHAR(50),
 		@AutoJob_ClearBalance_VValue_Runtime	VARCHAR(200),
 		@StartTime DATETIME,
-		@CompletedTime DATETIME
+		@CompletedTime DATETIME,
+		@EnvironmentCheck	VARCHAR(15)
 	;
+
+	SELECT @EnvironmentCheck = IIF(@Environment = 'PRO', '', @Environment)
+		, @AutoJob_ClearBalance_VName_Config = CONCAT('AutoJob_ClearBalance_Config', @EnvironmentCheck)
+		, @AutoJob_ClearBalance_VName_Runtime =  CONCAT('AutoJob_ClearBalance_Runtime', @EnvironmentCheck)
 
 	--TODO: Check setting
 	SELECT @AutoJob_ClearBalance_VValue_Config = IIF(VName = @AutoJob_ClearBalance_VName_Config, VValue, @AutoJob_ClearBalance_VValue_Config)
@@ -39,6 +49,7 @@ BEGIN
 		ManualTime		= CAST(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.mt') AS SMALLDATETIME),
 		RunningMode		= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.rm'), 'Normal'),
 		IsActive		= CAST(ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.ia'), 0) AS BIT),
+		TestSuperIds	= ISNULL(JSON_VALUE(@AutoJob_ClearBalance_VValue_Config, '$.sids'), ''),
 		StartTime		= @StartTime,
 		CompletedTime	= @CompletedTime
 	;

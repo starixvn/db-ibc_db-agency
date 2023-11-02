@@ -1,5 +1,6 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_Start]
+	@Environment	VARCHAR(10),
 	@RunningMode	VARCHAR(15),
 	@PairOfBatch	INT = 200,
 	@TotalPair		INT = 0 OUTPUT,
@@ -23,12 +24,15 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @SessionDate	SMALLDATETIME,
-		@Creator			INT, --StarixIT
-		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
-		@AutoTransfer_StartTime			DATETIME,
-		@SiteDBGroupID					SMALLINT,
-		@commandExec					NVARCHAR(MAX)
+	DECLARE @SessionDate			SMALLDATETIME,
+		@Creator					INT, --StarixIT
+		@AutoJob_VName_Config		VARCHAR(50),
+		@AutoJob_VValue_Config		VARCHAR(200),
+		@AutoTransfer_StartTime		DATETIME,
+		@SiteDBGroupID				SMALLINT,
+		@commandExec				NVARCHAR(MAX),
+		@EnvironmentCheck			VARCHAR(10),
+		@TestSuperIds				VARCHAR(200)
 	;
 
 	SELECT @AutoTransfer_StartTime = CURRENT_TIMESTAMP,
@@ -38,7 +42,9 @@ BEGIN
 			@TotalBatch				= 0,
 			@TotalSuper				= 0,
 			@ErrCode				= 0,
-			@ErrMsg					= ''
+			@ErrMsg					= '',
+			@EnvironmentCheck		= IIF(@Environment = 'PRO', '', @Environment),
+			@AutoJob_VName_Config	= CONCAT('AutoJob_ClearBalance_Config', @EnvironmentCheck)
 	;
 
 	SELECT @Creator = custid
@@ -46,17 +52,25 @@ BEGIN
 	WHERE username = 'StarixIT'
 	;
 
+	SELECT @AutoJob_VValue_Config = VValue
+	FROM dbo.SystemSettings (NOLOCK)
+	WHERE VName = @AutoJob_VName_Config
+	;
+
 	-- TODO: INIT data from current setting
 	IF @RunningMode IN ('Normal', 'Resume')
-		AND NOT EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
+		AND NOT EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate AND Environment = @Environment)
 	BEGIN
-		SELECT @SiteDBGroupID	= [dbo].[f_Get_SiteDBGroupID]();
+		SELECT @SiteDBGroupID	= [dbo].[f_Get_SiteDBGroupID]()
+			,@TestSuperIds		= ISNULL(JSON_VALUE(@AutoJob_VValue_Config, '$.sids'), '')
+		;
+		SET @TestSuperIds = IIF(@EnvironmentCheck <> '' AND LEN(@TestSuperIds)=0, '-1', @TestSuperIds);
 
 		BEGIN TRY
 			--TODO: CLEANUP data
-			DELETE dbo.Age_ClearBalanceCust_RunningSuper;
-			DELETE dbo.Age_ClearBalanceCust_BatchLog;
-			DELETE dbo.Age_ClearBalanceCust_Process;
+			DELETE dbo.Age_ClearBalanceCust_RunningSuper WHERE Environment = @Environment;
+			DELETE dbo.Age_ClearBalanceCust_BatchLog WHERE Environment = @Environment;
+			DELETE dbo.Age_ClearBalanceCust_Process WHERE Environment = @Environment;
 		
 			DROP TABLE IF EXISTS #tmpClearBalanceCust
 			CREATE TABLE #tmpClearBalanceCust(FromCustId INT, ToCustId INT PRIMARY KEY NONCLUSTERED, RoleId TINYINT, SuperId INT, IsAllDayBalTransfer BIT
@@ -66,7 +80,7 @@ BEGIN
 			--TODO: get Snapshot from DBCUST
 			SET @commandExec  = N'INSERT INTO #tmpClearBalanceCust (FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer)
 				SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer
-				FROM OPENQUERY(DBCUST, ''SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer FROM CustDB.dbo.f_Age_ClearBalanceCust_Snapshot('+ CAST(@SiteDBGroupID AS VARCHAR(10))+')'');'
+				FROM OPENQUERY(DBCUST, ''SELECT FromCustId, ToCustId, RoleId, SuperId, IsAllDayBalTransfer FROM CustDB.dbo.f_Age_ClearBalanceCust_Snapshot('+ CAST(@SiteDBGroupID AS VARCHAR(10))+','''+@TestSuperIds+''')'');'
 			;
 			EXEC sys.sp_executesql @commandExec;
 
@@ -77,6 +91,7 @@ BEGIN
 
 				--TODO: Update StartTime & CompletedTime
 				EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
+					@Environment = @Environment,
 					@StartTime = @AutoTransfer_StartTime,
 					@RunningMode = @RunningMode,
 					@IsCompleted = 1
@@ -116,12 +131,13 @@ BEGIN
 			) AS t
 
 			-- TODO: Age_ClearBalanceCust_RunningSuper
-			INSERT INTO dbo.Age_ClearBalanceCust_RunningSuper(SuperId, TotalBatch, RunningTotal, RunningBatchNo, TotalDownline)
+			INSERT INTO dbo.Age_ClearBalanceCust_RunningSuper(SuperId, TotalBatch, RunningTotal, RunningBatchNo, TotalDownline, Environment)
 			SELECT s.SuperId
 				,COUNT(DISTINCT p.BatchNo) AS TotalBatch
 				,0 AS RunningTotal
 				,0 AS RunningBatchNo
 				,s.TotalDownline
+				,@Environment AS Environment
 			FROM #tmpClearBalanceCust_Process p
 			INNER JOIN #tmpClearBalanceCust_RunningSuper s ON s.SuperID = p.SuperID
 			GROUP BY s.SuperId, s.TotalDownline
@@ -138,31 +154,34 @@ BEGIN
 					,[Status]
 					,ModifiedTime
 					,Creator
+					,Environment
 				)
-				SELECT BatchNo
-					,SuperID
-					,@SessionDate AS SessionDate
-					,FromCustID
-					,ToCustID
-					,IsAllDayBalTransfer
-					,RoleID
-					,'New' AS [Status]
-					,GETDATE() AS ModifiedTime
-					,@Creator AS Creator
-				FROM #tmpClearBalanceCust_Process p;
+			SELECT BatchNo
+				,SuperID
+				,@SessionDate AS SessionDate
+				,FromCustID
+				,ToCustID
+				,IsAllDayBalTransfer
+				,RoleID
+				,'New' AS [Status]
+				,GETDATE() AS ModifiedTime
+				,@Creator AS Creator
+				,@Environment AS Environment
+			FROM #tmpClearBalanceCust_Process p;
 
-				-- SET output
-				SELECT @TotalPair	= COUNT(1)
-					,@TotalBatch	= COUNT(DISTINCT BatchNo)
-					,@TotalSuper	= COUNT(DISTINCT SuperID)
-				FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
-				WHERE [Status] = 'New';
+			-- SET output
+			SELECT @TotalPair	= COUNT(1)
+				,@TotalBatch	= COUNT(DISTINCT BatchNo)
+				,@TotalSuper	= COUNT(DISTINCT SuperID)
+			FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
+			WHERE [Status] = 'New' AND Environment = @Environment;
 
-				--TODO: Update StartTime & CompletedTime
-				EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
-					@StartTime = @AutoTransfer_StartTime,
-					@RunningMode = @RunningMode,
-					@IsCompleted = 0
+			--TODO: Update StartTime & CompletedTime
+			EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
+				@Environment = @Environment,
+				@StartTime = @AutoTransfer_StartTime,
+				@RunningMode = @RunningMode,
+				@IsCompleted = 0
 		END TRY
 		BEGIN CATCH 
 			SELECT @ErrCode = 102
@@ -170,7 +189,7 @@ BEGIN
 		END CATCH
 	END
 	ELSE IF @RunningMode = 'Normal'
-		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
+		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate AND Environment = @Environment)
 	BEGIN
 		-- TODO: Scaleout Threads -- parallisym threads at the same time
 		SET @RunningMode = 'Scaleout';
@@ -179,10 +198,10 @@ BEGIN
 			,@TotalBatch	= COUNT(DISTINCT BatchNo)
 			,@TotalSuper	= COUNT(DISTINCT SuperID)
 		FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
-		WHERE [Status] = 'New';
+		WHERE [Status] = 'New' AND Environment = @Environment;
 	END
 	ELSE IF @RunningMode = 'Resume'
-		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate)
+		AND EXISTS (SELECT 1 FROM dbo.[Age_ClearBalanceCust_Process] WITH(NOLOCK) WHERE SessionDate = @SessionDate AND Environment = @Environment)
 	BEGIN
 		BEGIN TRY
 			-- Update Waiting, Processing to New if any
@@ -190,7 +209,7 @@ BEGIN
 			SET p.[Status] = 'New', p.ModifiedTime = CURRENT_TIMESTAMP, p.Amount = NULL
 				,p.TryCount = NULL, p.Result = NULL, p.StartTime = NULL, p.EndTime = NULL
 			FROM dbo.[Age_ClearBalanceCust_Process] p
-			WHERE p.SessionDate = @SessionDate
+			WHERE p.SessionDate = @SessionDate AND p.Environment = @Environment
 				AND [Status] IN ('Waiting', 'Processing')
 				AND p.TryCount IS NULL -- NOT touch on ReTry thread
 
@@ -198,18 +217,20 @@ BEGIN
 			UPDATE u WITH(ROWLOCK, UPDLOCK)
 			SET u.RunningBatchNo = 0
 			FROM dbo.Age_ClearBalanceCust_RunningSuper u
+			WHERE Environment = @Environment
 
 			-- SET output
 			SELECT @TotalPair	= COUNT(1)
 				,@TotalBatch	= COUNT(DISTINCT BatchNo)
 				,@TotalSuper	= COUNT(DISTINCT SuperID)
 			FROM [dbo].[Age_ClearBalanceCust_Process] (NOLOCK)
-			WHERE [Status] = 'New';
+			WHERE [Status] = 'New' AND Environment = @Environment;
 
 			--TODO: Update Setting - Resume Mode
 			IF (@TotalBatch > 0)
 			BEGIN
 				EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
+					@Environment = @Environment,
 					@StartTime = @AutoTransfer_StartTime,
 					@RunningMode = @RunningMode,
 					@IsCompleted = 0

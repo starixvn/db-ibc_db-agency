@@ -1,5 +1,5 @@
 /*<info serverAlias="DBCUST-CustDB" selecters="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
-ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot(@SiteDBGroupID SMALLINT) 
+ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot(@SiteDBGroupID SMALLINT, @TestSuperIds VARCHAR(200)) 
 RETURNS TABLE
 RETURN
 /*
@@ -10,6 +10,7 @@ RETURN
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230822@Bobby: Enhance checking cross level [RedmineID: #193021]
+		- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 
 */
 WITH CTE_Setting AS (
@@ -17,7 +18,13 @@ WITH CTE_Setting AS (
 	FROM dbo.Age_ClearBalanceCust_Setting s WITH(NOLOCK)
 		INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid =  s.FromCustId
 		INNER JOIN dbo.CustSuper cs WITH(NOLOCK) ON cs.custid = c.srecommend
+		LEFT JOIN STRING_SPLIT(@TestSuperIds, ',') AS test ON test.[value] = cs.custid
 	WHERE cs.SiteDBGroupID = @SiteDBGroupID
+		AND 1 = CASE 
+					WHEN LEN(ISNULL(@TestSuperIds,'')) = 0 THEN 1
+					WHEN test.[value] > 0 THEN 1
+					ELSE 0
+				END
 ),
 CTE_SMASetting AS (
 	SELECT tmp.SessionDate, ca.custid AS FromCustId, tmp.RoleId, ca.TransferOption, ISNULL(cm.IsAllDayBalTransfer, 0) AS IsAllDayBalTransfer, tmp.SuperId
@@ -47,10 +54,11 @@ FROM CTE_SMASetting s
 	INNER JOIN dbo.Customer c WITH(NOLOCK) ON c.custid =  cs.ToCustID
 WHERE cs.EffectiveDate <= s.SessionDate
 	AND 1 = CASE 
-			WHEN s.RoleId = 4 THEN 1 -- by pass cheking super vs master 
-			WHEN ISNULL(s.TransferOption, 0) = 0 THEN 1 -- Daily mode
-			WHEN ((ISNULL(s.TransferOption,0)/POWER(2*1, 0))% 2) = 1 -- Weekly mode
-				AND ((ISNULL(s.TransferOption,0)/POWER(2*1, 8-DATEPART(WEEKDAY, CURRENT_TIMESTAMP)))% 2) = 1 THEN 1 -- WEEKDAY enabled
+				WHEN cs.ScheduleOption > 0 THEN IIF(cs.ScheduleOption & POWER(2, DATEPART(WEEKDAY, CURRENT_TIMESTAMP)) > 0, 1, 0)
+				--WHEN s.RoleId = 4 THEN 1 -- by pass cheking super vs master 
+				--WHEN ISNULL(s.TransferOption, 0) = 0 THEN 1 -- Daily mode
+				--WHEN ((ISNULL(s.TransferOption,0)/POWER(2*1, 0))% 2) = 1 -- Weekly mode
+				--	AND ((ISNULL(s.TransferOption,0)/POWER(2*1, 8-DATEPART(WEEKDAY, CURRENT_TIMESTAMP)))% 2) = 1 THEN 1 -- WEEKDAY enabled
 			ELSE 0 
 		END
 	AND 1 = CASE 

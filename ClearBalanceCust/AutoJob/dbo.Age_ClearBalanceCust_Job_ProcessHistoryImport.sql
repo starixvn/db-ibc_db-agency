@@ -11,6 +11,7 @@ AS
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
 */
@@ -43,7 +44,8 @@ BEGIN
 				StartTime		DATETIME '$.c12',	
 				EndTime			DATETIME '$.c13',	
 				Creator			INT '$.c14',	
-				IsAllDayBalTransfer		BIT '$.c15'
+				IsAllDayBalTransfer		BIT '$.c15',
+				Environment				VARCHAR(10) '$.c16'
 			)
 		)
 		INSERT INTO [dbo].[Age_ClearBalanceCust_ProcessHistory]
@@ -61,7 +63,8 @@ BEGIN
            ,[StartTime]
            ,[EndTime]
            ,[Creator]
-           ,[IsAllDayBalTransfer])
+           ,[IsAllDayBalTransfer]
+		   ,[Environment])
 		SELECT [SessionDate]
            ,[BatchNo]
            ,[SuperId]
@@ -77,6 +80,7 @@ BEGIN
            ,[EndTime]
            ,[Creator]
            ,[IsAllDayBalTransfer]
+		   ,[Environment]
 		FROM CTE_Data
 	END TRY
 	BEGIN CATCH

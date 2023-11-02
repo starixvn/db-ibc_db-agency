@@ -1,5 +1,6 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_BatchProcess]
+	@Environment	VARCHAR(5),
 	@BatchNo		INT,
 	@FromCustID		INT, 
 	@ToCustIDs		VARCHAR(4000),
@@ -69,7 +70,7 @@ BEGIN
 		, @IsAllDayBalTransfer = p.IsAllDayBalTransfer
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
 	INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
-	WHERE p.BatchNo = @BatchNo
+	WHERE p.BatchNo = @BatchNo AND p.Environment = @Environment
 		AND p.[Status] = 'Waiting'
 	GROUP BY IsAllDayBalTransfer;
 
@@ -119,13 +120,14 @@ BEGIN
 									)
 							END
 									
-		INSERT INTO dbo.Age_ClearBalanceCust_BatchLog(BatchNo, SuperId, Command, StartTime, BatchStatus, RunningMode)
+		INSERT INTO dbo.Age_ClearBalanceCust_BatchLog(BatchNo, SuperId, Command, StartTime, BatchStatus, RunningMode, Environment)
 		SELECT @BatchNo AS BatchNo
 			, @SuperId AS SuperId
 			, @commandExec AS Command
 			, CURRENT_TIMESTAMP AS StartTime
 			, 'Processing' AS BatchStatus
 			, @RunningMode AS RunningMode
+			, @Environment AS Environment
 		;
 		SET @BatchLogIdIns = SCOPE_IDENTITY();
 	
@@ -147,6 +149,7 @@ BEGIN
 		INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
 		WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
 			AND p.[Status] <> 'Completed'
+			AND p.Environment = @Environment
 		; 
 
 		-- UPDATE Log:
@@ -162,6 +165,7 @@ BEGIN
 			rs.RunningTotal = CASE WHEN @RunningMode <> 'ReTry' THEN ISNULL(rs.RunningTotal,0) + 1 ELSE rs.RunningTotal END
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
 		WHERE rs.SuperId = @SuperId
+			AND rs.Environment = @Environment
 		;
 
 	END TRY
@@ -174,6 +178,7 @@ BEGIN
 		SET rs.RunningBatchNo = 0
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs
 		WHERE rs.SuperId = @SuperId
+			AND rs.Environment = @Environment
 		;
 
 		UPDATE bl WITH(ROWLOCK, UPDLOCK)
@@ -191,6 +196,7 @@ BEGIN
 			INNER JOIN #tmpProcessCust c ON c.ToCustID = p.ToCustId
 		WHERE p.FromCustId = @FromCustID
 			AND p.Result IS NULL  ---> NOT touch by transfer processing
+			AND p.Environment = @Environment
 	END CATCH
 
 	--SELECT @ErrCode AS ErrCode, @ErrMsg AS ErrMsg

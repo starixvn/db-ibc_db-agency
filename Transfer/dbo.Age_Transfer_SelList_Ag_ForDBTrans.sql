@@ -5,6 +5,7 @@ ALTER PROCEDURE [dbo].[Age_Transfer_SelList_Ag_ForDBTrans]
 	@PageIndex int=1,
 	@Username nvarchar(50)=null,
 	@CustStatus varchar(50)='Open' ,
+	@AutoTransfer	TINYINT = 2,
 	@IsYesterdayBalance bit = null,
 	@IsAllowTotalBalance bit = null,
 	@TotalOutStanding money = 0 OUTPUT,
@@ -58,10 +59,15 @@ Revisions:
 	- 20220714@Evan: Modify sp to avoid dump (remove code select into) - [Redmine: #175450]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	
 Param's Explanation:
-• @CustID: AgentID
-• @IsAllowTotalBalance: filter data based on total balance transfer
+	• @CustID: AgentID
+	• @IsAllowTotalBalance: filter data based on total balance transfer
+	• @AutoTransfer: 
+					- 0: NOT Allow
+					- 1: Allow
+					- 2: All
 
 */
 BEGIN
@@ -369,13 +375,13 @@ BEGIN
 
 	--TODO: Allow Auto Transfer [182071]
 	DROP TABLE IF EXISTS #ClearBalanceCust_Setting;
-	CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
+	CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT, ScheduleOption TINYINT);
 	DECLARE @SQL_CBS NVARCHAR(MAX)
-	SELECT  @SQL_CBS = 'SELECT FromCustID, ToCustID
-					FROM OPENQUERY(DBCUST, ''SELECT cbs.FromCustID, cbs.ToCustID
+	SELECT  @SQL_CBS = 'SELECT FromCustID, ToCustID, ScheduleOption
+					FROM OPENQUERY(DBCUST, ''SELECT cbs.FromCustID, cbs.ToCustID, cbs.ScheduleOption
 											FROM CustDB.dbo.Age_ClearBalanceCust_Setting cbs WITH(NOLOCK)
 											WHERE cbs.FromCustID = ' + CONVERT(VARCHAR(30), @custid) + ''')'
-	INSERT INTO #ClearBalanceCust_Setting (FromCustID, ToCustID)
+	INSERT INTO #ClearBalanceCust_Setting (FromCustID, ToCustID, ScheduleOption)
 	EXEC (@SQL_CBS)
 
 
@@ -401,12 +407,19 @@ BEGIN
 				c.recommend as member_recommend,
 				c.mrecommend as member_mrecommend,
 				c.Locked,
-				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer
+				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
+				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays
 			FROM 
 				#tmp_customer c 
 				LEFT JOIN #result_balance as b on c.custid =b.custid 
 				LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
 				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @custid AND cbs.ToCustID = c.CustID
+			WHERE 1 = CASE 
+							WHEN @AutoTransfer = 2 THEN 1
+							WHEN @AutoTransfer = 0 AND cbs.ToCustID IS NULL THEN 1
+							WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
+							ELSE 0
+						END
 		)a  
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 		--Total
@@ -426,6 +439,13 @@ BEGIN
 			FROM 
 				#tmp_customer c 
 				LEFT JOIN #result_balance as b on c.custid =b.custid 
+				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @custid AND cbs.ToCustID = c.CustID
+			WHERE 1 = CASE 
+							WHEN @AutoTransfer = 2 THEN 1
+							WHEN @AutoTransfer = 0 AND cbs.ToCustID IS NULL THEN 1
+							WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
+							ELSE 0
+						END
 		)a  
 		WHERE a.RowNumber <= @RowEND
 	END
@@ -451,7 +471,8 @@ BEGIN
 				c.recommend as member_recommend,
 				c.mrecommend as member_mrecommend,
 				c.Locked,
-				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer
+				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
+				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays
 			FROM 
 				#tmp_customer c 
 				LEFT JOIN #result_balance as b on c.custid =b.custid 
@@ -462,6 +483,12 @@ BEGIN
 					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(b.YesterdayBalance, 0)
 					WHEN @IsAllowTotalBalance = 1 THEN ISNULL(b.TotalBalance, 0)
 				END <> 0
+				AND 1 = CASE 
+							WHEN @AutoTransfer = 2 THEN 1
+							WHEN @AutoTransfer = 0 AND cbs.ToCustID IS NULL THEN 1
+							WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
+							ELSE 0
+						END
 		)a  
 		WHERE a.RowNumber BETWEEN @RowStart AND @RowEND
 		--Total
@@ -481,11 +508,18 @@ BEGIN
 			FROM 
 				#tmp_customer c 
 				LEFT JOIN #result_balance as b on c.custid =b.custid 
+				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @custid AND cbs.ToCustID = c.CustID
 			WHERE
 				CASE 
 					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(b.YesterdayBalance, 0)
 					WHEN @IsAllowTotalBalance = 1 THEN ISNULL(b.TotalBalance, 0)
 				END <> 0
+				AND 1 = CASE 
+							WHEN @AutoTransfer = 2 THEN 1
+							WHEN @AutoTransfer = 0 AND cbs.ToCustID IS NULL THEN 1
+							WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
+							ELSE 0
+						END
 		)a  
 		WHERE a.RowNumber <= @RowEND
 	END

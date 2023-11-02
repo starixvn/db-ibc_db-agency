@@ -1,6 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_Job_ProcessExport]
-	@PageSize				INT = 5000
+	@Environment	VARCHAR(10),
+	@PageSize		INT = 5000
 AS
 /*
 	Created:20230227@Bobby
@@ -9,6 +10,7 @@ AS
 
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
 */
@@ -27,6 +29,7 @@ BEGIN
 	SELECT @TotalRow = COUNT(1)
 	FROM bodb02.dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 	WHERE p.SessionDate = @today
+		AND Environment = @Environment
 	;
 
 	WITH CTE_Paging AS
@@ -55,9 +58,10 @@ BEGIN
 				StartTime		AS 'c12',	
 				EndTime			AS 'c13',	
 				Creator			AS 'c14',	
-				IsAllDayBalTransfer		AS 'c15'
-			FROM bodb02.dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-			WHERE p.SessionDate = @today
+				IsAllDayBalTransfer		AS 'c15',
+				Environment				AS 'c16'
+			FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
+			WHERE p.SessionDate = @today AND Environment = @Environment
 			ORDER BY BatchNo, SuperId
 			OFFSET ((p.PageIndex-1)*@PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY
 			FOR JSON PATH)
