@@ -22,7 +22,7 @@ AS
 		- 20220707@Sol: Alpha - Hide sum row (isSum 1 to 0) - [RedmineID: #173971] 
 		- 20230531@Danny: Remove some filter conditions [RedmineID: #188355] 
 		- 20230621@Lewis: Hide 19, 35 & Get data WLDate&Refno from BalanceRecord [RedmineID: #189598] 
-	
+		- 20231109@Sophia: Hide last data of SpecialCustomer [Redmine: #196719]
 */
 BEGIN
 
@@ -224,6 +224,11 @@ BEGIN
 				WHERE lo.logdate < b.ActionDate AND lo.custid = b.custid
 				ORDER BY lo.logdate DESC
 			) lo 
+		
+		DELETE b		
+		FROM #BalanceRecord b	 
+		INNER JOIN SpecialCustomer s WITH (NOLOCK) 
+			ON b.CustID = s.CustID AND b.ActionDate < '2023-11-09' 
 
 		--###############################################################
 
@@ -261,7 +266,7 @@ BEGIN
 					WHERE b.refNo = @RefNo
 				)
 				SELECT * FROM rs
-				WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)
+				WHERE @PageIndex < 0 OR @PageSize <= 0 OR (RowNumber BETWEEN @RowStart AND @RowEnd)					 
 				ORDER BY ActionDate, rowid
 					
 			END
