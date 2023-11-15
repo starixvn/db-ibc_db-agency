@@ -203,10 +203,11 @@ BEGIN
 	WITH CTE_CountInfo AS (
 		SELECT 
 			CASE 
-				WHEN p.[Status] IN ('Waiting', 'Processing', 'Pending') AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 15 THEN 'Cancel' 
+				WHEN p.[Status] IN ('Waiting', 'Processing') AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 15 THEN 'Cancel_Processing' 
+				WHEN p.[Status] IN ('Pending') AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 15 THEN 'Cancel_Pending' 
 				WHEN p.[Status] IN ('Pending') THEN 'Pending'
 				WHEN p.[Status] IN ('New', 'Waiting', 'Processing', 'Pending') THEN 'Processing'
-				WHEN p.[Status] IN ('Failed') AND err.AllowReTry = 1 AND p.TryCount IN (5, 60) THEN 'Failed'
+				WHEN p.[Status] IN ('Failed') AND err.IsShowHistory = 1 AND p.TryCount IN (5, 60) THEN 'Failed'
 			END AS StatusCount
 		FROM bodb02.dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 			LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
@@ -214,9 +215,9 @@ BEGIN
 			AND p.SessionDate = @today
 	)
 	SELECT 
-		@TotalCancelAll		= SUM(CASE WHEN StatusCount = 'Cancel' THEN 1 ELSE 0 END)
-		,@TotalPending		= SUM(CASE WHEN StatusCount = 'Pending' THEN 1 ELSE 0 END)
-		,@TotalProcessing	= SUM(CASE WHEN StatusCount = 'Processing' THEN 1 ELSE 0 END)
+		@TotalCancelAll		= SUM(CASE WHEN StatusCount IN ('Cancel_Processing', 'Cancel_Pending') THEN 1 ELSE 0 END)
+		,@TotalPending		= SUM(CASE WHEN StatusCount IN ('Pending', 'Cancel_Pending') THEN 1 ELSE 0 END)
+		,@TotalProcessing	= SUM(CASE WHEN StatusCount IN ('Processing', 'Cancel_Processing') THEN 1 ELSE 0 END)
 		,@TotalFailed		= SUM(CASE WHEN StatusCount = 'Failed' THEN 1 ELSE 0 END)
 	FROM CTE_CountInfo;
 

@@ -519,6 +519,7 @@ BEGIN
 				#tmp_customer c	
 				INNER JOIN #credit credit ON c.custid = credit.recommend
 				LEFT JOIN #result_balance balance ON c.custid = balance.recommend
+				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @masterid AND cbs.ToCustID = c.CustID
 			WHERE
 				CASE 
 					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)

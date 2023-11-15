@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB,DBAGE-bodb02,DBCTG-bodb02" selecters="" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBCUST-CustDB,DBAGE-bodb02,DBTXN-bodb02" selecters="" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.f_Age_ScheduleOption_Convert(@ScheduleOption TINYINT) 
 RETURNS VARCHAR(1000)
 BEGIN
@@ -15,7 +15,8 @@ BEGIN
 
 	SELECT @strDayWeek = STRING_AGG(DayWeek, ',')
 	FROM (
-		SELECT DayWeek, DayNameShort, DayNameLong, BitCheck 
+		SELECT TOP(7) DayWeek, DayNameShort, DayNameLong, BitCheck 
+			, CASE WHEN DayWeek = 1 THEN 8 ELSE DayWeek END AS DayOrder
 		FROM (
 			VALUES 
 				(1, 'Sun', 'Sunday',	@ScheduleOption & POWER(2, 1)),
@@ -27,6 +28,7 @@ BEGIN
 				(7, 'Sat', 'Saturday',	@ScheduleOption & POWER(2, 7))
 		) AS t (DayWeek, DayNameShort, DayNameLong, BitCheck)
 		WHERE BitCheck > 0
+		ORDER BY DayOrder ASC
 	)
 	AS ck;
 

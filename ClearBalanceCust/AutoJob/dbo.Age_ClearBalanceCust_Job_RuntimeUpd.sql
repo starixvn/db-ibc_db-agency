@@ -41,7 +41,7 @@ BEGIN
 		WHERE @StartTime IS NOT NULL 
 
 		-- CompletedTime
-		SELECT @AutoJob_Runtime_VValue = JSON_MODIFY(@AutoJob_Runtime_VValue, '$.CompletedTime', FORMAT(GETDATE(), 'yyyy-MM-dd hh:mm:ss'))
+		SELECT @AutoJob_Runtime_VValue = JSON_MODIFY(@AutoJob_Runtime_VValue, '$.CompletedTime', FORMAT(GETDATE(), 'yyyy-MM-dd HH:mm:ss'))
 		WHERE @IsCompleted =  1
 
 		IF EXISTS (
