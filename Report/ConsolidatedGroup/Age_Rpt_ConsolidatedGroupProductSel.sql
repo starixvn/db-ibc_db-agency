@@ -34,7 +34,8 @@ AS
 		- 20230323@Eden: Migrate NG and Keno to DCS structure [Redmine: #179711]
 		- 20230731@Eden: Simplify Live Casino Customer Setting - [Redmine: #189389]
 		- 20230928@Luke: Modify SPs to adapt in-house replication setup [Redmine: #194414]
-		
+		- 20231117@Tacy: ExtNAP/Alpha - Return Offered product lists by site/currency [Redmine: #196141]
+
 	Param's Explanation:
 
 */
@@ -42,161 +43,55 @@ AS
 BEGIN 
 	SET NOCOUNT ON 
 	
-	DECLARE @TmpCustID TABLE(OrderID INT IDENTITY (1,1), CustID INT)
-	DECLARE @ProductList TABLE (ProductID TINYINT, ProductName VARCHAR(50), EndOfSupportDate date, isShow BIT DEFAULT (0),[Type] tinyint,OrderNo int)
+	DECLARE @TmpSiteCurrency TABLE(OrderID INT IDENTITY (1,1),Currency TINYINT, Site VARCHAR(10))
+	DECLARE @CheckEnableProduct TABLE (ProductID TINYINT, ProductName VARCHAR(50), EndOfSupportDate date, IsHidden BIT,[Type] tinyint,OrderNo int)
 
-	INSERT INTO @TmpCustID
-	SELECT	B.CustID
-	FROM	dbo.custAccount A WITH (NOLOCK) 
+	--Get: site/currency of all lines belong to a group headline
+	INSERT INTO @TmpSiteCurrency (Currency, Site)
+	SELECT DISTINCT C.currency, C.site
+	FROM dbo.custAccount A WITH (NOLOCK) 
 	INNER JOIN dbo.custAccount B WITH (NOLOCK)ON A.GroupID = B.GroupID
-	WHERE	A.CustID = @CustID AND A.IsGroupHeadLine = 1 and A.IsRptConsol = 1
-
-	INSERT INTO @ProductList (ProductID, ProductName, EndOfSupportDate,OrderNo,[Type])
-	SELECT	ProductID, 
-			ProductName, 
-			EndOfSupportDate,
-			ISNULL(d.OrderNo,0) AS OrderNo,
-			CASE WHEN d.CasinoType = 1 THEN 53
-				WHEN d.CasinoType = 2 THEN 41
-				ELSE 0 END AS [Type]
-	FROM dbo.Products d WITH (NOLOCK)
-	WHERE GroupType = 0	-- Real product
+	INNER JOIN dbo.Customer C WITH (NOLOCK) ON C.custid=B.custid
+	WHERE A.CustID = @CustID AND A.IsGroupHeadLine = 1 and A.IsRptConsol = 1
 	
-	CREATE TABLE #SportBettypeFilter (RealProductId TINYINT, SportType SMALLINT,Bettype SMALLINT,IsLive BIT, SettingType TINYINT)
-	CREATE TABLE #ProductSettingType(
-		SettingType	tinyint,
-		SettingName	varchar(30)
-	)
-
-	INSERT INTO #ProductSettingType(SettingType,SettingName)
-	SELECT SettingType,SettingName 
-	FROM DBCUST.CUSTDB.dbo.ProductSettingType WITH(NOLOCK) 
-	WHERE SettingName IN('Product Status','Bet Setting','Stake Level')
-
-	INSERT INTO #SportBettypeFilter (RealProductId,SportType,Bettype,IsLive, SettingType)
-	SELECT p.RealProductId,p.SportType,p.Bettype,p.IsLive, p.SettingType   
-	FROM dbo.f_CustSetting_ProductSettingDetailSel(@SettingStatus) p
-		INNER JOIN #ProductSettingType t ON p.SettingType = t.SettingType
-	WHERE t.SettingName = 'Product Status'
-
-	UPDATE	@ProductList
-	SET		isShow = 1
-	WHERE	ProductID IN (1) ---SB: always show
-
-	-----------------------------------------------------------
-	----------------------------DCS---------------------------
-	SELECT t.ProductID,
-	MIN(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapIsHidden , t.bitmapOrder))) AS IsHide,
-	MAX(CONVERT(TINYINT,dbo.f_GetProductStatus(cps.bitmapHasSynced, t.bitmapOrder))) AS IsSync
-	INTO #T
-	FROM
-		dbo.CustProductStatus cps  WITH (NOLOCK)  
-		CROSS APPLY
-		(
-			SELECT p.bitmapOrder , 
-					RealProductID AS ProductID 
-			FROM #SportBettypeFilter c
-				INNER JOIN dbo.ProductStatusProfile p WITH (NOLOCK)
-					ON c.Sporttype = p.SportType AND p.Bettype = c.BetType
-		) t
-		INNER JOIN @TmpCustID c ON c.CustID = cps.CustID
-	GROUP BY t.ProductID
-
-	-- Check IsHidden only --
-	UPDATE	P
-	SET		isShow = 1
-	FROM	@ProductList P
-	INNER JOIN #T T
-		ON T.ProductID = P.ProductID
-	WHERE T.IsHide = 0
-		AND T.ProductID NOT IN (21, 22, 24)
-
-	-- Check IsHidden and IsSync --
-	UPDATE	P
-	SET		isShow = 1
-	FROM	@ProductList P
-	INNER JOIN #T T
-		ON T.ProductID = P.ProductID
-	WHERE T.IsHide = 0 AND T.IsSync = 1
-		AND T.ProductID IN (21, 22, 24)
-		
-	
-	----Check Show product by Site
-	DECLARE @Site VARCHAR(10), @Currency INT, @CID INT, @ID INT= 1, @SiteID INT
-	DECLARE @CheckPGSoftEnable AS TABLE (ProductID INT, SportType INT, BetType INT)
-	CREATE TABLE #SportBettypeDummy(RealProductId TINYINT, SportType SMALLINT,Bettype SMALLINT, IsHidden BIT DEFAULT(1))
-	--Insert sports of Live Casino
-	INSERT INTO #SportBettypeDummy (RealProductId,SportType,Bettype)
-	SELECT mt.RealProductId,p.SportType,p.Bettype
-	FROM dbo.f_CustSetting_ProductSettingDetailSel(@SettingStatus) p
-		INNER JOIN #ProductSettingType t ON p.SettingType = t.SettingType
-		INNER JOIN SportBettypeSettingMatrix mt WITH(NOLOCK) ON mt.SportType = p.SportType AND mt.BetType = p.BetType AND mt.isLicensee = 0 AND mt.Site = 'ALL' AND mt.isDeleted = 0
-	WHERE SettingName IN('Bet Setting','Stake Level')
-		AND p.ProductID IN (41) --Live Casino
-		AND EXISTS( SELECT 1 FROM #T dm WHERE p.ProductID = dm.ProductID AND dm.IsHide = 0)
+	--Check Show product by Site/Currency
+	DECLARE @Site VARCHAR(10), @Currency TINYINT, @ID INT= 1
 	 
-	WHILE EXISTS (SELECT 1 FROM	@TmpCustID WHERE OrderID = @ID)
+	WHILE EXISTS (SELECT 1 FROM	@TmpSiteCurrency WHERE OrderID = @ID)
 	BEGIN 
-		SELECT	@CID = CustID 
-		FROM	@TmpCustID 
+		SELECT	@Currency = c.currency,
+				@site = c.site 
+		FROM	@TmpSiteCurrency  c
 		WHERE	OrderID = @ID
 
-		--Product Status
-		SELECT	@SiteID = s.siteid,
-				@Currency = c.currency,
-				@site = c.site
-		FROM customer c WITH (NOLOCK)
-			INNER JOIN Site s WITH (NOLOCK) ON c.site = s.site	
-		WHERE c.custid = @CID
-		 
-		INSERT INTO @CheckPGSoftEnable (ProductID, SportType, BetType)
-		EXEC dbo.Acc_CustSetting_CheckMacauEnable @Site = @Site, @Currency = @Currency, @CustID = @CID, @SettingStatus = @SettingStatus
-
-		--START - Process for Live Casino
-		IF EXISTS ( SELECT 1 FROM #SportBettypeDummy) 
-		BEGIN
-			
-			UPDATE t
-			SET t.IsHidden = dbo.f_CustSetting_GetSportOfferStatusBySiteCurrency(@SiteID,@Currency,t.Sporttype,t.Bettype,@SettingStatus)
-			FROM #SportBettypeDummy t
-			WHERE t.IsHidden = 1
-
-			UPDATE	P
-			SET		isShow = 1
-			FROM	@ProductList P
-				INNER JOIN #SportBettypeDummy t ON p.ProductID = t.RealProductId
-			WHERE t.IsHidden = 0
-
-			DELETE t
-			FROM #SportBettypeDummy t
-			WHERE t.IsHidden = 0
-		END
-		--END - Process for Live Casino
+		INSERT INTO @CheckEnableProduct (ProductID, ProductName, IsHidden, EndOfSupportDate, OrderNo, [Type])
+		EXEC dbo.Age_GetOfferedProductBySiteCurrency @Site = @Site, @Currency = @Currency, @SettingStatus = @SettingStatus
 
 		SET @ID = @ID + 1
-		
 	END	 
-
-	UPDATE	P
-	SET		isShow = 1
-	FROM	@ProductList P
-	WHERE 	EXISTS (SELECT 1 FROM @CheckPGSoftEnable T WHERE T.ProductID = P.ProductID)
 	
 	--------------------------------------------
+	;WITH ProductList AS (
+		SELECT p.ProductID, 
+			   p.ProductName, 
+			   p.EndOfSupportDate, 
+			   MIN(CAST(IsHidden AS TINYINT)) AS IsHidden,
+			   p.OrderNo,
+			   p.[Type]
+		FROM @CheckEnableProduct p
+		GROUP BY p.ProductID, 
+			   p.ProductName, 
+			   p.EndOfSupportDate, 
+			   p.OrderNo,
+			   p.[Type]
+	)
 	SELECT p.ProductID, 
 	       p.ProductName, 
 		   p.EndOfSupportDate, 
-		   p.isShow,
+		   CASE WHEN p.IsHidden=0 THEN 1 ELSE 0 END AS isShow,
 		   p.OrderNo,
 		   p.[Type]
-	FROM @ProductList p
-	ORDER BY p.OrderNo
-	
-	DROP TABLE #T
-	DROP TABLE #ProductSettingType
-	DROP TABLE #SportBettypeFilter
-	DROP TABLE #SportBettypeDummy
+	FROM ProductList p
+	ORDER BY p.[Type], p.OrderNo
 END
-GO
-
- 
+GO 
