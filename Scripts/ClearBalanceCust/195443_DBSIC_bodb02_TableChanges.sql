@@ -1,6 +1,6 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02"></info>*/
 /*
-	Created: 20231030@Bobby
+	Created: 20231120@Bobby
 	DB: DBSIC-bodb02,DBCTG-bodb02
 	Task: AutoJob Enhancement - [Redmine : #195443]
 */
@@ -8,7 +8,7 @@
 USE [bodb02]
 GO
 
---Age_ClearBalanceCust_Process
+--1.Age_ClearBalanceCust_Process
 ALTER TABLE Age_ClearBalanceCust_Process
 ADD [Environment] VARCHAR(10)
 
@@ -25,7 +25,7 @@ CREATE CLUSTERED INDEX [CIX_SuperBatch] ON [dbo].[Age_ClearBalanceCust_Process]
 
 GO
 
----Age_ClearBalanceCust_RunningSuper
+---2.Age_ClearBalanceCust_RunningSuper
 ALTER TABLE Age_ClearBalanceCust_RunningSuper
 ADD [Environment] VARCHAR(10)
 GO
@@ -34,7 +34,7 @@ ALTER TABLE [dbo].[Age_ClearBalanceCust_RunningSuper] ADD  CONSTRAINT [DF_Age_Cl
 GO
 
 
----Age_ClearBalanceCust_BatchLog
+---3.Age_ClearBalanceCust_BatchLog
 ALTER TABLE Age_ClearBalanceCust_BatchLog
 ADD [Environment] VARCHAR(10)
 GO
@@ -42,6 +42,3 @@ GO
 ALTER TABLE [dbo].[Age_ClearBalanceCust_BatchLog] ADD  CONSTRAINT [DF_Age_ClearBalanceCust_BatchLog_Environment]  DEFAULT ('PRO') FOR [Environment]
 GO
 
---DBLOG
-ALTER TABLE [Age_ClearBalanceCust_ProcessHistory]
-ADD [Environment] VARCHAR(10)
