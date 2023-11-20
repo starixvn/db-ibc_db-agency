@@ -1,7 +1,7 @@
 /*<info serverAlias="DBLOG-bodb_CustomerLog"></info>*/
 /*
 	Created: 20231120@Bobby
-	DB: DBSIC-bodb02,DBCTG-bodb02
+	DB: DBLOG-bodb_CustomerLog
 	Task: AutoJob Enhancement - [Redmine : #195443]
 */
 --DBLOG

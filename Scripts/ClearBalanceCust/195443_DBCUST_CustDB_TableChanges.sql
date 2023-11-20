@@ -1,7 +1,7 @@
 /*<info serverAlias="DBCUST-CustDB"></info>*/
 /*
 	Created: 20231120@Bobby
-	DB: DBSIC-bodb02,DBCTG-bodb02
+	DB: DBCUST-CustDB
 	Task: AutoJob Enhancement - [Redmine : #195443]
 */
 USE CustDB;

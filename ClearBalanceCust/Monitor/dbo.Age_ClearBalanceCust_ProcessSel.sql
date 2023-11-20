@@ -207,7 +207,7 @@ BEGIN
 				WHEN p.[Status] IN ('Pending') AND DATEDIFF(MINUTE, p.ModifiedTime, CURRENT_TIMESTAMP) >= 15 THEN 'Cancel_Pending' 
 				WHEN p.[Status] IN ('Pending') THEN 'Pending'
 				WHEN p.[Status] IN ('New', 'Waiting', 'Processing', 'Pending') THEN 'Processing'
-				WHEN p.[Status] IN ('Failed') AND err.IsShowHistory = 1 AND p.TryCount IN (5, 60) THEN 'Failed'
+				WHEN p.[Status] IN ('Failed') AND ((err.IsShowHistory = 1 AND err.AllowReTry = 0) OR (err.AllowReTry = 1 AND p.TryCount IN (5, 60))) THEN 'Failed'
 			END AS StatusCount
 		FROM bodb02.dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 			LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
