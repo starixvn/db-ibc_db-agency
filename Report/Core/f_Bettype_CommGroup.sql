@@ -50,6 +50,7 @@ AS
 		- 20220707@Evan: Expand bettype range of Volleyball [Redmine: #173861]
 		- 20230810@Lewis: Add 4 new bettypes of Basketball AIO [Redmine: #191334]
 		- 20240202@Lewis: Move bettype 219 from CommGr 2 => CommGr1 [Redmine: #200765]
+		- 20240223@Lewis: Add WE Live Casino [Redmine: #195885]
 
 	- Columns:
 		- CommGroup:
@@ -201,6 +202,7 @@ FROM (
 		OR typeid BETWEEN 3501 AND 3599 --BG
 		OR typeId BETWEEN 3701 AND 3799 --Pragmatic Live Casino 
 		OR typeid BETWEEN 7901 AND 7999 -- Bitcoin product
+		OR typeid BETWEEN 10300 AND 10399 -- WE Live Casino
 		
 ) AS A
 
