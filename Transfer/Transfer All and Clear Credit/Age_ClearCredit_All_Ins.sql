@@ -21,7 +21,7 @@ AS
 		- 20181102@Johnson: Apply service broker for logging [Redmine: #103547]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20230510@Eden: Scale out DBTRANS for Credit [Redmine: #181595]
-
+		- 20231211@Johnson: Enhance log credit get Actualrate from DBCUST [redmine: #196720]
 	Param's Explanation:`
 		@MemberAmountXML = '<ROOT>
 					  <R ID="1290" AM="2483.0000" />
@@ -34,7 +34,7 @@ BEGIN
 	SET NOCOUNT ON
 	
 	-- General Info
-	DECLARE @currency INT, @actualrate FLOAT, @currencyName NVARCHAR(10)
+	DECLARE @currency INT, @currencyName NVARCHAR(10)
 
 	DECLARE @RoleId TINYINT, @srecommend INT, @username VARCHAR(50)
 	SELECT  @RoleId = roleid, @srecommend = srecommend, @currency = currency, @username = username
@@ -125,6 +125,15 @@ BEGIN
 		DECLARE @ActionId INT = 1212
 		DECLARE @LogData VARCHAR(1000)
 		DECLARE @log xml, @SB_Error BIT = 0
+		
+		DECLARE @Date DATE, @ActualRate FLOAT
+					
+		SELECT @Date = CURRENT_TIMESTAMP
+			
+		SELECT @ActualRate = e.ActualRate
+		FROM dbo.ExchangeDailyOanda e WITH (NOLOCK)
+		WHERE ExchangeDate = @Date
+			AND ExchangeId = @Currency
 		/*
 			========================= Start Member =========================
 		*/
@@ -230,7 +239,7 @@ BEGIN
 				SELECT @log = '', @SB_Error = 0
 				
 				SELECT @log = (
-					SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID, getdate() as LogDate
+					SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID, ISNULL(@ActualRate,0) as ActualRate, getdate() as LogDate
 					FROM @UpdCredit
 					FOR XML RAW('Row')
 				)
@@ -324,7 +333,7 @@ BEGIN
 			SELECT @log = '', @SB_Error = 0
 					
 			SELECT @log = (
-				SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID, getdate() as LogDate
+				SELECT @UserID as UserID,CustID, oldCredit as OldValue, newCredit as NewValue, @ip as IP, @LogData as Doing, @ActionId as ActionID,ISNULL(@ActualRate,0) as ActualRate, getdate() as LogDate
 				FROM @UpdCredit
 				FOR XML RAW('Row')
 			)
@@ -397,6 +406,7 @@ BEGIN
 									@LogData as '@Doing',
 									@DownlineCredit as '@OldValue',
 									@usedCreditMaster as '@NewValue',
+									ISNULL(@ActualRate,0) as '@ActualRate',
 									@IP as '@IP',
 									@ActionId as '@ActionID',
 									getdate() as '@LogDate'
