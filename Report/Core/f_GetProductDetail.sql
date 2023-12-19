@@ -19,7 +19,6 @@ AS
 		- 20221215@Eddie: Change Tournament Prize to Promotion Prize [RedmineID: #181578]
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
 		- 20231211@Lewis: Add Live22 [RedmineID: #194529]
-		
 */
 RETURN
 	SELECT 'ProductDetail' AS RefId, '1' AS ResourceId, 32 AS ProductId, 248 AS Sporttype, 0 AS Bettype, 1 AS [Order], 0 AS LeagueGroupID,  0 AS TicketType
@@ -70,8 +69,7 @@ RETURN
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '17' AS ResourceId, 73 AS ProductId, 155 AS Sporttype, 0 AS Bettype, 17 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType -- Normal Bets
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '18' AS ResourceId, 73 AS ProductId, 155 AS Sporttype, 8695 AS Bettype, 18 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType -- Promotion Prize
-
+	SELECT 'ProductDetail' AS RefId, '18' AS ResourceId, 73 AS ProductId, 155 AS Sporttype, 8695 AS Bettype, 18 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType -- Promotion Prize	  
 	--- Live22
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '21' AS ResourceId, 79 AS ProductId, 227 AS Sporttype, 0 AS Bettype, 21 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType -- Normal Bets
