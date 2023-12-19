@@ -12,7 +12,8 @@ ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_MAg]
 	@ErrCode int = 0 OUTPUT,
 	@ErrMsg nvarchar(4000) = '' OUTPUT,	
 	@CustStatus varchar(50)='',
-	@IsAutoTransfer BIT = 0
+	@IsAutoTransfer BIT = 0,
+	@AutoTransfer	TINYINT = 2
 AS
 /*
 Created: 
@@ -59,6 +60,7 @@ Revisions:
 	- 20230523@Danny: support scale out credit [Redmine: #181595]
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
+	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 
 Param's Explanation:
 	• @AmtTrans: amount of money
@@ -197,12 +199,32 @@ BEGIN
 	CREATE TABLE #BalanceInfo (CustId INT, Balance MONEY, Outstanding MONEY, TableName VARCHAR(50))
 
 	CREATE TABLE #recommend (CustId INT)
-	IF (@CustStatus <> '' OR @CustStatus <> null)
+
+	--TODO: Filter downlines
+	SET @AutoTransfer = ISNULL(@AutoTransfer, 2)
+	IF (@CustStatus <> '' OR @CustStatus <> null OR @AutoTransfer <> 2)
 	BEGIN
+		DROP TABLE IF EXISTS #ClearBalanceCust_Setting;
+		CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
+		DECLARE @SQL_CBS NVARCHAR(MAX);
+
+		SET @CustStatus = ISNULL(@CustStatus, 'All');
+
+		IF @AutoTransfer <> 2
+		BEGIN
+			SELECT  @SQL_CBS = 'SELECT FromCustID, ToCustID
+							FROM OPENQUERY(DBCUST, ''SELECT cbs.FromCustID, cbs.ToCustID
+													FROM CustDB.dbo.Age_ClearBalanceCust_Setting cbs WITH(NOLOCK)
+													WHERE cbs.FromCustID = ' + CONVERT(VARCHAR(30), @MasterID) + ''')'
+			INSERT INTO #ClearBalanceCust_Setting (FromCustID, ToCustID)
+			EXEC (@SQL_CBS)
+		END
+
 		INSERT INTO #recommend (CustId)
 		SELECT c.custid  
 		FROM CustDB.dbo.custInfo c WITH(NOLOCK,index=IX_custinfo)  
 		INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on c.custid=cs.CustID
+		LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.ToCustID = c.custid
 		WHERE	mrecommend = @MasterID 
 				AND c.roleid = 2   
 				AND c.Enabled = case @CustStatus when 'All' then c.Enabled 
@@ -216,6 +238,12 @@ BEGIN
 									when @CustStatus = 'Disabled' then 1
 									when @CustStatus = 'All' then 1
 									else 0 end
+				AND 1 = CASE 
+							WHEN @AutoTransfer = 2 THEN 1
+							WHEN @AutoTransfer = 0 AND cbs.ToCustID IS NULL THEN 1
+							WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
+							ELSE 0
+						END
 	END
 	ELSE
 	BEGIN

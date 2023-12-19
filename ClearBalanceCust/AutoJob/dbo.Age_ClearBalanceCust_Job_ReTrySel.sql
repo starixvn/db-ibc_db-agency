@@ -1,6 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ReTrySel]
-	@NumOfThread	INT = 4
+	@Environment VARCHAR(10)
+	,@NumOfThread	INT = 4
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(4000) = '' OUTPUT
 	,@IsCompleted	BIT = 0 OUTPUT
@@ -12,6 +13,7 @@ AS
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
 		• @NumOfBatch: Number of thread(s) are being run by WEB
@@ -40,6 +42,7 @@ BEGIN
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(UPDLOCK)
 		WHERE rs.RunningBatchNo = 0 ---> NOT running
 			AND rs.RunningTotal > 0 ---> 1 batch at least
+			AND Environment = @Environment
 	),
 	CTE_ClearBalanceCust_ReTry AS (
 		SELECT p.SuperId, p.BatchNo, p.FromCustId, p.ToCustId
@@ -54,6 +57,7 @@ BEGIN
 						WHEN ISNULL(p.TryCount, 1) BETWEEN 1 AND 4 THEN 1
 						ELSE 0
 					END
+			AND p.Environment = @Environment
 	),
 	CTE_RetryBatch AS (
 		SELECT TOP(@NumOfThread) SuperId, BatchNo
@@ -98,23 +102,25 @@ BEGIN
 	FROM (
 		SELECT TOP(1) IsCompletedCheck = 0
 		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
-		WHERE 
-			p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
-			OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
-			OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
-	
+		WHERE p.Environment = @Environment 
+			AND (
+				p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
+				OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
+				OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
+			)
 		UNION ALL -- CHECK: Today snapshot COMPLETED OR NOT
 		SELECT 0
 		WHERE NOT EXISTS (
 			SELECT TOP 1 1
 			FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+			WHERE p.Environment = @Environment
 		)
 	) AS ck;
 
 	-- TODO: Update AutoJob CompletedTime
 	IF @IsCompleted = 1
 	BEGIN
-		EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd] @IsCompleted = 1
+		EXEC [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd] @IsCompleted = 1, @Environment = @Environment
 	END
 END
 GO

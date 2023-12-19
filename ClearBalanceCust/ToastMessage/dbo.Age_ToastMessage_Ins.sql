@@ -1,4 +1,4 @@
-/*<info serverAlias="DBMSG-bodb_Message" executers="bodbDownlineNet,bodbAdminNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBMSG-bodb_Message" executers="bodbExtAccNet,bodbDownlineNet,bodbAdminNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ToastMessage_Ins]
 	@TargetId			INT,
 	@TypeId				TINYINT,
@@ -27,6 +27,7 @@ AS
 
 	Revisions:
 		- 20230831@Bobby: AutoJob clear balance downlines - Notice message [RedmineID: #182071]
+        - 20231101@Bobby: Enhance TransferOption config [RedmineID: #195135]
 
 	Param's Explanation:
 		• @PairOfBatch: The number pairs of batch

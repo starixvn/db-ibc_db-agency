@@ -1,9 +1,11 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ConfigUpd]
+	@Environment	VARCHAR(10),
 	@DefaultTime	VARCHAR(8),
 	@RunningMode	VARCHAR(10),
 	@IsActive		BIT,
 	@ManualTime		SMALLDATETIME = NULL,
+	@TestSuperIds	VARCHAR(200)= NULL,
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS
@@ -14,20 +16,27 @@ AS
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
-
+		-@Environment:
+			+ PRO
+			+ UAT
 */
 BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE
 		@AutoJob_ClearBalance_VName		VARCHAR(50)  = 'AutoJob_ClearBalance_Config',
-		@AutoJob_ClearBalance_VValue	VARCHAR(200)
+		@AutoJob_ClearBalance_VValue	VARCHAR(200),
+		@EnvironmentCheck	VARCHAR(15)
 	;
 
 	SELECT @ErrCode = 0,
-		@ErrMsg		= ''
+		@ErrMsg		= '',
+		@TestSuperIds = IIF(@Environment = 'PRO', NULL, @TestSuperIds),
+		@EnvironmentCheck = IIF(@Environment = 'PRO', '', @Environment),
+		@AutoJob_ClearBalance_VName = CONCAT('AutoJob_ClearBalance_Config', @EnvironmentCheck)
 	;
 
 	IF @RunningMode NOT IN ('Normal', 'Resume')
@@ -39,7 +48,6 @@ BEGIN
 		RETURN;
 	END
 
-
 	--TODO: UPDATE setting
 	BEGIN TRY
 		SET @AutoJob_ClearBalance_VValue = (
@@ -47,7 +55,8 @@ BEGIN
 				@DefaultTime	AS dt,
 				@ManualTime		AS mt,
 				@RunningMode	AS rm,
-				@IsActive		As ia
+				@IsActive		As ia,
+				@TestSuperIds	AS sids
 			FOR JSON PATH, WITHOUT_ARRAY_WRAPPER 
 		);
 
@@ -61,6 +70,8 @@ BEGIN
 			SET VValue = @AutoJob_ClearBalance_VValue
 			FROM dbo.SystemSettings s WITH(ROWLOCK, UPDLOCK)
 			WHERE VName = @AutoJob_ClearBalance_VName
+
+			
 		END
 		ELSE
 		BEGIN

@@ -1,6 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_BatchSel]
-	@NumOfThread	INT = 4
+	@Environment	VARCHAR(10)
+	,@NumOfThread	INT = 4
 	,@RunningMode	VARCHAR(15) = 'Normal'
 	,@ErrCode		INT = 0 OUTPUT
 	,@ErrMsg		NVARCHAR(4000) = '' OUTPUT
@@ -12,6 +13,7 @@ AS
 
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
+		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 
 	Param's Explanation:
 		• @NumOfBatch: Number of thread(s) are being run by WEB
@@ -36,7 +38,7 @@ BEGIN
 		SELECT rs.SuperId
 		FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH(UPDLOCK)
 		WHERE rs.RunningBatchNo = 0
-			--AND rs.RunningTotal < rs.TotalBatch --> ignore in cases resume many times
+			AND rs.Environment = @Environment
 	),
 	CTE_SuperBatch AS (
 		SELECT TOP(@NumOfThread) SuperId, BatchNo
@@ -45,7 +47,7 @@ BEGIN
 				,ROW_NUMBER() OVER (PARTITION BY p.SuperID ORDER BY p.BatchNo ASC) AS runIdx
 			FROM dbo.Age_ClearBalanceCust_Process p WITH(UPDLOCK)
 				INNER JOIN CTE_ProcessingBatch rs ON rs.SuperId = p.SuperID
-			WHERE p.[Status] = 'New'
+			WHERE p.[Status] = 'New' AND p.Environment = @Environment
 			GROUP BY p.SuperId, p.BatchNo
 		) AS t
 		WHERE t.runIdx = 1
@@ -58,7 +60,7 @@ BEGIN
 		INTO #tmpClearBalanceCust_BatchLog (SuperId, BatchNo, FromCustId, ToCustId)
 	FROM dbo.Age_ClearBalanceCust_Process p
 	INNER JOIN CTE_SuperBatch bl ON bl.SuperId = p.SuperID AND bl.BatchNo = p.BatchNo
-	WHERE p.[Status] = 'New'
+	WHERE p.[Status] = 'New' AND p.Environment = @Environment
 
 	--TODO: SET Running Super
 	;WITH CTE_Super AS (
@@ -69,6 +71,7 @@ BEGIN
 	SET rs.RunningBatchNo = cte.BatchNo
 	FROM dbo.Age_ClearBalanceCust_RunningSuper rs
 	INNER JOIN CTE_Super cte ON cte.SuperId = rs.SuperId
+	WHERE rs.Environment = @Environment
 	;
 
 	--- OUTPUT

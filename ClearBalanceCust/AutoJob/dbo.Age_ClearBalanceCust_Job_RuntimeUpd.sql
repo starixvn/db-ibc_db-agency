@@ -1,5 +1,6 @@
 /*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbAdminNet" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_RuntimeUpd]
+	@Environment	VARCHAR(10),
 	@StartTime		DATETIME	= NULL,
 	@RunningMode	VARCHAR(15)	= NULL,	
 	@IsCompleted	BIT = 0,
@@ -21,9 +22,13 @@ BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE
-		@AutoJob_Runtime_VName		VARCHAR(50)  = 'AutoJob_ClearBalance_Runtime',
-		@AutoJob_Runtime_VValue		VARCHAR(200) = '{}'
+		@AutoJob_Runtime_VName		VARCHAR(50),
+		@AutoJob_Runtime_VValue		VARCHAR(200) = '{}',
+		@EnvironmentCheck			VARCHAR(10)
 	;
+
+	SELECT @EnvironmentCheck		= IIF(@Environment = 'PRO', '', @Environment),
+			@AutoJob_Runtime_VName	= CONCAT('AutoJob_ClearBalance_Runtime', @EnvironmentCheck)
 
 	SELECT @AutoJob_Runtime_VValue = VValue
 	FROM dbo.SystemSettings (NOLOCK)
@@ -36,7 +41,7 @@ BEGIN
 		WHERE @StartTime IS NOT NULL 
 
 		-- CompletedTime
-		SELECT @AutoJob_Runtime_VValue = JSON_MODIFY(@AutoJob_Runtime_VValue, '$.CompletedTime', FORMAT(GETDATE(), 'yyyy-MM-dd hh:mm:ss'))
+		SELECT @AutoJob_Runtime_VValue = JSON_MODIFY(@AutoJob_Runtime_VValue, '$.CompletedTime', FORMAT(GETDATE(), 'yyyy-MM-dd HH:mm:ss'))
 		WHERE @IsCompleted =  1
 
 		IF EXISTS (
