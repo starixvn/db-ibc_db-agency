@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[Age_NewTotalBetsForeCast_LeagueSel] (
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20211115@Malcolm: Exclude Leagues are deleted [Redmine: #164321]
 		- 20220422@Evan: Remove Using IsDeleted field in League Table [Redmine: #171699]
+		- 20231227@Lewis: Add LeagueGroupId [Redmine: #197160]
 	
 	Parameter's Explanation:
 			
@@ -28,11 +29,12 @@ BEGIN
 	DECLARE @timeNow	DATETIME
 	SELECT @timeNow		= GETDATE()		
 	
-	CREATE TABLE #league (leagueid	INT, leaguename	NVARCHAR(500))
+	CREATE TABLE #league (leagueid	INT, leaguename	NVARCHAR(500), LeagueGroupId SMALLINT)
 	
-	INSERT INTO #league
+	INSERT INTO #league (leagueid, leaguename, LeagueGroupId)
 	SELECT l.leagueid
 			, l.leaguename
+			, l.LeagueGroupID
 	FROM dbo.League l WITH(NOLOCK)
 	WHERE l.sporttype	= @sporttype
 			AND l.IsActive	= 1
@@ -96,6 +98,7 @@ BEGIN
 	--return league	
 	SELECT leagueid
 			, leaguename
+			, LeagueGroupId
 	FROM #league
 	ORDER BY leagueid
 	
