@@ -45,6 +45,7 @@ AS
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20230302@Danny: Group VS product in range14, bk [RedmineID: #184618]
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
+		- 20240103@Lewis: Hotfix - Incorrect Owner's Turnover formula at Master, Agent Level [RedmineID: #199262]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -331,7 +332,7 @@ BEGIN
 						SUM(winlost) AS winlost,
 						SUM(actual_stake) AS actual_stake,
 						SUM(playercomm) playercomm,
-						SUM(ABS(b.stake)*spositiontaking) ownerturnover,
+						SUM(ABS(b.stake)*mpositiontaking) ownerturnover,
 						SUM(swinlost) swinlost,
 						SUM(mwinlost) mwinlost,
 						SUM(awinlost) awinlost,
@@ -465,7 +466,7 @@ BEGIN
 						SUM(winlost) AS winlost,
 						SUM(actual_stake) AS actual_stake,
 						SUM(playercomm) playercomm,
-						SUM(ABS(b.stake)*spositiontaking) ownerturnover,
+						SUM(ABS(b.stake)*apositiontaking) ownerturnover,
 						SUM(swinlost) swinlost,
 						SUM(mwinlost) mwinlost,
 						SUM(awinlost) awinlost,
@@ -598,7 +599,7 @@ BEGIN
 						SUM(winlost) AS winlost,
 						SUM(actual_stake) AS actual_stake,
 						SUM(playercomm) playercomm,
-						SUM(ABS(b.stake)*spositiontaking) ownerturnover,
+						SUM(ABS(b.stake)) ownerturnover,
 						SUM(swinlost) swinlost,
 						SUM(mwinlost) mwinlost,
 						SUM(awinlost) awinlost,
@@ -668,7 +669,7 @@ BEGIN
 				,SUM(ABS(b.stake)) as TurnOver
 				,0 as winlost
 				,0 as playercomm
-				,SUM(ABS(b.stake)) as ownerturnover
+				,SUM(ownerturnover) as ownerturnover
 				,SUM(winlost-actual_stake) ownerwinlost
 				,SUM(playercomm) as ownercomm
 				,0 as precomm
