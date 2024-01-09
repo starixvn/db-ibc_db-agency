@@ -15,6 +15,7 @@ AS
 	Revisions:
 		- 20200114@Percy: Initialize SP [RedmineID: #127288]
 		- 20211001@Evan: Extend data type column IP [RedmineID: #90903]
+		- 20240130@Lewis: Add leaguegroupid [RedmineID: #197160]
 */
 
 BEGIN
@@ -134,6 +135,7 @@ BEGIN
 
 		SELECT
 			m.leagueid
+			,l.LeagueGroupID
 			,m.GlobalShowTime
 			,m.sporttype
 			,m.matchid
@@ -160,6 +162,7 @@ BEGIN
 			,Company		= -(CASE WHEN b.statusID NOT IN (0, 1) THEN b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm ELSE 0 END)
 		FROM #BetMatching b
 			INNER JOIN dbo.match m WITH (NOLOCK) ON b.matchid = m.matchid
+			INNER JOIN dbo.League l WITH (NOLOCK) ON m.leagueid = l.leagueid
 			INNER JOIN dbo.Customer c WITH (NOLOCK) ON b.custid = c.custid
 		ORDER BY m.GlobalShowTime DESC, c.username ASC, b.transid DESC
 	END
@@ -247,6 +250,7 @@ BEGIN
 
 		SELECT
 			m.leagueid
+			,l.LeagueGroupID
 			,m.GlobalShowTime
 			,m.sporttype
 			,m.matchid
@@ -273,6 +277,7 @@ BEGIN
 			,Company		= -(CASE WHEN b.statusID NOT IN (0, 1) THEN b.winlost - b.actual_stake + b.swinlost + b.mwinlost + b.awinlost + b.scomm ELSE 0 END)
 		FROM #BetMatching b
 			INNER JOIN dbo.match14 m WITH (NOLOCK) ON b.matchid = m.matchid
+			INNER JOIN dbo.League l WITH (NOLOCK) ON m.leagueid = l.leagueid
 			INNER JOIN dbo.Customer c WITH (NOLOCK) ON b.custid = c.custid
 		ORDER BY m.GlobalShowTime DESC, c.username ASC, b.transid DESC
 	END

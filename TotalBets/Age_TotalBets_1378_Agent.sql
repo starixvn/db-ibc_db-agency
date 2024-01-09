@@ -13,6 +13,7 @@ AS
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20221227@Bobby: Correct formula for calculating Total Bet [RedmineID: #181608]
+		- 20240109@Lewis: Add LeagueGroupId [RedmineID: #197160]
 */
 
 BEGIN
@@ -21,6 +22,7 @@ BEGIN
 	SELECT
 		m.showtime,
 		m.leagueID,
+		l.LeagueGroupID,
 		m.matchcode,
 		b.liveindicator,
 		m.matchid,
@@ -53,12 +55,14 @@ BEGIN
 				AND statusID IN (0,1)
 		GROUP BY matchid, bettype, betteam, liveindicator, livehomescore, liveawayscore) as b
 		INNER JOIN bodb02.dbo.match m  WITH (NOLOCK) ON m.matchid = b.matchid 	
+		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
 	WHERE
 		m.eventstatus = 'running'
 	
 	GROUP BY
 		m.showtime,
 		m.leagueID,
+		l.LeagueGroupID,
 		m.matchcode,
 		b.liveindicator,
 		m.matchid,

@@ -15,6 +15,7 @@ Revisions:
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 	- 20221227@Bobby: Correct formula for calculating Total Bet [RedmineID: #181608]
+	- 20240109@Lewis: Add LeagueGroupId [RedmineID: #197160]
 	
 Param's Explanation:
 • @CustID: Master Agent ID
@@ -24,6 +25,7 @@ BEGIN
 	select 
 		m.showtime, 
 		m.leagueid,
+		l.LeagueGroupID,
 		m.matchcode,
 		a.liveindicator, 
 		a.livehomescore,
@@ -60,6 +62,7 @@ BEGIN
 	FROM
 		bettrans AS a  WITH (NOLOCK)
 		INNER JOIN match AS m  WITH (NOLOCK) ON m.matchid       = a.matchid and 	m.eventstatus='running'
+		INNER JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
 	where  	
 		a.mrecommend=@custid and
 		m.eventstatus='running'  and
@@ -74,6 +77,7 @@ BEGIN
 		m.matchid,
 		m.matchcode, 
 		m.leagueid, 
+		l.LeagueGroupID,
 		m.showtime,
 		m.isNeutral
 	order by a.liveindicator desc, m.matchcode

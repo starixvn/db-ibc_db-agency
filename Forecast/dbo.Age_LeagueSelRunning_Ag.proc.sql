@@ -16,6 +16,7 @@ Revisions:
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 	- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+	- 20240109@Lewis: Add LeagueGroupId [RedmineID: #197160]
 */
 BEGIN	
 	SET NOCOUNT ON
@@ -24,6 +25,7 @@ BEGIN
 
 	select 
 		m.leagueid
+		,l.LeagueGroupID
 		,m.sporttype
 	from 
 		league l with (nolock) 
@@ -33,7 +35,7 @@ BEGIN
 							from bettrans WITH (NOLOCK, INDEX = IX_betrunning_recommend)
 							where statusID in (0,1) and recommend = @AgID 
 								and bettype in (select val from dbo.strSplit_Key(@Bettypes,',')))  
-	group by m.leagueid, l.leaguename, m.sporttype
+	group by m.leagueid, l.leaguename, m.sporttype,l.LeagueGroupID
 	order by l.leaguename
 END
 GO
