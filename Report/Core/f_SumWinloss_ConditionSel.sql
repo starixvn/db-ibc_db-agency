@@ -61,6 +61,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
 		- 20230713@Lewis: Add Virtual Sports 3 (New) - Leap Gaming [RedmineID: #189207]
 		- 20231211@Lewis: Add Live22 [RedmineID: #194529]
+		- 20231116@Lewis: Add WE Live Casino [RedmineID: #195885]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -134,7 +135,8 @@ RETURN
 				(76, 159, 0, 0, 0),  -- YeeBet
 				(77, 178, 0, 0, 0), --VS3-LeapGaming(New)
 				(79, 227, 0, 0, 0), -- Live22
-				(79, 227, 7698, 0, 0) -- Live22 Promotion Prize
+				(79, 227, 7698, 0, 0), -- Live22 Promotion Prize
+				(80, 228, 0, 0, 0) --WE Live Casino
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
