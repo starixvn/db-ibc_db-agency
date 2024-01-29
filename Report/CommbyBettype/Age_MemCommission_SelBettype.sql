@@ -18,21 +18,26 @@ AS
 	- 20170425@Percy: Use related bettype - commission group function [RedmineID: #71665]
 	- 20190816@Percy: Apply primary-secondary bettype [RedmineID: #117068]
 	- 20190826@Percy: Sort by bet type [RedmineID: #118699]
+	- 20240105@Johnson: Hide bettype SABA for site 777777 [redmine: #194591]
 */
 
 BEGIN
 
 	SET NOCOUNT ON
 	
-	DECLARE @isIMBC BIT = 0
+	DECLARE @isIMBC BIT = 0,
+		@SpecialPlatform TINYINT = 0,
+		@Site VARCHAR(10)
 
 	IF ISNULL(@CustID, 0) <> 0
 	BEGIN
-		IF (
-				SELECT [Site]
-				FROM DBCUST.CustDB.dbo.Customer WITH (NOLOCK)
-				WHERE custid = @CustID
-				) = 'IMBC'
+		SELECT @Site = s.[Site],
+			@SpecialPlatform = s.SpecialPlatfrom
+		FROM DBCUST.CustDB.dbo.Customer c WITH (NOLOCK)
+			INNER JOIN Site s WITH(NOLOCK) ON c.Site = s.Site
+		WHERE custid = @CustID
+		
+		IF @Site = 'IMBC'
 			SELECT @isIMBC = 1
 	END
 
@@ -47,6 +52,7 @@ BEGIN
 				OR bc.bettype <> 501
 			)
 			AND bc.isShow = 1
+			AND 1 = CASE WHEN @SpecialPlatform = 4 AND bc.Bettype IN (228,229) THEN 0 ELSE 1 END --Hide bettype SABA xxx for 777777
 	)
 
 	SELECT CommGroup AS CommID
@@ -63,4 +69,4 @@ BEGIN
 	GROUP BY CommGroup
 	ORDER BY CommGroup
 END
-GO
+
