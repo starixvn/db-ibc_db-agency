@@ -19,6 +19,7 @@ AS
 		- 20221215@Eddie: Change Tournament Prize to Promotion Prize [RedmineID: #181578]
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
 		- 20231211@Lewis: Add Live22 [RedmineID: #194529]
+		- 20231211@Lewis: Add Live22 - fix bettype7698 [RedmineID: #194530]
 		
 */
 RETURN
