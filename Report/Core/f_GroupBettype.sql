@@ -20,15 +20,16 @@ RETURN
 		- 20191118@Percy: BMAIO - Add bet type 1302 (703) [RedmineID: #118622]
 		- 20191226@Percy: Apply column DisplayedTypeId on bettype table [RedmineID: #125126]
 		- 20230807@Danny: deploy SP in DBBOF [RedmineID: #191715]
+		- 20240119@Lewis: merge bettype for VirtualSport (1,2,3) [RedmineID: #198621]
 
-	Remark: Sportsbook only
+	Remark: Sportsbook only + VS
 */
 	WITH CTE_bettype AS
 	(
 		SELECT bt.typeid AS bettype, bt.DisplayedTypeId AS GroupTypeId
 		FROM dbo.bettype bt WITH (NOLOCK)
 		WHERE bt.typeid <> bt.DisplayedTypeId
-			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId = 1)
+			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId IN (1,5,27,49,77))
 	)
 	SELECT DISTINCT t.bettype, t.GroupTypeId
 	FROM CTE_bettype b
