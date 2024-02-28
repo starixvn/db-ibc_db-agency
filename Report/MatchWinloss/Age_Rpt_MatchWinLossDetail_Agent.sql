@@ -33,6 +33,7 @@ AS
 		- 20210305@Malcolm: Gather child matchs into a match (for cricket AIO)  - [RedminedId : #148454]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
+		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 */
 
 BEGIN
@@ -1038,7 +1039,8 @@ BEGIN
 			awayid, 
 			bettype, 
 			liveindicator,
-			leagueid,
+			m.leagueid,
+			ISNULL(l.LeagueGroupID,0) AS LeagueGroupID,
 			SUM(turnover) as turnover,
 			SUM(GrossComm) as GrossComm, 
 			SUM(MemberWinLoss) as MemberWinLoss, 
@@ -1052,8 +1054,9 @@ BEGIN
 			isNeutral, 
 			showtime,
 			CASE WHEN matchid < 1000000000 THEN 0 ELSE 1 END AS LeagueType -- 0: league, 1: League3rd
-	FROM #MAgMatchWLDetails	
-	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, leagueid, race, matchcode,isNeutral, showtime,
+	FROM #MAgMatchWLDetails m	
+	LEFT JOIN League l WITH (NOLOCK) ON m.leagueid = l.leagueid
+	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, m.leagueid, ISNULL(l.LeagueGroupID,0), race, matchcode,isNeutral, showtime,
 		CASE WHEN matchid < 1000000000 THEN 0 ELSE 1 END
 	ORDER BY betgroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, leagueid, race, bettype, liveindicator, matchcode
 

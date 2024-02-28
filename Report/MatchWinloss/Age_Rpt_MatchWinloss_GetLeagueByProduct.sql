@@ -25,6 +25,7 @@ AS
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
+		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -223,6 +224,7 @@ BEGIN
 	SELECT
 		DISTINCT
 		l.leagueid,
+		l.leaguegroupid,
 		l.sporttype,
 		tmp.LeagueType,
 		CASE @Language 
