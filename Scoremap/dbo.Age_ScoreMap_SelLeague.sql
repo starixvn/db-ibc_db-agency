@@ -21,6 +21,7 @@ AS
 		- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757]
 		- 20190918@Percy: Remove inactive products [RedmineID: #118699]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20240109@Lewis: Add LeagueGroupId [RedmineID: #197160]
 */
 
 BEGIN
@@ -45,8 +46,9 @@ BEGIN
 
 	IF @roleid = 4
 	BEGIN
-		SELECT m.leagueid,m.sporttype
-		FROM match m WITH(NOLOCK)			
+		SELECT m.leagueid,l.LeagueGroupID,m.sporttype
+		FROM match m WITH(NOLOCK)
+		INNER JOIN League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 		WHERE m.eventstatus <> 'completed'
 			AND m.matchid IN (SELECT DISTINCT matchid 
 								FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_srecommend)
@@ -54,12 +56,13 @@ BEGIN
 									AND b.statusid IN (0,1)
 									AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 							)
-		GROUP BY m.sporttype,m.leagueid 
+		GROUP BY m.sporttype,m.leagueid ,l.LeagueGroupID
 	END
 	ELSE IF @roleid = 3 
 	BEGIN
-		SELECT m.leagueid,m.sporttype
+		SELECT m.leagueid,l.LeagueGroupID,m.sporttype
 		FROM match m WITH(NOLOCK)
+		INNER JOIN League l WITH(NOLOCK) ON m.leagueid = l.leagueid
 		WHERE m.eventstatus <> 'completed'
 			AND m.matchid IN (SELECT DISTINCT matchid 
 								FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_mrecommend)
@@ -67,12 +70,13 @@ BEGIN
 									AND b.statusid IN (0,1)
 									AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 							)
-		GROUP BY  m.sporttype ,m.leagueid 
+		GROUP BY  m.sporttype ,m.leagueid ,l.LeagueGroupID
 	END
 	ELSE IF @roleid = 2
 	BEGIN 
-		SELECT m.leagueid,m.sporttype
-		FROM match m WITH(NOLOCK)			
+		SELECT m.leagueid,l.LeagueGroupID,m.sporttype
+		FROM match m WITH(NOLOCK)		
+		INNER JOIN League l WITH(NOLOCK) ON m.leagueid = l.leagueid	
 		WHERE m.eventstatus <> 'completed'
 			AND m.matchid IN (SELECT DISTINCT matchid 
 								FROM dbo.bettrans b WITH(NOLOCK, INDEX=IX_betrunning_recommend)
@@ -80,7 +84,7 @@ BEGIN
 									AND b.statusid IN (0,1)
 									AND EXISTS (SELECT TOP 1 1 FROM @tblBetType tbl WHERE tbl.bettype = b.bettype )
 							)
-		GROUP BY m.sporttype ,m.leagueid
+		GROUP BY m.sporttype ,m.leagueid,l.LeagueGroupID
 	END
 END
 GO

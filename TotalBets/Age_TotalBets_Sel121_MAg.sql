@@ -13,6 +13,7 @@ Revisions:
 	- 20121003@Dan: update betteam for 121,122 bettype
 	- 20180802@Helen: Update code for adjusting indexes - [Redmine:98757] 
 	- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+	- 20240109@Lewis: Add LeagueGroupId [RedmineID: #197160]
 Param's Explanation:
 • @CustID: Master AgentID
 */
@@ -21,6 +22,7 @@ BEGIN
 	SELECT 
 		m.showtime, 
 		m.leagueid,
+		l.LeagueGroupID,
 		m.matchcode, 
 		b.liveindicator, 
 		b.livehomescore,
@@ -46,6 +48,7 @@ BEGIN
 	FROM
 		bettrans AS b  WITH (NOLOCK)
 		INNER JOIN match AS m  WITH (NOLOCK) ON m.matchid = b.matchid and m.eventstatus='running'
+		INNER JOIN League AS l WITH (NOLOCK) ON m.leagueid = l.leagueid
 	WHERE  	
 		b.mrecommend=@custid 
 		AND m.eventstatus='running'
@@ -59,6 +62,7 @@ BEGIN
 		m.matchid,
 		m.matchcode, 
 		m.leagueid,
+		l.LeagueGroupID,
 		m.showtime,
 		m.isNeutral
 	order by b.liveindicator desc, m.matchcode
