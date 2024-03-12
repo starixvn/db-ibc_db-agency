@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBTP-bodb02" selecters="wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.f_Bettype_CommGroup ()
 RETURNS TABLE
 AS
@@ -6,7 +6,7 @@ AS
 /*
 	Created by Percy
 	Date: 2017-04-25
-	DB: DBAGE.bodb02
+	DB: DBAGE.bodb02,DBACC-bodb02,DBTP-bodb02
 	Task: Relationship between bettype and commission group
 
 	Revisions:
@@ -51,6 +51,7 @@ AS
 		- 20230810@Lewis: Add 4 new bettypes of Basketball AIO [Redmine: #191334]
 		- 20240202@Lewis: Move bettype 219 from CommGr 2 => CommGr1 [Redmine: #200765]
 		- 20240223@Lewis: Add WE Live Casino [Redmine: #195885]
+		- 20240312@Lewis: Add metadata DBACC-bodb02 , DBTP-bodb02 [Redmine: #193083]
 
 	- Columns:
 		- CommGroup:
