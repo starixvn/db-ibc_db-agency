@@ -27,6 +27,7 @@ AS
 		- 20230104@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]  
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
+		- 20240125@Lewis: Show Archived User [RedmineID: #199410]
 	
 	Param's Explanation:
 	  @ProductDetails:		
@@ -331,7 +332,7 @@ BEGIN
 		OPTION (MAXRECURSION 0)
 	END
 
-	SELECT	w.CustID AS CustId,
+	SELECT	c.CustID AS CustId,
 			c.UserName AS CustName,
 			c.FirstName,
 			c.LastName,
@@ -342,9 +343,9 @@ BEGIN
 			SUM(AgWinLost) AS AgWinLoss,
 			SUM(AgComm) AS AgComm
 	FROM #AgWinLoss w 
-		INNER JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-	GROUP BY w.CustID, c.UserName, c.FirstName, c.LastName
-	ORDER BY c.Username;
+		LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+	GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+	ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
 
 	SET NOCOUNT OFF;
 END
