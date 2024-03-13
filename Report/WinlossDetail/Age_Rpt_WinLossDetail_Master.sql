@@ -45,6 +45,7 @@ Revisions:
 	- 20230331@Malcolm: Add first name, last name [RedmineID : #184752]
 	- 20230526@Lewis: Add Search by Username [RedmineID : #184752 - Phase 2]
 	- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
+	- 20240125@Lewis: Show Archived User [RedmineID: #199410]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -462,7 +463,7 @@ BEGIN
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT	w.CustID AS CustId, 
+		SELECT	c.CustID AS CustId, 
 				c.UserName AS CustName, 
 				c.FirstName,
 				c.LastName,
@@ -479,10 +480,10 @@ BEGIN
 				SUM(SAgComm) as SAgComm,
 				SUM(NoOfTicket) as NumberOfTickets
 		FROM #SAgWinLossDetails w 
-			INNER JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+			LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
 		WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-		GROUP BY w.CustID, c.UserName, c.FirstName,  c.LastName
-		ORDER BY c.Username;
+		GROUP BY c.CustID, c.UserName, c.FirstName,  c.LastName
+		ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
 
 		SELECT	NULL AS CustId,
 				'Total' AS CustName,
@@ -516,7 +517,7 @@ BEGIN
 
 		SELECT wl.*
 		FROM (
-			SELECT	w.CustID AS CustId, 
+			SELECT	c.CustID AS CustId, 
 					c.UserName AS CustName, 
 					c.FirstName,
 					c.LastName,
@@ -532,11 +533,11 @@ BEGIN
 					SUM(SAgWinlost) as SAgWinLoss,
 					SUM(SAgComm) as SAgComm,
 					SUM(NoOfTicket) as NumberOfTickets,
-					ROW_NUMBER() over(order by c.UserName) as RowNum
+					ROW_NUMBER() over(order by IIF(c.Username IS NULL,1,0),c.UserName) as RowNum
 			FROM #SAgWinLossDetails w 
-				INNER JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
 			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-			GROUP BY w.CustID, c.UserName, c.FirstName, c.LastName
+			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
 		) wl
 		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
