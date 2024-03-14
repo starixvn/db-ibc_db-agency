@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_Ins]
 	@FromCustID		INT,
 	@ToCustID		INT,
@@ -32,6 +32,7 @@ AS
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		- 20230523@Danny: support scale out credit [Redmine: #181595]
 		- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
+		- 20240314@Bobby: EC enhancement [Redmine: #202276]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -165,13 +166,8 @@ BEGIN
 
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 	DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
-
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-	
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	EXEC dbo.Age_SelBalanceUpDay @BalanceUpDay= @balanceUpDay OUTPUT, @MoveBetsDay = @moveBetsDay OUTPUT
 
 	IF @roleid = 1
     BEGIN

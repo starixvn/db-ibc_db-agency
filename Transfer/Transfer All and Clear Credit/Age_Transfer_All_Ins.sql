@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Transfer_All_Ins]
 	@UserId					INT,
 	@CustId					INT,
@@ -34,6 +34,7 @@ AS
 		- 20230523@Danny: support scale out credit [Redmine: #181595]
 		- 20230705@Lewis: Allow to transfer YTB many times [Redmine: #186078]
 		- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
+		- 20240314@Bobby: EC enhancement [Redmine: #202276]
 */
 
 BEGIN
@@ -89,12 +90,7 @@ BEGIN
 
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
-
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	EXEC dbo.Age_SelBalanceUpDay @BalanceUpDay= @balanceUpDay OUTPUT, @MoveBetsDay = @moveBetsDay OUTPUT
 
 	IF @RoleId = 4
 		SELECT  @DownlineCustId = custId, @DownlineRoleId = roleId, @DownlineCredit = ISNULL(credit, 0)

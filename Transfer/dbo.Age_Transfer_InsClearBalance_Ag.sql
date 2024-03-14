@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_InsClearBalance_Ag]
 	@FromCustID int, --Agent ID here  
 	@ToCustIDs varchar(4000),   
@@ -72,6 +72,7 @@ Revisions:
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
+	- 20240314@Bobby: EC enhancement [Redmine: #202276]
 
 Param's Explanation:
 	• @FromCustID: list from custid
@@ -189,13 +190,8 @@ BEGIN
 
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 	DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
-
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-	
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	EXEC dbo.Age_SelBalanceUpDay @BalanceUpDay= @balanceUpDay OUTPUT, @MoveBetsDay = @moveBetsDay OUTPUT
 
 	SELECT @currency = ci.currency, @actualrate = e.actualrate, @currName = e.currency, @agUser = ci.username, 
 		@Recommend1 = ci.recommend, @MRecommend1 = ci.mrecommend, @srecommend1 = ci.srecommend  
