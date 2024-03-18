@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_MAg]
 	@MasterID int,
 	@ToCustIDs varchar(4000),
@@ -171,7 +171,10 @@ BEGIN
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
-	EXEC dbo.Age_SelBalanceUpDay @BalanceUpDay= @balanceUpDay OUTPUT, @MoveBetsDay = @moveBetsDay OUTPUT
+
+	--TODO: Get MBU days
+	EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @moveBetsDay OUTPUT
+	EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @balanceUpDay OUTPUT
 
 	DECLARE @WinlostDate datetime
 	SELECT  @WinlostDate = convert(varchar(10), CURRENT_TIMESTAMP, 120)

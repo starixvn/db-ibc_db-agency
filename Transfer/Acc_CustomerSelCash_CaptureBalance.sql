@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="wsv_alp" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelCash_CaptureBalance]
 	@CustId INT,
 	@TotalCash MONEY = 0 OUTPUT
@@ -37,7 +37,10 @@ BEGIN
 
 		DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 		DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
-		EXEC dbo.Age_SelBalanceUpDay @BalanceUpDay= @balanceUpDay OUTPUT, @MoveBetsDay = @moveBetsDay OUTPUT
+
+		--TODO: Get MBU days
+		EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @moveBetsDay OUTPUT
+		EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @balanceUpDay OUTPUT
 
 		DECLARE @yesterday SMALLDATETIME, @today SMALLDATETIME
 		SELECT @today =   CAST(CURRENT_TIMESTAMP AS DATE)
