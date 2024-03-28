@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02,DBBOF-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBEXT-bodb02,DBACC-bodb02,DBBOF-bodb02" selecters="wsv_nap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GroupBettype] ()
 RETURNS TABLE
 RETURN
@@ -21,15 +21,16 @@ RETURN
 		- 20191226@Percy: Apply column DisplayedTypeId on bettype table [RedmineID: #125126]
 		- 20230807@Danny: deploy SP in DBBOF [RedmineID: #191715]
 		- 20240119@Lewis: merge bettype for VirtualSport (1,2,3) [RedmineID: #198008]
+		- 20240119@Lewis: merge bettype for VirtualSport (4) [RedmineID: #198621]
 
-	Remark: Sportsbook only
+	Remark: Sportsbook only + VS
 */
 	WITH CTE_bettype AS
 	(
 		SELECT bt.typeid AS bettype, bt.DisplayedTypeId AS GroupTypeId
 		FROM dbo.bettype bt WITH (NOLOCK)
 		WHERE bt.typeid <> bt.DisplayedTypeId
-			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId IN (1,5,27,49,77))
+			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId IN (1,5,27,49,77,83))
 	)
 	SELECT DISTINCT t.bettype, t.GroupTypeId
 	FROM CTE_bettype b

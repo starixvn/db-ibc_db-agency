@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" selecters="wsv_nap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_GroupProduct]
 (
 )
@@ -20,6 +20,7 @@ AS
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20201124@Malcolm: Add Virtual Sports 3 [redmine: #131375]
 		- 20230713@Lewis: Add Virtual Sports 3 (New) - Leap Gaming [RedmineID: #189207]
+		- 20240119@Lewis: Add VS4 [RedmineID: #198621]
 */
 
 RETURN
@@ -31,6 +32,8 @@ RETURN
 	SELECT 49, 5
 	UNION ALL
 	SELECT 77, 5
+	UNION ALL
+	SELECT 83, 5
 
 	
 	/*

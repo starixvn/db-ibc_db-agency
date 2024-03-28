@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Agent]
 	@CustID			INT,
 	@FromDate		SMALLDATETIME,
@@ -32,6 +32,7 @@ AS
 		- 20221208@Eddie: Add New SABA ESports PinGoal [RedmineID: #181383]
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
+		- 20240315@Lewis: Add parlay vs4 10449 [RedmineID: #198621]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -106,7 +107,7 @@ BEGIN
 			ON f.ProductID = s.ProductID AND f.BetType = s.BetType AND s.ProductID IN (23)
 		LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 		LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
-	WHERE f.bettype <> 2799 -- Mix parlay of BRVS
+	WHERE f.bettype NOT IN (2799,10449) -- Mix parlay of BRVS
 		AND EXISTS(SELECT 1
 				   WHERE e.ProductId IS NULL 
 					OR 
@@ -300,7 +301,7 @@ BEGIN
 				INSERT INTO #MAgWinLoss (ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, TurnOver, AgTotal, MAgWinloss, MAgComm, NumberOfTickets)
 				SELECT
 					5 AS ProductId,
-					2799 AS bettype,
+					b.bettype,
 					s.sporttype,
 					0 AS liveindicator,
 					0 AS IsMMR,
@@ -318,11 +319,11 @@ BEGIN
 						INNER JOIN #SportBettype s ON bm.bettype = s.Bettype AND s.ProductID = 5
 					WHERE bm.refno = b.refno
 				) AS s
-				WHERE b.matchid = 2799 AND b.bettype = 2799
+				WHERE b.matchid IN (2799,10449) AND b.bettype IN (2799,10449)
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID IN (111, 112, 113)
 					AND b.mrecommend = @CustID
-				GROUP BY s.sporttype
+				GROUP BY b.bettype,s.sporttype
 			END
 		END
 
@@ -502,7 +503,7 @@ BEGIN
 				INSERT INTO #MAgWinLoss (ProductID, bettype, SportType, liveindicator, IsMMR, GrossComm, TurnOver, AgTotal, MAgWinloss, MAgComm, NumberOfTickets)
 				SELECT
 					5 AS ProductId,
-					2799 AS bettype,
+					b.bettype,
 					s.sporttype,
 					0 AS liveindicator,
 					0 AS IsMMR,
@@ -520,11 +521,11 @@ BEGIN
 						INNER JOIN #SportBettype s ON bm.bettype = s.Bettype AND s.ProductID = 5
 					WHERE bm.refno = b.refno
 				) AS s
-				WHERE b.matchid = 2799 AND b.bettype = 2799
+				WHERE b.matchid IN (2799,10449) AND b.bettype IN (2799,10449)
 					AND winlostdate BETWEEN @FDate AND @TDate
 					AND statusID IN (111, 112, 113)
 					AND b.mrecommend = @CustID
-				GROUP BY s.sporttype
+				GROUP BY b.bettype,s.sporttype
 			END
 		END	
 	END
