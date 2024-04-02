@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelCash_CaptureBalance]
 	@CustId INT,
 	@TotalCash MONEY = 0 OUTPUT
@@ -15,6 +15,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
     	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20240314@Bobby: EC enhancement [Redmine: #202276]
 	
 	Param's Explaination:
 		- @CustId: custid
@@ -35,13 +36,11 @@ BEGIN
 	BEGIN
 
 		DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-		DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 		DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
 
-		INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-		EXEC bodb02.dbo.Age_SelBalanceUpDay
-	
-		SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+		--TODO: Get MBU days
+		EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @moveBetsDay OUTPUT
+		EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @balanceUpDay OUTPUT
 
 		DECLARE @yesterday SMALLDATETIME, @today SMALLDATETIME
 		SELECT @today =   CAST(CURRENT_TIMESTAMP AS DATE)

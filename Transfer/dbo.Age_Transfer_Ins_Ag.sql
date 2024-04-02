@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_Ag] 
 	@FromCustID int, --the customer here
 	@ToUserName varchar(30), --the agent here
@@ -67,6 +67,7 @@ Revisions:
 	- 20230523@Danny: support scale out credit [Redmine: #181595]
 	- 20230705@Lewis: Allow to transfer YTB many times [Redmine: #186078]
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
+	- 20240314@Bobby: EC enhancement [Redmine: #202276]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -158,13 +159,11 @@ BEGIN
 
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 	DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
 
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
-	
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
+	--TODO: Get MBU days
+	EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @moveBetsDay OUTPUT
+	EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @balanceUpDay OUTPUT
 
 	DECLARE @CustBalance MONEY 
 	DECLARE @CustOutstanding MONEY

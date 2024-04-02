@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_SAg]
 	@SAgID int,
 	@SuperIDsTransferTotal VARCHAR(50)='', 
@@ -65,6 +65,7 @@ Revisions:
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
+	- 20240314@Bobby: EC enhancement [Redmine: #202276]
 	
 Param's Explanation:
 	• @AmtTrans: amount of money
@@ -154,14 +155,12 @@ BEGIN
 
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
-	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
 	DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
 
-	INSERT INTO @tblMoveBetBalanceUp(BalanceUpDay,MoveBetsDay)
-	EXEC bodb02.dbo.Age_SelBalanceUpDay
+	--TODO: Get MBU days
+	EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @moveBetsDay OUTPUT
+	EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @balanceUpDay OUTPUT
 	
-	SELECT @balanceUpDay = BalanceUpDay, @moveBetsDay = MoveBetsDay FROM @tblMoveBetBalanceUp
-
 	DECLARE @WinlostDate datetime
 	SELECT  @WinlostDate = convert(varchar(10), CURRENT_TIMESTAMP, 120)
 
