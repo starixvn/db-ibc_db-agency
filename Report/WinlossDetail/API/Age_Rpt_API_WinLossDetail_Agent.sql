@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Rpt_API_WinLossDetail_Agent] 
 	@CustID			 INT = NULL --mrecommend
 	,@FromDate		 SMALLDATETIME

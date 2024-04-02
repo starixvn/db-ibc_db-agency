@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Master]  
 	@CustID 		INT, --srecommend
 	@FromDate 		SMALLDATETIME,
@@ -28,6 +28,7 @@ AS
 		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
 		- 20240125@Lewis: Show Archived User [RedmineID: #199410]
+		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -174,7 +175,7 @@ BEGIN
 					SUM(swinlost) AS swinlost
 					
 			FROM dbo.bettrans b WITH (NOLOCK, index = IX_srecommend)  
-				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5)
+				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4)
 				LEFT JOIN (
 					SELECT LeagueGroupID, leagueid
 					FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
@@ -185,6 +186,7 @@ BEGIN
 											OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 											OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 											OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
+											OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
 											OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
 										) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff  THEN m.sporttype
 						ELSE 0 END sporttype, 
@@ -193,6 +195,7 @@ BEGIN
 											OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 											OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 											OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
+											OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
 											OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
 										) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
 						ELSE 0 END LeagueGroupID,

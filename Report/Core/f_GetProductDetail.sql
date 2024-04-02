@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBARC-bodb_Archive" selecters="bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBARC-bodb_Archive" selecters="wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.f_GetProductDetail()
 RETURNS TABLE
 AS
@@ -20,6 +20,7 @@ AS
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
 		- 20231211@Lewis: Add Live22 [RedmineID: #194529]
 		- 20231211@Lewis: Add Live22 - fix bettype7698 [RedmineID: #194530]
+		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		
 */
 RETURN
@@ -61,11 +62,13 @@ RETURN
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '20' AS ResourceId, 1 AS ProductId, 5 AS Sporttype, 0 AS Bettype, 15 AS [Order], 42 AS LeagueGroupID,  0 AS TicketType -- SABA Tennis
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '15' AS ResourceId, 1 AS ProductId, 1 AS Sporttype, 0 AS Bettype, 16 AS [Order], 113 AS LeagueGroupID,  0 AS TicketType -- SABA Soccer PinGoal
+	SELECT 'ProductDetail' AS RefId, '23' AS ResourceId, 1 AS ProductId, 4 AS Sporttype, 0 AS Bettype, 16 AS [Order], 42 AS LeagueGroupID,  0 AS TicketType -- Virtual Ice Hockey
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '16' AS ResourceId, 1 AS ProductId, 2 AS Sporttype, 0 AS Bettype, 17 AS [Order], 122 AS LeagueGroupID,  0 AS TicketType -- SABA Basketball PinGoal
+	SELECT 'ProductDetail' AS RefId, '15' AS ResourceId, 1 AS ProductId, 1 AS Sporttype, 0 AS Bettype, 17 AS [Order], 113 AS LeagueGroupID,  0 AS TicketType -- SABA Soccer PinGoal
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '19' AS ResourceId, 1 AS ProductId, 43 AS Sporttype, 0 AS Bettype, 20 AS [Order], 151 AS LeagueGroupID,  0 AS TicketType -- SABA ESports PinGoal
+	SELECT 'ProductDetail' AS RefId, '16' AS ResourceId, 1 AS ProductId, 2 AS Sporttype, 0 AS Bettype, 18 AS [Order], 122 AS LeagueGroupID,  0 AS TicketType -- SABA Basketball PinGoal
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '19' AS ResourceId, 1 AS ProductId, 43 AS Sporttype, 0 AS Bettype, 21 AS [Order], 151 AS LeagueGroupID,  0 AS TicketType -- SABA ESports PinGoal
 	
 	--- MG RNG
 	UNION ALL 
