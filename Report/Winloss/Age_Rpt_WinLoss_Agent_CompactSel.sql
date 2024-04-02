@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Agent_CompactSel]
 	@CustID 		INT, --mrecommend
 	@FromDate 		SMALLDATETIME,
@@ -18,6 +18,7 @@ AS
 	Revisions:
 		- 20240219@Bobby: Apply CDC bettrans_compact [RedmineID: #195357]
 		- 20240125@Lewis: Show Archived User [RedmineID: #199410]
+		- 20240320@Lewis: Change metadat wsv_alp,wsv_alpv [RedmineID: #201129]
 	
 	Param's Explanation:
 	 @ProductDetails:		
