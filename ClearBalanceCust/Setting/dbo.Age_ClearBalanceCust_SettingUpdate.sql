@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_SettingUpdate]
 	@FromCustId		INT,
 	@ToCustId		INT,
@@ -24,6 +24,7 @@ AS
 		- 20230822@Bobby: Enhance checking cross level [RedmineID: #193021]
 		- 20231009@Bobby: Enhance constraint temp table [RedmineID: #195213]
 		- 20231101@Luke: Alpha - Enhance auto transfer function (phase 2) [Redmine: #195135]
+		- 20240326@Luke: Alpha - Enhance auto transfer function (phase 3) [Redmine: #195551]
 
 	Param's Explanation:
 		• @FromCustID: The direct UplineID
@@ -149,8 +150,8 @@ BEGIN
 		IF @RoleID NOT IN (2,3,4)
 		BEGIN  
 			SELECT @ErrCode	= 101, 
-				@ErrMsg		= CASE WHEN @Language = 'E' THEN 'Customer does not exist.'  
-									ELSE [dbo].[f_Get_MsgNamebyMsgID](40014,@Language)
+				@ErrMsg		= CASE WHEN @Language = 'E' THEN 'This account does not exist.'  
+									ELSE [dbo].[f_Get_MsgNamebyMsgID](40065,@Language)
 									END    
 			GOTO SP_END;  
 		END  
@@ -178,8 +179,8 @@ BEGIN
 		IF @batchCount <> @pairCount
 		BEGIN  
 			SELECT @ErrCode	= 102, 
-					@ErrMsg	= CASE WHEN @Language = 'E' THEN 'Downline does not match.'  
-									ELSE [dbo].[f_Get_MsgNamebyMsgID](40014,@Language)
+					@ErrMsg	= CASE WHEN @Language = 'E' THEN 'This account does not belong to your downline.' 
+									ELSE [dbo].[f_Get_MsgNamebyMsgID](40066,@Language)
 								END    
 			GOTO SP_END;
 		END
