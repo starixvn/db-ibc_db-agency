@@ -10,8 +10,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Member]
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRecords	INT = 0 OUTPUT,
-	@UserName		VARCHAR(30) = '',
-	@Sporttype		SMALLINT = 0
+	@UserName		VARCHAR(30) = ''
 AS
 
 /*
@@ -471,7 +470,7 @@ BEGIN
 				SUM(NoOfTicket) AS NumberOfTickets
 		FROM #AgWinLossDetails w 
 			LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
-			OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = @Sporttype) AS wl			
+			OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl			
 		WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
 		GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, IsExistedWatchList
 		ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
@@ -520,7 +519,7 @@ BEGIN
 					ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum	
 			FROM #AgWinLossDetails w 
 				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
-				OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = @Sporttype) AS wl
+				OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl
 			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
 			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, IsExistedWatchList
 		) wl
