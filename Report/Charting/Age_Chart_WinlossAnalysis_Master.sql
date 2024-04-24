@@ -20,6 +20,7 @@ AS
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20220420@Danny: Separate Saba Sport Performance [Redmine: #167177]
+		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 */
 
 BEGIN
@@ -146,10 +147,6 @@ BEGIN
 			SELECT @TDate = DATEADD(DD, -1, @BalanceUpDay);
 		END
 	
-		IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
-		BEGIN
-			SELECT @FDate = '2016-06-01';	
-		END
 		
 		-- using cte to remove predicate when seek on sum_winloss_old
 		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype) AS
