@@ -1,6 +1,6 @@
 /*<info serverAlias="DBBOF-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_TotalBets_ChatBot_SelEvent] 	
-	@CustId		INT = 1176086, --recommend
+	@CustId		INT, --SMA
 	@IsApplyPT	BIT = 1
 AS
 /*
@@ -18,8 +18,7 @@ BEGIN
 	DECLARE @srecommend	INT
 		,@mrecommend	INT
 		,@recommend		INT
-		,@roleId		TINYINT
-		,@ckIsTest		BIT;
+		,@roleId		TINYINT;
 		
 	SELECT TOP(1)
 		@srecommend		= srecommend
@@ -29,14 +28,15 @@ BEGIN
 	FROM dbo.Customer WITH(NOLOCK)
 	WHERE custid = @CustId;
 
-	SELECT @ckIsTest	= 1
-		,@IsApplyPT 	= ISNULL(@IsApplyPT, 1);
+	SELECT @IsApplyPT 	= ISNULL(@IsApplyPT, 1);
 
-	DROP TABLE IF EXISTS #matchTO;
-	CREATE TABLE #matchTO (matchid INT PRIMARY KEY, stakeTO MONEY, maxtransid BIGINT);
-
-	INSERT INTO #matchTO(matchid, stakeTO)
-	SELECT b.matchid, b.stakeTO AS Turnover
+	SELECT TOP(10) l.leagueid, l.leagueCode, m.matchid, m.matchcode, m.homeid, m.awayid, m.IsNeutral, m.showtime, m.GlobalShowTime
+		, ISNULL(m.livehomescore, 0) AS livehomescore, ISNULL(m.liveawayscore, 0) AS liveawayscore, tmp.stakeTO AS Turnover
+		, CASE 
+			WHEN m.showtime LIKE '%LIVE%' AND ck.isLive = 0 THEN 1
+			WHEN ck.isLive = 1 THEN 2
+			ELSE ck.isLive 
+		END AS liveindicator
 	FROM (
 		SELECT matchid, SUM(actual_stake * IIF(@IsApplyPT = 1, apositiontaking, 1)) AS stakeTO
 		FROM dbo.bettrans b WITH(NOLOCK) 
@@ -58,74 +58,54 @@ BEGIN
 			AND b.srecommend = @srecommend
 			AND @roleId = 4
 		GROUP BY matchid
-	) AS b
-	WHERE b.stakeTO > 0;
-
-	--TODO: get max transid of match
-	UPDATE m
-	SET m.maxtransid = ck.maxtransid
-	FROM #matchTO m
-	CROSS APPLY (
-		SELECT MAX(transid) AS maxtransid
-		FROM dbo.bettrans b WITH(NOLOCK) 
-		WHERE b.matchid = m.matchid AND b.statusID IN (0, 1)
-	) AS ck;
-
-	--TODO: return output
-	SELECT TOP(10) l.leagueid, l.leagueCode, m.matchid, m.matchcode, m.homeid, m.awayid, m.IsNeutral, m.showtime, m.GlobalShowTime
-		, b.livehomescore, b.liveawayscore, tmp.stakeTO AS Turnover
-		, CASE 
-			WHEN m.showtime LIKE '%LIVE%' AND b.liveindicator = 0 THEN 1
-			WHEN b.liveindicator = 1 THEN 2
-			ELSE b.liveindicator 
-		END AS liveindicator
-	FROM #matchTO tmp
+	) AS tmp
 	INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = tmp.matchid
 	INNER JOIN dbo.League l WITH(NOLOCK) ON l.leagueid = m.leagueid
-	INNER JOIN dbo.bettrans b WITH(NOLOCK) ON b.transid = tmp.maxtransid
+	CROSS APPLY (
+		SELECT IIF(m.kickofftime <= CURRENT_TIMESTAMP, 1, 0) AS isLive
+	) AS ck
 	WHERE l.sporttype		= 1
+		AND tmp.stakeTO		> 0
 		AND m.eventstatus	= 'running'
-		--AND m.eventstatus NOT IN ('completed','Internal')
 		AND l.IsActive		= 1
 		--- filter major leagues
-		AND l.IsTest		= IIF(@ckIsTest = 1, l.IsTest, @ckIsTest)
 		AND l.LeagueGroupID  NOT IN (113 ) -- Exclude Saba PinGoal
 		AND l.leagueid	<> 28412 -- Arsenal & Over 2.5
-		AND leaguename NOT LIKE '%special%'
-		AND leaguename NOT LIKE '%specific%'
-		AND leaguename NOT LIKE '%corner%'
-		AND leaguename NOT LIKE '%booking%'
-		AND leaguename NOT LIKE '%winner%'
-		AND leaguename NOT LIKE '%goal%'
-		AND leaguename NOT LIKE '%team%'
-		AND leaguename NOT LIKE '%injury%'
-		AND leaguename NOT LIKE 'z*%'
-		AND leaguename NOT LIKE 'z-%'
-		AND leaguename NOT LIKE '%half%'
-		AND leaguename NOT LIKE '%advance%'
-		AND leaguename NOT LIKE '%reach%'
-		AND leaguename NOT LIKE '%?%'
-		AND leaguename NOT LIKE '%final%'
-		AND leaguename NOT LIKE '%promot%'
-		AND leaguename NOT LIKE '%method%'
-		AND leaguename NOT LIKE '%relegat%'
-		AND leaguename NOT LIKE '%double chance%'
-		AND leaguename NOT LIKE '%hockey%'
-		AND leaguename NOT LIKE '%yellow card%'
-		AND leaguename NOT LIKE '%red card%'
-		AND leaguename NOT LIKE '%winning%'
-		AND leaguename NOT LIKE '%scor%'
-		AND leaguename NOT LIKE '%penalty%'
-		AND leaguename NOT LIKE '%fantasy%'
-		AND leaguename NOT LIKE '%half%'
-		AND leaguename NOT LIKE '%Substitution%'
-		AND leaguename NOT LIKE '%offside%'
-		AND leaguename NOT LIKE '%free kick%'
-		AND leaguename NOT LIKE '%throw in%'
-		AND leaguename NOT LIKE '%extra%'
-		AND leaguename NOT LIKE '%rock bottom%'
-		AND leaguename NOT LIKE '%post split%'
-		AND leaguename NOT LIKE '%no use%'
-	ORDER BY tmp.stakeTO DESC
+		AND l.leaguename NOT LIKE '%special%'
+		AND l.leaguename NOT LIKE '%specific%'
+		AND l.leaguename NOT LIKE '%corner%'
+		AND l.leaguename NOT LIKE '%booking%'
+		AND l.leaguename NOT LIKE '%winner%'
+		AND l.leaguename NOT LIKE '%goal%'
+		AND l.leaguename NOT LIKE '%team%'
+		AND l.leaguename NOT LIKE '%injury%'
+		AND l.leaguename NOT LIKE 'z*%'
+		AND l.leaguename NOT LIKE 'z-%'
+		AND l.leaguename NOT LIKE '%half%'
+		AND l.leaguename NOT LIKE '%advance%'
+		AND l.leaguename NOT LIKE '%reach%'
+		AND l.leaguename NOT LIKE '%?%'
+		AND l.leaguename NOT LIKE '%final%'
+		AND l.leaguename NOT LIKE '%promot%'
+		AND l.leaguename NOT LIKE '%method%'
+		AND l.leaguename NOT LIKE '%relegat%'
+		AND l.leaguename NOT LIKE '%double chance%'
+		AND l.leaguename NOT LIKE '%hockey%'
+		AND l.leaguename NOT LIKE '%yellow card%'
+		AND l.leaguename NOT LIKE '%red card%'
+		AND l.leaguename NOT LIKE '%winning%'
+		AND l.leaguename NOT LIKE '%scor%'
+		AND l.leaguename NOT LIKE '%penalty%'
+		AND l.leaguename NOT LIKE '%fantasy%'
+		AND l.leaguename NOT LIKE '%half%'
+		AND l.leaguename NOT LIKE '%Substitution%'
+		AND l.leaguename NOT LIKE '%offside%'
+		AND l.leaguename NOT LIKE '%free kick%'
+		AND l.leaguename NOT LIKE '%throw in%'
+		AND l.leaguename NOT LIKE '%extra%'
+		AND l.leaguename NOT LIKE '%rock bottom%'
+		AND l.leaguename NOT LIKE '%post split%'
+		AND l.leaguename NOT LIKE '%no use%'
+	ORDER BY tmp.stakeTO DESC;
 END
 GO

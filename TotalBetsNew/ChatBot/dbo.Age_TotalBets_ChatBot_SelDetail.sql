@@ -1,7 +1,7 @@
 /*<info serverAlias="DBBOF-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_TotalBets_ChatBot_SelDetail] 	
-	@CustId		INT = 1176086, --recommend
-	@MatchId	INT = 83524706,
+ALTER PROCEDURE [dbo].[Age_TotalBets_ChatBot_SelDetail]
+	@CustId		INT, --SMA
+	@MatchId	INT,
 	@IsApplyPT	BIT = 1
 AS
 /*
@@ -33,7 +33,6 @@ BEGIN
 		,overTO		MONEY
 		,underTO	MONEY
 		,totalTO	MONEY
-		,maxtransId	BIGINT
 		,UNIQUE CLUSTERED (bettype, hdp, teamhdp)
 	);
 
@@ -43,7 +42,7 @@ BEGIN
 		,@recommend		= recommend
 		,@roleId		= roleId
 	FROM dbo.Customer WITH(NOLOCK)
-	WHERE custid = @CustId;
+	WHERE custid		= @CustId;
 
 	SELECT @eventId		= @MatchId
 		,@IsApplyPT 	= ISNULL(@IsApplyPT, 1);
@@ -109,36 +108,26 @@ BEGIN
 	) AS tb
 	GROUP BY bettype, hdp, teamhdp;
 
-	--TODO: get max transid of match
-	DECLARE @maxtransid BIGINT;
-	SELECT @maxtransid = MAX(transid)
-	FROM dbo.bettrans b WITH(NOLOCK) 
-	WHERE b.matchid = @eventId 
-		AND b.statusID IN (0, 1)
-
-	UPDATE m
-	SET m.maxtransid = @maxtransid
-	FROM #eventTotalBet m;
-
 	--TODO: match info
 	WITH CTE_matchTO AS (
-		SELECT @eventId			AS matchid
-			,MAX(maxtransId)	AS maxtransId
-			,SUM(totalTO)		AS totalTO
+		SELECT @eventId		AS matchid
+			,SUM(totalTO)	AS totalTO
 		FROM #eventTotalBet
 	)
 	SELECT l.leagueid, l.leagueCode, m.matchid, m.matchcode, m.homeid, m.awayid, m.IsNeutral, m.showtime, m.GlobalShowTime
-		, b.livehomescore, b.liveawayscore
+		, ISNULL(m.livehomescore, 0) AS livehomescore, ISNULL(m.liveawayscore, 0) AS liveawayscore
 		, CASE 
-			WHEN m.showtime LIKE '%LIVE%' AND b.liveindicator = 0 THEN 1
-			WHEN b.liveindicator = 1 THEN 2
-			ELSE b.liveindicator 
+			WHEN m.showtime LIKE '%LIVE%' AND ck.isLive = 0 THEN 1
+			WHEN ck.isLive = 1 THEN 2
+			ELSE ck.isLive 
 		END AS liveindicator
 		,cte.totalTO
 	FROM CTE_matchTO cte
 	INNER JOIN dbo.match m WITH(NOLOCK) ON m.matchid = cte.matchid
 	INNER JOIN dbo.League l WITH(NOLOCK) ON l.leagueid = m.leagueid
-	INNER JOIN dbo.bettrans b WITH(NOLOCK) ON b.transid = cte.maxtransid
+	CROSS APPLY (
+		SELECT IIF(m.kickofftime <= CURRENT_TIMESTAMP, 1, 0) AS isLive
+	) AS ck
 	WHERE m.eventstatus	= 'running'
 
 	--TODO: sum subtotal
