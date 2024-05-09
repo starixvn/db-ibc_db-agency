@@ -65,6 +65,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20240119@Lewis: Add VS4 [RedmineID: #198621]
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240228@Lewis: Add UUS [RedmineID: #192595]
+		- 20240408@Lewis: Add SABA xD [RedmineID: #202706]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -142,7 +143,8 @@ RETURN
 				(79, 227, 7698, 0, 0), -- Live22 Promotion Prize
 				(80, 228, 0, 0, 0), --WE Live Casino
 				(83, 188, 0, 0, 0), -- VS4-EdgeGaming
-				(78, 216, 0, 0, 0) -- UUS
+				(78, 216, 0, 0, 0), -- UUS
+				(86, 240, 0, 0, 0) --SABA xD
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
