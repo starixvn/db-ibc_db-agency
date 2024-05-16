@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_AutoTransfer_Job_GetTelegramNotify]
 	@Environment VARCHAR(10) = 'PRO'
 AS
@@ -9,6 +9,7 @@ AS
 
     Revisions:
         - 20240202@Luke: Enhance Auto Transfer Phase 3 [Redmine: #195551]
+		- 20240424@Luke: Improve auto transfer sp job to avoid deadlock [Redmine: #204349]
 
     Param's Explanation:
 
@@ -16,50 +17,36 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @SuperReach TABLE (SuperID INT)
     DECLARE @TelegramNotify TABLE (SuperID INT, FromCustID INT, ToCustID INT, [Status] VARCHAR(15), RowID INT, PRIMARY KEY(FromCustID, ToCustID))
-    --Check line completed
-    INSERT INTO @SuperReach (SuperID)
-        SELECT rs.superid
-        FROM (
-            SELECT distinct p.Superid
-            FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-            WHERE p.NotifyStatus = 0 AND Status IN ('Failed', 'Cancelled', 'Completed')
-		) AS rs 
-        CROSS APPLY (
-            SELECT 
-				SUM(CASE WHEN p.[Status] IN ('Failed', 'Pending') AND err.AllowReTry = 1 AND ISNULL(p.TryCount,0) < tmp.MaxTryCount THEN 1 
-							WHEN p.[Status] IN ('New', 'Waiting', 'Processing') THEN 1 ELSE 0 END) AS FailedReTry
-            FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
-            LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
-            OUTER APPLY (
-                SELECT CASE WHEN err.ErrType = 'TransferUM' THEN 60 ELSE 5 END AS MaxTryCount
-            ) AS tmp
-            WHERE p.SuperId = rs.SuperId
-        ) AS ck
-        WHERE ck.FailedReTry = 0 -- main completed
 
-	IF @@ROWCOUNT = 0
-		RETURN
-	
-    INSERT INTO @TelegramNotify(SuperID, FromCustID, ToCustID, [Status])
-        SELECT p.SuperID, FromCustID, ToCustID, [Status]
-        FROM Age_ClearBalanceCust_Process p WITH (ROWLOCK, UPDLOCK)
-            INNER JOIN @SuperReach s ON p.SuperId = s.SuperId
-		WHERE Environment = @Environment AND Status IN ('Failed', 'Cancelled', 'Completed')
-
-	IF @@ROWCOUNT = 0
-		RETURN
-
-    --Add rowid
-    ;WITH CTE_update AS
-    (
-        SELECT SuperID, FromCustID, ToCustID, [Status], ROW_NUMBER() OVER(PARTITION BY FromCustID, Status ORDER BY ToCustID) RowID
-        FROM @TelegramNotify
-    )
-    UPDATE t
-    SET t.RowID = ct.RowID 
-    FROM @TelegramNotify t INNER JOIN CTE_update ct ON ct.FromCustID = t.FromCustID AND ct.ToCustID = t.ToCustID
+	;WITH super_Reach AS
+	(
+		SELECT rs.SuperID
+        FROM Age_ClearBalanceCust_RunningSuper rs WITH (NOLOCK) 
+		WHERE rs.TotalBatch = rs.RunningTotal
+			AND NOT EXISTS(
+					SELECT TOP(1) 1
+					FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+					WHERE p.SuperId = rs.SuperId 
+						AND p.Environment = @Environment
+						AND (
+							p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
+							OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
+							OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
+						)
+					)		
+	)
+	INSERT INTO @TelegramNotify(SuperID, FromCustID, ToCustID, [Status], RowID)
+        SELECT sr.SuperID, t.FromCustID, t.ToCustID, t.[Status], ROW_NUMBER() OVER(PARTITION BY t.FromCustID, t.Status ORDER BY t.ToCustID) RowID
+        FROM super_Reach sr 
+			CROSS APPLY(
+				SELECT FromCustID, ToCustID, [Status]
+				FROM Age_ClearBalanceCust_Process p WITH (NOLOCK)
+				WHERE p.SuperId = sr.SuperId
+					AND p.Environment = @Environment
+					AND p.NotifyStatus = 0
+					AND p.Status IN ('Failed', 'Cancelled', 'Completed')
+			)t
 
     --Get Telegram notification info
     ;WITH CTE_Notify AS
@@ -78,7 +65,7 @@ BEGIN
     FROM CTE_Notify ct
     CROSS APPLY
     (
-        SELECT STRING_AGG(username, ', ') WITHIN GROUP (ORDER BY c.custid) CancelledList
+        SELECT STRING_AGG(CONVERT(VARCHAR(MAX),username), ', ') WITHIN GROUP (ORDER BY c.custid) CancelledList
         FROM @TelegramNotify t
             INNER JOIN CustDB.dbo.Customer c ON t.ToCustID = c.custid
         WHERE ct.FromCustID = t.FromCustID
@@ -87,7 +74,7 @@ BEGIN
     )c
     CROSS APPLY
     (
-        SELECT STRING_AGG(username, ', ') WITHIN GROUP (ORDER BY c.custid) FailedList
+        SELECT STRING_AGG(CONVERT(VARCHAR(MAX),username), ', ') WITHIN GROUP (ORDER BY c.custid) FailedList
         FROM @TelegramNotify t
 			INNER JOIN CustDB.dbo.Customer c ON t.ToCustID = c.custid
         WHERE ct.FromCustID = t.FromCustID
@@ -97,11 +84,12 @@ BEGIN
 
 	WHILE (1=1)
 	BEGIN
-		UPDATE TOP (5000) a
+		UPDATE TOP (500) a
 		SET a.NotifyStatus = 1
 		FROM dbo.Age_ClearBalanceCust_Process a WITH (ROWLOCK, UPDLOCK)
-			INNER JOIN @TelegramNotify s ON a.FromCustId = s.FromCustID AND a.ToCustId = s.ToCustID
-		WHERE a.NotifyStatus = 0
+			INNER JOIN @TelegramNotify s ON a.SuperId = s.SuperID AND a.FromCustId = s.FromCustID AND a.ToCustId = s.ToCustID
+		WHERE a.Environment = @Environment
+			AND a.NotifyStatus = 0
 
 		IF @@ROWCOUNT = 0
 			BREAK
