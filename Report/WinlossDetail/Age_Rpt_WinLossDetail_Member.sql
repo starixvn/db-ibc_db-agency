@@ -472,7 +472,7 @@ BEGIN
 			LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
 			OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl			
 		WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-		GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, IsExistedWatchList
+		GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, ISNULL(wl.IsExistedWatchList,0)
 		ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
 
 		SELECT	NULL AS CustId,
@@ -521,7 +521,7 @@ BEGIN
 				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
 				OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl
 			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, IsExistedWatchList
+			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, ISNULL(wl.IsExistedWatchList,0)
 		) wl
 		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
