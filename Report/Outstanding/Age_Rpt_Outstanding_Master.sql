@@ -131,7 +131,7 @@ BEGIN
 					SUM(c.PayoutAdjust - b.actual_stake) AS MemberToRisk,
 					SUM((c.PayoutAdjust - b.actual_stake) * b.spositiontaking) AS SuperRisk
 				FROM bettrans b WITH (NOLOCK)
-					OUTER APPLY (
+					CROSS APPLY (
 									SELECT TOP 1 ABS(c.PayoutAdjust)  AS PayoutAdjust
 									FROM CustLimitBetHistory_789 c WITH (NOLOCK) 
 									WHERE b.matchid = c.matchid 
@@ -154,7 +154,7 @@ BEGIN
 					SUM(c.PayoutAdjust - b.actual_stake) AS MemberToRisk,
 					SUM((c.PayoutAdjust - b.actual_stake) * b.spositiontaking) AS SuperRisk
 				FROM bettrans b WITH (NOLOCK)
-					OUTER APPLY (
+					CROSS APPLY (
 									SELECT TOP 1 ABS(c.PayoutAdjust)  AS PayoutAdjust
 									FROM CustLimitBetHistory_MBC c WITH (NOLOCK) 
 									WHERE b.matchid = c.matchid 
