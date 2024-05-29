@@ -7,8 +7,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Agent]
 	@PageIndex INT = 1,
 	@TotalMemberOutstanding	Money = 0 OUTPUT,
 	@TotalMasterOutstanding	Money = 0 OUTPUT,
-	@TotalSuperOutstanding	Money = 0 OUTPUT,
-	@SiteLabel varchar(50)
+	@TotalSuperOutstanding	Money = 0 OUTPUT
 AS
 
 /*
@@ -44,33 +43,117 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, ProductId TINYINT, PRIMARY KEY CLUSTERED (RefTable, bettype));
-
-	INSERT INTO #SportBettype (bettype, RefTable, ProductId)
-	SELECT bettype, RefTable, ProductId
-	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest);
-
 	-- #OutStanding
-	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, MemberToRisk MONEY, MasterRisk MONEY);
- 
-	-- bettrans
-	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
-	SELECT
-		recommend,
-		SUM(ABS(actual_stake)) AS MemberOutstanding,
-		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
-		SUM(actual_stake * spositiontaking) AS SuperOutstanding
-	FROM dbo.bettrans b WITH (NOLOCK)  
-	WHERE statusId IN (0, 1)
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 0 AND s.bettype = b.bettype
-		)
-		AND mrecommend =  @CustID		
-	GROUP BY recommend;
+	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, MasterRisk MONEY, SuperRisk MONEY);
 	
+	-- tmpbettrans
+	CREATE TABLE #tmpbettrans (
+		recommend INT
+		, bettype SMALLINT
+		, actual_stake MONEY
+		, mpositiontaking SMALLMONEY
+		, spositiontaking SMALLMONEY
+		, ExtraInfo VARCHAR(1000)
+	)
+	INSERT INTO #tmpbettrans (
+		recommend
+		, bettype
+		, actual_stake
+		, mpositiontaking
+		, spositiontaking
+		, ExtraInfo
+	)
+	SELECT
+		b.recommend
+		,b.bettype
+		,b.actual_stake
+		,b.mpositiontaking
+		,b.spositiontaking
+		,ISNULL(b.ExtraInfo,'')
+	FROM bettrans b WITH (NOLOCK)
+	WHERE StatusId IN (0,1)
+		AND b.mrecommend = @CustID
+		AND EXISTS (
+						SELECT 1 
+						FROM SportBettypeMatrix s WITH (NOLOCK) 
+						WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+							AND IsTest <= @isTest
+							AND s.RefTable = 0
+							AND s.BetType = b.bettype
+					)
+
+
+	IF EXISTS (SELECT 1 FROM string_split(@ProductIds,',') WHERE value ='1') -- bettrans (@productids exists SportBook)
+	BEGIN
+		-- PotentialWinning  (Only SportBook)
+		INSERT INTO #OutStanding (
+			recommend
+			, MemberOutstanding
+			, MasterOutstanding
+			, SuperOutstanding
+			, ToWin
+			, MasterRisk
+			, SuperRisk
+		)
+		SELECT
+			recommend,
+			SUM(ABS(actual_stake)),
+			SUM(actual_stake * mpositiontaking),
+			SUM(actual_stake * spositiontaking),
+			SUM(B.PayoutAdjust - actual_stake),
+			SUM((B.PayoutAdjust - actual_stake) * mpositiontaking),
+			SUM((B.PayoutAdjust- actual_stake) * spositiontaking)
+		FROM #tmpbettrans A
+			CROSS APPLY (SELECT ISNULL(CAST(('<xml>' + A.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust) B
+		WHERE EXISTS (
+						SELECT 1 
+						FROM SportBettypeMatrix s WITH (NOLOCK) 
+						WHERE s.ProductID = 1
+							AND IsTest <= @isTest
+							AND s.RefTable = 0
+							AND s.BetType = A.bettype
+					 )
+		GROUP BY recommend;
+
+		-- bettrans (exclude SportBook)
+		INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
+		SELECT
+			recommend,
+			SUM(ABS(actual_stake)) AS MemberOutstanding,
+			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
+			SUM(actual_stake * spositiontaking) AS SuperOutstanding
+		FROM #tmpbettrans b 
+		WHERE EXISTS (
+						SELECT 1
+						FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+						WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+						AND s.ProductID <> 1
+						AND IsTest <= @isTest
+						AND s.RefTable = 0
+						AND s.BetType = b.bettype
+					 )
+		GROUP BY recommend;
+	END
+	ELSE -- bettrans (@productids not exists SportBook)
+	BEGIN
+		INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
+		SELECT
+			recommend,
+			SUM(ABS(actual_stake)) AS MemberOutstanding,
+			SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
+			SUM(actual_stake * spositiontaking) AS SuperOutstanding
+		FROM #tmpbettrans b
+		WHERE EXISTS (
+							SELECT 1
+							FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+							WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+							and IsTest <= @isTest
+							AND s.RefTable = 0
+							AND s.BetType = b.bettype
+					   )
+		GROUP BY recommend;
+	END
+		
 	-- translog
 	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
 	SELECT
@@ -84,8 +167,11 @@ BEGIN
 		AND EXISTS 
 		(
 			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 3 AND s.bettype = t.gameID
+			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+			and IsTest <= @isTest
+			AND s.RefTable = 3
+			AND s.BetType = t.gameID
 		)
 	GROUP BY recommend;
 
@@ -101,8 +187,11 @@ BEGIN
 		AND EXISTS 
 		(
 			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 1 AND s.bettype = b.gameID
+			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+			and IsTest <= @isTest
+			AND s.RefTable = 1
+			AND s.BetType = b.gameID
 		)
 		AND mrecommend =  @CustID		
 	GROUP BY recommend;
@@ -119,74 +208,15 @@ BEGIN
 		AND EXISTS 
 		(
 			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 2 AND s.bettype = b.gameID
+			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
+			and IsTest <= @isTest
+			AND s.RefTable = 2
+			AND s.BetType = b.gameID
 		)
 		AND mrecommend =  @CustID		
 	GROUP BY recommend;
-
-	-- get data PotentialWinning (only SportBook)
-	IF EXISTS (SELECT TOP 1 1 FROM string_split(@ProductIds,',') WHERE value = '1')
-	BEGIN
-	-- #PotentialWinning
-		CREATE TABLE #PotentialWinning (recommend INT, MemberToRisk MONEY, MasterRisk MONEY)
-
-		IF @SiteLabel = '789y'
-		BEGIN  
-				INSERT INTO #PotentialWinning (recommend, MemberToRisk, MasterRisk)
-				SELECT
-					b.recommend,
-					SUM(c.PayoutAdjust - b.actual_stake) AS MemberToRisk,
-					SUM((c.PayoutAdjust - b.actual_stake) * b.mpositiontaking) AS MasterRisk
-				FROM bettrans b WITH (NOLOCK)
-					CROSS APPLY (
-									SELECT TOP 1 ABS(c.PayoutAdjust)  AS PayoutAdjust
-									FROM CustLimitBetHistory_789 c WITH (NOLOCK) 
-									WHERE b.matchid = c.matchid 
-										AND b.custid = c.custid 
-										AND b.transid = c.transid) c
-				WHERE b.statusID IN (0,1)
-					AND EXISTS (
-								SELECT 1
-								FROM #SportBettype s
-								WHERE s.RefTable = 0 AND s.ProductID = 1 AND s.bettype = b.bettype
-								)
-					AND mrecommend = @CustID
-				GROUP BY b.recommend
-		END
-		ELSE
-		BEGIN
-				INSERT INTO #PotentialWinning (recommend, MemberToRisk, MasterRisk)
-				SELECT
-					b.recommend,
-					SUM(c.PayoutAdjust - b.actual_stake) AS MemberToRisk,
-					SUM((c.PayoutAdjust - b.actual_stake) * b.mpositiontaking) AS MasterRisk
-				FROM bettrans b WITH (NOLOCK)
-					CROSS APPLY (
-									SELECT TOP 1 ABS(c.PayoutAdjust)  AS PayoutAdjust
-									FROM CustLimitBetHistory_MBC c WITH (NOLOCK) 
-									WHERE b.matchid = c.matchid 
-										AND b.custid = c.custid 
-										AND b.transid = c.transid) c
-				WHERE b.statusID IN (0,1)
-					AND EXISTS (
-								SELECT 1
-								FROM #SportBettype s
-								WHERE s.RefTable = 0 AND s.ProductID = 1 AND s.bettype = b.bettype
-								)
-					AND mrecommend = @CustID
-				GROUP BY b.recommend
-		END
 	
-	END	
-
-	-- UPDATE #OutStanding
-	UPDATE o
-	SET o.MemberToRisk = p.MemberToRisk , o.MasterRisk = p.MasterRisk
-	FROM #OutStanding o 
-	LEFT JOIN #PotentialWinning p
-		ON p.recommend = o.recommend
-
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
 		WITH rt AS (
 			SELECT
@@ -194,8 +224,9 @@ BEGIN
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(rt.MemberToRisk) AS MemberToRisk,
+				SUM(rt.ToWin) AS ToWin,
 				SUM(rt.MasterRisk) AS MasterRisk,
+				SUM(rt.SuperRisk) AS SuperRisk,
 				ROW_NUMBER() OVER (ORDER BY c.username) RowNum, 
 				c.username
 			FROM #OutStanding rt
@@ -209,8 +240,9 @@ BEGIN
 			rt.MemberOutstanding,
 			rt.MasterOutstanding,
 			rt.SuperOutstanding,
-			rt.MemberToRisk,
-			rt.MasterRisk
+			rt.ToWin,
+			rt.MasterRisk,
+			rt.SuperRisk
 		FROM	
 			rt
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
@@ -223,8 +255,9 @@ BEGIN
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(MemberToRisk) AS MemberToRisk,
+				SUM(ToWin) AS ToWin,
 				SUM(MasterRisk) AS MasterRisk,
+				SUM(SuperRisk) AS SuperRisk,
 				ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(MasterOutstanding, 0)) DESC) RowNum
 			FROM #OutStanding
 			GROUP BY recommend
@@ -235,8 +268,9 @@ BEGIN
 				rt.MemberOutstanding,
 				rt.MasterOutstanding,
 				rt.SuperOutstanding,
-				rt.MemberToRisk,
-				rt.MasterRisk
+				rt.ToWin,
+				rt.MasterRisk,
+				rt.SuperRisk
 			FROM 		rt
 			INNER JOIN dbo.custInfo c WITH (NOLOCK) 
 					ON rt.recommend = c.custid
@@ -248,9 +282,8 @@ BEGIN
 			@TotalMasterOutstanding = SUM(ISNULL(MasterOutstanding, 0))
 	FROM #OutStanding
 
-	DROP TABLE #SportBettype;
 	DROP TABLE #OutStanding;
-	DROP TABLE #PotentialWinning;
+	DROP TABLE #tmpbettrans;
 
 	SET NOCOUNT OFF;
 END
