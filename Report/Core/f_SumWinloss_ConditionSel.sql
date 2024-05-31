@@ -66,6 +66,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240228@Lewis: Add UUS [RedmineID: #192595]
 		- 20240408@Lewis: Add SABA xD [RedmineID: #202706]
+		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -82,6 +83,7 @@ RETURN
 				(1, 50, 0, 42, 0), -- SABA Cricket,
 				(1, 5, 0, 42, 0), -- SABA Tennis,
 				(1, 4, 0, 42, 0), -- Virtual Ice Hockey,
+				(1, 47, 0, 42, 0), -- SABA Kabaddi,
 				(1, 1, 0, 113, 0), -- SABA Soccer PinGoal,
 				(1, 2, 0, 122, 0), -- SABA Basketball PinGoal,
 				(1, 43, 0, 151, 0), -- SABA ESports PinGoal
