@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet" isFunction="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp" isFunction="0"></info>*/
 USE bodb02
 GO
  

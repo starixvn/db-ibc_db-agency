@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv,wsv_xnap" isFunction="0" isNested="0"></info>*/
 CREATE PROC dbo.Age_Rpt_GetProductDetail
 AS
 /*  
@@ -9,34 +9,21 @@ AS
 	Revisions:
 		- 20200819@Malcolm: Initialize Sps - [Redmine: #139575]
 		- 20220208@Danny: Separate Saba Sport Performance [Redmine: #167177]
-		
+		- 20240513@Lewis: Remove string_agg for product details [RedmineID: #203763]
+
 */
 
 BEGIN
-	;WITH t AS
-	(
 	SELECT 
-			RefId
-			,ResourceId
-			,ProductId
-			,Sporttype
-			,Bettype
-			,[Order]
-			,LeagueGroupID
-			,TicketType
-			,ROW_NUMBER() over (partition by ProductID, SportType, Bettype, [Order], LeagueGroupID order by LeagueGroupID) as rn_l
-			,ROW_NUMBER() over (partition by ProductID, SportType, Bettype,[Order],TicketType order by TicketType) as rn_t
-		FROM dbo.f_GetProductDetail()
-	)
-	SELECT RefId
-			,ResourceId
-			,ProductId
-			,Sporttype
-			,Bettype
-			,[Order]
-			,STRING_AGG(CASE WHEN rn_l = 1 THEN LeagueGroupID END,',') LeagueGroupID
-			,STRING_AGG(CASE WHEN rn_t = 1 THEN TicketType END,',')  TicketType
-	FROM t
-	GROUP BY RefId, ResourceId, ProductId, Sporttype, Bettype, [Order]
-	ORDER BY ProductId, [Order]
+			f.RefId
+			,f.ResourceId
+			,f.ProductId
+			,f.Sporttype
+			,f.Bettype
+			,f.[Order]
+			,f.LeagueGroupID
+			,f.TicketType
+			,f.ChildResourceId
+	FROM dbo.f_GetProductDetail() f
+	ORDER BY ProductId, [Order], Sporttype, LeagueGroupID, TicketType
 END
