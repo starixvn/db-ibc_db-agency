@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBEXT-bodb02" selecters="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView,bodbExtAccNet" viewers="" isFunction="1" isNested="1"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBEXT-bodb02,DBCTG-bodb02" selecters="wsv_nap,wsv_alp,wsv_alpv,wsv_xnap" viewers="" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_SportBettypeMatrixByProduct_Sel]
 (
 	 @ProductID		VARCHAR(500) = ''
@@ -17,6 +14,7 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrixByProduct_Sel]
 		- 20170220@Paul: Return more columns [RedmineID: #68723]
 		- 20170812@Percy: Add new server: DBACC.bodb02 [RedmineID: #66992]
 		- 20170830@Percy: Add new server: DBEXT.bodb02 [RedmineID: #66992]
+		- 20240611@Bobby: Switch to DBTrans [RedmineID: #206369]
 
 	Paramters Explanation:
  		@ProductID: list of products

@@ -41,7 +41,7 @@ BEGIN
 		,@mrecommend	= mrecommend
 		,@recommend		= recommend
 		,@roleId		= roleId
-	FROM dbo.Customer WITH(NOLOCK)
+	FROM CustDB.dbo.Customer WITH(NOLOCK)
 	WHERE custid		= @CustId;
 
 	SELECT @eventId		= @MatchId

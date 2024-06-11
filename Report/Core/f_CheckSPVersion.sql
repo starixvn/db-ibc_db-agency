@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CUSTDB,DBTXN-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBCUST-CUSTDB,DBTXN-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_CheckSPVersion]
 (
 	@PROCID INT
@@ -11,8 +11,10 @@ ALTER FUNCTION [dbo].[f_CheckSPVersion]
 		DBAGE.bodb02, DBEXT.bodb02, DBDWH.bodb02, DBDWH.bodb_dwrs,DBSUM.bodb_Summary
 		DBACC.bodb02, DBACC.bodb_ACC, DBRPT.bodb_Report,
 		DBPRO.bodb02, DBCUST.CUSTDB, DBTXN.bodb02
+
 	Revisions:
 		- 20160505@Percy: Remove 2 versions UAT3, UAT4 (for hotfix only)
+		- 20240611@Bobby: Switch to DBTrans [RedmineID: #206369]
 		
 	Remark: use function at database local - not link server or link database
 */
