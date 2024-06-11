@@ -1,7 +1,5 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" selecters="wsv_nap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
-ALTER FUNCTION [dbo].[f_GroupProduct]
-(
-)
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02,DBCTG-bodb02" selecters="wsv_nap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
+ALTER FUNCTION [dbo].[f_GroupProduct]()
 RETURNS TABLE
 AS
 
@@ -21,6 +19,7 @@ AS
 		- 20201124@Malcolm: Add Virtual Sports 3 [redmine: #131375]
 		- 20230713@Lewis: Add Virtual Sports 3 (New) - Leap Gaming [RedmineID: #189207]
 		- 20240119@Lewis: Add VS4 [RedmineID: #198621]
+		- 20240611@Bobby: Switch to DBTrans [RedmineID: #206369]
 */
 
 RETURN

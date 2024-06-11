@@ -1,7 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" selecters="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="1" isNested="1"></info>*/
-USE [bodb02]
-GO
-
+/*<info serverAlias="DBAGE-bodb02,DBCTG-bodb02" selecters="wsv_alp,wsv_alpv" viewers="" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_SportBettypeMatrixByProduct]
 (
 	@ProductIds	VARCHAR(MAX) = '',
@@ -16,6 +13,7 @@ ALTER FUNCTION [dbo].[f_SportBettypeMatrixByProduct]
 		
 	Revisions:
 		- 20171020@Percy: Add new function [RedmineID: #84690]
+		- 20240611@Bobby: Switch to DBTrans [RedmineID: #206369]
 
 	Paramters Explanation:
  		. @ProductIds: list of products

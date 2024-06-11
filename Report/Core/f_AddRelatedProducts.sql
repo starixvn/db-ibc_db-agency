@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02,DBCTG-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_AddRelatedProducts]
 (
 	@ProductIds VARCHAR(MAX) = ''
@@ -15,7 +15,8 @@ AS
 	Revisions:
 		- 20170623@Percy: Create new [RedmineID: #78339]
 		- 20171101@Percy: Enhance Performance [RedmineID: #86200]
-		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]		
+		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]	
+		- 20240611@Bobby: Switch to DBTrans [RedmineID: #206369]
 */
 
 BEGIN
