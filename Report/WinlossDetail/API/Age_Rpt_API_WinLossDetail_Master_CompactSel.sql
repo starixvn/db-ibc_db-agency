@@ -16,6 +16,7 @@ AS
 
 	Revisions:
 		- 20240321@Bobby: Initial [RedmineID: #202655]
+		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 	
 	Param's Explanation:
 	
@@ -309,10 +310,7 @@ BEGIN
 		SELECT @FDate	= @FromDate
 			,@TDate		= IIF(@ToDate >= @BalanceUpDay, DATEADD(DD, -1, @BalanceUpDay), @ToDate);
 	
-		IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
-		BEGIN
-			SELECT @FDate = '2016-06-01'
-		END
+
 
 		-- using cte to remove predicate when seek on sum_winloss_old
 		;WITH CTE_Winlostdate (winlostdate) AS

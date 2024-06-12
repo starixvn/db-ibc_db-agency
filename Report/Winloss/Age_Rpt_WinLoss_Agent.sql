@@ -31,6 +31,7 @@ AS
 		- 20240125@Lewis: Show Archived User [RedmineID: #199410]
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
+		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -297,10 +298,6 @@ BEGIN
 			SELECT @TDate = DATEADD(dd, -1, @BalanceUpDay);
 		END
 	
-		IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
-		BEGIN
-			SELECT @FDate = '2016-06-01';	
-		END			
 				
 
 		-- using cte to remove predicate when seek on sum_winloss_old

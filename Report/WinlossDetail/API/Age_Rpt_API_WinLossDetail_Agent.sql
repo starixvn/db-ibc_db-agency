@@ -18,6 +18,7 @@ Revisions:
 	- 20221128@Eddie: Change from SP "Age_Rpt_WinLossDetail_Agent" [RedmineID: #171247]
 	- 20230511@Eddie: Enhance data range [RedmineID: #188033]
 	- 20230707@Bobby: Support NetTO & GrossComm [RedmineID: #188035]
+	- 20240424@Lewis: Change old sql account [Redmine: #204021]
 	
 	
 Param's Explanation:
@@ -297,11 +298,7 @@ BEGIN
 		BEGIN
 			SELECT @TDate = DATEADD(DD, -1, @BalanceUpDay)
 		END
-	
-		IF @FromDate < '2016-06-01' AND @IsHide = 1 AND @LoginName <> 'bodbDownlineNetView' --- acc internal login 
-		BEGIN
-			SELECT @FDate = '2016-06-01'
-		END
+
 
 		-- using cte to remove predicate when seek on sum_winloss_old
 		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype, LeagueGroupID, TicketType) AS
