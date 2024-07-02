@@ -209,41 +209,44 @@ BEGIN
 					COUNT(1) AS NoOfTicket
 					
 			FROM dbo.bettrans b WITH(NOLOCK)
-				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4,47)
+				LEFT JOIN dbo.match m WITH(NOLOCK) 
+					ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4,47)
 				LEFT JOIN (
-					SELECT LeagueGroupID, leagueid
-					FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
-				) AS l  ON m.leagueid = l.leagueid
+							SELECT LeagueGroupID, leagueid
+							FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
+						  ) AS l  
+					ON m.leagueid = l.leagueid
 				OUTER APPLY (
-					SELECT CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 47) --SABA Kabaddi
-									 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
-					ELSE 0 END  sporttype, 
-					CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 47) --SABA Kabaddi
-									 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
-					ELSE 0 END LeagueGroupID,
-					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
-				) AS et
+								SELECT CASE WHEN ( 
+												(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+												 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 47) --SABA Kabaddi
+												 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
+											  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
+								ELSE 0 END  sporttype, 
+								CASE WHEN ( 
+												(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+												 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
+												 OR (l.LeagueGroupID = 42 AND m.sporttype = 47) --SABA Kabaddi
+												 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
+											  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
+								ELSE 0 END LeagueGroupID,
+								CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
+							) AS et
 				INNER JOIN (
-					SELECT DISTINCT ISNULL(p.GroupProductId, ma.ProductID) AS ProductID, ma.BetType, ma.RefTable
-					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
-					LEFT JOIN dbo.f_GroupProduct() p ON ma.ProductID = p.ProductId
-					WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
-							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
-				) AS s ON b.bettype = s.bettype
+							SELECT DISTINCT ISNULL(p.GroupProductId, ma.ProductID) AS ProductID, ma.BetType, ma.RefTable
+							FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+							LEFT JOIN dbo.f_GroupProduct() p ON ma.ProductID = p.ProductId
+							WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+									AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+							) AS s 
+						ON b.bettype = s.bettype
 			WHERE	b.winlostdate BETWEEN  @FDate AND @Tdate
 				AND b.srecommend = @CID
 				AND b.statusID IN (111, 112, 113) 
