@@ -18,12 +18,28 @@ DB: DBAGE/bodb02
 
 Revisions:
 	- 20240211@Bobby: Init [RedmineID: #202084]
+	- 20240625@Lewis: Change custinfo into customer [RedmineID: #207026]
 	
 	Param's Explanation:
 */
 
 BEGIN
 	SET NOCOUNT ON;
+
+	DROP TABLE IF EXISTS #WeekRange;
+	DROP TABLE IF EXISTS #TmpCondSumWL;
+
+	CREATE TABLE #WeekRange (winlostdate SMALLDATETIME);
+	CREATE TABLE #TmpCondSumWL(
+		SportType		INT,
+		BetType			INT,
+		LeagueGroupID	SMALLINT, 
+		TicketType		TINYINT
+	);
+
+	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT, LeagueGroupID SMALLINT, TicketType TINYINT)
+	DECLARE @isTest BIT, @__ProductDetails XML;
+	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
 
 	--TODO: SMA's info
 	DECLARE @srecommend INT, @mrecommend INT, @recommend INT, @roleId INT
@@ -51,10 +67,13 @@ BEGIN
 			,@srecommend	= srecommend 
 			,@mrecommend	= mrecommend 
 			,@recommend		= recommend 
-		FROM dbo.CustInfo WITH (NOLOCK) 
-		WHERE username = @UserName
-			AND @CID IN (srecommend, mrecommend, recommend)
+		FROM dbo.Customer WITH (NOLOCK) 
+		WHERE username = @UserName;
 
+		--CHECK direct downline
+		SELECT @downlineId = IIF(@CID IN (@srecommend, @mrecommend, @recommend), @downlineId, NULL)
+
+		IF @downlineId IS NULL GOTO RS_OUTPUT;
 		--print concat(@downlineId, '---', @downlineRoleId, ', @roleId=', @roleId, ',@recommend=',@recommend)
 	END
 
@@ -65,21 +84,6 @@ BEGIN
 
 	--TODO: Check OUTPUT
 	IF @CID IS NULL GOTO RS_OUTPUT;
-
-	DROP TABLE IF EXISTS #WeekRange;
-	DROP TABLE IF EXISTS #TmpCondSumWL;
-
-	CREATE TABLE #WeekRange (winlostdate SMALLDATETIME);
-	CREATE TABLE #TmpCondSumWL(
-		SportType		INT,
-		BetType			INT,
-		LeagueGroupID	SMALLINT, 
-		TicketType		TINYINT
-	);
-
-	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT, LeagueGroupID SMALLINT, TicketType TINYINT)
-	DECLARE @isTest BIT, @__ProductDetails XML;
-	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
