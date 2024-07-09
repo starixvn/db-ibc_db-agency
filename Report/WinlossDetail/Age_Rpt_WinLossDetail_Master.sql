@@ -49,6 +49,7 @@ Revisions:
 	- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 	- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 	- 20240424@Lewis: Change old sql account [Redmine: #204021]
+	- 20240709@Lewis: use bettrans [Redmine: #207526]
 	
 	Param's Explanation:
 	 @ProductDetails:		
