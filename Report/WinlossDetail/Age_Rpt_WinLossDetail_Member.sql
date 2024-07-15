@@ -49,6 +49,7 @@ Revisions:
 	- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 	- 20240424@Lewis: Change old sql account [Redmine: #204021]
 	- 20240703@Lewis: Switch data source - from bettrans to bettranscompact [Redmine: #207517]
+	- 20240715@Kelvin: Alpha - Link WL Detail to My Watchlist [Redmine:#201733]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -385,6 +386,7 @@ BEGIN
 				c.UserName AS CustName,
 				c.FirstName, 
 				c.LastName,
+				ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
 				SUM(TurnOver) AS Turnover,
 				SUM(TurnoverNoDraw) AS NetTurnover,
 				SUM(GrossComm) AS GrossComm,
@@ -395,8 +397,9 @@ BEGIN
 				SUM(NoOfTicket) AS NumberOfTickets
 		FROM #AgWinLossDetails w 
 			LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+			OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl	
 		WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-		GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+		GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName,ISNULL(wl.IsExistedWatchList,0)
 		ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
 
 		SELECT	NULL AS CustId,
@@ -431,6 +434,7 @@ BEGIN
 					c.UserName AS CustName,
 					c.FirstName, 
 					c.LastName,
+					ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
 					SUM(TurnOver) AS Turnover,
 					SUM(TurnoverNoDraw) AS NetTurnover,
 					SUM(GrossComm) AS GrossComm,
@@ -442,8 +446,9 @@ BEGIN
 					ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum	
 			FROM #AgWinLossDetails w 
 				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+				OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl
 			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, ISNULL(wl.IsExistedWatchList,0)
 		) wl
 		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
