@@ -22,6 +22,7 @@ AS
 		- 20231211@Lewis: Add Live22 - fix bettype7698 [RedmineID: #194530]
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240513@Lewis: Add Virtual Kabaddi [RedmineID: #203763]
+		- 20240626@Lewis: Add FastSpin [RedmineID: #205740]
 		
 */
 RETURN
@@ -83,4 +84,10 @@ RETURN
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '21' AS ResourceId, 79 AS ProductId, 227 AS Sporttype, 0 AS Bettype, 21 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '22' AS ResourceId, 79 AS ProductId, 227 AS Sporttype, 7698 AS Bettype, 22 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+	SELECT 'ProductDetail' AS RefId, '22' AS ResourceId, 79 AS ProductId, 227 AS Sporttype, 7698 AS Bettype, 22 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Prize
+	
+	--- FastSpin
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '26' AS ResourceId, 87 AS ProductId, 230 AS Sporttype, 0 AS Bettype, 26 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '27' AS ResourceId, 87 AS ProductId, 230 AS Sporttype, 11295 AS Bettype, 27 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Prize
