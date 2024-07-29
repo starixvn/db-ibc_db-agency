@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02,DBACC-bodb02,DBBOF-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION [dbo].[f_AddRelatedProducts]
 (
 	@ProductIds VARCHAR(MAX) = ''
