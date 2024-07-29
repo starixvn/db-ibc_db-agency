@@ -69,6 +69,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 		- 20240626@Lewis: Add FastSpin [RedmineID: #205740]
 		- 20240627@Lewis: Add FA CHAI [RedmineID: #206631]
+		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -133,6 +134,7 @@ RETURN
 				(61, 238, 0, 0, 0),--Habanero
 				(62, 167, 0, 0, 0), -- Creative Gaming
 				(66, 171, 0, 0, 0), --VGaming
+				(66, 171, 3897, 0, 0), --VGaming Promotion Prize
 				(68, 174, 0, 0, 0), -- AdvantPlay Mini
 				(67, 172, 0, 0, 0),  -- AdvantPlay Product
 				(69, 175, 0, 0, 0),  -- Bitcoin product
