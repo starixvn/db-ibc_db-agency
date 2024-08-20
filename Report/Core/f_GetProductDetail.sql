@@ -23,6 +23,7 @@ AS
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240513@Lewis: Add Virtual Kabaddi [RedmineID: #203763]
 		- 20240626@Lewis: Add FastSpin [RedmineID: #205740]
+		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
 		
 */
 RETURN
@@ -91,3 +92,9 @@ RETURN
 	SELECT 'ProductDetail' AS RefId, '26' AS ResourceId, 87 AS ProductId, 230 AS Sporttype, 0 AS Bettype, 26 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '27' AS ResourceId, 87 AS ProductId, 230 AS Sporttype, 11295 AS Bettype, 27 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Prize
+	
+	--- Vgaming
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '28' AS ResourceId, 66 AS ProductId, 171 AS Sporttype, 0 AS Bettype, 28 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '29' AS ResourceId, 66 AS ProductId, 171 AS Sporttype, 3897 AS Bettype, 29 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
