@@ -24,6 +24,7 @@ AS
 		- 20240513@Lewis: Add Virtual Kabaddi [RedmineID: #203763]
 		- 20240626@Lewis: Add FastSpin [RedmineID: #205740]
 		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
+		- 20240826@Lewis: Add FA CHAI - Promotion Prize [RedmineID: #209893]
 		
 */
 RETURN
@@ -98,3 +99,9 @@ RETURN
 	SELECT 'ProductDetail' AS RefId, '28' AS ResourceId, 66 AS ProductId, 171 AS Sporttype, 0 AS Bettype, 28 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '29' AS ResourceId, 66 AS ProductId, 171 AS Sporttype, 3897 AS Bettype, 29 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+	
+	--- FA CHAI
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '30' AS ResourceId, 89 AS ProductId, 146 AS Sporttype, 0 AS Bettype, 30 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '31' AS ResourceId, 89 AS ProductId, 146 AS Sporttype, 11399 AS Bettype, 31 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
