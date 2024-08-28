@@ -72,6 +72,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
 		- 20240805@Lewis: Add Nextspin [RedmineID: #199984]
 		- 20240827@Lewis: Add FA CHAI PromotionPrize [RedmineID: #209893]
+		- 20240711@Lewis: Add VS5 [RedmineID: #206527]
 		- 20240911@Lewis: Add ON Casino [RedmineID: #210024]
 		- 20241021@Lewis: Add Playtech RNG Casino [RedmineID: #210551]
 		- 20241021@Lewis: Add GPI RNG Casino [RedmineID: #207174]
@@ -161,6 +162,7 @@ RETURN
 				(89, 146, 0, 0, 0), --FA CHAI
 				(89, 146, 11399, 0, 0), --FA CHAI Promotion Prize
 				(85, 229, 0, 0, 0), --Nextspin
+				(88, 147, 0, 0, 0), --VS5-Virtually
 				(96, 138, 0, 0, 0), --ON Casino
 				(100, 148, 0, 0, 0), --Playtech
 				(48, 145, 0, 0, 0) --GPI RNG Casino
