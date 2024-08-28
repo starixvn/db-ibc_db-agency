@@ -71,6 +71,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20240627@Lewis: Add FA CHAI [RedmineID: #206631]
 		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
 		- 20240805@Lewis: Add Nextspin [RedmineID: #199984]
+		- 20240827@Lewis: Add FA CHAI PromotionPrize [RedmineID: #209893]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -155,6 +156,7 @@ RETURN
 				(87, 230, 0, 0, 0), -- FastSpin
 				(87, 230, 11295, 0, 0), -- FastSpin Promotion Prize
 				(89, 146, 0, 0, 0), --FA CHAI
+				(89, 146, 11399, 0, 0), --FA CHAI Promotion Prize
 				(85, 229, 0, 0, 0) --Nextspin
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
