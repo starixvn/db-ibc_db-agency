@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_Agent]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,
@@ -18,7 +18,8 @@ AS
 		- 20181003@Patrick: Index revolution [RedmineID: #101405]
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
-		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]  
+		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]   
+		- 20240717@Lewis: Change Old SQL account [Redmine: #207510]
 */
 
 BEGIN
