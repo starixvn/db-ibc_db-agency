@@ -53,6 +53,7 @@ AS
 		- 20240223@Lewis: Add WE Live Casino [Redmine: #195885]
 		- 20240312@Lewis: Add metadata DBACC-bodb02 , DBTP-bodb02 [Redmine: #193083]
 		- 20240717@Lewis: BaseBall AIO [Redmine: #207510]
+		- 20240905@Lewis: BaseBall AIO - Phase 1 - fix 8820 - commission 2 [Redmine: #207510]
 
 	- Columns:
 		- CommGroup:
@@ -131,7 +132,7 @@ FROM (
 			--Volleyball AIO
 			(3901),(3903),(3909),(3912),(3914),(3916),(3918),	
 			--Baseball AIO
-			(8804),(8805),(8810),(8818),(8819)
+			(8804),(8805),(8810),(8818),(8819),(8820)
 		)
 	B (bettype)
 
@@ -174,7 +175,7 @@ FROM (
 			--Volleyball AIO
 			(3900),(3910),(3911),(3913),(3915),(3917),
 			--Baseball AIO
-			(8813),(8817),(8820),(8822),(8825),(8826)
+			(8813),(8817),(8822),(8825),(8826)
 		)
 	C (bettype)
 	UNION ALL
