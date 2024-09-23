@@ -24,6 +24,7 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
+		- 20240920@Lewis: Betradar - Virtual Horse & Dog [Redmine: #211093]
 */
 
 BEGIN 

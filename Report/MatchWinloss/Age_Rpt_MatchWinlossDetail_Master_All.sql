@@ -390,6 +390,7 @@ BEGIN
 				FROM bettrans b WITH (NOLOCK)
 					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
+					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
 				WHERE b.srecommend = @custid
 					AND b.statusID NOT IN (101, 102, 103)
@@ -718,7 +719,7 @@ BEGIN
 						0 AS ChildMatchType,
 						0 AS homeid,
 						0 AS awayid,
-						b.bettype,
+						CASE WHEN ISNULL(f.bettype, 0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
 						0 AS liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) AS turnover,
@@ -742,6 +743,7 @@ BEGIN
 				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
+					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
 					--INNER JOIN #RecommendList Re ON Re.recommend = b.recommend
 				WHERE b.statusID NOT IN (101, 102, 103)

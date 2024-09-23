@@ -30,6 +30,7 @@ AS
 		- 20211115@Malcolm: Exclude Matchs are deleted [Redmine: #164321]
 		- 20220422@Evan: Remove Using IsDeleted field in League Table [Redmine: #171699]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
+		- 20240920@Lewis: Betradar - Virtual Horse & Dog [Redmine: #211093]
 */
  
 BEGIN
@@ -116,7 +117,27 @@ BEGIN
 		AND m.EventStatus <> 'closed'
 		AND l.isTest <= @IncludeTestData 
 	GROUP BY m.eventdate, m.sporttype
-	
+
+
+	-- VSRaceInfo, VSOutright -- Virtual Horse, Virtual Dog
+	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
+	SELECT
+		CASE WHEN DATEDIFF(DAY, @ToDate, m.eventdate) = 0 THEN 1 ELSE 0 END AS IsToday,
+		m.eventdate, m.sporttype,
+		SUM(CASE WHEN m.eventstatus = 'Completed' AND ISNULL(BetStatus,'') <> 'Refund' THEN 1 ELSE 0 END) AS Entered,
+		SUM(CASE WHEN m.eventstatus <> 'Completed' THEN 1 ELSE 0 END) AS NonEntered
+	FROM
+	(
+		SELECT DISTINCT r.LeagueID, o.EventDate, r.sporttype, r.BetStatus, r.EventStatus
+		FROM VSRaceInfo r WITH (NOLOCK)
+			INNER JOIN VSOutright o WITH (NOLOCK) ON o.EventID = r.EventID
+		WHERE o.EventDate BETWEEN @FromDate AND @ToDate
+			AND r.EventStatus <> 'closed'
+	) AS m		
+		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.LeagueID = l.League3rdID
+	WHERE l.isTest <= @IncludeTestData
+	GROUP BY m.EventDate, m.sporttype
+
 	SELECT IsToday, EventDate, Sporttype, Entered, NonEntered
 	FROM #tmp
 	ORDER BY EventDate, sporttype

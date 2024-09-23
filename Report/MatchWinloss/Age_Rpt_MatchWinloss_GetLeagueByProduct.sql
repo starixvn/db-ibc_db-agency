@@ -27,6 +27,7 @@ AS
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
+		- 20240920@Lewis: Betradar - Virtual Horse & Dog [Redmine: #211093]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -140,14 +141,36 @@ BEGIN
 			AND tmp.EventType = 3
 			AND l.isTest <= @IsShowAll;
 
-		INSERT INTO #tmpLeagues(leagueid, LeagueType) 
-		SELECT DISTINCT l.League3rdId, 1
-		FROM dbo.Match3rd m WITH(NOLOCK) 
-			INNER JOIN dbo.League3rd l WITH(NOLOCK) ON m.League3rdId = l.League3rdId 
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.match3rdId
+		INSERT INTO #tmpLeagues (leagueid, LeagueType) 
+		SELECT DISTINCT l.leagueid, 0
+		FROM dbo.outright m WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.orid
 		WHERE m.eventdate BETWEEN @fdate AND @tdate
 			AND m.EventStatus = 'completed'
 			AND tmp.EventType = 5;
+			
+		INSERT INTO #tmpLeagues (leagueid, LeagueType) 
+		SELECT DISTINCT l.leagueid, 0
+		FROM dbo.outright m WITH (NOLOCK) 
+			INNER JOIN dbo.league l WITH (NOLOCK) ON m.leagueid = l.leagueid 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = m.orid
+		WHERE m.eventdate BETWEEN @fdate AND @tdate
+			AND m.oddsstatus = 'completed'
+			AND tmp.EventType = 2
+			AND l.isTest <= @IsShowAll;
+
+		--Sporttype 198 177
+		INSERT INTO #tmpLeagues (leagueid, LeagueType)
+		SELECT DISTINCT l.league3rdid, 1
+		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
+			INNER JOIN dbo.league3rd l WITH (NOLOCK) ON r.leagueid = l.league3rdid
+			INNER JOIN dbo.VSOutright o WITH (NOLOCK) ON r.EventID = o.EventID
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
+		WHERE o.eventdate BETWEEN @fdate AND @tdate
+			AND o.eventstatus = 'completed'
+			AND tmp.EventType = 3
+			AND l.isTest <= @IsShowAll;
 
 	END
 
@@ -238,10 +261,22 @@ BEGIN
 			AND tmp.EventType = 5
 			AND l.isTest <= @IsShowAll;
 
+		--Sporttype 198 177
+		INSERT INTO #tmpLeagues (leagueid, LeagueType)
+		SELECT DISTINCT l.league3rdid, 1
+		FROM dbo.VSRaceInfo14 r WITH (NOLOCK) 
+			INNER JOIN dbo.league3rd l WITH (NOLOCK) ON r.leagueid = l.league3rdid
+			INNER JOIN dbo.VSOutright14 o WITH (NOLOCK) ON r.EventID = o.EventID
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
+		WHERE o.eventdate BETWEEN @fdate AND @tdate
+			AND o.eventstatus = 'completed'
+			AND tmp.EventType = 3
+			AND l.isTest <= @IsShowAll;
 	END
 	
 	DROP TABLE #tmpmatchid;
 	DROP TABLE #SportBettype;
+
 
 	SELECT
 		DISTINCT
@@ -261,7 +296,9 @@ BEGIN
 	FROM #tmpLeagues tmp
 		INNER JOIN league l WITH (NOLOCK) ON l.leagueid = tmp.leagueid
 	WHERE tmp.LeagueType = 0
+
 	UNION ALL
+
 	SELECT
 	DISTINCT
 	l.League3rdId,
@@ -270,17 +307,18 @@ BEGIN
 	tmp.LeagueType,
 	CASE @Language 
 		WHEN 'E' THEN l.leaguename
-		WHEN 'CS' THEN (CASE WHEN l.LeagueNameSC= '' or l.LeagueNameSC is null THEN l.leaguename ELSE l.LeagueNameSC END)
-		WHEN 'CT' THEN (CASE WHEN l.LeagueNameTC= '' or l.LeagueNameTC is null THEN l.leaguename ELSE l.LeagueNameTC END)
-		WHEN 'TH' THEN (CASE WHEN l.leaguenameth = '' or l.leaguenameth is null THEN l.leaguename ELSE l.leaguenameth END)
-		WHEN 'J' THEN (CASE WHEN l.LeagueNameJP= '' or l.LeagueNameJP is null THEN l.leaguename ELSE l.LeagueNameJP END)
-		WHEN 'KO' THEN (CASE WHEN l.leaguenameko= '' or l.leaguenameko is null THEN l.leaguename ELSE l.leaguenameko END)
+		--WHEN 'CS' THEN (CASE WHEN l.leaguenamecn= '' or l.leaguenamecn is null THEN l.leaguename ELSE l.leaguenamecn END)
+		--WHEN 'CT' THEN (CASE WHEN l.leaguenamec_uni= '' or l.leaguenamec_uni is null THEN l.leaguename ELSE l.leaguenamec_uni END)
+		--WHEN 'TH' THEN (CASE WHEN l.leaguenameth = '' or l.leaguenameth is null THEN l.leaguename ELSE l.leaguenameth END)
+		--WHEN 'J' THEN (CASE WHEN l.leaguenamej= '' or l.leaguenamej is null THEN l.leaguename ELSE l.leaguenamej END)
+		--WHEN 'KO' THEN (CASE WHEN l.leaguenameko= '' or l.leaguenameko is null THEN l.leaguename ELSE l.leaguenameko END)
 		ELSE l.leaguename
 	END	AS leaguename
 	FROM #tmpLeagues tmp
 		INNER JOIN League3rd l WITH (NOLOCK) ON l.League3rdId = tmp.leagueid
 	WHERE tmp.LeagueType = 1
 	ORDER BY sporttype;
+
 	
 	DROP TABLE #tmpLeagues;
 
