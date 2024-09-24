@@ -1,4 +1,4 @@
-/*<info serverAlias="DBMSG-bodb_Message" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBMSG-bodb_Message" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ToastMessage_Sel]
 	@TargetId			INT = 0,
 	@SubAccId			INT = NULL,
@@ -12,6 +12,7 @@ AS
 
 	Revisions:
 		- 20230831@Bobby: AutoJob clear balance downlines - Notice message [RedmineID: #182071]
+		- 20240924@Lewis: Deployed SIT [RedmineID: #182071]
 
 	Param's Explanation:
 
