@@ -168,7 +168,8 @@ BEGIN
 			INNER JOIN dbo.VSOutright o WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
 		WHERE o.eventdate BETWEEN @fdate AND @tdate
-			AND o.eventstatus = 'completed'
+			AND r.eventstatus = 'completed'
+			AND ISNULL(r.betstatus, '') <> 'refund'
 			AND tmp.EventType = 3
 			AND l.isTest <= @IsShowAll;
 
@@ -269,7 +270,8 @@ BEGIN
 			INNER JOIN dbo.VSOutright14 o WITH (NOLOCK) ON r.EventID = o.EventID
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
 		WHERE o.eventdate BETWEEN @fdate AND @tdate
-			AND o.eventstatus = 'completed'
+			AND r.eventstatus = 'completed'
+			AND ISNULL(r.betstatus, '') <> 'refund'
 			AND tmp.EventType = 3
 			AND l.isTest <= @IsShowAll;
 	END

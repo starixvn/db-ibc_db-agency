@@ -361,12 +361,12 @@ BEGIN
 				-- Virtual HR		
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  0 AS BetGroup,
-						'' matchid,
+						r.EventID as matchid,
 						0 AS ParentID,
 						0 AS ChildMatchType,
 						0 AS homeid,
 						0 AS awayid,
-						b.bettype,
+						CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
 						0 AS liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) AS turnover,
@@ -396,11 +396,11 @@ BEGIN
 					AND b.statusID NOT IN (101, 102, 103)
 					AND b.ruben = 1
 					AND b.winlostdate BETWEEN @FDate AND @TDate
-					AND o.eventstatus = 'completed'
+					AND r.eventstatus = 'completed'
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3				
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype;	
+				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;	
 				
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,
@@ -714,7 +714,7 @@ BEGIN
 				-- Virtual HR		
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime) 
 				SELECT  0 AS BetGroup,
-						'' matchid,
+						r.EventID as matchid,
 						0 AS ParentID,
 						0 AS ChildMatchType,
 						0 AS homeid,
@@ -750,11 +750,11 @@ BEGIN
 					AND b.ruben = 1
 					AND b.srecommend = @CustId
 					AND b.winlostdate BETWEEN @FDate AND @TDate
-					AND o.eventstatus = 'completed' 
+					AND r.eventstatus = 'completed' 
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3					
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype;
+				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
 
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,
