@@ -72,7 +72,7 @@ BEGIN
 		matchcode		NVARCHAR(50),
 		isNeutral		BIT,
 		showtime		NVARCHAR(50),
-		LeagueType		TINYINT
+		LeagueType		INT
 	);
 
 	CREATE TABLE #SportBettype(
@@ -359,7 +359,7 @@ BEGIN
 			IF @showVS = 1 
 			BEGIN
 				-- Virtual HR		
-				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType)
 				SELECT  0 AS BetGroup,
 						r.EventID as matchid,
 						0 AS ParentID,
@@ -386,7 +386,8 @@ BEGIN
 						r.EventID AS Race,
 						'' matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
-						r.EventTime AS showtime
+						r.EventTime AS showtime,
+						1 AS LeagueType
 				FROM bettrans b WITH (NOLOCK)
 					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -399,7 +400,7 @@ BEGIN
 					AND r.eventstatus = 'completed'
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
-					AND s.EventType = 3				
+					AND s.EventType = 3		--VS2 (use league3rd)		
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;	
 				
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
@@ -712,7 +713,7 @@ BEGIN
 			IF @showVS = 1 
 			BEGIN
 				-- Virtual HR		
-				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime) 
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType) 
 				SELECT  0 AS BetGroup,
 						r.EventID as matchid,
 						0 AS ParentID,
@@ -739,7 +740,8 @@ BEGIN
 						r.EventID AS Race,
 						'' AS matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
-						r.EventTime AS showtime
+						r.EventTime AS showtime,
+						1 AS LeagueType
 				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -753,7 +755,7 @@ BEGIN
 					AND r.eventstatus = 'completed' 
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
-					AND s.EventType = 3					
+					AND s.EventType = 3			--VS2 (use league3rd)		
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
 
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
@@ -827,7 +829,7 @@ BEGIN
 			ISNULL(s.LeagueType,0) AS LeagueType -- 0: league, 1: League3rd
 	FROM #SAgMatchWLDetails s 
 	LEFT JOIN League l  WITH (NOLOCK) ON s.leagueid = l.leagueid
-	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, s.leagueid, ISNULL(l.LeagueGroupID,0), race, matchcode, isNeutral, showtime, ISNULL(s.LeagueType,0)
+	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, s.leagueid, ISNULL(l.LeagueGroupID,0), race, matchcode, isNeutral, showtime,ISNULL(s.LeagueType,0)
 	ORDER BY betgroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, leagueid, race, bettype, liveindicator, matchcode;
 
 	DROP TABLE #SAgMatchWLDetails

@@ -91,7 +91,7 @@ BEGIN
 		matchcode		NVARCHAR(50),
 		isNeutral		BIT,
 		showtime		NVARCHAR(50),
-		LeagueType		TINYINT
+		LeagueType		INT
 	);
 
 	IF @isGetAll = 1 -- Get all leagues by sport's selected
@@ -231,7 +231,7 @@ BEGIN
 			HAVING ISNULL(COUNT(transid), 0) > 0;
 				
 			-- get data on table VSOutright, VSRaceInfo
-			INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
+			INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime, LeagueType)
 			SELECT	0 as BetGroup,
 					r.eventID as matchid,
 					0 as ParentID,
@@ -254,7 +254,8 @@ BEGIN
 					r.EventID as Race,
 					'' matchcode,
 					CONVERT (BIT, 0) AS IsNeutral,
-					r.EventTime as showtime
+					r.EventTime as showtime,
+					1 AS LeagueType
 			FROM bettrans b WITH (NOLOCK)
 				INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -548,7 +549,7 @@ BEGIN
 			HAVING ISNULL(COUNT(transid), 0) > 0;
 
 			-- get data on table VSOutright, VSRaceInfo
-			INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
+			INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime, LeagueType)
 			SELECT  0 as BetGroup,
 					r.eventID as matchid,
 					0 as ParentID,
@@ -571,7 +572,8 @@ BEGIN
 					r.EventID as Race,
 					'' matchcode,
 					CONVERT (BIT, 0) AS IsNeutral,
-					r.EventTime as showtime
+					r.EventTime as showtime,
+					1 AS LeagueType
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 				INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -1110,7 +1112,7 @@ BEGIN
 				-- Virtual HR
 				IF @showVS = 1 
 				BEGIN
-					INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
+					INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime, LeagueType)
 					SELECT  0 as BetGroup,
 							r.EventID as matchid,
 							0 as ParentID,
@@ -1133,7 +1135,8 @@ BEGIN
 							r.EventID as Race,
 							'' matchcode,
 							CONVERT (BIT, 0) AS IsNeutral,
-							r.EventTime as showtime
+							r.EventTime as showtime,
+							1 AS LeagueType
 					FROM bettrans b WITH (NOLOCK)
 						INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
 						INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -1165,7 +1168,7 @@ BEGIN
 				-- Virtual HR
 				IF @showVS = 1 
 				BEGIN
-					INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime)
+					INSERT INTO #AgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, race, matchcode, isNeutral, showtime, LeagueType)
 					SELECT  0 as BetGroup,
 							r.EventID as matchid,
 							0 as ParentID,
@@ -1188,7 +1191,8 @@ BEGIN
 							r.EventID as Race,
 							'' matchcode,
 							CONVERT (BIT, 0) AS IsNeutral,
-							r.EventTime as showtime
+							r.EventTime as showtime,
+							1 AS LeagueType
 					FROM bettrans14 b WITH (NOLOCK)
 						INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
 						INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
@@ -1340,7 +1344,7 @@ BEGIN
 			ISNULL(a.LeagueType,0) AS LeagueType -- 0: league, 1: League3rd
 	FROM #AgMatchWLDetails	a
 	LEFT JOIN League l WITH (NOLOCK) ON a.leagueid = l.leagueid
-	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype,liveindicator, matchcode, a.leagueid, ISNULL(l.LeagueGroupID,0), isNeutral, race, showtime, ISNULL(a.LeagueType,0)
+	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype,liveindicator, matchcode, a.leagueid, ISNULL(l.LeagueGroupID,0), isNeutral, race, showtime,ISNULL(a.LeagueType,0)
 	ORDER BY betgroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, leagueid, race, bettype, liveindicator, matchcode;
 
 	DROP TABLE #AgMatchWLDetails
