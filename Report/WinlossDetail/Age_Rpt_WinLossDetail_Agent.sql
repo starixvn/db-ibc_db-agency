@@ -15,6 +15,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Agent]
 AS
 
 /*
+
 Created: 
 Task : Smartphone friendly - Win Loss Detail Report
 DB: DBAGE/bodb02

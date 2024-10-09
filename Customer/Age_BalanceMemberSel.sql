@@ -1,8 +1,9 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet, bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_nap, wsv_alp,wsv_alpv" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_BalanceMemberSel]
 	@CustID INT
 AS
 /*
+
 	Created: 20180627@Elodie
 	DB: DBAGE/bodb02
 	Task: Left menu - Search customer - Balance Info
