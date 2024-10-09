@@ -25,7 +25,7 @@ BEGIN
 	;WITH super_Reach AS
 	(
 		SELECT rs.SuperID
-        FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH (NOLOCK)
+        FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH (ROWLOCK)
 		WHERE rs.TotalBatch = rs.RunningTotal --- completed batch by main thread
 			AND rs.RunningBatchNo = 0 -- without running reTry If any
 			AND NOT EXISTS(
@@ -50,7 +50,8 @@ BEGIN
 	FROM dbo.Age_ClearBalanceCust_Process p
 		INNER JOIn super_Reach sr ON p.SuperId = sr.SuperId
 	WHERE 
-		p.NotifyStatus = 0
+		p.Environment = @Environment
+		AND p.NotifyStatus = 0
 		AND p.[Status] IN ('Failed', 'Cancelled', 'Completed')
 	;
 
