@@ -30,6 +30,7 @@ AS
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
+		- 20240920@Lewis: Betradar - Virtual Horse & Dog - Remove VS1 Eventtype=3 - VSRaceInfo.(VendorMatchId & Distance) [Redmine: #211093]
 */
 
 BEGIN
@@ -383,8 +384,8 @@ BEGIN
 						SUM(acomm - comm) AS  MAgComm,
 						SUM(swinlost) AS SAgWinLoss,
 						SUM(scomm - acomm) AS  SAgComm,						
-						r.EventID AS Race,
-						'' matchcode,
+						r.VendorMatchId AS Race,
+						r.Distance AS matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
 						r.EventTime AS showtime,
 						1 AS LeagueType
@@ -401,7 +402,7 @@ BEGIN
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3		--VS2 (use league3rd)		
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;	
+				GROUP BY r.LeagueID, r.EventTime, r.EventID, r.VendorMatchId, r.Distance, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;	
 				
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,
@@ -715,7 +716,7 @@ BEGIN
 				-- Virtual HR		
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType) 
 				SELECT  0 AS BetGroup,
-						r.EventID as matchid,
+						r.EventID AS matchid,
 						0 AS ParentID,
 						0 AS ChildMatchType,
 						0 AS homeid,
@@ -737,8 +738,8 @@ BEGIN
 						SUM(acomm - comm) AS  MAgComm,
 						SUM(swinlost) AS SAgWinLoss,
 						SUM(scomm - acomm) AS  SAgComm,				
-						r.EventID AS Race,
-						'' AS matchcode,
+						r.VendorMatchId AS Race,
+						r.Distance AS matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
 						r.EventTime AS showtime,
 						1 AS LeagueType
@@ -756,7 +757,7 @@ BEGIN
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3			--VS2 (use league3rd)		
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
+				GROUP BY r.LeagueID, r.EventTime, r.EventID, r.VendorMatchId, r.Distance, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
 
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,

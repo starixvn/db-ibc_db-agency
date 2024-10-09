@@ -36,7 +36,7 @@ AS
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
-		- 20240920@Lewis: Betradar - Virtual Horse & Dog [Redmine: #211093]
+		- 20240920@Lewis: Betradar - Virtual Horse & Dog - Remove VS1 Eventtype=3 - VSRaceInfo.(VendorMatchId & Distance) [Redmine: #211093]
 */
 
 BEGIN
@@ -314,31 +314,31 @@ BEGIN
 			IF @showVS = 1 
 			BEGIN
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime, LeagueType)
-				SELECT  0 as BetGroup,
-						r.EventID as matchid,
-						0 as ParentID,
-						0 as ChildMatchType,
-						0 as homeid,
-						0 as awayid,
+				SELECT  0 AS BetGroup,
+						r.EventID AS matchid,
+						0 AS ParentID,
+						0 AS ChildMatchType,
+						0 AS homeid,
+						0 AS awayid,
 						CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
-						0 as liveindicator,
+						0 AS liveindicator,
 						r.leagueid,
 						SUM(ABS(stake)) as turnover,
 						SUM(CASE 
 							WHEN s.RefTable IN(1, 2) THEN 0
 							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
 							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
-						END) as GrossComm,
-						SUM(winlost - actual_stake) as MemberWinLoss,
-						SUM(playercomm) as MemberComm,
-						SUM(awinlost) as AgWinLoss,
+						END) AS GrossComm,
+						SUM(winlost - actual_stake) AS MemberWinLoss,
+						SUM(playercomm) AS MemberComm,
+						SUM(awinlost) AS AgWinLoss,
 						SUM(comm - b.playercomm) AS  AgComm,
-						SUM(mwinlost) as MAgWinLoss,
+						SUM(mwinlost) AS MAgWinLoss,
 						SUM(acomm - comm) AS  MAgComm,					
-						r.EventID as Race,
-						'' matchcode,
+						r.VendorMatchId AS Race,
+						r.Distance AS matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
-						r.EventTime as showtime,
+						r.EventTime AS showtime,
 						1 AS LeagueType
 				FROM bettrans b WITH (NOLOCK)
 					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -350,11 +350,11 @@ BEGIN
 					AND b.ruben = 1
 					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND r.eventstatus = 'completed'
-					AND isnull(r.betstatus,'') <> 'refund'
+					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
-					AND s.EventType = 3
+					AND s.EventType = 3 --VS2 (use league3rd)	
 				GROUP BY 
-					r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+					r.LeagueID, r.EventTime, r.EventID, r.VendorMatchId, r.Distance, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 as BetGroup,
@@ -647,31 +647,31 @@ BEGIN
 			IF @showVS = 1 
 			BEGIN
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime,LeagueType)
-				SELECT  0 as BetGroup,
-						r.EventID as matchid,
-						0 as homeid,
-						0 as ParentID,
-						0 as ChildMatchType,
-						0 as awayid,
+				SELECT  0 AS BetGroup,
+						r.EventID AS matchid,
+						0 AS homeid,
+						0 AS ParentID,
+						0 AS ChildMatchType,
+						0 AS awayid,
 						CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
-						0 as liveindicator,
+						0 AS liveindicator,
 						r.leagueid,
-						SUM(ABS(stake)) as turnover,
+						SUM(ABS(stake)) AS turnover,
 						SUM(CASE 
 							WHEN s.RefTable IN(1, 2) THEN 0
 							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
 							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
-						END) as GrossComm,
-						SUM(winlost - actual_stake) as MemberWinLoss,
-						SUM(playercomm) as MemberComm,
-						SUM(awinlost) as AgWinLoss,
+						END) AS GrossComm,
+						SUM(winlost - actual_stake) AS MemberWinLoss,
+						SUM(playercomm) AS MemberComm,
+						SUM(awinlost) AS AgWinLoss,
 						SUM(comm - b.playercomm) AS  AgComm,
-						SUM(mwinlost) as MAgWinLoss,
+						SUM(mwinlost) AS MAgWinLoss,
 						SUM(acomm - comm) AS  MAgComm,					
-						r.EventID as Race,
-						'' matchcode,
+						r.VendorMatchId AS Race,
+						r.Distance AS matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
-						r.EventTime as showtime,
+						r.EventTime AS showtime,
 						1 AS LeagueType
 				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -683,10 +683,10 @@ BEGIN
 					AND b.ruben = 1
 					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND r.eventstatus = 'completed'
-					AND isnull(r.betstatus, '') <> 'refund'
+					AND ISNULL(r.betstatus, '') <> 'refund'
 					AND s.ProductID = 5
-					AND s.EventType = 3
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+					AND s.EventType = 3 --VS2 (use league3rd)
+				GROUP BY r.LeagueID, r.EventTime, r.EventID, r.VendorMatchId, r.Distance, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 as BetGroup,
@@ -869,48 +869,8 @@ BEGIN
 				GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 		
-				-- Virtual HR		
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
-				SELECT  0 as BetGroup,
-						r.EventID as matchid,
-						0 as ParentID,
-						0 as ChildMatchType,
-						0 as homeid,
-						0 as awayid,
-						CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
-						0 as liveindicator,
-						r.leagueid,
-						SUM(ABS(stake)) as turnover,
-						SUM(CASE 
-							WHEN s.RefTable IN(1, 2) THEN 0
-							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
-							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
-						END) as GrossComm,
-						SUM(winlost - actual_stake) as MemberWinLoss,
-						SUM(playercomm) as MemberComm,
-						SUM(awinlost) as AgWinLoss,
-						SUM(comm - b.playercomm) AS  AgComm,
-						SUM(mwinlost) as MAgWinLoss,
-						SUM(acomm - comm) AS  MAgComm,					
-						r.EventID as Race,
-						'' matchcode,
-						CONVERT (BIT, 0) AS IsNeutral,
-						r.EventTime as showtime
-				FROM bettrans b WITH (NOLOCK)
-					INNER JOIN VSOutright o WITH (NOLOCK) ON b.oddsid = o.Orid
-					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = o.EventID
-					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
-					INNER JOIN @tmpLeague l ON r.leagueid = l.leagueid
-					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-				WHERE b.mrecommend = @custid
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND b.winlostdate BETWEEN @FDate AND @TDate
-					AND r.eventstatus = 'completed'
-					AND isnull(r.betstatus, '') <> 'refund'
-					AND s.ProductID = 5
-					AND s.EventType = 3
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+				-- Virtual HR (VSOutright, VSRaceInfo)
+				-- VS1 + eventtype = 3 => end of support
 			
 				-- Outright
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
@@ -1046,48 +1006,8 @@ BEGIN
 				GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral, m.showtime,
 					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END 
 			
-				-- Virtual HR		
-				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
-				SELECT  0 as BetGroup,
-						r.EventID as matchid,
-						0 as homeid,
-						0 as ParentID,
-						0 as ChildMatchType,
-						0 as awayid,
-						CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
-						0 as liveindicator,
-						r.leagueid,
-						SUM(ABS(stake)) as turnover,
-						SUM(CASE 
-							WHEN s.RefTable IN(1, 2) THEN 0
-							WHEN apositiontaking + mpositiontaking = 1 THEN 0 
-							ELSE acomm/(1 - apositiontaking - mpositiontaking) 
-						END) as GrossComm,
-						SUM(winlost - actual_stake) as MemberWinLoss,
-						SUM(playercomm) as MemberComm,
-						SUM(awinlost) as AgWinLoss,
-						SUM(comm - b.playercomm) AS  AgComm,
-						SUM(mwinlost) as MAgWinLoss,
-						SUM(acomm - comm) AS  MAgComm,					
-						r.EventID as Race,
-						'' matchcode,
-						CONVERT (BIT, 0) AS IsNeutral,
-						r.EventTime as showtime
-				FROM bettrans14 b WITH (NOLOCK)
-					INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
-					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = o.EventID
-					LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
-					INNER JOIN @tmpLeague l ON r.leagueid = l.leagueid
-					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
-				WHERE b.mrecommend = @custid
-					AND b.statusID NOT IN (101, 102, 103)
-					AND b.ruben = 1
-					AND b.winlostdate BETWEEN @FDate AND @TDate
-					AND r.eventstatus = 'completed'
-					AND isnull(r.betstatus,'') <> 'refund'
-					AND s.ProductID = 5
-					AND s.EventType = 3
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+				-- Virtual HR (VSOutright, VSRaceInfo)
+				-- VS1 + eventtype = 3 => end of support
 			
 				-- outright (14)
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
@@ -1197,29 +1117,29 @@ BEGIN
 				IF @showVS = 1 
 				BEGIN
 					INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime, LeagueType)
-					SELECT  0 as BetGroup,
-							r.EventID as matchid,
-							0 as ParentID,
-							0 as ChildMatchType,
-							0 as homeid,
-							0 as awayid,
+					SELECT  0 AS BetGroup,
+							r.EventID AS matchid,
+							0 AS ParentID,
+							0 AS ChildMatchType,
+							0 AS homeid,
+							0 AS awayid,
 							CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
-							0 as liveindicator,
+							0 AS liveindicator,
 							r.leagueid,
-							SUM(ABS(stake)) as turnover,
+							SUM(ABS(stake)) AS turnover,
 							SUM(CASE 
 								WHEN s.RefTable IN(1, 2) THEN 0
 								WHEN apositiontaking + mpositiontaking = 1 THEN 0 
 								ELSE acomm/(1 - apositiontaking - mpositiontaking) 
-							END) as GrossComm,
-							SUM(winlost - actual_stake) as MemberWinLoss,
-							SUM(playercomm) as MemberComm,
-							SUM(awinlost) as AgWinLoss,
+							END) AS GrossComm,
+							SUM(winlost - actual_stake) AS MemberWinLoss,
+							SUM(playercomm) AS MemberComm,
+							SUM(awinlost) AS AgWinLoss,
 							SUM(comm - b.playercomm) AS  AgComm,
-							SUM(mwinlost) as MAgWinLoss,
+							SUM(mwinlost) AS MAgWinLoss,
 							SUM(acomm - comm) AS  MAgComm,					
-							r.EventID as Race,
-							'' matchcode,
+							r.VendorMatchId AS Race,
+							r.Distance AS matchcode,
 							CONVERT (BIT, 0) AS IsNeutral,
 							r.EventTime as showtime,
 							1 AS LeagueType
@@ -1237,7 +1157,7 @@ BEGIN
 						AND ISNULL(r.betstatus, '') <> 'refund'
 						AND s.ProductID = 5
 						AND s.EventType = 3
-					GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+					GROUP BY r.LeagueID, r.EventTime, r.EventID, r.VendorMatchId, r.Distance, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 				END
 			END
 		
@@ -1304,31 +1224,31 @@ BEGIN
 				IF @showVS = 1 
 				BEGIN
 					INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime, LeagueType)
-					SELECT  0 as BetGroup,
-							r.EventID as matchid,
-							0 as homeid,
-							0 as ParentID,
-							0 as ChildMatchType,
-							0 as awayid,
+					SELECT  0 AS BetGroup,
+							r.EventID AS matchid,
+							0 AS homeid,
+							0 AS ParentID,
+							0 AS ChildMatchType,
+							0 AS awayid,
 							CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
-							0 as liveindicator,
+							0 AS liveindicator,
 							r.leagueid,
-							SUM(ABS(stake)) as turnover,
+							SUM(ABS(stake)) AS turnover,
 							SUM(CASE 
 								WHEN s.RefTable IN(1, 2) THEN 0
 								WHEN apositiontaking + mpositiontaking = 1 THEN 0 
 								ELSE acomm/(1 - apositiontaking - mpositiontaking) 
-							END) as GrossComm,
-							SUM(winlost - actual_stake) as MemberWinLoss,
-							SUM(playercomm) as MemberComm,
-							SUM(awinlost) as AgWinLoss,
+							END) AS GrossComm,
+							SUM(winlost - actual_stake) AS MemberWinLoss,
+							SUM(playercomm) AS MemberComm,
+							SUM(awinlost) AS AgWinLoss,
 							SUM(comm - b.playercomm) AS  AgComm,
-							SUM(mwinlost) as MAgWinLoss,
+							SUM(mwinlost) AS MAgWinLoss,
 							SUM(acomm - comm) AS  MAgComm,					
-							r.EventID as Race,
-							'' matchcode,
+							r.VendorMatchId AS Race,
+							r.Distance AS matchcode,
 							CONVERT (BIT, 0) AS IsNeutral,
-							r.EventTime as showtime,
+							r.EventTime AS showtime,
 							1 AS LeagueType
 					FROM bettrans14 b WITH (NOLOCK)
 						INNER JOIN VSOutright14 o WITH (NOLOCK) ON b.oddsid = o.Orid
@@ -1344,7 +1264,7 @@ BEGIN
 						AND ISNULL(r.betstatus, '') <> 'refund'
 						AND s.ProductID = 5
 						AND s.EventType = 3
-					GROUP BY r.LeagueID, r.EventTime, r.eventID, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
+					GROUP BY r.LeagueID, r.EventTime, r.EventID, r.VendorMatchId, r.Distance, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END
 				END
 			END
 		END
