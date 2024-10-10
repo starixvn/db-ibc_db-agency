@@ -10,6 +10,7 @@ AS
     Revisions:
         - 20240202@Luke: Enhance Auto Transfer Phase 3 [Redmine: #195551]
 		- 20240424@Luke: Improve auto transfer sp job to avoid deadlock [Redmine: #204349]
+		- 20240823@Bobby: Avoid deadlock with main thread [Redmine: #209565]
 
     Param's Explanation:
 
@@ -17,82 +18,72 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @TelegramNotify TABLE (SuperID INT, FromCustID INT, ToCustID INT, [Status] VARCHAR(15), RowID INT, PRIMARY KEY(FromCustID, ToCustID))
+    DROP TABLE IF EXISTS #TelegramNotify; 
+	CREATE TABLE #TelegramNotify (SuperID INT, FromCustID INT, ToCustID INT, [Status] VARCHAR(15), PRIMARY KEY(FromCustID, ToCustID))
 
+	--- SET notify on completed supers
 	;WITH super_Reach AS
 	(
 		SELECT rs.SuperID
-        FROM Age_ClearBalanceCust_RunningSuper rs WITH (NOLOCK) 
-		WHERE rs.TotalBatch = rs.RunningTotal
+        FROM dbo.Age_ClearBalanceCust_RunningSuper rs WITH (ROWLOCK)
+		WHERE rs.TotalBatch = rs.RunningTotal --- completed batch by main thread
+			AND rs.RunningBatchNo = 0 -- without running reTry If any
 			AND NOT EXISTS(
-					SELECT TOP(1) 1
-					FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
-					WHERE p.SuperId = rs.SuperId 
-						AND p.Environment = @Environment
-						AND (
-							p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
-							OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
-							OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
-						)
-					)		
-	)
-	INSERT INTO @TelegramNotify(SuperID, FromCustID, ToCustID, [Status], RowID)
-        SELECT sr.SuperID, t.FromCustID, t.ToCustID, t.[Status], ROW_NUMBER() OVER(PARTITION BY t.FromCustID, t.Status ORDER BY t.ToCustID) RowID
-        FROM super_Reach sr 
-			CROSS APPLY(
-				SELECT FromCustID, ToCustID, [Status]
-				FROM Age_ClearBalanceCust_Process p WITH (NOLOCK)
-				WHERE p.SuperId = sr.SuperId
+				SELECT TOP(1) 1
+				FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+				LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
+				WHERE p.SuperId = rs.SuperId 
 					AND p.Environment = @Environment
-					AND p.NotifyStatus = 0
-					AND p.Status IN ('Failed', 'Cancelled', 'Completed')
-			)t
+					AND 
+					(
+						p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
+						OR (err.AllowReTry = 1 AND p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
+						OR (err.AllowReTry = 1 AND err.ErrType = 'TransferUM' AND p.Status IN ('Pending') AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 59) --> TransferUM Pending
+						OR p.NotifyStatus = 1 --- done notification
+					)
+				)
+	)
+	UPDATE p WITH(ROWLOCK, UPDLOCK)
+	SET p.NotifyStatus = 1
+	OUTPUT INSERTED.SuperID, INSERTED.FromCustId, INSERTED.ToCustId, INSERTED.[Status]
+	INTO #TelegramNotify (SuperID, FromCustId, ToCustId, [Status])
+	FROM dbo.Age_ClearBalanceCust_Process p
+		INNER JOIn super_Reach sr ON p.SuperId = sr.SuperId
+	WHERE 
+		p.Environment = @Environment
+		AND p.NotifyStatus = 0
+		AND p.[Status] IN ('Failed', 'Cancelled', 'Completed')
+	;
 
-    --Get Telegram notification info
-    ;WITH CTE_Notify AS
+	--TODO: Send notify information
+	;WITH CTE_TelegramNotify AS (
+		SELECT t.SuperID, t.FromCustID, t.ToCustID, t.[Status]
+			, ROW_NUMBER() OVER(PARTITION BY t.FromCustID, t.[Status] ORDER BY t.ToCustID) RowID
+		FROM #TelegramNotify t
+	),
+	CTE_Notify AS
     (
         SELECT FromCustID, 
             SUM(IIF([Status]='Completed',1,0))  AS Success,
             SUM(IIF([Status]='Cancelled',1,0)) AS Cancelled,
             SUM(IIF([Status]='Failed',1,0)) AS Failed
-        FROM @TelegramNotify 
+        FROM CTE_TelegramNotify 
         GROUP BY FromCustID
     )
-
-    SELECT ct.FromCustID, Success, Cancelled, Failed, 
-        CASE WHEN Cancelled > 10 THEN CONCAT(CancelledList,',...') ELSE CancelledList END CancelledList, 
-        CASE WHEN Failed > 10 THEN CONCAT(FailedList,',...') ELSE FailedList END FailedList
+    SELECT ct.FromCustID, ct.Success, ct.Cancelled, ct.Failed, 
+        CASE WHEN ct.Cancelled > 10 THEN CONCAT(c.CancelledList,',...') ELSE c.CancelledList END CancelledList, 
+        CASE WHEN ct.Failed > 10 THEN CONCAT(c.FailedList,',...') ELSE c.FailedList END FailedList
     FROM CTE_Notify ct
     CROSS APPLY
     (
-        SELECT STRING_AGG(CONVERT(VARCHAR(MAX),username), ', ') WITHIN GROUP (ORDER BY c.custid) CancelledList
-        FROM @TelegramNotify t
+        SELECT 
+			STRING_AGG(CONVERT(VARCHAR(MAX), IIF([Status]='Cancelled', c.username, NULL)), ', ') WITHIN GROUP (ORDER BY c.custid) CancelledList,
+			STRING_AGG(CONVERT(VARCHAR(MAX), IIF([Status]='Failed', c.username, NULL)), ', ') WITHIN GROUP (ORDER BY c.custid) FailedList
+        FROM CTE_TelegramNotify t
             INNER JOIN CustDB.dbo.Customer c ON t.ToCustID = c.custid
         WHERE ct.FromCustID = t.FromCustID
-            AND t.[Status] = 'Cancelled'
+            AND t.[Status]  IN ( 'Cancelled', 'Failed')
             AND t.RowID <= 10
-    )c
-    CROSS APPLY
-    (
-        SELECT STRING_AGG(CONVERT(VARCHAR(MAX),username), ', ') WITHIN GROUP (ORDER BY c.custid) FailedList
-        FROM @TelegramNotify t
-			INNER JOIN CustDB.dbo.Customer c ON t.ToCustID = c.custid
-        WHERE ct.FromCustID = t.FromCustID
-			AND t.[Status] = 'Failed'
-			AND t.RowID <= 10
-    )f
-
-	WHILE (1=1)
-	BEGIN
-		UPDATE TOP (500) a
-		SET a.NotifyStatus = 1
-		FROM dbo.Age_ClearBalanceCust_Process a WITH (ROWLOCK, UPDLOCK)
-			INNER JOIN @TelegramNotify s ON a.SuperId = s.SuperID AND a.FromCustId = s.FromCustID AND a.ToCustId = s.ToCustID
-		WHERE a.Environment = @Environment
-			AND a.NotifyStatus = 0
-
-		IF @@ROWCOUNT = 0
-			BREAK
-	END
+    ) AS c
 END
 GO
