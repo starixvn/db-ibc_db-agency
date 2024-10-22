@@ -1,4 +1,4 @@
-/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_TotalBets_1378_Master]
 	@CustId INT
 AS
@@ -14,6 +14,7 @@ AS
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20221227@Bobby: Correct formula for calculating Total Bet [RedmineID: #181608]
 		- 20240109@Lewis: Add LeagueGroupId [RedmineID: #197160]
+		- 20241022@Lewis: Sort ASC for 2 livescores [RedmineID: #209651]
 */
 
 BEGIN
@@ -72,6 +73,6 @@ BEGIN
 		b.liveawayscore,
 		m.isNeutral
 	ORDER BY
-		b.liveindicator desc,m.matchcode
+		b.liveindicator desc,m.matchcode, b.livehomescore, b.liveawayscore
 END
 GO
