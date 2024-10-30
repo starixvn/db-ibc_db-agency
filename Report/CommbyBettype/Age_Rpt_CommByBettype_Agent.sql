@@ -19,7 +19,8 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20200929@Malcolm : Offer Myanmar Odds for bettype in (1,3,7,8) [RedmineId : #141956]
 		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]   
-		- 20240717@Lewis: Change Old SQL account [Redmine: #207510]
+		- 20240717@Lewis: Change Old SQL account [Redmine: #207510]   
+		- 20241030@Lewis: Remove column MyanmarOddsComm [Redmine: #201396]
 */
 
 BEGIN
@@ -54,7 +55,7 @@ BEGIN
 
 		INSERT INTO #tmp(ma_comm, CommGroup, recommend)
 		SELECT  SUM(ISNULL(acomm,0) - ISNULL(comm,0)) AS ma_comm,
-				CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
+				CommGroup,
 				recommend
 		FROM dbo.bettrans b WITH(NOLOCK) 
 			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype
@@ -62,7 +63,7 @@ BEGIN
 			AND ruben = 1 
 			AND winlostdate BETWEEN @FDate AND @ToDate 
 		GROUP BY
-			CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
+			CommGroup,
 			recommend;
 	END
 
@@ -75,14 +76,14 @@ BEGIN
 		
 		INSERT INTO #tmp(ma_comm, CommGroup, recommend)
 		SELECT  SUM(ISNULL(acomm,0) - ISNULL(comm,0)) AS ma_comm,
-				CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
+				CommGroup,
 				b.recommend
 		FROM dbo.bettrans14 b with(nolock) 
 			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype
 		WHERE b.mrecommend = @CID
 			AND winlostdate BETWEEN @FromDate AND @TDate
 		GROUP BY
-			CASE WHEN b.bettype IN (1, 3, 7, 8) AND b.oddstype = 6 THEN  5 ELSE CommGroup END,
+			CommGroup,
 			b.recommend;
 	END
 		
@@ -93,13 +94,12 @@ BEGIN
 			ISNULL([1],0) AS Comm1,
 			ISNULL([2],0) AS Comm2,
 			ISNULL([3],0) AS Comm3,
-			ISNULL([4],0) AS CasinoComm,
-			ISNULL([5],0) AS MyanmarOddsComm
+			ISNULL([4],0) AS CasinoComm
 	FROM #tmp AS p
 		PIVOT
 		(
 			SUM(ma_comm)
-			FOR CommGroup IN ([1],[2],[3],[4],[5])
+			FOR CommGroup IN ([1],[2],[3],[4])
 		) AS pvt
 		INNER JOIN customer c WITH(NOLOCK) On c.custid = pvt.recommend 
 	ORDER BY c.username;
