@@ -1,4 +1,4 @@
-/*<info serverAlias="DBBAH-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
+/*<info serverAlias="DBBAH-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv" viewers="" isFunction="0"></info>*/
 ALTER PROCEDURE Age_Rpt_BetCreditHistory
 (
 	@FromDate DATETIME,
@@ -22,13 +22,12 @@ AS
 		- 20220707@Sol: Alpha - Hide sum row (isSum 1 to 0) - [RedmineID: #173971] 
 		- 20230531@Danny: Remove some filter conditions [RedmineID: #188355] 
 		- 20230621@Lewis: Hide 19, 35 & Get data WLDate&Refno from BalanceRecord [RedmineID: #189598] 
+		- 20241030@Lewis: Remove logic cheat BU range [RedmineID: #212553] 
 	
 */
 BEGIN
 
 	DECLARE 
-		@MoveBetsDay	SMALLDATETIME, 
-		@BalanceUpDay	SMALLDATETIME,
 		@InternalFromDate DATETIME,
 		@InternalToDate DATETIME,
 		@CustId INT = 0,
@@ -37,8 +36,6 @@ BEGIN
 		@OldCreditFirstTimes MONEY,
 		@OldActionDateFirstTimes DATETIME
 		
-
-	DECLARE @tmp TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME) 
 
 	SELECT @LoggedRoleId = c.roleid
 	FROM dbo.Customer c WITH(NOLOCK)
@@ -89,18 +86,7 @@ BEGIN
 	END
 	----end validation
 
-	INSERT INTO @tmp(BalanceUpDay, MoveBetsDay)
-	EXEC Age_SelBalanceUpDay
-
-	SELECT @MoveBetsDay = MoveBetsDay, @BalanceUpDay = BalanceUpDay FROM @tmp
 	SELECT @InternalFromDate = @FromDate, @InternalToDate = DATEADD(DAY, 1, @Todate) --cover for users that are created in @today
-
-	----check BU date with from/to date
-	IF (@FromDate < @BalanceUpDay OR @Todate < @BalanceUpDay)
-	BEGIN
-		SELECT @ErrorCode = 102, @ErrorMess = 'From Date/To Date must be greater than or equal "' + CONVERT(VARCHAR(20), @BalanceUpDay, 101) + '"'
-		RETURN
-	END
 
 	CREATE TABLE #BalanceRecord(ActionDate DATETIME, winlostdate SMALLDATETIME, refNo BIGINT, actual_stake MONEY, winloss MONEY, playercomm MONEY, BalanceChanged MONEY, NewBalance MONEY, GivenCredit MONEY, BetCredit MONEY, Action VARCHAR(256), custid INT, ActionID INT, rowid BIGINT, bettype SMALLINT, IsUserLogActionId BIT)
 	CREATE TABLE #LogCredit(ActionID INT, ActionNameEN NVARCHAR(256), logid BIGINT, custid INT, logdate DATETIME, OldValue MONEY, NewValue MONEY)
