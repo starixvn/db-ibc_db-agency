@@ -47,66 +47,24 @@ BEGIN
 	INSERT INTO #SportBettype (bettype, RefTable)
 	SELECT bettype, RefTable
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest)
-	WHERE ProductID <> 1
 	;
 
 	-- #OutStanding
 	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, SuperRisk MONEY);
 
-	-- #PotentialWinning  (Only SportBook)
-	CREATE TABLE #PotentialWinning (
-		mrecommend INT
-		, actual_stake MONEY
-		, spositiontaking MONEY
-		, ExtraInfo VARCHAR(1000)
-	)
-	IF EXISTS (SELECT 1 FROM string_split(@ProductIds,',') WHERE value ='1')
-	BEGIN
-		INSERT INTO #PotentialWinning (
-			mrecommend
-			, actual_stake
-			, spositiontaking
-			, ExtraInfo
-		)
-		SELECT
-			b.mrecommend
-			,b.actual_stake
-			,b.spositiontaking
-			,ISNULL(b.ExtraInfo,'')
-		FROM bettrans b WITH (NOLOCK)
-		WHERE StatusId IN (0,1)
-			AND EXISTS (
-							SELECT 1 
-							FROM SportBettypeMatrix s WITH (NOLOCK) 
-							WHERE b.bettype = s.bettype AND s.ProductID = 1 AND s.RefTable = 0 AND s.IsTest <= @isTest
-						)
-			AND b.srecommend = @CustID
-	
-		INSERT INTO #OutStanding (
-			mrecommend
-			, MemberOutstanding
-			, SuperOutstanding
-			, ToWin
-			, SuperRisk
-		)
-		SELECT
-			mrecommend,
-			SUM(ABS(actual_stake)),
-			SUM(actual_stake * spositiontaking),
-			SUM(B.PayoutAdjust - actual_stake),
-			SUM((B.PayoutAdjust- actual_stake) * spositiontaking)
-		FROM #PotentialWinning A
-			CROSS APPLY (SELECT ISNULL(CAST(('<xml>' + ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust) B
-		GROUP BY mrecommend;
-	END
-
-	-- bettrans (exclude SportBook)
-	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
+	-- bettrans
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding, ToWin, SuperRisk)
 	SELECT
 		mrecommend,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
-		SUM(actual_stake * spositiontaking) AS SuperOutstanding
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
+		SUM(pa.PayoutAdjust - actual_stake),
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
 	FROM dbo.bettrans b WITH (NOLOCK)  
+		OUTER APPLY (
+						SELECT ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
+						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/root/p1') = 1
+					) pa
 	WHERE statusId IN (0, 1)
 		AND EXISTS (
 			SELECT 1
@@ -170,8 +128,8 @@ BEGIN
 				rt.mrecommend,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(rt.ToWin) AS ToWin,
-				SUM(rt.SuperRisk) AS SuperRisk,
+				SUM(ISNULL(rt.ToWin,0)) AS ToWin,
+				SUM(ISNULL(rt.SuperRisk,0)) AS SuperRisk,
 				ROW_NUMBER() OVER (ORDER BY c.username) RowNum,
 				c.username
 			FROM #OutStanding rt
@@ -197,8 +155,8 @@ BEGIN
 			mrecommend,
 			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-			SUM(ToWin) AS ToWin,
-			SUM(SuperRisk) AS SuperRisk,
+			SUM(ISNULL(ToWin,0)) AS ToWin,
+			SUM(ISNULL(SuperRisk,0)) AS SuperRisk,
 			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(SuperOutstanding, 0)) DESC) RowNum
 		FROM #OutStanding
 		GROUP BY mrecommend
@@ -222,7 +180,6 @@ BEGIN
 
 	DROP TABLE #SportBettype;
 	DROP TABLE #OutStanding;
-	DROP TABLE #PotentialWinning
 
 	SET NOCOUNT OFF;
 END

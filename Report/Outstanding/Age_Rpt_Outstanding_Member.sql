@@ -47,85 +47,28 @@ BEGIN
 	INSERT INTO #SportBettype (bettype, RefTable)
 	SELECT bettype, RefTable
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest)
-	WHERE ProductID <> 1
 	;
 
 	-- #OutStanding
 	CREATE TABLE #OutStanding (custid INT, MemberOutstanding MONEY, AgentOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, AgentRisk MONEY, MasterRisk MONEY, SuperRisk MONEY);
  
-	-- #PotentialWinning  (Only SportBook)
-	CREATE TABLE #PotentialWinning (
-		custid INT
-		, actual_stake MONEY
-		, apositiontaking SMALLMONEY
-		, mpositiontaking SMALLMONEY
-		, spositiontaking SMALLMONEY
-		, ExtraInfo VARCHAR(1000)
-	)
-	IF EXISTS (SELECT 1 FROM string_split(@ProductIds,',') WHERE value ='1')
-	BEGIN
-		INSERT INTO #PotentialWinning (
-			custid
-			, actual_stake
-			, apositiontaking
-			, mpositiontaking
-			, spositiontaking
-			, ExtraInfo
-		)
-		SELECT 
-			b.custid
-			, b.actual_stake
-			, b.apositiontaking
-			, b.mpositiontaking
-			, b.spositiontaking
-			, b.ExtraInfo
-		FROM bettrans b WITH (NOLOCK) 
-		WHERE b.statusID IN (0,1)
-			AND EXISTS (
-							SELECT 1
-							FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
-							WHERE s.ProductID = 1
-							and IsTest <= @isTest
-							AND s.RefTable = 0
-							AND s.BetType = b.BetType
-						)
-			AND recommend = @CustID
-
-		INSERT INTO #OutStanding (
-			custid
-			, MemberOutstanding
-			, AgentOutstanding
-			, MasterOutstanding
-			, SuperOutstanding
-			, ToWin
-			, AgentRisk
-			, MasterRisk
-			, SuperRisk
-		)
-		SELECT
-			custid,
-			SUM(ABS(actual_stake)),
-			SUM(actual_stake * apositiontaking),
-			SUM(actual_stake * mpositiontaking),
-			SUM(actual_stake * spositiontaking),
-			SUM(B.PayoutAdjust - actual_stake),
-			SUM((B.PayoutAdjust - actual_stake) * apositiontaking),
-			SUM((B.PayoutAdjust - actual_stake) * mpositiontaking),
-			SUM((B.PayoutAdjust- actual_stake) * spositiontaking)
-		FROM #PotentialWinning A
-			CROSS APPLY (SELECT ISNULL(CAST(('<xml>' + A.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust) B
-		GROUP BY custid;
-	END
-
-	-- bettrans (exclude SportBook)
-	INSERT INTO #OutStanding (custid, MemberOutstanding, AgentOutstanding, MasterOutstanding, SuperOutstanding)
+	-- bettrans
+	INSERT INTO #OutStanding (custid, MemberOutstanding, AgentOutstanding, MasterOutstanding, SuperOutstanding, ToWin, AgentRisk, MasterRisk, SuperRisk)
 	SELECT
 		custid,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * apositiontaking) AS AgentOutstanding,
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
-		SUM(actual_stake * spositiontaking) AS SuperOutstanding
-	FROM dbo.bettrans b WITH (NOLOCK)  
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
+		SUM(pa.PayoutAdjust - actual_stake),
+		SUM((pa.PayoutAdjust - actual_stake) * apositiontaking),
+		SUM((pa.PayoutAdjust - actual_stake) * mpositiontaking),
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
+	FROM dbo.bettrans b WITH (NOLOCK)
+		OUTER APPLY (
+						SELECT ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
+						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/root/p1') = 1
+					) pa
 	WHERE statusId IN (0,1)
 		AND EXISTS 
 		(
@@ -202,10 +145,10 @@ BEGIN
 				SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(rt.ToWin) AS ToWin,
-				SUM(rt.AgentRisk) AS AgentRisk,
-				SUM(rt.MasterRisk) AS MasterRisk,
-				SUM(rt.SuperRisk) AS SuperRisk,
+				SUM(ISNULL(rt.ToWin,0)) AS ToWin,
+				SUM(ISNULL(rt.AgentRisk,0)) AS AgentRisk,
+				SUM(ISNULL(rt.MasterRisk,0)) AS MasterRisk,
+				SUM(ISNULL(rt.SuperRisk,0)) AS SuperRisk,
 				ROW_NUMBER() OVER(ORDER BY c.username ) RowNum ,
 				c.username
 			FROM #OutStanding rt
@@ -236,10 +179,10 @@ BEGIN
 			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 			SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
 			SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
-			SUM(ToWin) AS ToWin,
-			SUM(AgentRisk) AS AgentRisk,
-			SUM(MasterRisk) AS MasterRisk,
-			SUM(SuperRisk) AS SuperRisk,
+			SUM(ISNULL(ToWin,0)) AS ToWin,
+			SUM(ISNULL(AgentRisk,0)) AS AgentRisk,
+			SUM(ISNULL(MasterRisk,0)) AS MasterRisk,
+			SUM(ISNULL(SuperRisk,0)) AS SuperRisk,
 			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(AgentOutstanding, 0)) DESC) RowNum
 		FROM #OutStanding
 		GROUP BY custid
@@ -266,7 +209,6 @@ BEGIN
 	FROM #OutStanding
 
 	DROP TABLE #OutStanding;
-	DROP TABLE #PotentialWinning;
 	DROP TABLE #SportBettype;
 
 	SET NOCOUNT OFF;
