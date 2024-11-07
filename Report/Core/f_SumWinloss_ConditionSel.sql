@@ -161,7 +161,7 @@ RETURN
 				(89, 146, 11399, 0, 0), --FA CHAI Promotion Prize
 				(85, 229, 0, 0, 0), --Nextspin
 				(96, 138, 0, 0, 0), --ON Casino
-				(100, 149, 0, 0, 0) --Playtech
+				(100, 148, 0, 0, 0) --Playtech
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
