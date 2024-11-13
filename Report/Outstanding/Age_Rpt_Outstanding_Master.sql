@@ -50,20 +50,22 @@ BEGIN
 	;
 
 	-- #OutStanding
-	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, SuperRisk MONEY);
+	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, SuperRisk MONEY, IsSB BIT);
 
 	-- bettrans
-	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding, ToWin, SuperRisk)
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding, ToWin, SuperRisk, IsSB)
 	SELECT
 		mrecommend,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
 		SUM(pa.PayoutAdjust - actual_stake),
-		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking),
+		ISNULL(pa.IsSB,0) AS IsSB
 	FROM dbo.bettrans b WITH (NOLOCK)  
 		OUTER APPLY (
-						SELECT ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
-						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/root/p1') = 1
+						SELECT 1 AS IsSB
+							   ,ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
+						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/xml/p1') = 1
 					) pa
 	WHERE statusId IN (0, 1)
 		AND EXISTS (
@@ -72,7 +74,7 @@ BEGIN
 			WHERE s.RefTable = 0 AND s.bettype = b.bettype
 		) -- bet tickets
 		AND srecommend = @CustID		
-	GROUP BY mrecommend;
+	GROUP BY mrecommend,ISNULL(pa.IsSB,0);
 	
 	-- translog
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
@@ -128,8 +130,8 @@ BEGIN
 				rt.mrecommend,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(ISNULL(rt.ToWin,0)) AS ToWin,
-				SUM(ISNULL(rt.SuperRisk,0)) AS SuperRisk,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.ToWin,0))) AS ToWin,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.SuperRisk,0))) AS SuperRisk,
 				ROW_NUMBER() OVER (ORDER BY c.username) RowNum,
 				c.username
 			FROM #OutStanding rt
@@ -155,8 +157,8 @@ BEGIN
 			mrecommend,
 			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-			SUM(ISNULL(ToWin,0)) AS ToWin,
-			SUM(ISNULL(SuperRisk,0)) AS SuperRisk,
+			SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(ToWin,0))) AS ToWin,
+			SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(SuperRisk,0))) AS SuperRisk,
 			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(SuperOutstanding, 0)) DESC) RowNum
 		FROM #OutStanding
 		GROUP BY mrecommend

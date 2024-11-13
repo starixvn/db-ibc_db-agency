@@ -44,10 +44,10 @@ BEGIN
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
 	-- #OutStanding
-	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, MasterRisk MONEY, SuperRisk MONEY);
+	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, MasterRisk MONEY, SuperRisk MONEY, IsSB BIT);
  
 	-- bettrans
-	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding, ToWin, MasterRisk, SuperRisk)
+	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding, ToWin, MasterRisk, SuperRisk, IsSB)
 	SELECT
 		recommend,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
@@ -55,11 +55,13 @@ BEGIN
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
 		SUM(pa.PayoutAdjust - actual_stake),
 		SUM((pa.PayoutAdjust - actual_stake) * mpositiontaking),
-		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking),
+		ISNULL(pa.IsSB,0)
 	FROM dbo.bettrans b WITH (NOLOCK)  
 		OUTER APPLY (
-						SELECT ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
-						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/root/p1') = 1
+						SELECT 1 AS IsSB
+								, ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
+						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/xml/p1') = 1
 					) pa
 	WHERE statusId IN (0, 1)
 		AND EXISTS 
@@ -72,7 +74,7 @@ BEGIN
 			AND s.BetType = b.bettype
 		)
 		AND mrecommend =  @CustID		
-	GROUP BY recommend;
+	GROUP BY recommend,ISNULL(pa.IsSB,0);
 	
 	-- translog
 	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
@@ -144,9 +146,9 @@ BEGIN
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(ISNULL(rt.ToWin,0)) AS ToWin,
-				SUM(ISNULL(rt.MasterRisk,0)) AS MasterRisk,
-				SUM(ISNULL(rt.SuperRisk,0)) AS SuperRisk,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.ToWin,0))) AS ToWin,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.MasterRisk,0))) AS MasterRisk,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.SuperRisk,0))) AS SuperRisk,
 				ROW_NUMBER() OVER (ORDER BY c.username) RowNum, 
 				c.username
 			FROM #OutStanding rt
@@ -175,9 +177,9 @@ BEGIN
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(ISNULL(ToWin,0)) AS ToWin,
-				SUM(ISNULL(MasterRisk,0)) AS MasterRisk,
-				SUM(ISNULL(SuperRisk,0)) AS SuperRisk,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(ToWin,0))) AS ToWin,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(MasterRisk,0))) AS MasterRisk,
+				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(SuperRisk,0))) AS SuperRisk,
 				ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(MasterOutstanding, 0)) DESC) RowNum
 			FROM #OutStanding
 			GROUP BY recommend
