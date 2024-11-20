@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="wsv_alp" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Age_Customer_TotalAmount_Sel]
 	@CustId INT,
 	@RoleId TINYINT
