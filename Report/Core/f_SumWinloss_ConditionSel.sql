@@ -74,6 +74,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20240827@Lewis: Add FA CHAI PromotionPrize [RedmineID: #209893]
 		- 20240911@Lewis: Add ON Casino [RedmineID: #210024]
 		- 20241021@Lewis: Add Playtech RNG Casino [RedmineID: #210551]
+		- 20241021@Lewis: Add GPI RNG Casino [RedmineID: #207174]
 	Paramters Explanation:
  		@ProductID: list of products
 */
@@ -161,7 +162,8 @@ RETURN
 				(89, 146, 11399, 0, 0), --FA CHAI Promotion Prize
 				(85, 229, 0, 0, 0), --Nextspin
 				(96, 138, 0, 0, 0), --ON Casino
-				(100, 148, 0, 0, 0) --Playtech
+				(100, 148, 0, 0, 0), --Playtech
+				(48, 145, 0, 0, 0) --GPI RNG Casino
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
