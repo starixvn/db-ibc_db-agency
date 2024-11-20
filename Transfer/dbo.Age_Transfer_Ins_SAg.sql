@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_SAg]
 	@SAgID int,
 	@SuperIDsTransferTotal VARCHAR(50)='', 
@@ -799,7 +799,7 @@ BEGIN
 				END CATCH
 
 				--Add writelog for each amt transfered - Vinh 20080629
-				SELECT @LogData = 'Transfer from Master ' + @MagUser + ' to Super ' + @saUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @transcode)			
+				SELECT @LogData = 'Transfer from Master/DirectMember ' + @MagUser + ' to Super ' + @saUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @transcode)			
 				--AutoJob Transfer: Completed
 				UPDATE @tblResultMember
 				SET RefNo = @transcode
