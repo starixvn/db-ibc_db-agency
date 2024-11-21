@@ -94,7 +94,8 @@ BEGIN
 		[suspended] bit,
 		[firstname] nvarchar(50) null,
 		[lastname] nvarchar(50) null,
-		Locked TINYINT
+		Locked TINYINT,
+		IsDirectMember BIT DEFAULT(0)
 	)
 
 	CREATE TABLE #balance  
@@ -404,7 +405,8 @@ BEGIN
 				c.lastname,
 				c.Locked,
 				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
-				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays
+				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays,
+				c.IsDirectMember
 			FROM 
 				#tmp_customer c	
 				INNER JOIN #credit credit ON c.custid = credit.recommend
@@ -478,7 +480,8 @@ BEGIN
 				c.lastname,
 				c.Locked,
 				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
-				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays
+				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays,
+				c.IsDirectMember
 			FROM
 				#tmp_customer c	
 				INNER JOIN #credit credit ON c.custid = credit.recommend
