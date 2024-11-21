@@ -8,6 +8,7 @@ ALTER PROCEDURE [Age_Transfer_SelList_SAg]
 	@AutoTransfer	TINYINT = 2,
 	@IsYesterdayBalance bit = null,
 	@IsAllowTotalBalance bit = null,
+	@Leveltype	TINYINT = 0,
 	@TotalOutStanding money = 0 OUTPUT,
 	@TotalCredit money = 0 OUTPUT,
 	@TotalUsedCredit money = 0 OUTPUT,
@@ -59,6 +60,10 @@ Param's Explanation:
 		- 0: NOT Allow
 		- 1: Allow
 		- 2: All
+	• @Leveltype: 
+		- 0: All
+		- 1: Master Agent
+		- 2: Directmember
 */
 BEGIN
 	SET NOCOUNT ON
@@ -70,8 +75,6 @@ BEGIN
 	CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
 	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
 	SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
-
-	select getdate() 
 	
 	DECLARE @RowCount int, @RowStart int, @RowEnd int
 	SELECT @PageIndex = @PageIndex - 1, @RowStart = @PageSize * @PageIndex + 1, @RowEnd = @RowStart + @PageSize - 1
@@ -145,7 +148,6 @@ BEGIN
 	)
 
 	SET @Username = isnull(@Username, '')
-	SELECT GETDATE()
 	--Filter user
 	
 	;WITH cte AS
@@ -157,6 +159,7 @@ BEGIN
 				0 AS IsDirectMember
 			FROM CustDB.dbo.custinfo as c (nolock)
 			WHERE srecommend = @SAgID AND roleid < 4 AND mrecommend > 0
+				AND @Leveltype IN (0,1)
 			GROUP BY c.mrecommend
 			UNION ALL
 			SELECT 
@@ -166,8 +169,9 @@ BEGIN
 				1 AS IsDirectMember
 			FROM CustDB.dbo.custinfo as c (nolock)
 			WHERE srecommend = @SAgID 
-				AND mrecommend = -4
-				and roleid = 1
+				AND roleid = 1
+				AND mrecommend = -4			
+				AND @Leveltype IN (0,2)
 		)
 	INSERT INTO #CustomerList (custid , Credit, UsedCredit,enabled, username, closed, suspended, firstname, lastname, Locked, IsDirectMember)
 	SELECT tmp.custid, tmp.magentCredit, tmp.magentUsedCredit, ci.Enabled,ci.username, CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END IsClosed
@@ -192,8 +196,17 @@ BEGIN
 
 	INSERT INTO #DirectMemberList (custid)
 	SELECT custid
-	FROM #CustomerList
+	FROM #CustomerList t
 	WHERE IsDirectMember = 1
+	
+	UNION ALL --Get direct member of Master
+	SELECT c.CustId
+	FROM #CustomerList t	
+		INNER JOIN CustDB.dbo.CustInfo c WITH (NOLOCK)
+			ON c.mrecommend = t.custid					
+				AND c.roleid = 1
+				AND c.recommend = -3
+				AND t.IsDirectMember = 0
 
 	IF @@ROWCOUNT > 0
 		SET @IsExistDirect = 1
@@ -229,9 +242,17 @@ BEGIN
 	BEGIN
 		INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 		SELECT
-			r.custid AS mrecommend,
-			ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0),
+			CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END AS mrecommend,
+			ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) 
+						THEN 
+							CASE WHEN b.recommend = -3 THEN mwinlost+acomm-comm 
+								ELSE winlost-actual_stake+playercomm END
+					ELSE 0 END), 0),
+			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) 
+						THEN 
+							CASE WHEN b.recommend = -3 THEN mwinlost+acomm-comm 
+							ELSE winlost-actual_stake+playercomm END			
+					ELSE 0 END), 0),
 			ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
@@ -243,7 +264,7 @@ BEGIN
 			inner join dbo.bettransRnG b WITH(NOLOCK, index = IX_custid ) ON r.custid = b.custid
 		WHERE 	statusID IN (0, 1)
 				OR winlostdate >= @yesterday
-		GROUP BY r.custid
+		GROUP BY CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END
 
 	END
 
@@ -270,9 +291,17 @@ BEGIN
 	BEGIN
 		INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 		SELECT
-			r.custid AS mrecommend,
-			ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0),
+			CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END AS mrecommend,
+			ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) 
+						THEN 
+							CASE WHEN b.recommend = -3 THEN mwinlost+acomm-comm 
+								ELSE winlost-actual_stake+playercomm END
+					ELSE 0 END), 0),
+			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) 
+						THEN 
+							CASE WHEN b.recommend = -3 THEN mwinlost+acomm-comm 
+							ELSE winlost-actual_stake+playercomm END			
+					ELSE 0 END), 0),
 			ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
@@ -285,7 +314,7 @@ BEGIN
 		WHERE 
 				statusID IN (0, 1)
 				OR winlostdate >= @yesterday
-		GROUP BY r.custid
+		GROUP BY CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END
 
 	END
 
@@ -307,7 +336,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 		SELECT
-			r.custid AS mrecommend,
+			CASE WHEN t.recommend = -3 THEN t.mrecommend ELSE r.custid END AS mrecommend,
 			0,
 			0,
 			0,
@@ -316,7 +345,7 @@ BEGIN
 		FROM #DirectMemberList r
 			INNER JOIN  dbo.translog t WITH(NOLOCK,index = IX_custid ) ON t.custid = r.CustId
 		WHERE statusID IN (0, 1)
-		GROUP BY r.custid
+		GROUP BY CASE WHEN t.recommend = -3 THEN t.mrecommend ELSE r.custid END
 	END
 
 	-- bettrans
@@ -338,7 +367,7 @@ BEGIN
 	BEGIN
 		INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
 		SELECT
-			r.custid AS mrecommend,
+			CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END AS mrecommend,
 			0,
 			0,
 			0,
@@ -348,7 +377,7 @@ BEGIN
 			INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX = IX_customerinfo) ON b.custid = r.CustId
 		WHERE ruben = 0
 			AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
-		GROUP BY r.custid
+		GROUP BY CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END
 	END
 		-- settle ticket
 	INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
@@ -377,9 +406,15 @@ BEGIN
 	BEGIN
 		INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 		SELECT
-			r.custid AS mrecommend,
-			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END), 0),
-			ISNULL(SUM(mwinlost+acomm-comm), 0),
+			CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END AS mrecommend,
+			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday 
+						THEN 
+							CASE WHEN b.recommend = -3 THEN mwinlost+acomm-comm 
+								ELSE winlost-actual_stake+playercomm END
+						ELSE 0 END), 0),
+			ISNULL(SUM(CASE WHEN b.recommend = -3 THEN mwinlost+acomm-comm
+							ELSE winlost-actual_stake+playercomm END)
+					, 0),
 			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN mwinlost+acomm-comm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
@@ -396,24 +431,22 @@ BEGIN
 						OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 					)
 			AND winlostdate > @moveBetsDay  
-		GROUP BY r.custid
+		GROUP BY CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END
 	END
 
 	INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 	SELECT
 		mrecommend,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0) 
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) YesterdayCashBalance,
+			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE 0 END END), 0) YesterdayCashBalance,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0) 
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) TotalCashBalance,
+			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE 0 END END), 0) TotalCashBalance,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
 			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend AND b.custid <> mrecommend AND b.custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) YesterdayBalance,
+			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0) YesterdayBalance,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
 			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend AND b.custid <> mrecommend AND b.custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0) 
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) TotalBalance,
+			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0) TotalBalance,
 		0 Outstanding,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) PendingTransfer3rd
 	FROM #recommend r
@@ -433,13 +466,9 @@ BEGIN
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0) 
 			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) TotalCashBalance,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend AND b.custid <> mrecommend AND b.custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) YesterdayBalance,
+			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0) YesterdayBalance,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend AND b.custid <> mrecommend AND b.custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0) 
-			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) TotalBalance,
+			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0) TotalBalance,
 		0 Outstanding,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) PendingTransfer3rd
 	FROM #CustomerList r
@@ -454,19 +483,15 @@ BEGIN
 	BEGIN
 		INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 		SELECT
-			r.custid,
+			CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END AS mrecommend,
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0) 
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) YesterdayCashBalance,
+			+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+PlayerComm END), 0) YesterdayCashBalance,
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0) 
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) TotalCashBalance,
+				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+PlayerComm END), 0) TotalCashBalance,
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend AND b.custid <> mrecommend AND b.custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0)
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) YesterdayBalance,
+				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0) YesterdayBalance,
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0)
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0)
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> recommend AND b.custid <> mrecommend AND b.custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END), 0) 
-				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE 0 END END), 0) TotalBalance,
+				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0) TotalBalance,
 			0 Outstanding,
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) PendingTransfer3rd
 		FROM  #DirectMemberList r
@@ -475,7 +500,7 @@ BEGIN
 					WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 					WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 				ELSE 1 END
-		GROUP BY r.custid
+		GROUP BY CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END
 	END
 	/* End Balance Info */
 
@@ -538,7 +563,7 @@ BEGIN
 				c.enabled,
 				c.suspended,
 				IsNull(c.credit, 0) AS magentCredit, 
-				c.UsedCredit, 
+				c.UsedCredit AS magentUsedCredit, 
 				IsNull(balance.Outstanding,0) magentOutstanding, 
 				IsNull(balance.TotalCashBalance,0) magentCashBalance, 
 				IsNull(balance.TotalBalance,0) magentBalance, 
@@ -549,7 +574,8 @@ BEGIN
 				c.lastname,
 				c.Locked,
 				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
-				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays
+				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays,
+				c.IsDirectMember
 			FROM #CustomerList c
 				LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
 				LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
@@ -565,7 +591,7 @@ BEGIN
 		--Total
 		SELECT @TotalOutStanding = sum(magentOutstanding),
 				@TotalCredit = sum(magentCredit),
-				@TotalUsedCredit = sum(UsedCredit),
+				@TotalUsedCredit = sum(magentUsedCredit),
 				@TotalMAgentBalance = sum(magentBalance),
 				@TotalYesterdayMAgentBalance = sum(yesterday_magentBalance),
 				@TotalMAgentCashBalance = sum(magentCashBalance),
@@ -580,13 +606,14 @@ BEGIN
 				c.enabled,
 				c.suspended,
 				IsNull(c.credit, 0) AS magentCredit, 
-				c.usedcredit, 
+				c.usedcredit AS magentUsedCredit, 
 				IsNull(balance.Outstanding,0) magentOutstanding, 
 				IsNull(balance.TotalCashBalance,0) magentCashBalance, 
 				IsNull(balance.TotalBalance,0) magentBalance, 
 				IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
 				IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
-				IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd
+				IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
+				c.IsDirectMember
 			FROM #CustomerList c
 				LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
 				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @SAgID AND cbs.ToCustID = c.CustID
@@ -611,7 +638,7 @@ BEGIN
 				c.enabled,
 				c.suspended,
 				IsNull(c.Credit, 0) AS magentCredit, 
-				c.UsedCredit, 
+				c.UsedCredit AS magentUsedCredit, 
 				IsNull(balance.Outstanding,0) magentOutstanding, 
 				IsNull(balance.TotalCashBalance,0) magentCashBalance, 
 				IsNull(balance.TotalBalance,0) magentBalance, 
@@ -622,7 +649,8 @@ BEGIN
 				c.lastname,
 				c.Locked,
 				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
-				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays
+				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays,
+				c.IsDirectMember
 			FROM #CustomerList c
 				LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
 				LEFT JOIN #ClosedReason cr ON c.custid = cr.custid
@@ -664,7 +692,8 @@ BEGIN
 				IsNull(balance.TotalBalance,0) magentBalance, 
 				IsNull(balance.YesterdayCashBalance,0) yesterday_magentCashBalance, 
 				IsNull(balance.YesterdayBalance,0) yesterday_magentBalance,
-				IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd
+				IsNull(balance.PendingTransfer3rd,0) PendingTransfer3rd,
+				c.IsDirectMember
 			FROM #CustomerList c
 				LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
 				LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.FromCustID = @SAgID AND cbs.ToCustID = c.CustID

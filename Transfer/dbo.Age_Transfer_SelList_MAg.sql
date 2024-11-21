@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [Age_Transfer_SelList_MAg]
 	@masterid int,
 	@PageSize int=500,
@@ -8,6 +8,7 @@ ALTER PROCEDURE [Age_Transfer_SelList_MAg]
 	@AutoTransfer	TINYINT = 2,
 	@IsYesterdayBalance bit = null,
 	@IsAllowTotalBalance bit = null,
+	@Leveltype	TINYINT = 0,
 	@TotalOutStanding money = 0 OUTPUT,
 	@TotalCredit money = 0 OUTPUT,
 	@TotalUsedCredit money = 0 OUTPUT,
@@ -50,6 +51,7 @@ Revisions:
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
+	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - Move SP from DBAGE to DBSIC [Redmine: #211969]
 
 Param's Explanation:
 	• @CustID: MAgentID
@@ -58,6 +60,10 @@ Param's Explanation:
 			- 0: NOT Allow
 			- 1: Allow
 			- 2: All
+	• @Leveltype: 
+		- 0: All
+		- 1: Master Agent
+		- 2: Directmember
 */
 BEGIN
 
