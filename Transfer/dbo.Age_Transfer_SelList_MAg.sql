@@ -140,7 +140,7 @@ BEGIN
 	SELECT c.recommend,
 		isnull(SUM(CASE WHEN roleid = 2 THEN credit ELSE 0 END), 0) AS agentCredit,			
 		isnull(SUM(CASE WHEN roleid = 1 THEN credit ELSE 0 END), 0) AS agentUsedCredit
-	FROM custinfo as c (nolock)
+	FROM CustDB.dbo.custinfo as c (nolock)
 	WHERE mrecommend = @masterid AND roleid < 3
 	GROUP BY c.recommend
 
@@ -276,8 +276,8 @@ BEGIN
 		)
 		SELECT 
 			c.custid, ci.enabled, ci.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
-		FROM CustInfo ci with (NOLOCK,index=IX_custinfo)  
-			INNER JOIN Customer c (nolock) on ci.custid = c.custid 
+		FROM CustDB.dbo.CustInfo ci with (NOLOCK,index=IX_custinfo)  
+			INNER JOIN CustDB.dbo.Customer c (nolock) on ci.custid = c.custid 
 			CROSS APPLY  
 					(
 						SELECT 
@@ -286,7 +286,7 @@ BEGIN
 							, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 							, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 							, Locked
-						FROM dbo.CustProductStatus cs WITH(NOLOCK)
+						FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 						WHERE cs.CustID = ci.custid
 					) AS cs	
 		WHERE	ci.mrecommend=@masterid AND ci.roleid = 2 
@@ -315,8 +315,8 @@ BEGIN
 		)
 		SELECT 
 			c.custid, ci.enabled, ci.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ISNULL(cs.Locked, 0)
-		FROM CustInfo ci with (NOLOCK,index=IX_custinfo) 
-			INNER JOIN Customer c (nolock) on ci.custid = c.custid 
+		FROM CustDB.dbo.CustInfo ci with (NOLOCK,index=IX_custinfo) 
+			INNER JOIN CustDB.dbo.Customer c (nolock) on ci.custid = c.custid 
 			CROSS APPLY  
 					(
 						SELECT 
@@ -325,7 +325,7 @@ BEGIN
 							, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 							, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 							, Locked
-						FROM dbo.CustProductStatus cs WITH(NOLOCK)
+						FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 						WHERE cs.CustID = ci.custid
 					) AS cs	
 		WHERE	ci.mrecommend=@masterid AND ci.roleid = 2  AND ci.username like '%' + @Username + '%'  
