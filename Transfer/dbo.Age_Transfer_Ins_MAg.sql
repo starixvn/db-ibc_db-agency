@@ -62,6 +62,8 @@ Revisions:
 	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20240314@Bobby: EC enhancement [Redmine: #202276]
+	- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
+	- 
 
 Param's Explanation:
 	• @AmtTrans: amount of money
@@ -75,6 +77,8 @@ BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE @rCount INT, @FromCustID INT, @PairStatus VARCHAR(15), @Result nvarchar(4000);
+	DECLARE @IsExistDirect BIT = 0
+
 	-- TODO: support auto clear balance
 	DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), MsgId INT, ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
 	INSERT INTO @tblResultMember(CustId)
@@ -197,7 +201,8 @@ BEGIN
 
 	CREATE TABLE #BalanceInfo (CustId INT, Balance MONEY, Outstanding MONEY, TableName VARCHAR(50))
 
-	CREATE TABLE #recommend (CustId INT)
+	CREATE TABLE #recommend (CustId INT, IsDirectMember BIT)
+	CREATE TABLE #DirectMemberList (CustId INT)
 
 	--TODO: Filter downlines
 	SET @AutoTransfer = ISNULL(@AutoTransfer, 2)
@@ -219,13 +224,16 @@ BEGIN
 			EXEC (@SQL_CBS)
 		END
 
-		INSERT INTO #recommend (CustId)
-		SELECT c.custid  
+		INSERT INTO #recommend (CustId, IsDirectMember)
+		SELECT c.custid , CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END
 		FROM CustDB.dbo.custInfo c WITH(NOLOCK,index=IX_custinfo)  
 		INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on c.custid=cs.CustID
 		LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.ToCustID = c.custid
 		WHERE	mrecommend = @MasterID 
-				AND c.roleid = 2   
+				AND 1 = CASE WHEN c.roleid = 2 THEN 1
+							WHEN c.roleid = 1 AND c.recommend = -3 THEN 1
+						ELSE 0
+						END
 				AND c.Enabled = case @CustStatus when 'All' then c.Enabled 
 						else	case @CustStatus  
 								when 'Disabled' then 0   
@@ -246,9 +254,19 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		INSERT INTO #recommend (CustId)
-		SELECT CustId FROM @tblCustIds
+		INSERT INTO #recommend (CustId, IsDirectMember)
+		SELECT t.CustId, CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END
+		FROM @tblCustIds t
+			INNER JOIN CustDb.dbo.CustInfo c WITH (NOLOCK) ON c.custid = t.CustId
 	END
+	
+	INSERT INTO #DirectMemberList (custid)
+	SELECT custid
+	FROM #recommend
+	WHERE IsDirectMember = 1
+
+	IF @@ROWCOUNT > 0
+		SET @IsExistDirect = 1
   
 	 --MASTER IS ALLOWED TO TRANSFER TOTAL BALANCE INCLUDING TODAY BALANCE 
 	 IF (SELECT srecommend FROM CustDB.dbo.custinfo (NOLOCK) WHERE custid = @MasterID AND ROLEid = 3 ) IN  (SELECT CONVERT(INT,value) FROM STRING_SPLIT(@SuperIDsTransferTotal, ','))
@@ -259,11 +277,24 @@ BEGIN
 			recommend,
 			ISNULL(SUM(awinlost+comm-playercomm), 0)
 				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
-		FROM dbo.bettransRNG b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-			AND statusID NOT IN (0,1)
+		FROM #recommend c
+			INNER JOIN dbo.bettransRNG b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId AND c.IsDirectMember = 0
+		WHERE statusID NOT IN (0,1)
 			AND winlostdate >= @yesterday
 		GROUP BY recommend
+
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #BalanceInfo (CustId, Balance)
+			SELECT 
+				c.CustId,
+				ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+			FROM #DirectMemberList c
+				INNER JOIN dbo.bettransRNG b WITH(NOLOCK, index = IX_custid) ON b.custid = c.CustId
+			WHERE statusID NOT IN (0,1)
+				AND winlostdate >= @yesterday
+			GROUP BY c.CustId
+		END
 
 		-- bettransLC
 		INSERT INTO #BalanceInfo (CustId, Balance)
@@ -271,11 +302,24 @@ BEGIN
 			recommend,
 			ISNULL(SUM(awinlost+comm-playercomm), 0)
 				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
-		FROM dbo.bettransLC b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-			AND statusID NOT IN (0,1)
+		FROM #recommend c
+			INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId AND c.IsDirectMember = 0
+		WHERE statusID NOT IN (0,1)
 			AND winlostdate >= @yesterday
 		GROUP BY recommend
+
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #BalanceInfo (CustId, Balance)
+			SELECT 
+				c.custid,
+				ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+			FROM #DirectMemberList c
+				INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_custid) ON b.custid = c.CustId
+			WHERE statusID NOT IN (0,1)
+				AND winlostdate >= @yesterday
+			GROUP BY c.custid
+		END
 	  
 		WHILE (@IsDiff = 1)
 		BEGIN
@@ -289,9 +333,9 @@ BEGIN
 				ISNULL(SUM(awinlost+comm-playercomm), 0)
 					+ ISNULL(SUM(winlost-actual_stake+playercomm), 0),
 				'tblBettrans'
-			FROM dbo.bettrans b WITH(NOLOCK)
-			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-				AND b.statusID IN (111, 112, 113)
+			FROM #recommend c
+				INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId AND c.IsDirectMember = 0
+			WHERE b.statusID IN (111, 112, 113)
 				AND winlostdate > @moveBetsDay
 				AND (
 						b.winlostdate < @yesterday
@@ -299,21 +343,56 @@ BEGIN
 					)
 			GROUP BY recommend
 
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+				SELECT 
+					c.custid,
+					ISNULL(SUM(winlost-actual_stake+playercomm), 0),
+					'tblBettrans'
+				FROM #DirectMemberList c
+					INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_customerinfo) ON b.custid = c.CustId 
+				WHERE b.statusID IN (111, 112, 113)
+					AND winlostdate > @moveBetsDay
+					AND (
+							b.winlostdate < @yesterday
+							OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+						)
+				GROUP BY c.custid
+			END
+
 			-- Transfer
 			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
 			SELECT 
 				recommend,
-				ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-					+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+				ISNULL(SUM(CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
+					+ ISNULL(SUM(CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 				'tblTransfer'
-			FROM dbo.Transfer b WITH(NOLOCK)
-			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+			FROM #recommend c 
+				INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId AND c.IsDirectMember = 0
+			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 													WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 													WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 												ELSE 1 END
 						AND bettype NOT IN (21008, 21009)
 			GROUP BY recommend
+
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+				SELECT 
+					c.custid,
+					ISNULL(SUM(CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+					'tblTransfer'
+				FROM #DirectMemberList c 
+					INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_custid) ON b.custid = c.CustId
+				WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+														WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+														WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+													ELSE 1 END
+							AND bettype NOT IN (21008, 21009)
+				GROUP BY c.custid
+			END
 
 			----check MB date, BU date again to make sure it is not changed
 			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
@@ -343,11 +422,24 @@ BEGIN
 			recommend,
 			ISNULL(SUM(awinlost+comm-playercomm), 0)
 				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
-		FROM dbo.bettransRNG b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-			AND statusID NOT IN (0,1)
+		FROM #recommend c
+			INNER JOIN dbo.bettransRNG b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId AND c.IsDirectMember = 0
+		WHERE statusID NOT IN (0,1)
 			AND winlostdate = @yesterday
 		GROUP BY recommend
+
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #BalanceInfo (CustId, Balance)
+			SELECT 
+				c.CustId,
+				ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+			FROM #DirectMemberList c
+				INNER JOIN dbo.bettransRNG b WITH(NOLOCK, index = IX_custid) ON b.custid = c.CustId 
+			WHERE statusID NOT IN (0,1)
+				AND winlostdate = @yesterday
+			GROUP BY c.CustId
+		END
 
 		-- bettransLC
 		INSERT INTO #BalanceInfo (CustId, Balance)
@@ -355,11 +447,24 @@ BEGIN
 			recommend,
 			ISNULL(SUM(awinlost+comm-playercomm), 0)
 				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
-		FROM dbo.bettransLC b WITH(NOLOCK)
-		WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-			AND statusID NOT IN (0,1)
+		FROM #recommend c
+			INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId AND c.IsDirectMember = 0 
+		WHERE statusID NOT IN (0,1)
 			AND winlostdate = @yesterday
 		GROUP BY recommend
+
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #BalanceInfo (CustId, Balance)
+			SELECT 
+				c.CustId,
+				ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+			FROM #DirectMemberList c
+				INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_custid) ON b.custid = c.CustId
+			WHERE statusID NOT IN (0,1)
+				AND winlostdate = @yesterday
+			GROUP BY c.CustId
+		END
 
 		WHILE (@IsDiff = 1)
 		BEGIN
@@ -373,9 +478,9 @@ BEGIN
 				ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0)
 					+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 				'tblBettrans'
-			FROM dbo.bettrans b WITH(NOLOCK)
-			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-				AND b.statusID IN (111, 112, 113)
+			FROM #recommend c
+				INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId AND c.IsDirectMember = 0
+			WHERE b.statusID IN (111, 112, 113)
 				AND winlostdate > @moveBetsDay
 				AND (
 						b.winlostdate < @yesterday
@@ -383,21 +488,56 @@ BEGIN
 					)
 			GROUP BY recommend
 
-				-- Transfer
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+				SELECT 
+					c.CustId,
+					ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+					'tblBettrans'
+				FROM #DirectMemberList c
+					INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_customerinfo) ON b.custid = c.CustId
+				WHERE b.statusID IN (111, 112, 113)
+					AND winlostdate > @moveBetsDay
+					AND (
+							b.winlostdate < @yesterday
+							OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+						)
+				GROUP BY c.CustId
+			END
+
+			-- Transfer
 			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
 			SELECT 
 				recommend,
-				ISNULL(SUM(CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ), 0)
-					+ ISNULL(SUM(CASE WHEN custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ), 0),
+				ISNULL(SUM(CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ), 0)
+					+ ISNULL(SUM(CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ), 0),
 				'tblTransfer'
-			FROM dbo.Transfer b WITH(NOLOCK)
-			WHERE EXISTS (SELECT 1 FROM #recommend r WHERE b.recommend = r.CustId)
-						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+			FROM #recommend c
+				INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_recommend) ON b.Recommend = c.CustId AND c.IsDirectMember = 0
+			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 													WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 													WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 												ELSE 1 END
 						AND bettype NOT IN (21008, 21009)
 			GROUP BY recommend
+
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #BalanceInfo (CustId, Balance, TableName)
+				SELECT 
+					c.CustId,
+					ISNULL(SUM(winlost-actual_stake+playercomm), 0),
+					'tblTransfer'
+				FROM #DirectMemberList c
+					INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_custid) ON b.CustId = c.CustId
+				WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+														WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+														WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+													ELSE 1 END
+							AND bettype NOT IN (21008, 21009)
+				GROUP BY c.CustId
+			END
 
 			----check MB date, BU date again to make sure it is not changed
 			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
@@ -446,7 +586,8 @@ BEGIN
 	 FROM #Agent 
 		INNER JOIN CustDB.dbo.custinfo ci with (NOLOCK) ON ci.custid = #Agent.custid 
 
-	 DECLARE @currency int , @actualrate float, @currName nvarchar(10), @RefNo bigint, @amount money, @grefno BIGINT, @TransID BIGINT
+	 DECLARE @currency int , @actualrate float, @currName nvarchar(10), @RefNo bigint, @amount money, @grefno BIGINT
+		, @TransID_from BIGINT, @TransID_to BIGINT
 	 DECLARE @srecommend int, @AgentID int , @MAUser nvarchar(50), @AgUser nvarchar(50)
 	 DECLARE @LogData nvarchar(200), @SubAccName varchar(30)
  
@@ -569,22 +710,23 @@ BEGIN
 			------------------Insert trans into DB---------------------------------------------------------------
 			IF @amount > 0
 			BEGIN
-				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
-				INSERT INTO Transfer 
-					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-					winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-					scomm, swinlost,ip,statusID, RepUpdateTime)
-				VALUES 
-					(@TransID ,@creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @agUser + @extraTransDesc, 
-					@amount, 0, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
-					0, 0,@ip,131,SYSDATETIME())
-				IF @@Error <> 0
-				BEGIN								
+				EXEC Get_Bettrans_TransID @TransID = @TransID_from OUTPUT
+				BEGIN TRY
+					INSERT INTO Transfer 
+						(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+						winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+						scomm, swinlost,ip,statusID, RepUpdateTime)
+					VALUES 
+						(@TransID_from ,@creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @agUser + @extraTransDesc, 
+						@amount, 0, @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
+						0, 0,@ip,131,SYSDATETIME())
+				END TRY
+				BEGIN CATCH							
 					SELECT @ErrCode = 102
 					--Manually rollback
 					UPDATE dbo.Transfer WITH(ROWLOCK)
 					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
-					WHERE refno = @RefNo
+					WHERE TransId IN (@TransID_from, @TransID_to)
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
@@ -592,26 +734,27 @@ BEGIN
 					WHERE CustID = @AgentID;
 
 					GOTO NEXT_PAIR;
-				END
+				END CATCH
 
 				DECLARE @TotalCashAgent MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCashAgent OUTPUT
 
-				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
-				INSERT INTO Transfer
-					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-					winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance, RepUpdateTime)
-				VALUES 
-					(@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @maUser + @extraTransDesc, 
-					0, @amount, @WinlostDate, @currency, @actualrate,@currName, @agentid, @masterid, @srecommend, 
-					0, 0,@ip,131, @TotalCashAgent,SYSDATETIME())
-				IF @@Error <> 0
-				BEGIN						
+				EXEC Get_Bettrans_TransID @TransID = @TransID_to OUTPUT
+				BEGIN TRY
+					INSERT INTO Transfer
+						(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
+						winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance, RepUpdateTime)
+					VALUES 
+						(@TransID_to, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @maUser + @extraTransDesc, 
+						0, @amount, @WinlostDate, @currency, @actualrate,@currName, @agentid, @masterid, @srecommend, 
+						0, 0,@ip,131, @TotalCashAgent,SYSDATETIME())
+				END TRY
+				BEGIN CATCH						
 					SELECT @ErrCode = 103
 					--Manually rollback
 					UPDATE dbo.Transfer WITH(ROWLOCK)
 					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
-					WHERE refno = @RefNo
+					WHERE TransId IN (@TransID_from, @TransID_to)
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
@@ -619,10 +762,10 @@ BEGIN
 					WHERE CustID = @AgentID;
 
 					GOTO NEXT_PAIR;
-				END
+				END CATCH
 
 				--Add writelog for each amt transfered - Vinh 20080629
-				SELECT @LogData = 'Transfer from Agent ' + @agUser + ' to Master ' + @maUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
+				SELECT @LogData = 'Transfer from Agent/Direct Member ' + @agUser + ' to Master ' + @maUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
 			
 				--AutoJob Transfer: Completed
 				UPDATE @tblResultMember
@@ -633,13 +776,13 @@ BEGIN
 			ELSE IF @amount<0
 			BEGIN
 				--SET @amount = abs(@amount)
-				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				EXEC Get_Bettrans_TransID @TransID = @TransID_from OUTPUT
 				INSERT INTO Transfer 
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 					scomm, swinlost,ip,statusID, RepUpdateTime)
 				VALUES 
-					(@TransID, @creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @agUser + @extraTransDesc, 
+					(@TransID_from, @creator, @masterid, @maUser, @RefNo, current_timestamp, 21003, 'To Customer ::: ' + @agUser + @extraTransDesc, 
 					0, abs(@amount),  @WinlostDate, @currency, @actualrate, @currName, 0, @masterid, @srecommend, 
 					0, 0,@ip,131,SYSDATETIME())
 				if @@Error <> 0
@@ -648,7 +791,7 @@ BEGIN
 					--Manually rollback
 					UPDATE dbo.Transfer WITH(ROWLOCK)
 					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
-					WHERE refno = @RefNo
+					WHERE TransId IN (@TransID_from, @TransID_to)
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
@@ -661,13 +804,13 @@ BEGIN
 				DECLARE @TotalCashAgentNev MONEY 
 				EXEC Acc_CustomerSelCash_CaptureBalance @custid = @agentid, @TotalCash  = @TotalCashAgentNev OUTPUT
 
-				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
+				EXEC Get_Bettrans_TransID @TransID = @TransID_to OUTPUT
 				INSERT INTO Transfer
 					(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, 
 					scomm, swinlost,ip,statusID, balance, RepUpdateTime)
 				VALUES 
-					(@TransID, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @maUser + @extraTransDesc, 
+					(@TransID_to, @creator, @agentid, @agUser, @RefNo, current_timestamp, 21003, 'From Customer ::: ' + @maUser + @extraTransDesc, 
 					abs(@amount), 0,@WinlostDate, @currency, @actualrate, @currName, @agentid, @masterid, @srecommend, 
 					0, 0,@ip,131, @TotalCashAgentNev,SYSDATETIME())
 				IF @@Error <> 0
@@ -676,7 +819,7 @@ BEGIN
 					--Manually rollback
 					UPDATE dbo.Transfer WITH(ROWLOCK)
 					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
-					WHERE refno = @RefNo
+					WHERE TransId IN (@TransID_from, @TransID_to)
 				
 					--AutoJob Transfer
 					UPDATE @tblResultMember
@@ -687,7 +830,7 @@ BEGIN
 				END
 			
 				--Add writelog for each amt transfered - Vinh 20080629
-				SELECT @LogData = 'Transfer from Master ' + @maUser + ' to Agent ' + @agUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
+				SELECT @LogData = 'Transfer from Master ' + @maUser + ' to Agent/Direct Member ' + @agUser + ' with amount ' + CONVERT(VARCHAR(20), @amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
 			
 				--AutoJob Transfer: Completed
 				UPDATE @tblResultMember
@@ -756,5 +899,7 @@ BEGIN
 	DROP TABLE #SportBettype
 	DROP TABLE #BalanceInfo
 	DROP TABLE #recommend
+	DROP TABLE #ClearBalanceCust_Setting
+	DROP TABLE #DirectMemberList
 END
 GO
