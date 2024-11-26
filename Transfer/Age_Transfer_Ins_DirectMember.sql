@@ -78,7 +78,7 @@ Param's Explanation:
 BEGIN
 	SET NOCOUNT ON;
 	DECLARE @RefNo BIGINT, @ToCustID INT
-		, @UplineID int, @custid int,  @srecommend int, @TransID_from BIGINT,@TransID_to BIGINT, @mrecommend INT
+		, @custid int,  @srecommend int, @TransID_from BIGINT,@TransID_to BIGINT, @mrecommend INT
 	DECLARE @currency int, @actualrate float, @currName nvarchar(10) , @User nvarchar(50)
 	DECLARE @Upline_UserName nvarchar(50), @ABSamount MONEY
 	DECLARE @SubAccName VARCHAR(30) = '', @Member_recommend INT,@member_mrecommend INT
@@ -457,7 +457,7 @@ BEGIN
 		   @Upline_Username = c.username, @srecommend = c.srecommend, @mrecommend = c.mrecommend
 	FROM CustDB.dbo.custinfo c with (NOLOCK) 
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on c.currency = e.exchangeid 
-	WHERE custid = @UplineID AND roleid IN (3,4)
+	WHERE custid = @ToCustID AND roleid IN (3,4)
 
 	EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 	------------------Insert trans into DB---------------------------------------------------------------
@@ -476,7 +476,7 @@ BEGIN
 				winlostdate, currency, actualrate, currencyName,recommend, mrecommend, srecommend, 
 			scomm, swinlost,ip,statusID,RepUpdateTime)
 		VALUES 
-			(@TransID_from ,@creator, @UplineID, @Upline_Username, @RefNo, current_timestamp, 21004, 'From Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			(@TransID_from ,@creator, @ToCustID, @Upline_Username, @RefNo, current_timestamp, 21004, 'From Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 			@amount, 0,  @WinlostDate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
 			0, 0,@ip,131,SYSDATETIME())
 		END TRY
@@ -543,7 +543,7 @@ BEGIN
 				(transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
 					winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
 				scomm, swinlost,ip,statusID, RepUpdateTime)
-			VALUES (@TransID_from, @creator, @UplineID, @Upline_UserName, @RefNo, current_timestamp, 21004, 'To Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+			VALUES (@TransID_from, @creator, @ToCustID, @Upline_UserName, @RefNo, current_timestamp, 21004, 'To Customer :: ' + @User + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 				0, abs(@amount), @WinlostDate, @currency, @actualrate,@currName, 0, @mrecommend, @srecommend, 
 				0, 0,@ip,131, SYSDATETIME())
 		END TRY
