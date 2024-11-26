@@ -7,7 +7,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinlossDetail_WeekDataSel]
 	@ProductDetails NVARCHAR(MAX) = 'All',
 	@BalanceUpDay	SMALLDATETIME,
 	@MoveBetsDay	SMALLDATETIME,
-	@UserName		VARCHAR(30) = ''
+	@UserName		VARCHAR(30) = '',
+	@IsReward		BIT = 1
 
 AS
 
@@ -19,6 +20,7 @@ DB: DBAGE/bodb02
 Revisions:
 	- 20240211@Bobby: Init [RedmineID: #202084]
 	- 20240625@Lewis: Change custinfo into customer [RedmineID: #207026]
+    - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 	
 	Param's Explanation:
 */
@@ -100,7 +102,22 @@ BEGIN
 			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
 		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
 	END
-			
+
+	--TODO: SabaWalletTicket
+	IF @IsReward = 1
+	BEGIN
+		INSERT INTO #WeekRange(winlostdate)
+		SELECT DISTINCT b.winlostdate
+		FROM SabaWalletTicket b WITH (NOLOCK)
+		WHERE b.winlostdate BETWEEN @FDate AND @TDate
+			AND WalletID = 2
+			AND 1 = CASE WHEN @roleId = 4 AND b.Srecommend = @CID THEN 1
+						 WHEN @roleId = 3 AND b.Mrecommend = @CID THEN 1
+						 WHEN @roleId = 2 AND b.Recommend = @CID THEN 1
+						 WHEN @roleId = 1 AND b.CustID = @CID THEN 1
+						 END
+	END
+				
 	--TODO: bettrans range
 	IF @ToDate > @MoveBetsDay
 	BEGIN 	
@@ -185,6 +202,7 @@ BEGIN
 			AND ISNULL(b.ticketType,0) = w.ticketType
 		OPTION (MAXRECURSION 0);
 	END	
+	
 
 	--TODO: Return
 	RS_OUTPUT:

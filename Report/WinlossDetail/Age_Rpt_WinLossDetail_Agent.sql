@@ -10,7 +10,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Agent]
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
 	@TotalRecords	INT = 0 OUTPUT,
-	@UserName		VARCHAR(30) = ''
+	@UserName		VARCHAR(30) = '',
+	@IsReward		BIT = 1
 
 AS
 
@@ -50,6 +51,7 @@ Revisions:
 	- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 	- 20240424@Lewis: Change old sql account [Redmine: #204021]
 	- 20240703@Lewis: Switch data source - from bettrans to bettranscompact [Redmine: #207517]
+    - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -109,7 +111,8 @@ BEGIN
 		AgComm			MONEY,
 		MAgWinLost		MONEY,
 		MAgComm			MONEY,
-		NoOfTicket		INT
+		NoOfTicket		INT,
+		RewardAmount	MONEY
 	)
 
 	CREATE TABLE #GrossComm (CustId INT, TurnoverNoDraw MONEY, GrossComm MONEY)
@@ -149,9 +152,13 @@ BEGIN
 
 	------Get @Srecommend
 	DECLARE @Srecommend int;
+	DECLARE @CurrencyCode VARCHAR(12);
 
-	SELECT @Srecommend = Srecommend 
-	FROM dbo.CustInfo WITH(NOLOCK)
+	SELECT @Srecommend = Srecommend
+			,@CurrencyCode = e.Code
+	FROM dbo.CustInfo c WITH(NOLOCK)
+	INNER JOIN dbo.Exchange e WITH (NOLOCK)
+		ON c.currency = e.ExchangeId
 	WHERE CustID = @CustID;
 
 	-----Get Special Super to hide data of them before specific date 
@@ -176,7 +183,8 @@ BEGIN
 	SELECT	@FDate = @FromDate,
 			@TDate = @ToDate, 
 			@CID = @custid;
-			
+
+				
 	--TODO: bettrans range
 	IF @ToDate > @MoveBetsDay
 	BEGIN 	
@@ -389,42 +397,103 @@ BEGIN
 		OPTION (MAXRECURSION 0);
 	END	
 
+
+	--TODO: SabaWalletTicket
+	IF @IsReward = 1
+	BEGIN
+		SELECT @FDate = @FromDate, @TDate = @ToDate
+
+		INSERT INTO #MAgWinLossDetails(CustID,RewardAmount)
+		SELECT Recommend,SUM(Amount)
+		FROM SabaWalletTicket b WITH (NOLOCK)
+		WHERE b.winlostdate BETWEEN @FDate AND @TDate
+			AND b.WalletID= 2
+			AND b.Mrecommend = @CID
+			AND (@UserName_CustId = 0 OR b.Recommend = @UserName_CustId)
+		GROUP BY Recommend
+	END
+	
+	--TODO: Result
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT	c.CustID AS CustId, 
-				c.UserName AS CustName, 
-				c.FirstName,
-				c.LastName,
-				SUM(TurnOver) AS Turnover,
-				SUM(TurnoverNoDraw) as NetTurnover,
-				SUM(GrossComm) AS GrossComm,
-				SUM(MemberWinLost) AS MemberWinLoss,
-				SUM(PlayerComm) AS MemberComm,
-				SUM(AgWinlost) AS AgWinLoss,
-				SUM(AgComm) AS AgComm,
-				SUM(MAgWinlost) AS MAgWinLoss,
-				SUM(MAgComm) AS MAgComm,
-				SUM(NoOfTicket) AS NumberOfTickets
-		FROM #MAgWinLossDetails w 
-			LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-		WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-		GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
-		ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
+		IF @IsReward = 1
+		BEGIN
+			SELECT	c.CustID AS CustId, 
+					c.UserName AS CustName, 
+					c.FirstName,
+					c.LastName,
+					SUM(TurnOver) AS Turnover,
+					SUM(TurnoverNoDraw) as NetTurnover,
+					SUM(GrossComm) AS GrossComm,
+					SUM(MemberWinLost) AS MemberWinLoss,
+					SUM(PlayerComm) AS MemberComm,
+					SUM(AgWinlost) AS AgWinLoss,
+					SUM(AgComm) AS AgComm,
+					SUM(MAgWinlost) AS MAgWinLoss,
+					SUM(MAgComm) AS MAgComm,
+					SUM(NoOfTicket) AS NumberOfTickets,
+					SUM(w.RewardAmount) AS RewardAmount,
+					@CurrencyCode AS RewardCurrency
+			FROM #MAgWinLossDetails w 
+				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
+			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+			ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
 
-		SELECT	NULL AS CustId,
-				'Total' AS CustName,
-				SUM(TurnOver) AS Turnover,
-				SUM(TurnoverNoDraw) as NetTurnover,
-				SUM(GrossComm) AS GrossComm,
-				SUM(MemberWinLost) AS MemberWinLoss,
-				SUM(PlayerComm) AS MemberComm,
-				SUM(AgWinlost) AS AgWinLoss,
-				SUM(AgComm) AS AgComm,
-				SUM(MAgWinlost) AS MAgWinLoss,
-				SUM(MAgComm) AS MAgComm,
-				SUM(NoOfTicket) AS NumberOfTickets
-		FROM #MAgWinLossDetails
-		WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+			SELECT	NULL AS CustId,
+					'Total' AS CustName,
+					SUM(TurnOver) AS Turnover,
+					SUM(TurnoverNoDraw) as NetTurnover,
+					SUM(GrossComm) AS GrossComm,
+					SUM(MemberWinLost) AS MemberWinLoss,
+					SUM(PlayerComm) AS MemberComm,
+					SUM(AgWinlost) AS AgWinLoss,
+					SUM(AgComm) AS AgComm,
+					SUM(MAgWinlost) AS MAgWinLoss,
+					SUM(MAgComm) AS MAgComm,
+					SUM(NoOfTicket) AS NumberOfTickets,
+					SUM(RewardAmount) AS RewardAmount,
+					@CurrencyCode AS RewardCurrency
+			FROM #MAgWinLossDetails
+			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+		END
+		ELSE
+		BEGIN
+			SELECT	c.CustID AS CustId, 
+					c.UserName AS CustName, 
+					c.FirstName,
+					c.LastName,
+					SUM(TurnOver) AS Turnover,
+					SUM(TurnoverNoDraw) as NetTurnover,
+					SUM(GrossComm) AS GrossComm,
+					SUM(MemberWinLost) AS MemberWinLoss,
+					SUM(PlayerComm) AS MemberComm,
+					SUM(AgWinlost) AS AgWinLoss,
+					SUM(AgComm) AS AgComm,
+					SUM(MAgWinlost) AS MAgWinLoss,
+					SUM(MAgComm) AS MAgComm,
+					SUM(NoOfTicket) AS NumberOfTickets
+			FROM #MAgWinLossDetails w 
+				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
+			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+			ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
+
+			SELECT	NULL AS CustId,
+					'Total' AS CustName,
+					SUM(TurnOver) AS Turnover,
+					SUM(TurnoverNoDraw) as NetTurnover,
+					SUM(GrossComm) AS GrossComm,
+					SUM(MemberWinLost) AS MemberWinLoss,
+					SUM(PlayerComm) AS MemberComm,
+					SUM(AgWinlost) AS AgWinLoss,
+					SUM(AgComm) AS AgComm,
+					SUM(MAgWinlost) AS MAgWinLoss,
+					SUM(MAgComm) AS MAgComm,
+					SUM(NoOfTicket) AS NumberOfTickets
+			FROM #MAgWinLossDetails
+			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+		END
 	END
 	ELSE
 	BEGIN
@@ -439,14 +508,38 @@ BEGIN
 			) tmp; 
 		END
 
-		SELECT wl.*
-		FROM (
-			SELECT	c.CustID AS CustId, 
-					c.UserName AS CustName, 
-					c.FirstName,
-					c.LastName,
+		IF @IsReward = 1
+		BEGIN
+			SELECT wl.*
+			FROM (
+				SELECT	c.CustID AS CustId, 
+						c.UserName AS CustName, 
+						c.FirstName,
+						c.LastName,
+						SUM(TurnOver) AS Turnover,
+						SUM(TurnoverNoDraw) AS NetTurnover,
+						SUM(GrossComm) AS GrossComm,
+						SUM(MemberWinLost) AS MemberWinLoss,
+						SUM(PlayerComm) AS MemberComm,
+						SUM(AgWinlost) AS AgWinLoss,
+						SUM(AgComm) AS AgComm,
+						SUM(MAgWinlost) AS MAgWinLoss,
+						SUM(MAgComm) AS MAgComm,
+						SUM(NoOfTicket) AS NumberOfTickets,
+						SUM(w.RewardAmount) AS RewardAmount,
+						@CurrencyCode AS RewardCurrency,
+						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum
+				FROM #MAgWinLossDetails w
+					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+				WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
+				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+			) wl
+			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+
+			SELECT	NULL AS CustId,
+					'Total' AS CustName,
 					SUM(TurnOver) AS Turnover,
-					SUM(TurnoverNoDraw) AS NetTurnover,
+					SUM(TurnoverNoDraw) as NetTurnover,
 					SUM(GrossComm) AS GrossComm,
 					SUM(MemberWinLost) AS MemberWinLoss,
 					SUM(PlayerComm) AS MemberComm,
@@ -455,28 +548,53 @@ BEGIN
 					SUM(MAgWinlost) AS MAgWinLoss,
 					SUM(MAgComm) AS MAgComm,
 					SUM(NoOfTicket) AS NumberOfTickets,
-					ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum
-			FROM #MAgWinLossDetails w
-				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
-		) wl
-		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+					SUM(RewardAmount) AS RewardAmount,
+					@CurrencyCode AS RewardCurrency
+			FROM #MAgWinLossDetails
+			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+		END
+		ELSE
+		BEGIN
+			SELECT wl.*
+			FROM (
+				SELECT	c.CustID AS CustId, 
+						c.UserName AS CustName, 
+						c.FirstName,
+						c.LastName,
+						SUM(TurnOver) AS Turnover,
+						SUM(TurnoverNoDraw) AS NetTurnover,
+						SUM(GrossComm) AS GrossComm,
+						SUM(MemberWinLost) AS MemberWinLoss,
+						SUM(PlayerComm) AS MemberComm,
+						SUM(AgWinlost) AS AgWinLoss,
+						SUM(AgComm) AS AgComm,
+						SUM(MAgWinlost) AS MAgWinLoss,
+						SUM(MAgComm) AS MAgComm,
+						SUM(NoOfTicket) AS NumberOfTickets,
+						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum
+				FROM #MAgWinLossDetails w
+					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+				WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
+				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+			) wl
+			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
-		SELECT	NULL AS CustId,
-				'Total' AS CustName,
-				SUM(TurnOver) AS Turnover,
-				SUM(TurnoverNoDraw) as NetTurnover,
-				SUM(GrossComm) AS GrossComm,
-				SUM(MemberWinLost) AS MemberWinLoss,
-				SUM(PlayerComm) AS MemberComm,
-				SUM(AgWinlost) AS AgWinLoss,
-				SUM(AgComm) AS AgComm,
-				SUM(MAgWinlost) AS MAgWinLoss,
-				SUM(MAgComm) AS MAgComm,
-				SUM(NoOfTicket) AS NumberOfTickets
-		FROM #MAgWinLossDetails
-		WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+			SELECT	NULL AS CustId,
+					'Total' AS CustName,
+					SUM(TurnOver) AS Turnover,
+					SUM(TurnoverNoDraw) as NetTurnover,
+					SUM(GrossComm) AS GrossComm,
+					SUM(MemberWinLost) AS MemberWinLoss,
+					SUM(PlayerComm) AS MemberComm,
+					SUM(AgWinlost) AS AgWinLoss,
+					SUM(AgComm) AS AgComm,
+					SUM(MAgWinlost) AS MAgWinLoss,
+					SUM(MAgComm) AS MAgComm,
+					SUM(NoOfTicket) AS NumberOfTickets
+			FROM #MAgWinLossDetails
+			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+		END
+		
 	END
 
 

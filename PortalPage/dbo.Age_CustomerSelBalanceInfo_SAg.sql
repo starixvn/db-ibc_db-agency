@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_SAg]
 	 @custid		INT, -- srecommend
 	 @MoveBetsDay	SMALLDATETIME -- not use
@@ -16,6 +16,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20220429@Malcolm: Offer telegram bot service - [Redmine: #167819]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+        - 20240918@Lewis: Rebate Retention - RewardReceivable RewardPayable [RedmineId: #208503]
 */
 
 BEGIN
@@ -73,6 +74,17 @@ BEGIN
 	)
 	EXEC dbo.Acc_CustomerSelWinLoss @CustId = @CustId, @MoveBetDay = @moveBetDay
 
+	--Reward
+	DECLARE
+			@RewardPending MONEY = NULL ,
+			@RewardBalance MONEY = NULL ,  
+			@RewardCurrency VARCHAR(10) = NULL 
+	EXEC Acc_CustomerSelBalanceReward @CustId = @CustID
+									  ,@RewardPending  = @RewardPending OUTPUT   
+									  ,@RewardBalance  = @RewardBalance OUTPUT
+									  ,@RewardCurrency = @RewardCurrency OUTPUT
+
+
 	SELECT
 		@username					AS username,
 		@CurrencyName				AS CurrencyName,
@@ -84,7 +96,11 @@ BEGIN
 		SUM(yesterdayWinloss)		AS yesterdayWinloss,
 		@givenCredit				AS givenCredit,
 		@memberCredit				AS memberCredit,
-		SUM(PendingTransfer3rd)	AS PendingTransfer3rd
+		SUM(PendingTransfer3rd)	AS PendingTransfer3rd,
+		--Reward
+		@RewardPending AS RewardPayable,
+		@RewardBalance AS RewardReceivable,
+		@RewardCurrency AS RewardCurrency
 	FROM #BalanceInfo
 
 	DROP TABLE #BalanceInfo
