@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet, bodbDownlineNet,bodbDownlineNetView" isFunction="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_nap, wsv_alp,wsv_alpv" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_BalanceMemberSel]
 	@CustID INT
 AS
@@ -14,6 +14,7 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+        - 20240918@Lewis: Rebate Retention - RewardReceivable RewardPayable [RedmineId: #208503]
 
 	Example: EXEC Age_BalanceMemberSel @CustID=1382337
 */
@@ -61,10 +62,21 @@ BEGIN
 	)
 	EXEC dbo.Acc_CustomerSelCash @CustId = @CustId, @MoveBetDay = @moveBetDay, @BUDate = @balanceUpDay
 
+	DECLARE
+			@RewardPending MONEY = NULL ,
+			@RewardBalance MONEY = NULL ,  
+			@RewardCurrency VARCHAR(10) = NULL 
+	EXEC Acc_CustomerSelBalanceReward @CustId = @CustID
+									  ,@RewardPending  = @RewardPending OUTPUT   
+									  ,@RewardBalance  = @RewardBalance OUTPUT
+									  ,@RewardCurrency = @RewardCurrency OUTPUT
 	SELECT
 		@custid AS CustID,		
 		SUM(yesterdayMemberCash) AS yesterday_Cash
 		-- Cash & Outstanding & PendingTransfer3rd: get from other SP
+		-- Reward
+		,@RewardBalance AS RewardReceivable
+		,@RewardCurrency AS RewardCurrency
 	FROM #BalanceInfo
 
 	DROP TABLE #BalanceInfo
