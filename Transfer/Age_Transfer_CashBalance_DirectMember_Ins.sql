@@ -1,5 +1,5 @@
 /*<info serverAlias="DBSIC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_Ins]
+ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_DirectMember_Ins]
 	@FromCustID		INT,
 	@ToCustID		INT,
 	@SubAccID		INT = 0,
