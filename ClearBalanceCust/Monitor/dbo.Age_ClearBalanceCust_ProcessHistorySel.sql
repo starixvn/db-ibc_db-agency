@@ -137,7 +137,7 @@ BEGIN
 		IsDirectMember	BIT
 	);
 
-	INSERT INTO #pageResult (UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, TotalRow)
+	INSERT INTO #pageResult (UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, TotalRow,IsDirectMember)
 	SELECT c.UserName, c.FirstName, c.LastName,  
 		CASE 
 			WHEN p.StartTime IS NOT NULL THEN p.Amount
