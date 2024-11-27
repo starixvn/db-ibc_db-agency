@@ -52,6 +52,7 @@ Revisions:
 	- 20240424@Lewis: Change old sql account [Redmine: #204021]
 	- 20240703@Lewis: Switch data source - from bettrans to bettranscompact [Redmine: #207517]
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
+	- 20241127@Bobby: Enhance Perf bettrans_compact [RedmineId: #214299]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -182,19 +183,26 @@ BEGIN
 	INNER JOIN dbo.Exchange e WITH (NOLOCK) 
 		ON c.currency = e.ExchangeId
 	WHERE c.custid = @CID
-			
+
 	--TODO: bettrans range
 	IF @ToDate > @MoveBetsDay
 	BEGIN
+		DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX)
+
 		SELECT @FDate	= IIF(@FromDate <= @MoveBetsDay, DATEADD(DD, 1, @MoveBetsDay), @FromDate)
 			,@TDate		= @ToDate
 
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@downlineIds	= STRING_AGG(CAST(custid AS VARCHAR(MAX)), ',')
+		FROM dbo.Customer WITH(NOLOCK)
+		WHERE srecommend = @CID
+			AND RoleId = 3
+
 		-- TODO: get data from bettrans_compact
 		;WITH CTE_Master AS (
-			SELECT custid
-			FROM dbo.Customer WITH(NOLOCK)
-			WHERE srecommend = @CID
-				AND RoleId = 3
+			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+			FROM STRING_SPLIT(@downlineIds, ',') AS c
 		)
 		INSERT INTO #SAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, SAgWinLost, SAgComm, NoOfTicket)
 		SELECT	b.custid,
