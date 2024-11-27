@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView,wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_CashBalance_Ins]
 	@FromCustID		INT,
 	@ToCustID		INT,
@@ -395,7 +395,7 @@ BEGIN
 		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
 		SELECT 0, 0, SUM(ABS(actual_stake*mpositiontaking))
 	    FROM dbo.translog t WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM CustDB.dbo.Customer c WITH(NOLOCK) WHERE t.recommend = c.custid AND c.mrecommend = @mrecommend AND c.roleid = 2)
+		WHERE mrecommend = @custid
 			AND statusID IN (0,1)
 
 		WHILE (@IsDiff = 1)
@@ -507,16 +507,16 @@ BEGIN
 		
 		EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
-		INSERT INTO Transfer
-			(TransId, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
-			 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, RepUpdateTime)
-		VALUES 
-			(@TransID, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, @Amount, 0, 
-			 @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131,SYSDATETIME())
-			
-		IF @@ERROR <> 0
-		BEGIN
+		BEGIN TRY
+			INSERT INTO Transfer
+				(TransId, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
+				 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, RepUpdateTime)
+			VALUES 
+				(@TransID, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, @Amount, 0, 
+				 @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
+				0, 0, @ip, 131,SYSDATETIME())
+		END	TRY		
+		BEGIN CATCH
 			SELECT @ErrCode = 102
 				
 			-- Manually rollback
@@ -525,7 +525,7 @@ BEGIN
 			WHERE refno = @RefNo
 				
 			RETURN
-		END
+		END CATCH
 
 		-- Update balance of member
 		IF @RoleId = 1
@@ -552,17 +552,17 @@ BEGIN
 
 		EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
-		INSERT INTO Transfer
-			(TransID, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
-			 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, Balance, RepUpdateTime)
-		VALUES 
-			(@TransID, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, @Amount,
-			 @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131,@TotalCashTo,SYSDATETIME())
+		BEGIN TRY
+			INSERT INTO Transfer
+				(TransID, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
+				 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, Balance, RepUpdateTime)
+			VALUES 
+				(@TransID, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, @Amount,
+				 @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
+				0, 0, @ip, 131,@TotalCashTo,SYSDATETIME())
 
-				
-		IF @@ERROR <> 0
-		BEGIN
+		END TRY		
+		BEGIN CATCH
 			SELECT @ErrCode = 102
 
 			-- Manually rollback
@@ -577,7 +577,7 @@ BEGIN
 			END
 
 			RETURN
-		END
+		END CATCH
 
 		SELECT @LogUsername = CASE @RoleId
 								WHEN 1 THEN 'from Customer ' + @ToUsername + ' to Agent' + @FromUsername
@@ -593,16 +593,16 @@ BEGIN
 
 		EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
-		INSERT INTO Transfer 
-			(TransID, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
-			 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, RepUpdateTime)
-		VALUES 
-			(@TransID, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, ABS(@Amount),
-			   @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131, SYSDATETIME())
-				
-		IF @@ERROR <> 0
-		BEGIN
+		BEGIN TRY
+			INSERT INTO Transfer 
+				(TransID, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
+				 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, RepUpdateTime)
+			VALUES 
+				(@TransID, @creator, @FromCustID, @FromUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, 0, ABS(@Amount),
+				   @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId = 1 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 2 THEN @mrecommend ELSE 0 END, @srecommend,
+				0, 0, @ip, 131, SYSDATETIME())
+		END TRY
+		BEGIN CATCH
 			SELECT @ErrCode = 107
 
 			--Manually rollback
@@ -611,7 +611,7 @@ BEGIN
 			WHERE refno = @RefNo
 					
 			RETURN
-		END
+		END CATCH
 		
 		SELECT @transdesc = 'Cash Balance From ::' + CASE WHEN @RoleId = 1 THEN ' ' ELSE ': ' END + @FromUsername + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END
 		
@@ -620,16 +620,16 @@ BEGIN
 
 		EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 
-		INSERT INTO Transfer
-			(TransId, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
-			 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, balance, RepUpdateTime)
-		VALUES 
-			(@TransID, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, ABS(@Amount), 0,
-			 @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
-			0, 0, @ip, 131,@TotalCashToNev, SYSDATETIME())
-				
-		IF @@ERROR <> 0
-		BEGIN
+		BEGIN TRY
+			INSERT INTO Transfer
+				(TransId, Creator, CustId, Username, RefNo, TransDate, Bettype, TransDesc, Winlost, Actual_Stake,   
+				 WinlostDate, Currency, ActualRate, CurrencyName, Recommend, MRecommend, SRecommend, SComm, SWinlost,IP,StatusId, balance, RepUpdateTime)
+			VALUES 
+				(@TransID, @creator, @ToCustID, @ToUsername, @RefNo, CURRENT_TIMESTAMP, @bettype, @transdesc, ABS(@Amount), 0,
+				 @winlostdate, @currency, @actualrate, @currencyname, CASE WHEN @RoleId <= 2 THEN @recommend ELSE 0 END, CASE WHEN @RoleId <= 3 THEN @mrecommend ELSE 0 END, @srecommend,
+				0, 0, @ip, 131,@TotalCashToNev, SYSDATETIME())
+		END TRY	
+		BEGIN CATCH
 			SELECT @ErrCode = 107
 
 			--Manually rollback
@@ -638,7 +638,7 @@ BEGIN
 			WHERE refno = @RefNo
 					
 			RETURN
-		END
+		END CATCH
 
 		-- Update balance of member
 		IF @RoleId = 1

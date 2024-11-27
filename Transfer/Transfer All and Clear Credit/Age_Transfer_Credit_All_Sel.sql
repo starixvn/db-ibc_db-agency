@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
@@ -21,6 +21,7 @@ AS
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		- 20230526@Danny: Scale out dbtrans [RedmineID: #181595]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
 		- @DownlineNetPosition : 
@@ -453,21 +454,32 @@ BEGIN
 			yesterdayMemberCash MONEY, totalMemberCash MONEY,
 			yesterdayAgentCash MONEY, totalAgentCash MONEY,
 			yesterdayMasterCash MONEY, totalMasterCash MONEY,
-			Outstanding MONEY, AmountAfterTransfer MONEY
+			Outstanding MONEY, AmountAfterTransfer MONEY,
+			IsDirectMemeber BIT DEFAULT(0)
 		)
+
+		CREATE TABLE #DirectMember (CustId INT PRIMARY KEY)
 
 		IF @RoleId = 4
 		BEGIN
+			INSERT INTO #DirectMember (CustId)
+			SELECT c.custid
+			FROM dbo.custInfo c WITH (NOLOCK)
+			WHERE c.mrecommend = @DownlineCustID
+				AND c.recommend = -3
+				AND c.roleid = 1
+
 			INSERT INTO #Result
 			(
 				custId,
 				yesterdayMemberCash, totalMemberCash,
 				yesterdayAgentCash, totalAgentCash,
 				yesterdayMasterCash, totalMasterCash,
-				Outstanding, AmountAfterTransfer
+				Outstanding, AmountAfterTransfer,
+				IsDirectMemeber
 			)
 			SELECT
-				custId,
+				d.custId,
 				SUM(CASE WHEN statusId NOT IN (0,1) AND winlostdate <= @yesterday THEN
 						CASE WHEN roleId = 1 THEN ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(playercomm,0) ELSE 0 END
 						ELSE 0 END),
@@ -488,9 +500,11 @@ BEGIN
 						ELSE 0 END),
 				SUM(CASE WHEN statusId IN (0,1) AND roleId = 1 THEN ISNULL(actual_stake,0) ELSE 0 END),
 				SUM(CASE WHEN @IsTotalTransfer = 1 OR roleId > 1 OR winlostdate <= @yesterday THEN CASE WHEN statusId IN (0,1) THEN -ISNULL(actual_stake,0) ELSE 0 END
-						ELSE ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(playercomm,0) END)
-			FROM #Data
-			GROUP BY custId
+						ELSE ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(playercomm,0) END),
+				CASE WHEN c.CustId IS NOT NULL THEN 1 ELSE 0 END
+			FROM #Data d
+				LEFT JOIN #DirectMember c ON c.CustId = d.custId
+			GROUP BY d.custId, CASE WHEN c.CustId IS NOT NULL THEN 1 ELSE 0 END
 		END
 		ELSE IF @RoleId = 3
 		BEGIN
@@ -524,8 +538,10 @@ BEGIN
 
 		DROP TABLE #Data
 
-		DECLARE @memberOutStanding MONEY
-		SELECT  @memberOutStanding = ISNULL(SUM(Outstanding), 0) FROM #Result
+		DECLARE @memberOutStanding MONEY, @DirectmemberOutStanding MONEY
+		SELECT  @memberOutStanding = ISNULL(SUM(CASE WHEN IsDirectMemeber = 0 THEN Outstanding ELSE 0 END), 0) 
+			, @DirectmemberOutStanding = ISNULL(SUM(CASE WHEN IsDirectMemeber = 1 THEN Outstanding ELSE 0 END), 0) 
+		FROM #Result
 
 		-- Calculate credit
 		BEGIN
@@ -578,7 +594,7 @@ BEGIN
 				END
 			END
 
-			DECLARE @memberClearableCredit MONEY = 0
+			DECLARE @memberClearableCredit MONEY = 0, @DirectmemberClearableCredit MONEY
 
 			IF EXISTS (SELECT 1 FROM @ErrTable)
 			BEGIN
@@ -593,7 +609,17 @@ BEGIN
 				FROM dbo.custInfo c WITH (NOLOCK)
 					LEFT JOIN #Result r ON c.custId = r.custId
 					LEFT JOIN #NetPosition np ON c.custId = np.custId
-				WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1
+				WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1 AND c.recommend > 0
+					AND ISNULL(c.credit, 0) > 0
+
+				SELECT @DirectmemberClearableCredit =
+					SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
+							WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
+							ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
+				FROM dbo.custInfo c WITH (NOLOCK)
+					LEFT JOIN #Result r ON c.custId = r.custId
+					LEFT JOIN #NetPosition np ON c.custId = np.custId
+				WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1 AND c.recommend = -3
 					AND ISNULL(c.credit, 0) > 0
 			END
 			ELSE IF @RoleId = 3
@@ -609,7 +635,7 @@ BEGIN
 					AND ISNULL(c.credit, 0) > 0
 			END
 
-			SELECT @memberClearableCredit = ISNULL(@memberClearableCredit, 0)
+			SELECT @memberClearableCredit = ISNULL(@memberClearableCredit, 0), @DirectmemberClearableCredit = ISNULL(@DirectmemberClearableCredit, 0)
 
 			DROP TABLE #NetPosition
 		END
@@ -626,28 +652,32 @@ BEGIN
 			UNION ALL
 			SELECT 2, 0, NULL
 			UNION ALL
-			SELECT 3, 0, NULL WHERE @RoleId = 4
+			SELECT 3, 0, @DirectmemberOutStanding  
+			UNION ALL
+			SELECT 4, 0, NULL 
+			WHERE @RoleId = 4
 		END
 		ELSE IF @IsTotalTransfer = 1
 		BEGIN
 			SELECT
 				Detail AS RowId,
 				u.TransferableAmount,
-				CASE WHEN u.Detail = 1 THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
+				CASE WHEN u.Detail IN (1,3) THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
 			FROM
 			(
 				SELECT
-					ISNULL(SUM(totalMemberCash), 0) AS [1],
-					ISNULL(SUM(totalMemberCash+totalAgentCash), 0) AS [2],
-					ISNULL(SUM(totalMemberCash+totalAgentCash+totalMasterCash), 0) AS [3]
+					ISNULL(SUM(CASE WHEN IsDirectMemeber = 0 THEN totalMemberCash ELSE 0 END), 0) AS [1],
+					ISNULL(SUM((CASE WHEN IsDirectMemeber = 0 THEN totalMemberCash ELSE 0 END)+totalAgentCash), 0) AS [2],
+					ISNULL(SUM(CASE WHEN IsDirectMemeber = 1 THEN totalMemberCash ELSE 0 END), 0) AS [3], --DirectMember to Master
+					ISNULL(SUM(totalMemberCash+totalAgentCash+totalMasterCash), 0) AS [4]
 				FROM #Result
 			) AS Balance
 			UNPIVOT
 			(
 				TransferableAmount
-				FOR Detail IN ([1],[2],[3])
+				FOR Detail IN ([1],[2],[3],[4])
 			) AS u
-			WHERE (@RoleId = 4 OR u.Detail <> 3)
+			WHERE (@RoleId = 4 OR u.Detail <> 4)
 			ORDER BY RowId
 		END
 		ELSE
@@ -655,34 +685,36 @@ BEGIN
 			SELECT
 				Detail AS RowId,
 				u.TransferableAmount,
-				CASE WHEN u.Detail = 1 THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
+				CASE WHEN u.Detail IN (1,4) THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
 			FROM
 			(
 				SELECT
-					ISNULL(SUM(yesterdayMemberCash), 0) AS [1],
-					ISNULL(SUM(yesterdayMemberCash+yesterdayAgentCash), 0) AS [2],
-					ISNULL(SUM(yesterdayMemberCash+yesterdayAgentCash+yesterdayMasterCash), 0) AS [3]
+					ISNULL(SUM(CASE WHEN IsDirectMemeber = 0 THEN yesterdayMemberCash ELSE 0 END), 0) AS [1],
+					ISNULL(SUM((CASE WHEN IsDirectMemeber = 0 THEN yesterdayMemberCash ELSE 0 END)+yesterdayAgentCash), 0) AS [2],
+					ISNULL(SUM(CASE WHEN IsDirectMemeber = 1 THEN yesterdayMemberCash ELSE 0 END), 0) AS [3],
+					ISNULL(SUM(yesterdayMemberCash+yesterdayAgentCash+yesterdayMasterCash), 0) AS [4]
 				FROM #Result
 			) AS Balance
 			UNPIVOT
 			(
 				TransferableAmount
-				FOR Detail IN ([1],[2],[3])
+				FOR Detail IN ([1],[2],[3],[4])
 			) AS u
-			WHERE (@RoleId = 4 OR u.Detail <> 3)
+			WHERE (@RoleId = 4 OR u.Detail <> 4)
 			ORDER BY RowId
 		END
 
 		DROP TABLE #Result
 
 		-- Return credit table
-		DECLARE @memberCredit MONEY, @agentCredit MONEY, @masterCredit MONEY
+		DECLARE @memberCredit MONEY, @agentCredit MONEY, @masterCredit MONEY, @DirectMemberCredit MONEY
 
 		IF @RoleId = 4
 		BEGIN
-			SELECT  @memberCredit = SUM(CASE WHEN roleId = 1 THEN ISNULL(credit, 0) ELSE 0 END),
+			SELECT  @memberCredit = SUM(CASE WHEN roleId = 1 AND recommend > 0 THEN ISNULL(credit, 0) ELSE 0 END),
 					@agentCredit  = SUM(CASE WHEN roleId = 2 THEN ISNULL(credit, 0) ELSE 0 END),
-					@masterCredit = SUM(CASE WHEN roleId = 3 THEN ISNULL(credit, 0) ELSE 0 END)
+					@masterCredit = SUM(CASE WHEN roleId = 3 THEN ISNULL(credit, 0) ELSE 0 END),
+					@DirectMemberCredit = SUM(CASE WHEN roleId = 1 AND recommend = -3 THEN ISNULL(credit, 0) ELSE 0 END)
 			FROM	dbo.custInfo WITH (NOLOCK)
 			WHERE	mrecommend = @DownlineCustId
 		END
@@ -700,15 +732,20 @@ BEGIN
 			UNION ALL
 			SELECT 2, @agentCredit, 0
 			UNION ALL
-			SELECT 3, @masterCredit, 0 WHERE @RoleId = 4
+			SELECT 3, @DirectMemberCredit, 0 
+			UNION ALL
+			SELECT 4, @masterCredit, 0 
+			WHERE @RoleId = 4
 		END
 		ELSE
 		BEGIN
 			SELECT 1 AS RowId, @memberCredit AS GivenCredit, @memberClearableCredit AS ClearableCredit
 			UNION ALL
-			SELECT 2, @agentCredit, @agentCredit - @memberCredit + @memberClearableCredit
+			SELECT 2, @agentCredit, @agentCredit - @memberCredit + @memberClearableCredit			
 			UNION ALL
-			SELECT 3, @masterCredit, @masterCredit - @memberCredit + @memberClearableCredit
+			SELECT 3, @DirectMemberCredit, @DirectmemberClearableCredit
+			UNION ALL
+			SELECT 4, @masterCredit, @masterCredit - @memberCredit + @memberClearableCredit + @DirectmemberClearableCredit
 			WHERE @RoleId = 4
 		END
 	END

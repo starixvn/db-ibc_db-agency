@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_alp" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearCredit_All_Ins]
 	@UserId				INT,
 	@CustId				INT,
@@ -21,6 +21,7 @@ AS
 		- 20181102@Johnson: Apply service broker for logging [Redmine: #103547]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20230510@Eden: Scale out DBTRANS for Credit [Redmine: #181595]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 		- 20241206@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
 	Param's Explanation:`
 		@MemberAmountXML = '<ROOT>
@@ -103,6 +104,8 @@ BEGIN
 		IF @RoleId = 4
 			INSERT INTO @tblrecommend (recommend)
 			SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 2
+			UNION ALL 
+			SELECT -3
 		ELSE
 			INSERT INTO @tblrecommend (recommend)
 			VALUES (@DownlineCustId)
@@ -372,7 +375,10 @@ BEGIN
 				DECLARE @usedCreditMaster MONEY
 				SELECT  @usedCreditMaster = SUM(ISNULL(credit, 0))
 				FROM dbo.custInfo WITH (NOLOCK)
-				WHERE mrecommend = @DownlineCustId AND roleId = 2
+				WHERE mrecommend = @DownlineCustId 
+					AND 1 = CASE WHEN roleId = 2 THEN 1
+								WHEN roleid = 1 AND recommend = -3 THEN 1
+								ELSE 0 END
 
 				SELECT  @usedCreditMaster = ISNULL(@usedCreditMaster, 0)
 
