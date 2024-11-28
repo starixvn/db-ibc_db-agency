@@ -21,6 +21,7 @@ AS
 		- 20201124@Malcolm: Add Virtual Sports 3 [redmine: #131375]
 		- 20230713@Lewis: Add Virtual Sports 3 (New) - Leap Gaming [RedmineID: #189207]
 		- 20240119@Lewis: Add VS4 [RedmineID: #198621]
+		- 20240711@Lewis: Add VS5 [RedmineID: #206527]
 */
 
 RETURN
@@ -34,6 +35,8 @@ RETURN
 	SELECT 77, 5
 	UNION ALL
 	SELECT 83, 5
+	UNION ALL
+	SELECT 88, 5
 
 	
 	/*

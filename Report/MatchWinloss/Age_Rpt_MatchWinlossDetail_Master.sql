@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_Master] 
 	@CustID			INT, --srecommend
 	@FromDate		SMALLDATETIME,
@@ -6,6 +6,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_Master]
 	@MoveBetsDay	SMALLDATETIME,
 	@leagueIds		VARCHAR(MAX),
 	@ProductIds		VARCHAR(MAX),
+	@league3rdIds	VARCHAR(MAX),
 	@isGetAll		BIT
 AS
 
@@ -22,6 +23,7 @@ AS
 			2. @league3rdIds: get data from league3rd table
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
+		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
 */
 
 BEGIN 
@@ -44,6 +46,7 @@ BEGIN
 			@Todate = @Todate,
 			@MoveBetsDay = @MoveBetsDay,
 			@leagueIds = @leagueIds,
+			@league3rdIds =	@league3rdIds,
 			@ProductIds = @ProductIds
 	END
 END

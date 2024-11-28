@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchWinlossDetail_Master_All] 
 	@CustID			INT,
 	@fromdate		SMALLDATETIME, 
@@ -29,6 +29,7 @@ AS
 		- 20210823@Sol: Alpha - Allow more time to transfer (phase 2b) - [RedmineID: #160440]
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
+		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
 */
 
 BEGIN
@@ -70,7 +71,8 @@ BEGIN
 		race			NVARCHAR(20),
 		matchcode		NVARCHAR(50),
 		isNeutral		BIT,
-		showtime		NVARCHAR(50)
+		showtime		NVARCHAR(50),
+		LeagueType		TINYINT
 	);
 
 	CREATE TABLE #SportBettype(
@@ -184,9 +186,55 @@ BEGIN
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
 				AND s.ProductID <> 3
-				AND s.EventType <> 3 --- exclude VS HR					
+				AND s.EventType NOT IN (3,5) --- exclude VS HR	+ VS5				
 			GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
+			
+			
+			-- match3rd
+			INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType)
+			SELECT  0 AS BetGroup,
+					m.Match3rdId,
+					0 AS ParentID,
+					0 AS ChildMatchType,
+					m.homeid,
+					m.awayid,
+					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
+					0 AS liveindicator,
+					m.League3rdId,
+					SUM(ABS(stake)) AS turnover,
+					SUM(CASE 
+						WHEN s.RefTable IN (1,2) THEN 0 
+						WHEN tpositiontaking = 1 THEN 0 
+						ELSE scomm/(1 - tpositiontaking) 
+					END) AS GrossComm,
+					SUM(winlost - actual_stake) AS MemberWinLoss,
+					SUM(playercomm) AS MemberComm,
+					SUM(awinlost) AS AgWinLoss,
+					SUM(comm - playercomm) AS  AgComm,
+					SUM(mwinlost) AS MAgWinLoss,
+					SUM(acomm - comm) AS  MAgComm,
+					SUM(swinlost) AS SAgWinLoss,
+					SUM(scomm - acomm) AS SAgComm,
+					'' AS race,
+					l.LeagueCode AS matchcode,
+					0 AS IsNeutral,
+					ISNULL(m.StartTime,'') as showtime,
+					1 AS LeagueType
+			FROM dbo.bettrans b WITH (NOLOCK)
+				INNER JOIN dbo.Match3rd m WITH (NOLOCK) ON m.Match3rdId = b.matchid
+				INNER JOIN dbo.League3rd l WITH (NOLOCK) ON l.League3rdId = m.League3rdId
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype 		
+				LEFT JOIN (SELECT bettype ,GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+			WHERE b.srecommend = @custid
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND m.eventstatus = 'completed'
+				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND s.ProductID = 5
+				AND s.EventType = 5
+			GROUP BY m.Match3rdId, m.homeid, m.awayid, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END, m.League3rdId, l.LeagueCode,ISNULL(m.StartTime,'')
+
 			--Number game
 			IF @showNG = 1
 			BEGIN
@@ -389,8 +437,9 @@ BEGIN
 					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103) 
-				GROUP BY b.bettype	
+				GROUP BY b.bettype
 				HAVING ISNULL(COUNT(transid), 0) > 0;	
+
 			END	
 		END
 
@@ -488,9 +537,53 @@ BEGIN
 				AND b.statusID NOT IN (101, 102, 103)
 				AND b.ruben = 1
 				AND s.ProductID <> 3
-				AND s.EventType <> 3				
+				AND s.EventType NOT IN (3,5)	--- exclude VS HR	+ VS5				
 			GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
+
+			-- match3rd
+			INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType)
+			SELECT  0 AS BetGroup,
+					m.Match3rdId,
+					0 AS ParentID,
+					0 AS ChildMatchType,
+					m.homeid,
+					m.awayid,
+					CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END AS bettype,
+					0 AS liveindicator,
+					m.League3rdId,
+					SUM(ABS(stake)) AS turnover,
+					SUM(CASE 
+						WHEN s.RefTable IN (1,2) THEN 0 
+						WHEN tpositiontaking = 1 THEN 0 
+						ELSE scomm/(1 - tpositiontaking) 
+					END) AS GrossComm,
+					SUM(winlost - actual_stake) AS MemberWinLoss,
+					SUM(playercomm) AS MemberComm,
+					SUM(awinlost) AS AgWinLoss,
+					SUM(comm - playercomm) AS  AgComm,
+					SUM(mwinlost) AS MAgWinLoss,
+					SUM(acomm - comm) AS  MAgComm,
+					SUM(swinlost) AS SAgWinLoss,
+					SUM(scomm - acomm) AS SAgComm,
+					'' AS race,
+					l.LeagueCode AS matchcode,
+					0 AS IsNeutral,
+					ISNULL(m.StartTime,'') as showtime,
+					1 AS LeagueType
+			FROM dbo.bettrans14 b WITH (NOLOCK)
+				INNER JOIN dbo.Match3rd14 m WITH (NOLOCK) ON m.Match3rdId = b.matchid
+				INNER JOIN dbo.League3rd l WITH (NOLOCK) ON l.League3rdId = m.League3rdId
+				INNER JOIN #SportBettype s ON b.bettype = s.Bettype 
+				LEFT JOIN (SELECT bettype, GroupTypeId FROM [dbo].[f_GroupBettype]()) f ON f.bettype = b.bettype
+			WHERE b.srecommend = @custid
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND m.eventstatus = 'completed'
+				AND b.statusID NOT IN (101, 102, 103)
+				AND b.ruben = 1
+				AND s.ProductID = 5
+				AND s.EventType = 5
+			GROUP BY m.Match3rdId, m.homeid, m.awayid, CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END, m.League3rdId, l.LeagueCode,ISNULL(m.StartTime,'')
 
 			-- Number Game
 			IF @showNG = 1
@@ -697,8 +790,10 @@ BEGIN
 					AND b.winlostdate BETWEEN @FDate AND @TDate
 					AND b.ruben = 1
 					AND b.statusID NOT IN (101, 102, 103) 
-				GROUP BY b.bettype	
+				GROUP BY b.bettype
 				HAVING ISNULL(COUNT(transid), 0) > 0;
+				
+	
 			END		
 			
 			--DROP TABLE #RecommendList
@@ -727,11 +822,10 @@ BEGIN
 			matchcode,	
 			isNeutral,
 			showtime,
-			CASE WHEN matchid < 1000000000 THEN 0 ELSE 1 END AS LeagueType -- 0: league, 1: League3rd
+			ISNULL(s.LeagueType,0) AS LeagueType -- 0: league, 1: League3rd
 	FROM #SAgMatchWLDetails s 
 	LEFT JOIN League l  WITH (NOLOCK) ON s.leagueid = l.leagueid
-	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, s.leagueid, ISNULL(l.LeagueGroupID,0), race, matchcode, isNeutral, showtime,
-		CASE WHEN matchid < 1000000000 THEN 0 ELSE 1 END
+	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, s.leagueid, ISNULL(l.LeagueGroupID,0), race, matchcode, isNeutral, showtime, ISNULL(s.LeagueType,0)
 	ORDER BY betgroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, leagueid, race, bettype, liveindicator, matchcode;
 
 	DROP TABLE #SAgMatchWLDetails
