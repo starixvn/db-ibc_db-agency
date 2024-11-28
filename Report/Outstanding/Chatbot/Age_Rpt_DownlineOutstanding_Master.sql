@@ -1,4 +1,4 @@
-/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBBOF-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_DownlineOutstanding_Master]
     @ProductIds VARCHAR(MAX),
     @DownlineId INT -- master

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_MatchSelResultEntered]
 	@IncludeTestData BIT = 1 -- 1: Show All; 0: is NOT show Test  
 AS
@@ -29,6 +29,7 @@ AS
 		- 20190826@Percy: Remove inactive products [RedmineID: #118699]
 		- 20211115@Malcolm: Exclude Matchs are deleted [Redmine: #164321]
 		- 20220422@Evan: Remove Using IsDeleted field in League Table [Redmine: #171699]
+		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
 */
  
 BEGIN
@@ -101,6 +102,20 @@ BEGIN
 		INNER JOIN dbo.League l WITH (NOLOCK) ON m.LeagueID = l.LeagueID
 	WHERE l.isTest <= @IncludeTestData 
 	GROUP BY m.EventDate, l.sporttype
+
+	-- match3rd
+	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
+	SELECT
+		CASE WHEN DATEDIFF(DAY, @ToDate, m.eventdate) = 0 THEN 1 ELSE 0 END AS IsToday,
+		m.eventdate, m.sporttype,
+		SUM(CASE WHEN m.eventstatus IN ('completed') THEN 1 ELSE 0 END) AS Entered,
+		SUM(CASE WHEN m.eventstatus NOT IN ('completed') THEN 1 ELSE 0 END) AS NonEntered
+	FROM dbo.Match3rd m WITH (NOLOCK)
+		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.League3rdId = l.League3rdId
+	WHERE m.EventDate BETWEEN @FromDate AND @ToDate
+		AND m.EventStatus <> 'closed'
+		AND l.isTest <= @IncludeTestData 
+	GROUP BY m.eventdate, m.sporttype
 	
 	SELECT IsToday, EventDate, Sporttype, Entered, NonEntered
 	FROM #tmp

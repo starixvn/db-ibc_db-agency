@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
 	@CustID		INT, --srecommend
 	@ProductIds	VARCHAR(MAX),
