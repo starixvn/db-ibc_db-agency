@@ -1,8 +1,7 @@
-/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_Transfer_InsClearBalance_Ag]
 	@FromCustID int, --Agent ID here  
 	@ToCustIDs varchar(4000),   
-	@SuperIDsTransferTotal VARCHAR(50)='', 
 	@creator int,  
 	@Language varchar(2)= 'E',  
 	@SubAccID int = 0, --Sub-AccountID  
@@ -73,11 +72,11 @@ Revisions:
 	- 20230908@Bobby: AutoJob Enhancement [RedmineID: #193017]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20240314@Bobby: EC enhancement [Redmine: #202276]
+	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - remove @SuperIDsTransferTotal [Redmine: #211969]
 
 Param's Explanation:
 	• @FromCustID: list from custid
 	• @ToCustIDs: list to custid
-	  @SuperIDsTransferTotal: Supers are allowed to tranfer total balance including today balance 
 	  @IsAllDayBalTransfer: allow transfer many times per day
 
 */
@@ -289,86 +288,86 @@ BEGIN
 
 	/* *********** Calculating balance *********** */
 	/* Note: using recommend = @AgentId on bettrans, bettransRnG, bettransLC, translog to using index on recommend column */
+	--Yesterday Balance  
+	-- bettransRnG
+	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
+	SELECT
+		custid,
+		ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
+	FROM dbo.bettransRnG b WITH (NOLOCK) 
+	WHERE b.recommend = @AgentID
+		AND (
+			statusID IN (0, 1)
+			OR winlostdate = @yesterday
+		)
+	GROUP BY custid
 
-	--TOTAL BALANCE INCLUDING TODAY BALANCE 
-	IF (SELECT srecommend FROM CustDB.dbo.custInfo (NOLOCK) WHERE custid = @AgentID AND roleid = 2) IN (SELECT CONVERT(INT,value) FROM STRING_SPLIT(@SuperIDsTransferTotal, ','))
-	BEGIN 
-		-- bettransRnG
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
-		SELECT
-			custid,
-			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
-		FROM dbo.bettransRnG b WITH (NOLOCK) 
-		WHERE b.recommend = @AgentID
-			AND (
-				statusID IN (0, 1)
-				OR winlostdate >= @yesterday
-			)
-		GROUP BY custid
-
-		-- bettransLC
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
-		SELECT
-			custid,
-			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
-		FROM dbo.bettransLC b WITH (NOLOCK) 
-		WHERE b.recommend = @AgentID
-			AND (
-				statusID IN (0, 1)
-				OR winlostdate >= @yesterday
-			)
-		GROUP BY custid
+	-- bettransLC
+	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
+	SELECT
+		custid,
+		ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
+	FROM dbo.bettransLC b WITH (NOLOCK) 
+	WHERE b.recommend = @AgentID
+		AND (
+			statusID IN (0, 1)
+			OR winlostdate = @yesterday
+		)
+	GROUP BY custid
 	
-		-- translog
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
-		SELECT
-			custid,
-			0,
-			ISNULL(SUM(ABS(actual_stake)), 0)
-		FROM dbo.translog t WITH (NOLOCK) 
-		WHERE t.recommend = @AgentID
-			AND statusID IN (0, 1)
-		GROUP BY custid
+	-- translog
+	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
+	SELECT
+		custid,
+		0,
+		ISNULL(SUM(ABS(actual_stake)), 0)
+	FROM dbo.translog t WITH (NOLOCK) 
+	WHERE t.recommend = @AgentID
+		AND statusID IN (0, 1)
+	GROUP BY custid
 
-		-- bettrans
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
+	-- bettrans
+	INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
+	SELECT
+		custid,
+		0,
+		ISNULL(SUM(ABS(actual_stake)), 0)
+	FROM dbo.bettrans b WITH(NOLOCK)
+	WHERE b.recommend = @AgentID
+		AND b.ruben = 0
+		AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
+	GROUP BY custid
+
+	WHILE (@IsDiff = 1)
+	BEGIN
+
+		DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
+
+			--tblBettrans
+		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
 		SELECT
 			custid,
+			ISNULL(SUM(winlost-actual_stake+playercomm ), 0),
 			0,
-			ISNULL(SUM(ABS(actual_stake)), 0)
+			0,
+			'tblBettrans'
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.recommend = @AgentID
-			AND b.ruben = 0
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
-		GROUP BY custid
-	
-		WHILE (@IsDiff = 1)
-		BEGIN
-			DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
-
-
-				--tblBettrans
-			INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
-			SELECT
-				custid,
-				ISNULL(SUM( winlost-actual_stake+playercomm ), 0),
-				0,
-				0,
-				'tblBettrans'
-			FROM dbo.bettrans b WITH(NOLOCK)
-			WHERE b.recommend = @AgentID
-				AND b.statusID IN (111, 112, 113)
-				AND (
-					b.winlostdate < @yesterday
-					OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+			AND b.statusID IN (111, 112, 113)
+			AND (
+				b.winlostdate < @yesterday
+				OR (
+					winlostdate = @yesterday
+					AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 				)
-				AND winlostdate > @moveBetsDay
-			GROUP BY custid
-
-				--tblTransfer
-			INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
+			)
+			AND winlostdate > @moveBetsDay
+		GROUP BY custid
+				
+		--tblTransfer
+		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
 			SELECT
 				custid,
 				ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
@@ -377,151 +376,36 @@ BEGIN
 				'tblTransfer'
 			FROM dbo.Transfer b WITH(NOLOCK)
 			WHERE b.recommend = @AgentID
-						AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-													WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-													WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-											ELSE 1 END
-			GROUP BY custid
-		
-			----check MB date, BU date again to make sure it is not changed
-			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
-			EXEC dbo.Acc_ReCheck_MBUDate 
-				@MBDate = @moveBetsDay,
-				@BUDate = @balanceUpDay,
-				@IsDiff = @IsDiff OUTPUT,
-				@NewMBDate = @NewMoveBetDate OUTPUT,
-				@NewBUDate = @NewBalanceUpDate OUTPUT
-			IF @IsDiff = -1 
-				BEGIN
-					RETURN	
-				END
-				
-			IF @IsDiff = 1 
-			BEGIN
-				SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
-			END
-		END
-	END 
-	--Yesterday Balance  
-	ELSE 
-	BEGIN 
-		-- bettransRnG
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
-		SELECT
-			custid,
-			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
-		FROM dbo.bettransRnG b WITH (NOLOCK) 
-		WHERE b.recommend = @AgentID
-			AND (
-				statusID IN (0, 1)
-				OR winlostdate = @yesterday
-			)
-		GROUP BY custid
-
-		-- bettransLC
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
-		SELECT
-			custid,
-			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
-		FROM dbo.bettransLC b WITH (NOLOCK) 
-		WHERE b.recommend = @AgentID
-			AND (
-				statusID IN (0, 1)
-				OR winlostdate = @yesterday
-			)
-		GROUP BY custid
-	
-		-- translog
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
-		SELECT
-			custid,
-			0,
-			ISNULL(SUM(ABS(actual_stake)), 0)
-		FROM dbo.translog t WITH (NOLOCK) 
-		WHERE t.recommend = @AgentID
-			AND statusID IN (0, 1)
-		GROUP BY custid
-
-		-- bettrans
-		INSERT INTO #BalanceInfo (CustId, Balance, Outstanding)
-		SELECT
-			custid,
-			0,
-			ISNULL(SUM(ABS(actual_stake)), 0)
-		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE b.recommend = @AgentID
-			AND b.ruben = 0
-			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
-		GROUP BY custid
-
-		WHILE (@IsDiff = 1)
-		BEGIN
-
-			DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
-
-				--tblBettrans
-			INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
-			SELECT
-				custid,
-				ISNULL(SUM(winlost-actual_stake+playercomm ), 0),
-				0,
-				0,
-				'tblBettrans'
-			FROM dbo.bettrans b WITH(NOLOCK)
-			WHERE b.recommend = @AgentID
-				AND b.statusID IN (111, 112, 113)
 				AND (
-					b.winlostdate < @yesterday
-					OR (
-						winlostdate = @yesterday
-						AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-					)
+					b.winlostdate <= @yesterday
+					OR b.bettype > 20000
 				)
-				AND winlostdate > @moveBetsDay
+				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+										WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+										WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+								ELSE 1 END
 			GROUP BY custid
-				
-			--tblTransfer
-			INSERT INTO #BalanceInfo (CustId, Balance, Outstanding, PendingTransfer3rd, TableName)
-				SELECT
-					custid,
-					ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
-					0,
-					ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0),
-					'tblTransfer'
-				FROM dbo.Transfer b WITH(NOLOCK)
-				WHERE b.recommend = @AgentID
-					AND (
-						b.winlostdate <= @yesterday
-						OR b.bettype > 20000
-					)
-					AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-											WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-											WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-									ELSE 1 END
-				GROUP BY custid
 		
-			----check MB date, BU date again to make sure it is not changed
-			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
-			EXEC dbo.Acc_ReCheck_MBUDate 
-				@MBDate = @moveBetsDay,
-				@BUDate = @balanceUpDay,
-				@IsDiff = @IsDiff OUTPUT,
-				@NewMBDate = @NewMoveBetDate OUTPUT,
-				@NewBUDate = @NewBalanceUpDate OUTPUT
+		----check MB date, BU date again to make sure it is not changed
+		SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+		EXEC dbo.Acc_ReCheck_MBUDate 
+			@MBDate = @moveBetsDay,
+			@BUDate = @balanceUpDay,
+			@IsDiff = @IsDiff OUTPUT,
+			@NewMBDate = @NewMoveBetDate OUTPUT,
+			@NewBUDate = @NewBalanceUpDate OUTPUT
     
-    		IF @IsDiff = -1 
-			BEGIN
-				RETURN	
-			END
+    	IF @IsDiff = -1 
+		BEGIN
+			RETURN	
+		END
 			
-			IF @IsDiff = 1 
-			BEGIN
-				SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
-			END
+		IF @IsDiff = 1 
+		BEGIN
+			SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
 		END
 	END
+
 	/* *********** End Calculating balance *********** */
 
 	/* Filtering input custids */

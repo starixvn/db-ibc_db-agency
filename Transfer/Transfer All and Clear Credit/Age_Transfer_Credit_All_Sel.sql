@@ -2,7 +2,6 @@
 CREATE PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
-	@SuperIDsTransferTotal	NVARCHAR(50) = '',
 	@IsAllDayTransfer		BIT = 0,
 	@Language				VARCHAR(2) = 'E',
 	@DownlineNetPosition	XML,
@@ -443,11 +442,6 @@ BEGIN
 	
 	-- Return data
 	BEGIN
-		DECLARE @IsTotalTransfer BIT = 0
-
-		IF ',' + @SuperIDsTransferTotal + ',' LIKE '%,' + CONVERT(VARCHAR(20), @srecommend) + ',%'
-			SELECT @IsTotalTransfer = 1
-
 		CREATE TABLE #Result
 		(
 			custId INT PRIMARY KEY,
@@ -499,7 +493,7 @@ BEGIN
 						CASE WHEN roleId = 3 THEN ISNULL(winlost,0)-ISNULL(actual_stake,0) ELSE ISNULL(mwinlost,0)+ISNULL(acomm,0)-ISNULL(comm,0) END
 						ELSE 0 END),
 				SUM(CASE WHEN statusId IN (0,1) AND roleId = 1 THEN ISNULL(actual_stake,0) ELSE 0 END),
-				SUM(CASE WHEN @IsTotalTransfer = 1 OR roleId > 1 OR winlostdate <= @yesterday THEN CASE WHEN statusId IN (0,1) THEN -ISNULL(actual_stake,0) ELSE 0 END
+				SUM(CASE WHEN roleId > 1 OR winlostdate <= @yesterday THEN CASE WHEN statusId IN (0,1) THEN -ISNULL(actual_stake,0) ELSE 0 END
 						ELSE ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(playercomm,0) END),
 				CASE WHEN c.CustId IS NOT NULL THEN 1 ELSE 0 END
 			FROM #Data d
@@ -530,7 +524,7 @@ BEGIN
 						CASE WHEN roleId = 2 THEN ISNULL(winlost,0)-ISNULL(actual_stake,0) ELSE ISNULL(awinlost,0)+ISNULL(comm,0)-ISNULL(playercomm,0) END
 						ELSE 0 END),
 				SUM(CASE WHEN statusId IN (0,1) AND roleId = 1 THEN ISNULL(actual_stake,0) ELSE 0 END),
-				SUM(CASE WHEN @IsTotalTransfer = 1 OR roleId > 1 OR winlostdate <= @yesterday THEN CASE WHEN statusId IN (0,1) THEN -ISNULL(actual_stake,0) ELSE 0 END
+				SUM(CASE WHEN roleId > 1 OR winlostdate <= @yesterday THEN CASE WHEN statusId IN (0,1) THEN -ISNULL(actual_stake,0) ELSE 0 END
 						ELSE ISNULL(winlost,0)-ISNULL(actual_stake,0)+ISNULL(playercomm,0) END)
 			FROM #Data
 			GROUP BY custId
@@ -656,29 +650,6 @@ BEGIN
 			UNION ALL
 			SELECT 4, 0, NULL 
 			WHERE @RoleId = 4
-		END
-		ELSE IF @IsTotalTransfer = 1
-		BEGIN
-			SELECT
-				Detail AS RowId,
-				u.TransferableAmount,
-				CASE WHEN u.Detail IN (1,3) THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
-			FROM
-			(
-				SELECT
-					ISNULL(SUM(CASE WHEN IsDirectMemeber = 0 THEN totalMemberCash ELSE 0 END), 0) AS [1],
-					ISNULL(SUM((CASE WHEN IsDirectMemeber = 0 THEN totalMemberCash ELSE 0 END)+totalAgentCash), 0) AS [2],
-					ISNULL(SUM(CASE WHEN IsDirectMemeber = 1 THEN totalMemberCash ELSE 0 END), 0) AS [3], --DirectMember to Master
-					ISNULL(SUM(totalMemberCash+totalAgentCash+totalMasterCash), 0) AS [4]
-				FROM #Result
-			) AS Balance
-			UNPIVOT
-			(
-				TransferableAmount
-				FOR Detail IN ([1],[2],[3],[4])
-			) AS u
-			WHERE (@RoleId = 4 OR u.Detail <> 4)
-			ORDER BY RowId
 		END
 		ELSE
 		BEGIN

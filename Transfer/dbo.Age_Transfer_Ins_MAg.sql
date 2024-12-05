@@ -2,7 +2,6 @@
 ALTER PROCEDURE  [dbo].[Age_Transfer_Ins_MAg]
 	@MasterID int,
 	@ToCustIDs varchar(4000),
-	@SuperIDsTransferTotal VARCHAR(50)='', 
 	@creator int,
 	@FullTransfer bit = 1,
 	@AmtTrans money = 0,
@@ -68,7 +67,6 @@ Param's Explanation:
 	• @AmtTrans: amount of money
 	• @MasterID: from master
 	• @ToCustIDs: list custid
-	  @SuperIDsTransferTotal: Supers are allowed to tranfer total balance including today balance 
 
 */
 BEGIN
@@ -253,174 +251,85 @@ BEGIN
 		FROM @tblCustIds t
 	END
 	
-	 --MASTER IS ALLOWED TO TRANSFER TOTAL BALANCE INCLUDING TODAY BALANCE 
-	 IF (SELECT srecommend FROM CustDB.dbo.custinfo (NOLOCK) WHERE custid = @MasterID AND ROLEid = 3 ) IN  (SELECT CONVERT(INT,value) FROM STRING_SPLIT(@SuperIDsTransferTotal, ','))
-	BEGIN
-		-- bettransRNG
-		INSERT INTO #BalanceInfo (CustId, Balance)
-		SELECT 
-			recommend,
-			ISNULL(SUM(awinlost+comm-playercomm), 0)
-				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
-		FROM #recommend c
-			INNER JOIN dbo.bettransRNG b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
-		WHERE statusID NOT IN (0,1)
-			AND winlostdate >= @yesterday
-		GROUP BY recommend
-
-		-- bettransLC
-		INSERT INTO #BalanceInfo (CustId, Balance)
-		SELECT 
-			recommend,
-			ISNULL(SUM(awinlost+comm-playercomm), 0)
-				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
-		FROM #recommend c
-			INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
-		WHERE statusID NOT IN (0,1)
-			AND winlostdate >= @yesterday
-		GROUP BY recommend
-
-	  
-		WHILE (@IsDiff = 1)
-		BEGIN
-
-			DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
-		
-			-- bettrans
-			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-			SELECT 
-				recommend,
-				ISNULL(SUM(awinlost+comm-playercomm), 0)
-					+ ISNULL(SUM(winlost-actual_stake+playercomm), 0),
-				'tblBettrans'
-			FROM #recommend c
-				INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
-			WHERE b.statusID IN (111, 112, 113)
-				AND winlostdate > @moveBetsDay
-				AND (
-						b.winlostdate < @yesterday
-						OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-					)
-			GROUP BY recommend
-
-			-- Transfer
-			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-			SELECT 
-				recommend,
-				ISNULL(SUM(CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END), 0)
-					+ ISNULL(SUM(CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-				'tblTransfer'
-			FROM #recommend c 
-				INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId 
-			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-													WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-													WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-												ELSE 1 END
-						AND bettype NOT IN (21008, 21009)
-			GROUP BY recommend
-
-
-			----check MB date, BU date again to make sure it is not changed
-			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
-			EXEC dbo.Acc_ReCheck_MBUDate 
-				@MBDate = @moveBetsDay,
-				@BUDate = @balanceUpDay,
-				@IsDiff = @IsDiff OUTPUT,
-				@NewMBDate = @NewMoveBetDate OUTPUT,
-				@NewBUDate = @NewBalanceUpDate OUTPUT
-			IF @IsDiff = -1 
-				BEGIN
-					RETURN	
-				END
-			
-			IF @IsDiff = 1 
-			BEGIN
-				SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
-			END
-		END
-	END
 	-- YESTERDAY TRANSFER
-	ELSE
+	-- bettransRNG
+	INSERT INTO #BalanceInfo (CustId, Balance)
+	SELECT 
+		recommend,
+		ISNULL(SUM(awinlost+comm-playercomm), 0)
+			+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+	FROM #recommend c
+		INNER JOIN dbo.bettransRNG b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
+	WHERE statusID NOT IN (0,1)
+		AND winlostdate = @yesterday
+	GROUP BY recommend
+
+	-- bettransLC
+	INSERT INTO #BalanceInfo (CustId, Balance)
+	SELECT 
+		recommend,
+		ISNULL(SUM(awinlost+comm-playercomm), 0)
+			+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+	FROM #recommend c
+		INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
+	WHERE statusID NOT IN (0,1)
+		AND winlostdate = @yesterday
+	GROUP BY recommend
+
+	WHILE (@IsDiff = 1)
 	BEGIN
-		-- bettransRNG
-		INSERT INTO #BalanceInfo (CustId, Balance)
+
+		DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
+
+		-- bettrans
+		INSERT INTO #BalanceInfo (CustId, Balance, TableName)
 		SELECT 
 			recommend,
-			ISNULL(SUM(awinlost+comm-playercomm), 0)
-				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0)
+				+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
+			'tblBettrans'
 		FROM #recommend c
-			INNER JOIN dbo.bettransRNG b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
-		WHERE statusID NOT IN (0,1)
-			AND winlostdate = @yesterday
+			INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
+		WHERE b.statusID IN (111, 112, 113)
+			AND winlostdate > @moveBetsDay
+			AND (
+					b.winlostdate < @yesterday
+					OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
+				)
 		GROUP BY recommend
 
-		-- bettransLC
-		INSERT INTO #BalanceInfo (CustId, Balance)
+		-- Transfer
+		INSERT INTO #BalanceInfo (CustId, Balance, TableName)
 		SELECT 
 			recommend,
-			ISNULL(SUM(awinlost+comm-playercomm), 0)
-				+ ISNULL(SUM(winlost-actual_stake+playercomm), 0)
+			ISNULL(SUM(CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ), 0)
+				+ ISNULL(SUM(CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ), 0),
+			'tblTransfer'
 		FROM #recommend c
-			INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
-		WHERE statusID NOT IN (0,1)
-			AND winlostdate = @yesterday
+			INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_recommend) ON b.Recommend = c.CustId
+		WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+												WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+												WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+											ELSE 1 END
+					AND bettype NOT IN (21008, 21009)
 		GROUP BY recommend
 
-		WHILE (@IsDiff = 1)
-		BEGIN
-
-			DELETE FROM #BalanceInfo WHERE TableName IN ('tblBettrans','tblTransfer')
-
-			-- bettrans
-			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-			SELECT 
-				recommend,
-				ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0)
-					+ ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-				'tblBettrans'
-			FROM #recommend c
-				INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_recommend) ON b.recommend = c.CustId
-			WHERE b.statusID IN (111, 112, 113)
-				AND winlostdate > @moveBetsDay
-				AND (
-						b.winlostdate < @yesterday
-						OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-					)
-			GROUP BY recommend
-
-			-- Transfer
-			INSERT INTO #BalanceInfo (CustId, Balance, TableName)
-			SELECT 
-				recommend,
-				ISNULL(SUM(CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ), 0)
-					+ ISNULL(SUM(CASE WHEN b.custid <> recommend THEN winlost-actual_stake+playercomm ELSE 0 END ), 0),
-				'tblTransfer'
-			FROM #recommend c
-				INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_recommend) ON b.Recommend = c.CustId
-			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-													WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-													WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-												ELSE 1 END
-						AND bettype NOT IN (21008, 21009)
-			GROUP BY recommend
-
-			----check MB date, BU date again to make sure it is not changed
-			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
-			EXEC dbo.Acc_ReCheck_MBUDate 
-				@MBDate = @moveBetsDay,
-				@BUDate = @balanceUpDay,
-				@IsDiff = @IsDiff OUTPUT,
-				@NewMBDate = @NewMoveBetDate OUTPUT,
-				@NewBUDate = @NewBalanceUpDate OUTPUT
-			IF @IsDiff = -1 
-				BEGIN
-					RETURN	
-				END
-			
-			IF @IsDiff = 1 
+		----check MB date, BU date again to make sure it is not changed
+		SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
+		EXEC dbo.Acc_ReCheck_MBUDate 
+			@MBDate = @moveBetsDay,
+			@BUDate = @balanceUpDay,
+			@IsDiff = @IsDiff OUTPUT,
+			@NewMBDate = @NewMoveBetDate OUTPUT,
+			@NewBUDate = @NewBalanceUpDate OUTPUT
+		IF @IsDiff = -1 
 			BEGIN
-				SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
+				RETURN	
 			END
+			
+		IF @IsDiff = 1 
+		BEGIN
+			SELECT @moveBetsDay = @NewMoveBetDate, @balanceUpDay = @NewBalanceUpDate
 		END
 	END
 

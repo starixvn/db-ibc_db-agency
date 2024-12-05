@@ -4,7 +4,6 @@ ALTER PROCEDURE [dbo].[Age_Transfer_All_Ins]
 	@CustId					INT,
 	@SubAccId				INT,
 	@DownlineUsername		NVARCHAR(50),
-	@SuperIDsTransferTotal	NVARCHAR(50) = '',
 	@IsAllDayTransfer		BIT = 0,
 	@IP						VARCHAR(45) = '',
 	@Language				VARCHAR(2) = 'E',
@@ -566,10 +565,6 @@ BEGIN
 		END
 	END
 
-	DECLARE @IsTotalTransfer BIT = 0
-	IF ',' + @SuperIDsTransferTotal + ',' LIKE '%,' + CONVERT(VARCHAR(20), @srecommend) + ',%'
-		SELECT @IsTotalTransfer = 1
-
 	-- Back to check rule before transfer
 	-- 3. Nagative bet credit after transfer
 	CREATE TABLE #NetPosition (custid INT, netPosition MONEY)
@@ -585,7 +580,7 @@ BEGIN
 	(
 		SELECT custId,
 			SUM(CASE WHEN statusId IN (0,1) THEN -ISNULL(actual_stake, 0) ELSE ISNULL(winlost - actual_stake + playercomm, 0) END
-				- CASE WHEN statusId NOT IN (0,1) AND (@IsTotalTransfer = 1 OR winlostdate <= @yesterday) THEN ISNULL(winlost - actual_stake + playercomm, 0) ELSE 0 END)
+				- CASE WHEN statusId NOT IN (0,1) AND (winlostdate <= @yesterday) THEN ISNULL(winlost - actual_stake + playercomm, 0) ELSE 0 END)
 				AS amountAfterTransfer
 		FROM #tempData
 		GROUP BY custId
@@ -626,7 +621,7 @@ BEGIN
 			SELECT custId, SUM(ISNULL(winlost - actual_stake + playercomm, 0)) AS memberBalance
 			FROM #tempData
 			WHERE statusId NOT IN (0,1)
-				AND (@IsTotalTransfer = 1 OR winlostdate <= @yesterday)
+				AND (winlostdate <= @yesterday)
 			GROUP BY custId
 			HAVING SUM(ISNULL(winlost - actual_stake + playercomm, 0)) <> 0
 		)
@@ -643,7 +638,7 @@ BEGIN
 			SELECT custId, SUM(ISNULL(winlost - actual_stake + playercomm, 0)) AS memberBalance
 			FROM #tempData
 			WHERE statusId NOT IN (0,1)
-				AND (@IsTotalTransfer = 1 OR winlostdate <= @yesterday)
+				AND (winlostdate <= @yesterday)
 			GROUP BY custId
 			HAVING SUM(ISNULL(winlost - actual_stake + playercomm, 0)) <> 0
 		)
@@ -662,7 +657,7 @@ BEGIN
 				SELECT recommend, SUM(ISNULL(winlost-actual_stake+awinlost+comm, 0)) AS agentBalance
 				FROM #tempData
 				WHERE statusId NOT IN (0,1)
-					AND (@IsTotalTransfer = 1 OR winlostdate <= @yesterday)
+					AND (winlostdate <= @yesterday)
 				GROUP BY recommend
 				HAVING SUM(ISNULL(winlost-actual_stake+awinlost+comm, 0)) <> 0
 			)
@@ -677,7 +672,7 @@ BEGIN
 			SELECT @DownlineCustId, @CustId, @srecommend, @DownlineUsername, @username, SUM(ISNULL(winlost-actual_stake+awinlost+comm, 0))
 			FROM #tempData
 			WHERE statusId NOT IN (0,1)
-				AND (@IsTotalTransfer = 1 OR winlostdate <= @yesterday)
+				AND (winlostdate <= @yesterday)
 			HAVING SUM(ISNULL(winlost-actual_stake+awinlost+comm, 0)) <> 0
 		END
 
@@ -687,7 +682,7 @@ BEGIN
 			SELECT @masterBalance = SUM(ISNULL(winlost-actual_stake+mwinlost+awinlost+acomm, 0))
 			FROM #tempData
 			WHERE statusId NOT IN (0,1)
-				AND (@IsTotalTransfer = 1 OR winlostdate <= @yesterday)
+				AND (winlostdate <= @yesterday)
 
 			SELECT @masterBalance = ISNULL(@masterBalance, 0)
 		END
