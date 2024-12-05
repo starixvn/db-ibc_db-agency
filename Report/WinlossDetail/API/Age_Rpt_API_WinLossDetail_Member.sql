@@ -21,6 +21,7 @@ AS
 		- 20240321@Bobby: Change source bettrans to bettrans_compact [RedmineID: #202655]
 		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 		- 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
+		- 20241205@Lewis: Hotfix filter range bk [RedmineId: #214813]
 	
 	Param's Explanation:
 	
@@ -255,7 +256,7 @@ BEGIN
 	END
 
 	--TODO: sum_winloss range
-	IF @FromDate <= @MoveBetsDay
+	IF (@ToDate >= @BalanceUpDay AND @FromDate <= @MoveBetsDay)
 	BEGIN
 		SELECT @FDate	= IIF(@FromDate >= @BalanceUpDay, @FromDate, @BalanceUpDay)
 			, @TDate	= IIF(@ToDate >= @MoveBetsDay, @MoveBetsDay, @ToDate);
