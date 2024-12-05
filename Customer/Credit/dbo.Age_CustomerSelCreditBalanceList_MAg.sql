@@ -142,8 +142,8 @@ BEGIN
 		INNER JOIN CustDB.dbo.CustProductStatus cs WITH(NOLOCK) ON cs.CustID = ci.custid
 	WHERE (ci.username like '%' + @Username + '%' OR @Username = '')
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
-		AND	isnull(cs.IsClosed,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(cs.IsClosed, 0)) end
-		AND isnull(cs.IsSuspended,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(cs.IsSuspended, 0))end
+		AND	isnull(cs.CloseInfo,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(cs.CloseInfo, 0)) end
+		AND isnull(cs.SuspendInfo,0) = case when @Closed = 0 then 0 else coalesce(@Suspended, isnull(cs.SuspendInfo, 0))end
 
 	--Capture balance
 	--Normal recommend
