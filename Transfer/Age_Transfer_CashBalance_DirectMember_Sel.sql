@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [Age_Transfer_CashBalance_DirectMember_Sel]
 	@CustID INT
 AS
@@ -6,10 +6,10 @@ AS
 /*
 	Created by: Max
 	Task: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
-	DB: DBAGE.bodb02
+	DB: DBSIC.bodb02
 	
 	Revisions:
-		- 20241127@20241127: Init SP [RedmineID: #211969]
+		- 20241127@Max: Init SP [RedmineID: #211969]
 
 	Param's Explanation:
 		- @CustID: custid of Direct Member under Super/Master
@@ -29,7 +29,7 @@ BEGIN
 	INSERT INTO #SportBettype (bettype, RefTable)
 	SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
-	DECLARE @uplineId INT, @DirectMemberType TINYINT --(-4: Direct under Super, -3: Direct under Master)
+	DECLARE @uplineId INT, @DirectMemberType INT --(-4: Direct under Super, -3: Direct under Master)
 		, @GivenCredit MONEY, @username NVARCHAR(50)
 
 	SELECT
