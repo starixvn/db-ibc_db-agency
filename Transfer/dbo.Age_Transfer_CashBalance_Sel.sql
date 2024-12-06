@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [Age_Transfer_CashBalance_Sel]
 	@CustID INT
 AS
@@ -6,7 +6,7 @@ AS
 /*
 	Created by: Percy
 	Task: Get Cash Balance Info of @CustID and Upline
-	DB: DBAGE.bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02
 	
 	Revisions:
 		- 20170609@Percy: Create new [RedmineID: #74291]
