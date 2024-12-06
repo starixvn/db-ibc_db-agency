@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
@@ -10,7 +10,7 @@ AS
 
 /*
 	Created: 20180801@Percy
-	DB: DBAGE.bodb02
+	DB: DBSIC-bodb02
 	Task: Alpha - Transfer - Transfer All & Clear Credit - Select (Super/Master only)
 
 	Revisions:
