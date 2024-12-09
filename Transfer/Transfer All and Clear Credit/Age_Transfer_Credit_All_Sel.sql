@@ -1,5 +1,5 @@
 /*<info serverAlias="DBSIC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
-CREATE PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
+ALTER PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
 	@IsAllDayTransfer		BIT = 0,
@@ -33,7 +33,7 @@ BEGIN
 	SET NOCOUNT ON
 
 	DECLARE @RoleId TINYINT, @srecommend INT, @n INT = 1
-	SELECT  @RoleId = roleid, @srecommend = srecommend FROM dbo.Customer WITH (NOLOCK) WHERE custId = @CustId
+	SELECT  @RoleId = roleid, @srecommend = srecommend FROM CustDB.dbo.Customer WITH (NOLOCK) WHERE custId = @CustId
 
 	SELECT  @DownlineUsername = LTRIM(RTRIM(@DownlineUsername))
 	
@@ -68,18 +68,18 @@ BEGIN
 		-- 1. Nagative given credit
 		IF @RoleId = 4
 		BEGIN
-			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			IF EXISTS (SELECT 1 FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 1, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+				SELECT 1, CustDB.dbo.f_Get_MsgNamebyMsgID(40037, @Language)
 			END
 		END
 		ELSE IF @RoleId = 3
 		BEGIN
-			IF EXISTS (SELECT 1 FROM dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
+			IF EXISTS (SELECT 1 FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND ISNULL(credit, 0) < 0)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 1, dbo.f_Get_MsgNamebyMsgID(40037, @Language)
+				SELECT 1, CustDB.dbo.f_Get_MsgNamebyMsgID(40037, @Language)
 			END
 		END
 
@@ -92,10 +92,10 @@ BEGIN
 		BEGIN
 			IF @RoleId = 4
 				INSERT INTO @tblcustId (custid)
-				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 1
+				SELECT custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @DownlineCustId AND roleId = 1
 			ELSE IF @RoleId = 3
 				INSERT INTO @tblcustId (custid)
-				SELECT custid FROM dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND roleId = 1
+				SELECT custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE recommend = @DownlineCustId AND roleId = 1
 
 			IF EXISTS (
 					SELECT TOP 1 1
@@ -110,7 +110,7 @@ BEGIN
 				)
 			BEGIN
 				INSERT INTO @ErrTable (Id, Content)
-				SELECT 3, dbo.f_Get_MsgNamebyMsgID(50013, @Language)
+				SELECT 3, CustDB.dbo.f_Get_MsgNamebyMsgID(50013, @Language)
 			END
 		END
 
@@ -128,14 +128,14 @@ BEGIN
 				
 			IF @ErrCode <> 0
 			BEGIN
-				SELECT @ErrMsg = dbo.f_Get_MsgNamebyMsgID(50014, @Language)
-							+	CASE WHEN SUBSTRING(@strTransferOption, 2, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90002,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 3, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90003,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 4, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90004,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 5, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90005,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 6, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90006,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 7, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90007,@Language) + ' - ' ELSE '' END +
-								CASE WHEN SUBSTRING(@strTransferOption, 1, 1) = 1 THEN [dbo].[f_Get_MsgNamebyMsgID](90008,@Language) + ' - ' ELSE '' END
+				SELECT @ErrMsg = CustDB.dbo.f_Get_MsgNamebyMsgID(50014, @Language)
+							+	CASE WHEN SUBSTRING(@strTransferOption, 2, 1) = 1 THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](90002,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 3, 1) = 1 THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](90003,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 4, 1) = 1 THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](90004,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 5, 1) = 1 THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](90005,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 6, 1) = 1 THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](90006,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 7, 1) = 1 THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](90007,@Language) + ' - ' ELSE '' END +
+								CASE WHEN SUBSTRING(@strTransferOption, 1, 1) = 1 THEN CustDB.[dbo].[f_Get_MsgNamebyMsgID](90008,@Language) + ' - ' ELSE '' END
 				SELECT @ErrMsg = LEFT(@ErrMsg, LEN(@ErrMsg) - 2)
 
 				INSERT INTO @ErrTable (Id, Content)
@@ -167,9 +167,16 @@ BEGIN
 			mwinlost MONEY, acomm MONEY
 		)
 
+		CREATE TABLE #tmp_customer (CustId INT)
+
 		-- Get Total Balance
 		IF @RoleId = 4 -- Super view Master
 		BEGIN
+			INSERT INTO #tmp_customer (CustId)
+			SELECT custid
+			FROM CustDB.dbo.custInfo c WITH (NOLOCK)
+			WHERE c.mrecommend = @DownlineCustID
+
 			-- bettrans
 			INSERT INTO #Data
 			(
@@ -185,8 +192,8 @@ BEGIN
 				SUM(winlost), SUM(actual_stake), SUM(playercomm),
 				SUM(awinlost), SUM(comm),
 				SUM(mwinlost), SUM(acomm)
-			FROM dbo.bettrans WITH (NOLOCK)
-			WHERE mrecommend = @DownlineCustId
+			FROM dbo.bettrans b WITH (NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #tmp_customer c WHERE c.CustId = b.custid)
 				AND winlostdate > @moveBetsDay
 			GROUP BY
 				winlostdate, bettype, statusId,
@@ -206,8 +213,8 @@ BEGIN
 				SUM(winlost), SUM(actual_stake), SUM(playercomm),
 				SUM(awinlost), SUM(comm),
 				SUM(mwinlost), SUM(acomm)
-			FROM dbo.Transfer WITH (NOLOCK)
-			WHERE mrecommend = @DownlineCustId
+			FROM dbo.Transfer b WITH (NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #tmp_customer c WHERE c.CustId = b.custid)
 				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
@@ -250,11 +257,10 @@ BEGIN
 				SUM(winlost) AS winlost, SUM(actual_stake), SUM(playercomm),
 				SUM(awinlost), SUM(comm),
 				SUM(mwinlost), SUM(acomm)
-			FROM dbo.bettransRnG WITH (NOLOCK)
-			WHERE srecommend = @srecommend -- using index on IX_srecommend_winlostdate
+			FROM dbo.bettransRnG b WITH (NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #tmp_customer c WHERE c.CustId = b.custid)
 				AND winlostdate IN (@yesterday, @today)
 				AND statusId NOT IN (0,1)
-				AND mrecommend * @n = @DownlineCustId -- prevent using index IX_mrecommend (@n = 1)
 			GROUP BY
 				winlostdate,
 				custId
@@ -269,10 +275,9 @@ BEGIN
 				winlostdate, 0 AS statusId,
 				custId, 1 AS roleId,
 				SUM(actual_stake)
-			FROM dbo.bettransRnG WITH (NOLOCK)
-			WHERE srecommend = @srecommend -- using index on IX_srecommend
+			FROM dbo.bettransRnG b WITH (NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #tmp_customer c WHERE c.CustId = b.custid)
 				AND statusId IN (0,1)
-				AND mrecommend * @n = @DownlineCustId -- prevent using index IX_mrecommend (@n = 1)
 			GROUP BY
 				winlostdate,
 				custId
@@ -292,8 +297,8 @@ BEGIN
 				SUM(winlost) AS winlost, SUM(actual_stake), SUM(playercomm),
 				SUM(awinlost), SUM(comm),
 				SUM(mwinlost), SUM(acomm)
-			FROM dbo.bettransLC WITH (NOLOCK)
-			WHERE mrecommend = @DownlineCustId
+			FROM dbo.bettransLC b WITH (NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #tmp_customer c WHERE c.CustId = b.custid)
 				AND (statusID IN (0,1) OR winlostdate >= @yesterday)
 			GROUP BY
 				winlostdate, statusId,
@@ -310,8 +315,8 @@ BEGIN
 				0 AS statusId,
 				custId, 1 AS roleId,
 				SUM(actual_stake)
-			FROM dbo.translog WITH (NOLOCK)
-			WHERE mrecommend = @DownlineCustId
+			FROM dbo.translog b WITH (NOLOCK)
+			WHERE EXISTS (SELECT 1 FROM #tmp_customer c WHERE c.CustId = b.custid)
 				AND statusID IN (0,1)
 			GROUP BY
 				custId
@@ -458,7 +463,7 @@ BEGIN
 		BEGIN
 			INSERT INTO #DirectMember (CustId)
 			SELECT c.custid
-			FROM dbo.custInfo c WITH (NOLOCK)
+			FROM CustDB.dbo.custInfo c WITH (NOLOCK)
 			WHERE c.mrecommend = @DownlineCustID
 				AND c.recommend = -3
 				AND c.roleid = 1
@@ -533,7 +538,7 @@ BEGIN
 		DROP TABLE #Data
 
 		DECLARE @memberOutStanding MONEY, @DirectmemberOutStanding MONEY
-		SELECT  @memberOutStanding = ISNULL(SUM(CASE WHEN IsDirectMemeber = 0 THEN Outstanding ELSE 0 END), 0) 
+		SELECT  @memberOutStanding = ISNULL(SUM(CASE WHEN ISNULL(IsDirectMemeber,0) = 0 THEN Outstanding ELSE 0 END), 0) 
 			, @DirectmemberOutStanding = ISNULL(SUM(CASE WHEN IsDirectMemeber = 1 THEN Outstanding ELSE 0 END), 0) 
 		FROM #Result
 
@@ -561,7 +566,7 @@ BEGIN
 			BEGIN
 				IF EXISTS (
 					SELECT TOP 1 1
-					FROM dbo.custInfo c WITH (NOLOCK)
+					FROM CustDB.dbo.custInfo c WITH (NOLOCK)
 						LEFT JOIN #Result r ON c.custId = r.custId
 						LEFT JOIN #NetPosition np ON c.custId = np.custId
 					WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1 AND ISNULL(c.credit, 0) >= 0
@@ -569,14 +574,14 @@ BEGIN
 				)
 				BEGIN
 					INSERT INTO @ErrTable (Id, Content)
-					SELECT 2, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+					SELECT 2, CustDB.dbo.f_Get_MsgNamebyMsgID(50012, @Language)
 				END
 			END
 			ELSE IF @RoleId = 3
 			BEGIN
 				IF EXISTS (
 					SELECT TOP 1 1
-					FROM dbo.custInfo c WITH (NOLOCK)
+					FROM CustDB.dbo.custInfo c WITH (NOLOCK)
 						LEFT JOIN #Result r ON c.custId = r.custId
 						LEFT JOIN #NetPosition np ON c.custId = np.custId
 					WHERE c.recommend = @DownlineCustId AND c.RoleId = 1 AND ISNULL(c.credit, 0) >= 0
@@ -584,7 +589,7 @@ BEGIN
 				)
 				BEGIN
 					INSERT INTO @ErrTable (Id, Content)
-					SELECT 2, dbo.f_Get_MsgNamebyMsgID(50012, @Language)
+					SELECT 2, CustDB.dbo.f_Get_MsgNamebyMsgID(50012, @Language)
 				END
 			END
 
@@ -600,7 +605,7 @@ BEGIN
 					SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
 							WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
 							ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
-				FROM dbo.custInfo c WITH (NOLOCK)
+				FROM CustDB.dbo.custInfo c WITH (NOLOCK)
 					LEFT JOIN #Result r ON c.custId = r.custId
 					LEFT JOIN #NetPosition np ON c.custId = np.custId
 				WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1 AND c.recommend > 0
@@ -610,7 +615,7 @@ BEGIN
 					SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
 							WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
 							ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
-				FROM dbo.custInfo c WITH (NOLOCK)
+				FROM CustDB.dbo.custInfo c WITH (NOLOCK)
 					LEFT JOIN #Result r ON c.custId = r.custId
 					LEFT JOIN #NetPosition np ON c.custId = np.custId
 				WHERE c.mrecommend = @DownlineCustId AND c.RoleId = 1 AND c.recommend = -3
@@ -622,7 +627,7 @@ BEGIN
 					SUM(CASE WHEN ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) >= 0 THEN ISNULL(c.credit,0)
 							WHEN ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) <= 0 THEN 0
 							ELSE ISNULL(c.credit,0)+ISNULL(r.AmountAfterTransfer,0)+ISNULL(np.netPosition,0) END)
-				FROM dbo.custInfo c WITH (NOLOCK)
+				FROM CustDB.dbo.custInfo c WITH (NOLOCK)
 					LEFT JOIN #Result r ON c.custId = r.custId
 					LEFT JOIN #NetPosition np ON c.custId = np.custId
 				WHERE c.recommend = @DownlineCustId AND c.RoleId = 1
@@ -646,9 +651,9 @@ BEGIN
 			UNION ALL
 			SELECT 2, 0, NULL
 			UNION ALL
-			SELECT 3, 0, @DirectmemberOutStanding  
+			SELECT -3, 0, @DirectmemberOutStanding  WHERE @RoleId = 4
 			UNION ALL
-			SELECT 4, 0, NULL 
+			SELECT 3, 0, NULL 
 			WHERE @RoleId = 4
 		END
 		ELSE
@@ -656,22 +661,22 @@ BEGIN
 			SELECT
 				Detail AS RowId,
 				u.TransferableAmount,
-				CASE WHEN u.Detail IN (1,4) THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
+				CASE WHEN u.Detail IN (1,-3) THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
 			FROM
 			(
 				SELECT
 					ISNULL(SUM(CASE WHEN IsDirectMemeber = 0 THEN yesterdayMemberCash ELSE 0 END), 0) AS [1],
 					ISNULL(SUM((CASE WHEN IsDirectMemeber = 0 THEN yesterdayMemberCash ELSE 0 END)+yesterdayAgentCash), 0) AS [2],
-					ISNULL(SUM(CASE WHEN IsDirectMemeber = 1 THEN yesterdayMemberCash ELSE 0 END), 0) AS [3],
-					ISNULL(SUM(yesterdayMemberCash+yesterdayAgentCash+yesterdayMasterCash), 0) AS [4]
+					ISNULL(SUM(CASE WHEN IsDirectMemeber = 1 THEN yesterdayMemberCash ELSE 0 END), 0) AS [-3],
+					ISNULL(SUM(yesterdayMemberCash+yesterdayAgentCash+yesterdayMasterCash), 0) AS [3]
 				FROM #Result
 			) AS Balance
 			UNPIVOT
 			(
 				TransferableAmount
-				FOR Detail IN ([1],[2],[3],[4])
+				FOR Detail IN ([1],[2],[-3],[3])
 			) AS u
-			WHERE (@RoleId = 4 OR u.Detail <> 4)
+			WHERE (@RoleId = 4 OR u.Detail NOT IN (-3,3))
 			ORDER BY RowId
 		END
 
@@ -686,14 +691,14 @@ BEGIN
 					@agentCredit  = SUM(CASE WHEN roleId = 2 THEN ISNULL(credit, 0) ELSE 0 END),
 					@masterCredit = SUM(CASE WHEN roleId = 3 THEN ISNULL(credit, 0) ELSE 0 END),
 					@DirectMemberCredit = SUM(CASE WHEN roleId = 1 AND recommend = -3 THEN ISNULL(credit, 0) ELSE 0 END)
-			FROM	dbo.custInfo WITH (NOLOCK)
+			FROM	CustDB.dbo.custInfo WITH (NOLOCK)
 			WHERE	mrecommend = @DownlineCustId
 		END
 		ELSE IF @RoleId = 3
 		BEGIN
 			SELECT  @memberCredit = SUM(CASE WHEN roleId = 1 THEN ISNULL(credit, 0) ELSE 0 END),
 					@agentCredit  = SUM(CASE WHEN roleId = 2 THEN ISNULL(credit, 0) ELSE 0 END)
-			FROM	dbo.custInfo WITH (NOLOCK)
+			FROM	CustDB.dbo.custInfo WITH (NOLOCK)
 			WHERE	recommend = @DownlineCustId
 		END
 		
@@ -703,9 +708,9 @@ BEGIN
 			UNION ALL
 			SELECT 2, @agentCredit, 0
 			UNION ALL
-			SELECT 3, @DirectMemberCredit, 0 
+			SELECT -3, @DirectMemberCredit, 0  WHERE @RoleId = 4
 			UNION ALL
-			SELECT 4, @masterCredit, 0 
+			SELECT 3, @masterCredit, 0 
 			WHERE @RoleId = 4
 		END
 		ELSE
@@ -714,11 +719,14 @@ BEGIN
 			UNION ALL
 			SELECT 2, @agentCredit, @agentCredit - @memberCredit + @memberClearableCredit			
 			UNION ALL
-			SELECT 3, @DirectMemberCredit, @DirectmemberClearableCredit
+			SELECT -3, @DirectMemberCredit, @DirectmemberClearableCredit WHERE @RoleId = 4
 			UNION ALL
-			SELECT 4, @masterCredit, @masterCredit - @memberCredit + @memberClearableCredit + @DirectmemberClearableCredit
+			SELECT 3, @masterCredit, @masterCredit - @memberCredit + @memberClearableCredit + @DirectmemberClearableCredit
 			WHERE @RoleId = 4
 		END
 	END
+
+	DROP TABLE #DirectMember
+	DROP TABLE #tmp_customer
 END
 GO
