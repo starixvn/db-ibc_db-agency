@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" selecters="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBCUST-CustDB" selecters="wsv_alp" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot(@SiteDBGroupID SMALLINT, @TestSuperIds VARCHAR(200), @Environment VARCHAR(10)) 
 RETURNS TABLE
 RETURN
