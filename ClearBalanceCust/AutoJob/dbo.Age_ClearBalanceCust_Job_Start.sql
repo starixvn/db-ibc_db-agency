@@ -74,8 +74,7 @@ BEGIN
 			DROP TABLE IF EXISTS #tmpClearBalanceCust
 			CREATE TABLE #tmpClearBalanceCust(FromCustId INT, ToCustId INT PRIMARY KEY NONCLUSTERED, RoleId TINYINT, SuperId INT, IsAllDayBalTransfer BIT
 				, DirectMember INT DEFAULT (0)
-				--, INDEX CIX_SuperRole CLUSTERED (SuperId, RoleId)
-				, INDEX CIX_SuperRole (SuperId, RoleId)
+				, INDEX CIX_SuperRole CLUSTERED (SuperId, RoleId)
 			);
 
 			--TODO: get Snapshot from DBCUST
@@ -113,8 +112,7 @@ BEGIN
 			CREATE TABLE #tmpClearBalanceCust_Process(
 				SuperId INT, FromCustId INT, ToCustId INT PRIMARY KEY NONCLUSTERED, RoleID TINYINT, IsAllDayBalTransfer BIT, BatchNo INT
 				, DirectMember INT
-				--,INDEX CIX_SuperBatch CLUSTERED (SuperId, BatchNo)
-				,INDEX CIX_SuperBatch (SuperId, BatchNo)
+				,INDEX CIX_SuperBatch CLUSTERED (SuperId, BatchNo)
 			);
 
 			--TODO: Super order by TotalDownline
