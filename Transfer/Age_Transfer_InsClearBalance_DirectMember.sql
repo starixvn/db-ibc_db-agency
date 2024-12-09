@@ -44,6 +44,9 @@ BEGIN
 	DECLARE @UplineUserName NVARCHAR(50), @UplineID INT, @TransID_from BIGINT, @TransID_to BIGINT, @recommend_member INT, @mrecommend_member INT, @srecommend_member INT
 			,@UplineRoleID TINYINT, @isValidDirectMember BIT = 0
 	
+	CREATE TABLE #custid (CustId INT)
+	DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), MsgId INT, ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
+
 	EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption   
 		@CustID = @FromCustID,  
 		@ErrMsg = @ErrMsg OUTPUT,  
@@ -67,9 +70,7 @@ BEGIN
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on ci.currency = e.exchangeid 
 	WHERE custid = @FromCustID AND @DirectMember IN (-3,-4)
 	
-	CREATE TABLE #custid (CustId INT)
-	
-	IF @UplineUserName IS NULL --OR (@UplineRoleID = 4 AND @DirectMember <> -4) OR  (@UplineRoleID = 3 AND @DirectMember <> -3) OR @isValidDirectMember = 0
+	IF @UplineUserName IS NULL 
 	BEGIN  
 		select @ErrCode = 102  
 		Select @ErrMsg = case @Language   
@@ -149,7 +150,6 @@ BEGIN
 	-- TODO: support auto clear balance
 	IF @IsAutoTransfer = 1
 	BEGIN
-		DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), MsgId INT, ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
 		INSERT INTO @tblResultMember(CustId)
 		SELECT DISTINCT t.value
 		FROM STRING_SPLIT(@ToCustIDs, ',') AS t;
@@ -499,10 +499,12 @@ BEGIN
 			WHERE rIdx = @rCount
 
 			-- SET username
-			UPDATE @tblResultMember
-			SET UserName = @User
-			WHERE CustId = @custid;	
-
+			IF @IsAutoTransfer = 1
+			BEGIN
+				UPDATE @tblResultMember
+				SET UserName = @User
+				WHERE CustId = @custid;	
+			END
 			IF (@amount = 0)
 			BEGIN
 				UPDATE @tblResultMember
@@ -582,10 +584,12 @@ BEGIN
 					WHERE transid IN (@TransID_from, @TransID_to)
 							
 					--AutoJob Transfer
-					UPDATE @tblResultMember
-					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
-					WHERE CustID = @custid;
-
+					IF @IsAutoTransfer = 1
+					BEGIN
+						UPDATE @tblResultMember
+						SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+						WHERE CustID = @custid;
+					END
 					GOTO NEXT_PAIR;
 				END CATCH 
 		
@@ -599,10 +603,12 @@ BEGIN
 					SET	 custid = 0, Winlost = 0, Actual_Stake = 0, RepUpdateTime = SYSDATETIME(), Recommend = 0, MRecommend = 0, SRecommend = 0	
 					WHERE transid IN (@TransID_from, @TransID_to)
 					--AutoJob Transfer
-					UPDATE @tblResultMember
-					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = CONCAT('Dot_BalanceDebitUpd @ErrCode=', @ErrCode)
-					WHERE CustID = @custid;
-
+					IF @IsAutoTransfer = 1
+					BEGIN
+						UPDATE @tblResultMember
+						SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = CONCAT('Dot_BalanceDebitUpd @ErrCode=', @ErrCode)
+						WHERE CustID = @custid;
+					END
 					GOTO NEXT_PAIR;
 				END
 		
@@ -628,18 +634,22 @@ BEGIN
 					EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @amount, @type = 2;
 				
 					--AutoJob Transfer
-					UPDATE @tblResultMember
-					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
-					WHERE CustID = @custid;
-
+					IF @IsAutoTransfer = 1
+					BEGIN
+						UPDATE @tblResultMember
+						SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+						WHERE CustID = @custid;
+					END
 					GOTO NEXT_PAIR;
 				END CATCH						
 				
 				--AutoJob Transfer: Completed
-				UPDATE @tblResultMember
-				SET RefNo = @RefNo
-				WHERE CustID = @custid;
-
+				IF @IsAutoTransfer = 1
+				BEGIN
+					UPDATE @tblResultMember
+					SET RefNo = @RefNo
+					WHERE CustID = @custid;
+				END
 				--Add writelog for each amt transfered - Vinh 20080629  
 				SELECT @LogData = 'Transfer from Customer ' + @User + ' to Upline ' + @UplineUserName + ' with amount ' + convert(varchar(20), @amount) + ' Ref.No ' + convert(varchar(20), @RefNo)
 		
@@ -669,10 +679,12 @@ BEGIN
 					WHERE transid IN (@TransID_from, @TransID_to)
 									
 					--AutoJob Transfer
-					UPDATE @tblResultMember
-					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
-					WHERE CustID = @custid;
-
+					IF @IsAutoTransfer = 1
+					BEGIN
+						UPDATE @tblResultMember
+						SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+						WHERE CustID = @custid;
+					END
 					GOTO NEXT_PAIR;
 				END CATCH 
 
@@ -695,18 +707,22 @@ BEGIN
 					WHERE transid IN (@TransID_from, @TransID_to)
 					
 					--AutoJob Transfer
-					UPDATE @tblResultMember
-					SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
-					WHERE CustID = @custid;
-
+					IF @IsAutoTransfer = 1
+					BEGIN
+						UPDATE @tblResultMember
+						SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+						WHERE CustID = @custid;
+					END
 					GOTO NEXT_PAIR;
 				END CATCH
 		
 				--AutoJob Transfer: Completed
-				UPDATE @tblResultMember
-				SET RefNo = @RefNo
-				WHERE CustID = @custid;
-
+				IF @IsAutoTransfer = 1
+				BEGIN
+					UPDATE @tblResultMember
+					SET RefNo = @RefNo
+					WHERE CustID = @custid;
+				END
 				---update credit balance 
 				SELECT @ABSamount = abs(@amount)  
 				--EXEC Dot_BalanceUpdCredit @CustID = @CustID, @balance = @ABSamount	
@@ -754,9 +770,12 @@ BEGIN
 		END TRY
 		BEGIN CATCH
 			--Exception
-			UPDATE @tblResultMember
-			SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
-			WHERE CustID = @custid;
+			IF @IsAutoTransfer = 1
+			BEGIN
+				UPDATE @tblResultMember
+				SET MsgId = 50027, ErrType = 'DBIssue', ErrMsg = ERROR_MESSAGE()
+				WHERE CustID = @custid;
+			END
 		END CATCH
 
 		NEXT_PAIR:
