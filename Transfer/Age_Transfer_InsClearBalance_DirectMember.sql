@@ -189,14 +189,12 @@ BEGIN
 	SELECT bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel (0, 0, 0, 2, '', '', @isTest)
 
 	CREATE TABLE #BalanceInfo (CustId INT, Balance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY, TableName VARCHAR(50))
-
+	CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
 	--TODO: Filter downlines
 	SET @AutoTransfer = ISNULL(@AutoTransfer, 2) -- 2 all, 1: enable auto transfer, 0 disable
 
 	IF (ISNULL(@ToCustIDs,'0') = '0' AND @IsAutoTransfer = 0) -- for manual transfer for all pages
 	BEGIN
-		DROP TABLE IF EXISTS #ClearBalanceCust_Setting;
-		CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
 		DECLARE @SQL_CBS NVARCHAR(MAX);
 		SET @CustStatus = ISNULL(@CustStatus, 'All');
 
@@ -473,10 +471,12 @@ BEGIN
 	DECLARE @isSucc varchar(10), @SubAccName varchar(30)
  
 	--- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
-	SELECT @SubAccName = username 
-	FROM DBCUST.CustDB.dbo.custSub WITH(NOLOCK) 
-	WHERE SubAccID = @SubAccID
- 
+	IF @SubAccID > 0
+	BEGIN
+		SELECT @SubAccName = username 
+		FROM DBCUST.CustDB.dbo.custSub WITH(NOLOCK) 
+		WHERE SubAccID = @SubAccID
+	END
 	SELECT @isSucc='false'  
   
 	DECLARE @rCount INT = 1;
@@ -802,6 +802,6 @@ BEGIN
 	END  
  
 	DROP TABLE #Member  
-
+	DROP TABLE #ClearBalanceCust_Setting
 END		
 GO
