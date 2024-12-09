@@ -1,15 +1,18 @@
 /*<info serverAlias="DBSIC-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE  [dbo].[Age_Transfer_Auto_InsClearBalance_DirectMember]
+ALTER PROCEDURE  [dbo].[Age_Transfer_InsClearBalance_DirectMember]
 	@FromCustID int, --Agent ID here  
 	@ToCustIDs varchar(4000), 
 	@DirectMember INT,
 	@creator int,  
 	@Language varchar(2)= 'E',  
+	@SubAccID int = 0, --Sub-AccountID  
 	@IP varchar(45)='',
 	@ErrCode int = 0 OUTPUT,  
 	@ErrMsg nvarchar(4000) = '' OUTPUT,  
 	@CustStatus varchar(50)='',
-	@IsAllDayBalTransfer BIT = 0
+	@IsAllDayBalTransfer BIT = 0,
+	@IsAutoTransfer BIT = 0,
+	@AutoTransfer	TINYINT = 2
 AS  
 /*
 	Created:20241206@Helen 
@@ -25,6 +28,7 @@ AS
 		• @ToCustIDs: list to custid
 		  @IsAllDayBalTransfer: allow transfer many times per day
 		• @DirectMember: - 3: Master Direct Member;	- 4: Super Direct Member
+		• @AutoTransfer: 2: All; 1 --> Enabled, 0 --> Disabled
 
 */
 BEGIN
@@ -38,13 +42,8 @@ BEGIN
 	DECLARE @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
 
 	DECLARE @UplineUserName NVARCHAR(50), @UplineID INT, @TransID_from BIGINT, @TransID_to BIGINT, @recommend_member INT, @mrecommend_member INT, @srecommend_member INT
+			,@UplineRoleID TINYINT, @isValidDirectMember BIT = 0
 	
-	-- TODO: support auto clear balance
-	DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), MsgId INT, ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
-	INSERT INTO @tblResultMember(CustId)
-	SELECT DISTINCT t.value
-	FROM STRING_SPLIT(@ToCustIDs, ',') AS t;
-
 	EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption   
 		@CustID = @FromCustID,  
 		@ErrMsg = @ErrMsg OUTPUT,  
@@ -53,19 +52,24 @@ BEGIN
    
 	IF @ErrCode > 0  
 	BEGIN  
-		SET @Result = (SELECT 50023 AS MsgId, 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-		EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIds
-			,@Status='Failed', @Result = @Result;
+		IF @IsAutoTransfer = 1
+		BEGIN
+			SET @Result = (SELECT 50023 AS MsgId, 'TransferOption' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIds
+				,@Status='Failed', @Result = @Result;
+		END
 		RETURN
 	END
 
 	SELECT @UplineUserName = ci.username , @currency = ci.currency, @actualrate = e.actualrate, @currName = e.currency
-		, @MRecommend1 = ci.mrecommend, @srecommend1 = ci.srecommend  
+		, @MRecommend1 = ci.mrecommend, @srecommend1 = ci.srecommend, @UplineRoleID = ci.roleid 
 	FROM CustDB.dbo.custinfo ci (nolock) 
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on ci.currency = e.exchangeid 
 	WHERE custid = @FromCustID AND @DirectMember IN (-3,-4)
 	
- 	IF @UplineUserName IS NULL
+	CREATE TABLE #custid (CustId INT)
+	
+	IF @UplineUserName IS NULL --OR (@UplineRoleID = 4 AND @DirectMember <> -4) OR  (@UplineRoleID = 3 AND @DirectMember <> -3) OR @isValidDirectMember = 0
 	BEGIN  
 		select @ErrCode = 102  
 		Select @ErrMsg = case @Language   
@@ -73,11 +77,14 @@ BEGIN
 		   ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(40014,@Language)
 			end    
 
-		SET @Result = (SELECT 40014 AS MsgId, 'NotFound' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-		EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-			,@Status='Failed', @Result = @Result;
-		
+		IF @IsAutoTransfer = 1
+		BEGIN
+			SET @Result = (SELECT 40014 AS MsgId, 'NotFound' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
+				,@Status='Failed', @Result = @Result;
+		END
 		RETURN
+
 	END  
   
 	SELECT @UplineID = @FromCustID  
@@ -97,12 +104,15 @@ BEGIN
 	 
 	IF @ErrCode <> 0  -- Function Transfer is under UM 
 	BEGIN	
-		SET @Result = (SELECT 50024 AS MsgId,'TransferUM' AS ErrType, @ErrMsg AS ErrMsg, 
-			@ToTimeConfig AS ToTime FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-		EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-			,@Status='Pending', @Result = @Result;
+		IF @IsAutoTransfer = 1
+		BEGIN
+			SET @Result = (SELECT 50024 AS MsgId,'TransferUM' AS ErrType, @ErrMsg AS ErrMsg, 
+				@ToTimeConfig AS ToTime FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
+				,@Status='Pending', @Result = @Result;
+		END
 		RETURN
-	END		
+	END	
 
 	---- #2 CHECK FLAG ISTRANSFERRING = 1 THEN RAISE ERROR
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckRunningByCust  
@@ -113,11 +123,36 @@ BEGIN
 		 
 	IF @ErrCode <> 0  -- the auto transfer job is running this custid
 	BEGIN
-		SET @Result = (SELECT 50026 AS MsgId, 'AccTransfering' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-		EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-			,@Status='Failed', @Result = @Result;
-		
+		IF @IsAutoTransfer = 1
+		BEGIN
+			SET @Result = (SELECT 50026 AS MsgId, 'AccTransfering' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
+				,@Status='Failed', @Result = @Result;
+		END
 		RETURN
+	END
+	---- #2.1 CHECK Status is Waiting or Running -- manual tranfer
+	IF @IsAutoTransfer = 0
+	BEGIN
+		EXEC bodb02.dbo.Age_ClearBalanceCust_CheckRunning  
+			@CustID = @UplineID
+			,@Language = @Language
+			,@ErrMsg = @ErrMsg OUTPUT 
+			,@ErrCode = @ErrCode OUTPUT
+			 
+		IF @ErrCode <> 0  -- the auto transfer job is running for this line
+		BEGIN		
+			RETURN
+		END	
+	END
+
+	-- TODO: support auto clear balance
+	IF @IsAutoTransfer = 1
+	BEGIN
+		DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), MsgId INT, ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
+		INSERT INTO @tblResultMember(CustId)
+		SELECT DISTINCT t.value
+		FROM STRING_SPLIT(@ToCustIDs, ',') AS t;
 	END
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
@@ -155,13 +190,133 @@ BEGIN
 
 	CREATE TABLE #BalanceInfo (CustId INT, Balance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY, TableName VARCHAR(50))
 
-	CREATE TABLE #custid (CustId INT)
+	--TODO: Filter downlines
+	SET @AutoTransfer = ISNULL(@AutoTransfer, 2) -- 2 all, 1: enable auto transfer, 0 disable
 
-	--TODO: 
-	INSERT INTO #custid (CustId)
-	SELECT DISTINCT CONVERT(INT, value) AS CustId
-	FROM STRING_SPLIT(@ToCustIDs, ',')
+	IF (@CustStatus <> '' OR @CustStatus <> null OR @AutoTransfer <> 2) AND @IsAutoTransfer = 0 -- for manual transfer
+	BEGIN
+		DROP TABLE IF EXISTS #ClearBalanceCust_Setting;
+		CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
+		DECLARE @SQL_CBS NVARCHAR(MAX);
+		SET @CustStatus = ISNULL(@CustStatus, 'All');
 
+		IF @AutoTransfer <> 2
+		BEGIN
+			SELECT  @SQL_CBS = 'SELECT FromCustID, ToCustID
+							FROM OPENQUERY(DBCUST, ''SELECT cbs.FromCustID, cbs.ToCustID
+													FROM CustDB.dbo.Age_ClearBalanceCust_Setting cbs WITH(NOLOCK)
+													WHERE cbs.FromCustID = ' + CONVERT(VARCHAR(30), @UplineID) + ''')'
+			INSERT INTO #ClearBalanceCust_Setting (FromCustID, ToCustID)
+			EXEC (@SQL_CBS)
+		END
+		IF @DirectMember = -4
+		BEGIN 
+			INSERT INTO #custid (CustId)
+			SELECT c.custid
+			FROM CustDB.dbo.custInfo c WITH(NOLOCK,index=IX_custinfo_1)  
+			INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on c.custid=cs.CustID
+			LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.ToCustID = c.custid
+			WHERE	srecommend = @UplineID AND c.recommend = -4 
+					AND c.roleid = 1   
+					AND c.Enabled = case @CustStatus when 'All' then c.Enabled 
+							else	case @CustStatus  
+									when 'Disabled' then 0   
+									else 1 end  
+							end
+					AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0  then 1
+										when @CustStatus = 'Suspended' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 then 1
+										when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
+										when @CustStatus = 'Disabled' then 1
+										when @CustStatus = 'All' then 1
+										else 0 end
+					AND 1 = CASE 
+								WHEN @AutoTransfer = 2 THEN 1
+								WHEN @AutoTransfer = 0 AND cbs.ToCustID IS NULL THEN 1
+								WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
+								ELSE 0
+							END
+			END
+		ELSE IF @DirectMember = -3
+		BEGIN 
+			INSERT INTO #custid (CustId)
+			SELECT c.custid
+			FROM CustDB.dbo.custInfo c WITH(NOLOCK,index=IX_custinfo_1)  
+			INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on c.custid=cs.CustID
+			LEFT JOIN #ClearBalanceCust_Setting cbs ON cbs.ToCustID = c.custid
+			WHERE	mrecommend = @UplineID AND c.recommend = -3 
+					AND c.roleid = 1   
+					AND c.Enabled = case @CustStatus when 'All' then c.Enabled 
+							else	case @CustStatus  
+									when 'Disabled' then 0   
+									else 1 end  
+							end
+					AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0  then 1
+										when @CustStatus = 'Suspended' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 then 1
+										when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
+										when @CustStatus = 'Disabled' then 1
+										when @CustStatus = 'All' then 1
+										else 0 end
+					AND 1 = CASE 
+								WHEN @AutoTransfer = 2 THEN 1
+								WHEN @AutoTransfer = 0 AND cbs.ToCustID IS NULL THEN 1
+								WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
+								ELSE 0
+							END
+		END
+	END
+	ELSE IF (@IsAutoTransfer = 1 OR ISNULL(@ToCustIDs, '0') <> '0') -- validate for auto and manual input param
+	BEGIN
+		INSERT INTO #custid (CustId)
+		SELECT CONVERT(INT, value) AS CustId
+		FROM STRING_SPLIT(@ToCustIDs, ',')
+		IF @DirectMember = -3
+		BEGIN
+			SET @isValidDirectMember = ISNULL((SELECT TOP (1) 0
+			FROM #custid c
+				INNER JOIN CUSTDB.dbo.custinfo ci with (nolock) ON c.CustId = ci.custid
+			WHERE ci.recommend <> -3),1)
+		END
+		ELSE IF @DirectMember = -4
+		BEGIN
+			SET @isValidDirectMember = ISNULL((SELECT TOP (1) 0
+			FROM #custid c
+				INNER JOIN CUSTDB.dbo.custinfo ci with (nolock) ON c.CustId = ci.custid
+			WHERE ci.recommend <> -4),1)
+		END
+		IF @isValidDirectMember = 0
+		BEGIN  
+			select @ErrCode = 102  
+			Select @ErrMsg = case @Language   
+				when 'E' then 'Customer does not exist.'  
+			   ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(40014,@Language)
+				end    
+
+			IF @IsAutoTransfer = 1
+			BEGIN
+				SET @Result = (SELECT 40014 AS MsgId, 'NotFound' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
+					,@Status='Failed', @Result = @Result;
+			END
+			RETURN
+		END  
+	END
+	-- Return if no data for #custid
+	IF NOT EXISTS (SELECT TOP (1) 1 FROM #custid)
+	BEGIN
+			select @ErrCode = 102  
+			Select @ErrMsg = case @Language   
+				when 'E' then 'Customer does not exist.'  
+			   ELSE CustDB.dbo.f_Get_MsgNamebyMsgID(40014,@Language)
+				end    
+
+			IF @IsAutoTransfer = 1
+			BEGIN
+				SET @Result = (SELECT 40014 AS MsgId, 'NotFound' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
+					,@Status='Failed', @Result = @Result;
+			END
+			RETURN
+	END
 	/* *********** Calculating balance *********** */
 	--Yesterday Balance  
 	-- bettransRnG
@@ -282,7 +437,7 @@ BEGIN
 	INSERT INTO #Member (custid, memberName, memberBalance, memberOutstanding, memberCredit, memberPendingTransfer3rd)
 	SELECT c.CustId, '', SUM(ISNULL(b.Balance,0)), SUM(ISNULL(b.Outstanding,0)), 0, SUM(ISNULL(PendingTransfer3rd, 0))
 	FROM #custid c
-	LEFT JOIN #BalanceInfo b ON b.CustId = c.CustId
+		LEFT JOIN #BalanceInfo b ON b.CustId = c.CustId
 	GROUP BY c.CustId
 	/* End Filtering input custids */
 
@@ -295,11 +450,14 @@ BEGIN
 						@ErrCode = 103
 			;
 		
-		SET @Result = (SELECT 50025 AS MsgId, 'BalanceZero' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
-		EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
-			,@Status='Ignored', @Result = @Result;
-		
+		IF @IsAutoTransfer = 1
+		BEGIN
+			SET @Result = (SELECT 50025 AS MsgId, 'BalanceZero' AS ErrType, @ErrMsg AS ErrMsg FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @ToCustIDs
+				,@Status='Ignored', @Result = @Result;
+		END
 		RETURN
+
 	END
  
 	--Update member credit of table #Member
@@ -312,7 +470,12 @@ BEGIN
 	SELECT  @procName = OBJECT_NAME(@@PROCID)
  
 	DECLARE @ErrItems nvarchar(4000);
-	DECLARE @isSucc varchar(10)
+	DECLARE @isSucc varchar(10), @SubAccName varchar(30)
+ 
+	--- 20150606@Kathy: Migrate custDB to new server DBCust(Get credit from DBCust.CustDB) [Redmine:#36216]
+	SELECT @SubAccName = username 
+	FROM DBCUST.CustDB.dbo.custSub WITH(NOLOCK) 
+	WHERE SubAccID = @SubAccID
  
 	SELECT @isSucc='false'  
   
@@ -347,40 +510,44 @@ BEGIN
 				WHERE CustId = @custid;
 				GOTO NEXT_PAIR;
 			END
-	
-			--AutoJob Transfer: START a Pair waiting to Processing
-			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
-				,@Status='Processing', @Amount=@Amount
-				,@ErrCode = @ErrCode OUTPUT
-				,@ErrMsg = @ErrMsg OUTPUT
-			;
-			-- CHECK: Cancelling
-			IF @ErrCode > 0
-			BEGIN
-				UPDATE @tblResultMember
-				SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
-				WHERE CustId = @custid;	
-				GOTO NEXT_PAIR;
-			END
 			
+			--AutoJob Transfer: START a Pair waiting to Processing
+			IF @IsAutoTransfer = 1
+			BEGIN
+				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
+					,@Status='Processing', @Amount=@Amount
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				;
+				-- CHECK: Cancelling
+				IF @ErrCode > 0
+				BEGIN
+					UPDATE @tblResultMember
+					SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+					WHERE CustId = @custid;	
+					GOTO NEXT_PAIR;
+				END
+			END
 			------------------Gen refno---------------------------------------------------------------  
 			EXEC Get_Refno_Transid @RefNo = @RefNo OUTPUT
 
 			-- TODO: AutoTransfer - Check cancelled
-			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
-				,@Status='Processing'
-				,@ErrCode = @ErrCode OUTPUT
-				,@ErrMsg = @ErrMsg OUTPUT
-			;
-			-- CHECK: Cancelling
-			IF @ErrCode > 0
+			IF @IsAutoTransfer = 1
 			BEGIN
-				UPDATE @tblResultMember
-				SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
-				WHERE CustId = @custid;	
-				GOTO NEXT_PAIR;
+				EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
+					,@Status='Processing'
+					,@ErrCode = @ErrCode OUTPUT
+					,@ErrMsg = @ErrMsg OUTPUT
+				;
+				-- CHECK: Cancelling
+				IF @ErrCode > 0
+				BEGIN
+					UPDATE @tblResultMember
+					SET MsgId = @ErrCode, ErrType = 'TransferStatus', ErrMsg = @ErrMsg
+					WHERE CustId = @custid;	
+					GOTO NEXT_PAIR;
+				END
 			END
-			
 			--TODO: Set default ERROR for MANUAL transfer
 			DECLARE @extraTransDesc VARCHAR(100);
 			SELECT @ErrCode		= 105
@@ -389,7 +556,11 @@ BEGIN
 										THEN 'Clear balance failed. Please try again.'
 									ELSE CustDB.[dbo].[f_Get_MsgNamebyMsgID](50003, @Language)
 								END
-					, @extraTransDesc = ' (added via the Auto Transfer process)'
+					, @extraTransDesc = CASE 
+											WHEN @IsAutoTransfer = 1 THEN ' (added via the Auto Transfer process)'
+											WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')'
+											ELSE ''
+										END
 
 			------------------Insert trans into transfer---------------------------------------------------------------  
 			IF (@amount > 0)  
@@ -589,18 +760,26 @@ BEGIN
 		END CATCH
 
 		NEXT_PAIR:
-		
-		SELECT @Result = (SELECT MsgId, ErrType, ErrMsg, RefNo FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
-			@PairStatus = CASE WHEN RefNo > 0 THEN 'Completed' ELSE 
-				CASE WHEN ErrType = 'BalanceZero' THEN 'Ignored' ELSE 'Failed' END 
-			END
-		FROM @tblResultMember 
-		WHERE CustId=@CustId
-		;
-		EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
-			,@Status=@PairStatus, @Result = @Result;
-		
+		IF @IsAutoTransfer = 1
+		BEGIN
+			SELECT @Result = (SELECT MsgId, ErrType, ErrMsg, RefNo FOR JSON PATH, WITHOUT_ARRAY_WRAPPER),
+				@PairStatus = CASE WHEN RefNo > 0 THEN 'Completed' ELSE 
+					CASE WHEN ErrType = 'BalanceZero' THEN 'Ignored' ELSE 'Failed' END 
+				END
+			FROM @tblResultMember 
+			WHERE CustId=@CustId
+			;
+			EXEC dbo.Age_ClearBalanceCust_Process_StatusUpd @FromCustID = @FromCustID, @ToCustIds = @custid
+				,@Status=@PairStatus, @Result = @Result;
+		END
+		ELSE 
+		BEGIN
+			--TODO: Check FAILED break for MANUAL transfer
+			IF @ErrCode > 0
+				RETURN;
+		END
 		SET @rCount += 1;
+
 	END  
  
 	DROP TABLE #Member  
