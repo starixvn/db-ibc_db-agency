@@ -15,7 +15,7 @@ AS
 	Created:20241206@Helen 
 	Task: Auto transfer for direct member - Alpha
 	DB: DBSIC/bodb02
-	Original: Clone code from Age_Transfer_InsClearBalance_Ag
+	Original: get reference code from Age_Transfer_InsClearBalance_Ag
 
 	Revisions:
 		- 20241206@Helen: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
@@ -31,7 +31,7 @@ BEGIN
 	SET NOCOUNT ON  
 
 	DECLARE @LogData NVARCHAR(500), @PairStatus VARCHAR(15), @Result nvarchar(4000);
-	DECLARE @agentid INT, @custid int  
+	DECLARE @custid int  
 	DECLARE @currency INT, @actualrate FLOAT, @currName NVARCHAR(10)    
 	DECLARE @User NVARCHAR(50)  
 	DECLARE @RefNo BIGINT, @ToCustID INT, @Amount FLOAT, @MRecommend1 INT, @srecommend1 INT  

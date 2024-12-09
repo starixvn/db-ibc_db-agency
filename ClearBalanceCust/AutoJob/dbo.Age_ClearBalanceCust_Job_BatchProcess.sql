@@ -97,7 +97,7 @@ BEGIN
 							WHEN @RoleID = 2 THEN 'dbo.Age_Transfer_InsClearBalance_Ag'
 							WHEN @RoleID = 3 AND @DirectMember = 0 THEN 'dbo.Age_Transfer_Ins_MAg'
 							WHEN @RoleID = 4 AND @DirectMember = 0 THEN 'dbo.Age_Transfer_Ins_SAg'
-							WHEN @RoleID IN (3,4) AND @DirectMember IN (-3,-4) THEN 'dbo.Age_Transfer_InsClearBalance_DirectMemer'
+							WHEN @RoleID IN (3,4) AND @DirectMember IN (-3,-4) THEN 'dbo.Age_Transfer_Auto_InsClearBalance_DirectMember'
 							ELSE 'NA'
 						END;
 		SELECT @commandExec = CASE 
