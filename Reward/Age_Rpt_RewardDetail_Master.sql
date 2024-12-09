@@ -200,6 +200,7 @@ BEGIN
 			,m.username AS MasterUserName 
 			,rr.MasterPaymentStatus
 			,rr.MasterPaymentDate
+			,rr.IsDirectMember
 		FROM #RewardReport rr
 		INNER JOIN Customer mem WITH (NOLOCK) ON mem.custid = rr.CustID
 		LEFT JOIN Customer a WITH (NOLOCK) ON a.custid = rr.Recommend
@@ -234,6 +235,7 @@ BEGIN
 			,A.MasterUserName 
 			,A.MasterPaymentStatus
 			,A.MasterPaymentDate
+			,A.IsDirectMember
 		FROM (
 				SELECT 
 					rr.CreatedDate
@@ -255,6 +257,7 @@ BEGIN
 					,m.username AS MasterUserName 
 					,rr.MasterPaymentStatus
 					,rr.MasterPaymentDate
+					,rr.IsDirectMember
 					,ROW_NUMBER() OVER (ORDER BY rr.CreatedDate DESC) AS Rownum
 				FROM #RewardReport rr
 				INNER JOIN Customer mem WITH (NOLOCK) ON mem.custid = rr.CustID

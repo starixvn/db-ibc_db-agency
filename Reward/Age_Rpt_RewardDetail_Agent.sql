@@ -8,6 +8,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_RewardDetail_Agent]
 	,@PaymentStatus BIT = NULL
 	,@PageSize		INT = 0
 	,@PageIndex		INT = 0
+	,@LevelType TINYINT = 0
 	,@TotalRecords	INT = 0 OUTPUT
 AS  
 /*  
@@ -17,11 +18,16 @@ AS
   
     Revisions:  
         - 20240918@Lewis: Initialize SP [RedmineId: #208503]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master - Move SP from DBAGE to DBSIC [Redmine: #211969]
   
     Param's Explanation:  
 		- @Username: '': ALL | <>'': MemberUsername  
 			
 		- @PaymentStatus: NULL: ALL | 1: Paid | 0: UnPaid -> MemberPaymentStatus
+		• @Leveltype: 
+			- 0: All
+			- 1: Master Agent
+			- 2: Directmember
 */  
 BEGIN  
     SET NOCOUNT ON; 
@@ -90,6 +96,8 @@ BEGIN
 		,Recommend INT
 		,AgentPaymentStatus BIT
 		,AgentPaymentDate DATE
+		--Direct member
+		,IsDirectMember BIT DEFAULT (0)
 	)
 	INSERT INTO #RewardReport(
 		TransId
@@ -107,6 +115,8 @@ BEGIN
 		,Recommend
 		,AgentPaymentStatus
 		,AgentPaymentDate
+		--Direct member
+		,IsDirectMember
 	)
 	SELECT 
 		swt.TransId
@@ -125,6 +135,8 @@ BEGIN
 		,swt.Recommend
 		,CASE WHEN swt.PaymentStatus & 2 = 2 THEN 1 ELSE 0 END AS AgentPaymentStatus
 		,swt.MPaymentDate AS AgentPaymentDate
+		--Direct member
+		,IIF(swt.Recommend < 0, 1, 0) AS IsDirectMember
 	FROM SabaWalletTicket swt WITH (NOLOCK) 
 	LEFT JOIN #ProgramList p
 		ON swt.ProgramId = p.ProgramId
@@ -165,9 +177,10 @@ BEGIN
 			,a.username AS AgentUserName 
 			,rr.AgentPaymentStatus
 			,rr.AgentPaymentDate
+			,rr.IsDirectMember
 		FROM #RewardReport rr
 		INNER JOIN Customer mem WITH (NOLOCK) ON mem.custid = rr.CustID
-		INNER JOIN Customer a WITH (NOLOCK) ON a.custid = rr.Recommend
+		LEFT JOIN Customer a WITH (NOLOCK) ON a.custid = rr.Recommend
 		ORDER BY CreatedDate DESC
 	END
 	ELSE
@@ -193,6 +206,7 @@ BEGIN
 			,A.AgentUserName 
 			,A.AgentPaymentStatus
 			,A.AgentPaymentDate
+			,A.IsDirectMember
 		FROM (
 				SELECT 
 					rr.CreatedDate
@@ -209,10 +223,11 @@ BEGIN
 					,a.username AS AgentUserName 
 					,rr.AgentPaymentStatus
 					,rr.AgentPaymentDate
+					,rr.IsDirectMember
 					,ROW_NUMBER() OVER (ORDER BY  rr.CreatedDate DESC) AS Rownum
 				FROM #RewardReport rr
 				INNER JOIN Customer mem WITH (NOLOCK) ON mem.custid = rr.CustID
-				INNER JOIN Customer a WITH (NOLOCK) ON a.custid = rr.Recommend
+				LEFT JOIN Customer a WITH (NOLOCK) ON a.custid = rr.Recommend
 			) A
 		WHERE A.Rownum BETWEEN @RowStart AND @RowEnd
 	END
