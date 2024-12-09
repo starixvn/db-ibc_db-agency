@@ -6,6 +6,7 @@ ALTER PROCEDURE [dbo].[Age_RewardPayment_Agent]
 	,@Todate SMALLDATETIME =''
 	,@ProgramIds VARCHAR(MAX) = ''
 	,@PaymentStatus TINYINT = NULL
+	,@LevelType TINYINT = 0
 AS  
 /*  
     Created: 20240918@Lewis  
@@ -14,6 +15,7 @@ AS
   
     Revisions:  
         - 20240918@Lewis: Initialize SP [RedmineId: #208503]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master - Move SP from DBAGE to DBSIC [Redmine: #211969]
   
     Param's Explanation:  
 		- @Username: '': ALL | <>'': Username  
@@ -21,7 +23,11 @@ AS
 					 Master -> AgentUsername
 					 Agent  -> MemberUsername  
 
-		- @PaymentStatus: NULL: ALL | 1: Paid | 0: UnPaid 			
+		- @PaymentStatus: NULL: ALL | 1: Paid | 0: UnPaid 		
+		• @Leveltype: 
+			- 0: All
+			- 1: Master Agent
+			- 2: Directmember
 
 */  
 BEGIN  
@@ -58,12 +64,13 @@ BEGIN
 		TransId BIGINT
 		,CreatedDate DATETIME
 		,ProgramId SMALLINT
-		--agent
+		--agent/ Direct Member
 		--,AgentUserName VARCHAR(30)
 		,Recommend INT
 		,AgentAmount MONEY
 		,AgentPaymentStatus BIT
 		,AgentPaymentDate DATE
+		,IsDirectMember BIT DEFAULT(0)
 	)
 	INSERT INTO #RewardReport(
 		TransId
@@ -75,24 +82,32 @@ BEGIN
 		,AgentAmount
 		,AgentPaymentStatus
 		,AgentPaymentDate
+		,IsDirectMember
 	)
 	SELECT 
 		swt.TransId
 		,swt.TransDate
 		,swt.ProgramId
-		--agent
-		,swt.Recommend
+		--agent/ Direct member
+		,IIF(swt.Recommend = -3, swt.CustId, swt.Recommend) AS Recommend
 		,swt.Amount AS AgentAmount
 		,CASE WHEN swt.PaymentStatus & 2 = 2 THEN 1 ELSE 0 END AS AgentPaymentStatus
 		,swt.MPaymentDate AS AgentPaymentDate
-
+		,IIF(swt.Recommend = -3, 1, 0) AS IsDirectMember
 	FROM SabaWalletTicket swt WITH (NOLOCK) 
 	LEFT JOIN #ProgramList p
 		ON swt.ProgramId = p.ProgramId
 	WHERE swt.WalletID = 2
 		AND swt.Mrecommend = @CustId	
 		AND swt.WinlostDate BETWEEN @Fromdate AND @Todate
-		AND (swt.Recommend = @Username_CustId OR @Username_CustId = 0)
+		AND 1 = CASE WHEN @Username_CustId = 0 THEN 1
+					WHEN swt.Recommend = @Username_CustId THEN 1
+					WHEN swt.CustID = @Username_CustId THEN 1
+				ELSE 0 END
+		AND 1 = CASE WHEN @LevelType = 0 THEN 1
+					WHEN @LevelType = 1 AND swt.Recommend > 0 THEN 1
+					WHEN @LevelType = 2 AND swt.Recommend = -3 THEN 1
+				ELSE 0 END
 		AND (
 				ISNULL(@ProgramIds,'') = '' --get all
 				OR p.ProgramId IS NOT NULL
@@ -107,12 +122,13 @@ BEGIN
 	SELECT 
 		MAX(rr.TransId) AS MaxTransId
 		,rr.ProgramId
-		--agent
+		--agent/ Direct member
 		,rr.Recommend
 		,a.username AS AgentUserName 
 		,SUM(rr.AgentAmount) AS AgentAmount
 		,rr.AgentPaymentStatus
 		,rr.AgentPaymentDate
+		,rr.IsDirectMember
 	FROM #RewardReport rr
 	INNER JOIN Customer a WITH (NOLOCK) ON a.custid = rr.Recommend
 	GROUP BY rr.ProgramId
@@ -120,6 +136,7 @@ BEGIN
 		,a.username
 		,rr.AgentPaymentStatus
 		,rr.AgentPaymentDate
+		,rr.IsDirectMember
 	ORDER BY rr.ProgramId
 		,a.username
 

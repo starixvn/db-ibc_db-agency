@@ -490,7 +490,7 @@ BEGIN
 				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
 				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays,
 				c.IsDirectMember,
-				c.credit - isnull(balance.outstanding,0) + isnull(balance.TotalBalance,0) - isnull(balance.YesterdayBalance,0) FutureBetCredit
+				c.agentCredit - isnull(balance.outstanding,0) + isnull(balance.TotalBalance,0) - isnull(balance.YesterdayBalance,0) FutureBetCredit
 			FROM 
 				#tmp_customer c	
 				LEFT JOIN #result_balance balance ON c.custid = balance.recommend
@@ -564,7 +564,7 @@ BEGIN
 				IIF(cbs.ToCustID > 0, 1, 0) AS IsAllowAutoTransfer,
 				dbo.f_Age_ScheduleOption_Convert(cbs.ScheduleOption) AS ScheduleWeekDays,
 				c.IsDirectMember,
-				c.credit - isnull(balance.outstanding,0) + isnull(balance.TotalBalance,0) - isnull(balance.YesterdayBalance,0) FutureBetCredit
+				c.agentCredit - isnull(balance.outstanding,0) + isnull(balance.TotalBalance,0) - isnull(balance.YesterdayBalance,0) FutureBetCredit
 			FROM
 				#tmp_customer c	
 				LEFT JOIN #result_balance balance ON c.custid = balance.recommend

@@ -748,7 +748,6 @@ BEGIN
 	DROP TABLE #customerList
 	DROP TABLE #recommend
 	DROP TABLE #SportBettype
-	DROP TABLE #ClearBalanceCust_Setting
 	DROP TABLE #DirectMemberList
 END
 GO

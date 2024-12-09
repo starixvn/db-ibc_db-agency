@@ -673,6 +673,5 @@ BEGIN
 	DROP TABLE #SportBettype
 	DROP TABLE #BalanceInfo
 	DROP TABLE #recommend
-	DROP TABLE #ClearBalanceCust_Setting
 END
 GO
