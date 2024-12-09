@@ -193,7 +193,7 @@ BEGIN
 	--TODO: Filter downlines
 	SET @AutoTransfer = ISNULL(@AutoTransfer, 2) -- 2 all, 1: enable auto transfer, 0 disable
 
-	IF (@CustStatus <> '' OR @CustStatus <> null OR @AutoTransfer <> 2) AND @IsAutoTransfer = 0 -- for manual transfer
+	IF (ISNULL(@ToCustIDs,'0') = '0' AND @IsAutoTransfer = 0) -- for manual transfer for all pages
 	BEGIN
 		DROP TABLE IF EXISTS #ClearBalanceCust_Setting;
 		CREATE TABLE #ClearBalanceCust_Setting(FromCustID INT, ToCustID INT);
