@@ -128,7 +128,8 @@ BEGIN
 										', @ToCustIDs=''', @ToCustIDs, '''',
 										', @Creator=', @Creator,
 										', @DirectMember=', @DirectMember,
-										', @IsAllDayBalTransfer=', @IsAllDayBalTransfer
+										', @IsAllDayBalTransfer=', @IsAllDayBalTransfer,
+										', @IsAutoTransfer=', @IsAutoJobTransfer
 									)
 
 							END
