@@ -92,8 +92,10 @@ BEGIN
 		--master/ Direct member
 		,IIF(swt.Mrecommend = -4, swt.CustId, swt.Mrecommend) AS Mrecommend
 		,swt.Amount AS MasterAmount
-		,CASE WHEN swt.PaymentStatus & 4 = 4 THEN 1 ELSE 0 END AS MasterPaymentStatus
-		,swt.SPaymentDate AS MasterPaymentDate
+		,CASE WHEN swt.Mrecommend > 0 AND swt.PaymentStatus & 4 = 4 THEN 1 
+				WHEN swt.Mrecommend = -4 AND swt.StatusId = 1 THEN 1		
+			ELSE 0 END AS MasterPaymentStatus
+		,IIF(swt.Mrecommend = -4, swt.APaymentDate, swt.SPaymentDate) AS MasterPaymentDate
 		,IIF(swt.Mrecommend = -4, 1, 0) AS IsDirectMember
 	FROM SabaWalletTicket swt WITH (NOLOCK) 
 	LEFT JOIN #ProgramList p
