@@ -10,12 +10,13 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Agent]
 AS
 
 /*
-    Created: 
-    Task : 
-    DB: DBAGE/bodb02
+    Created:20240219@Bobby
+    Task: Alpha Winloss report - Apply CDC bettrans_compact
+    DB: DBAGE/bodb_Age
+	Original: Age_Rpt_WinLoss_Agent
     
 	Revisions:
-        - 20161111@Paul: Microsite for Report - [Redmine: #66991]
+		- 20161111@Paul: Microsite for Report - [Redmine: #66991]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
@@ -32,6 +33,7 @@ AS
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 		- 20240424@Lewis: Change old sql account [Redmine: #204021]
+		- 20241205@Lewis: Change data source bettrans_compact [Redmine: #214836]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -163,67 +165,27 @@ BEGIN
 			SET @FDate = DATEADD(DD, 1, @MoveBetsDay);
 		END
 
-		;WITH cte_bettrans AS
-		(
-			SELECT	b.recommend,
-					SUM(ABS(b.stake)) AS stake,
-					SUM(CASE
-						WHEN s.RefTable IN (1, 2) THEN 0
-						WHEN apositiontaking + mpositiontaking = 1 THEN 0
-						ELSE acomm/(1-apositiontaking - mpositiontaking)
-					END) AS GrossComm,
-					SUM(b.acomm) acomm,
-					SUM(b.winlost) winlost,
-					SUM(b.actual_stake) actual_stake,
-					SUM(b.awinlost) awinlost,
-					SUM(b.comm) comm,
-					SUM(b.mwinlost) mwinlost
-					
-			FROM dbo.bettrans b WITH (NOLOCK)
-				LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4,47)
-				LEFT JOIN (
-					SELECT LeagueGroupID, leagueid
-					FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
-				) AS l  ON m.leagueid = l.leagueid
-				OUTER APPLY (
-					SELECT CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 47) --SABA Kabaddi
-									 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
-					ELSE 0 END  sporttype, 
-					CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
-									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 4) --Virtual Ice Hockey
-									 OR (l.LeagueGroupID = 42 AND m.sporttype = 47) --SABA Kabaddi
-									 OR (l.LeagueGroupID = 151 AND m.sporttype = 43)
-								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN l.LeagueGroupID
-					ELSE 0 END LeagueGroupID,
-					CASE WHEN b.betdaqid = -2 THEN 1 ELSE 0 END TicketType
-				) AS et
-				INNER JOIN @SportBettypeMatrix s ON b.bettype = s.bettype 
-					AND (s.ProductID <> 1 OR (s.ProductID = 1 AND et.sporttype = s.SportType AND et.LeagueGroupID = s.LeagueGroupID AND et.TicketType = s.TicketType))
-			WHERE b.mrecommend = @CID 
-				AND b.winlostdate BETWEEN @FDate AND @TDate
-				AND b.statusID IN (111, 112, 113)
-			GROUP BY b.recommend
+		--TODO: bettrans_compact
+		;WITH CTE_Agent AS (
+			SELECT custid
+			FROM dbo.Customer WITH(NOLOCK)
+			WHERE mrecommend = @CID
+				AND RoleId = 2
 		)
 		INSERT INTO #MAgWinLoss(CustID, TurnOver, GrossComm, AgTotal, MAgWinlost, Comm)
-		SELECT	recommend AS CustID,
-				SUM(ABS(b.stake)) AS TurnOver,
-				SUM(GrossComm) AS GrossComm,
-				ISNULL(SUM(winlost - actual_stake), 0) + ISNULL(SUM(awinlost), 0) + ISNULL(SUM(comm), 0) AS AgTotal,
-				SUM(mwinlost) AS MAgWinlost,
-				ISNULL(SUM(acomm), 0) - ISNULL(SUM(comm), 0) AS Comm
-		FROM cte_bettrans b 
-		GROUP BY recommend;
+		SELECT	b.CustID,
+			SUM(TurnOver) AS TurnOver,
+			SUM(GrossComm) AS GrossComm,
+			SUM(winlost+ awinlost+ comm) AS AgTotal,
+			SUM(mwinlost) AS MAgWinlost,
+			SUM(acomm-comm) AS Comm
+		FROM bodb_AGE.dbo.bettrans_compact b WITH(NOLOCK)
+			INNER JOIN CTE_Agent m ON m.custid = b.custid
+			INNER JOIN @SportBettypeMatrix s ON b.bettype = s.bettype 
+				AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
+		WHERE 
+			b.winlostdate BETWEEN @FDate AND @TDate
+		GROUP BY b.custid;
 
 		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1) -- bettransRnG
 		BEGIN
@@ -297,7 +259,7 @@ BEGIN
 		BEGIN
 			SELECT @TDate = DATEADD(dd, -1, @BalanceUpDay);
 		END
-	
+			
 				
 
 		-- using cte to remove predicate when seek on sum_winloss_old
