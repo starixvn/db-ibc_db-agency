@@ -122,7 +122,7 @@ BEGIN
 			GROUP BY SuperID;
 
 			-- TODO: Batching by Super
-			INSERT INTO #tmpClearBalanceCust_Process (SuperID, FromCustId, ToCustId, RoleID, IsAllDayBalTransfer, BatchNo,DirectMember)
+			INSERT INTO #tmpClearBalanceCust_Process (SuperID, FromCustId, ToCustId, RoleID, IsAllDayBalTransfer, DirectMember, BatchNo)
 			SELECT SuperID, FromCustId, ToCustId, RoleID, IsAllDayBalTransfer, t.DirectMember
 				,SUM(CASE WHEN t.superIdx%@PairOfBatch = 1 THEN 1 ELSE 0 END) OVER (ORDER BY t.rIdx) AS BatchNo
 			FROM(
