@@ -1,4 +1,4 @@
-/*<info serverAlias="DBACC-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBACC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel]  
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
@@ -6,6 +6,7 @@ ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel]
 	@Username		VARCHAR(50) = '',
 	@PageSize		INT = 0,
 	@PageIndex		INT = 0,
+	@LevelType		TINYINT = 0,	
 	@TotalRecords	INT = 0 OUTPUT
 AS  
 
@@ -17,6 +18,7 @@ AS
 	Revisions:  
 		- 20201228@Danny: Transfer To Downline History Report  [Redmine: #146038]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 */  
  
 BEGIN
@@ -44,18 +46,30 @@ SET NOCOUNT ON;
 
 	SELECT  @roleID = roleid  FROM dbo.custInfo WITH(NOLOCK) WHERE custid = @custID
 
-	CREATE TABLE #DownLineList (CustID INT, username NVARCHAR(100))
+	CREATE TABLE #DownLineList (CustID INT, username NVARCHAR(100), IsDirectMember BIT DEFAULT(0))
 
 	IF @roleID = 4 
 	BEGIN
-		INSERT INTO #DownLineList(CustID, username)
-		SELECT CustID,username  FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 3 and srecommend = @CustID AND username LIKE '%' + @Username + '%'
+		INSERT INTO #DownLineList(CustID, username, IsDirectMember)
+		SELECT CustID,username  
+			,IIF(recommend = -4, 1, 0) AS IsDirectMember
+		FROM dbo.custInfo WITH(NOLOCK) 
+		WHERE 1 = CASE WHEN roleid = 3 AND @LevelType IN (0,1) THEN 1
+					WHEN roleid = 1 AND @LevelType IN (0,2) AND recommend = -4 THEN 1
+				ELSE 0 END
+			and srecommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	IF @roleID = 3 
 	BEGIN
-		INSERT INTO #DownLineList(CustID, username)
-		SELECT CustID, username FROM dbo.custInfo WITH(NOLOCK) WHERE roleid = 2 and mrecommend = @CustID AND username LIKE '%' + @Username + '%'
+		INSERT INTO #DownLineList(CustID, username, IsDirectMember)
+		SELECT CustID, username 
+			,IIF(recommend = -4, 1, 0) AS IsDirectMember
+		FROM dbo.custInfo WITH(NOLOCK) 
+		WHERE 1 = CASE WHEN roleid = 2 AND @LevelType IN (0,1) THEN 1
+					WHEN roleid = 1 AND @LevelType IN (0,2) AND recommend = -3 THEN 1
+				ELSE 0 END
+			and mrecommend = @CustID AND username LIKE '%' + @Username + '%'
 	END
 
 	IF @roleID = 2 
@@ -76,7 +90,8 @@ SET NOCOUNT ON;
 		OldBalance		MONEY,
 		NewBalance		MONEY,
 		TransDesc		NVARCHAR(1000),
-		creator			INT
+		creator			INT, 
+		IsDirectMember BIT DEFAULT(0)
 	);
 
 	CREATE TABLE #result(
@@ -87,6 +102,7 @@ SET NOCOUNT ON;
 		OldBalance		MONEY,
 		NewBalance		MONEY,
 		TransDesc		NVARCHAR(1000),
+		IsDirectMember BIT DEFAULT(0),
 		rn				INT
 	);
 
@@ -109,7 +125,7 @@ SET NOCOUNT ON;
 			AND  winlostdate BETWEEN @FDate AND @TDate
 			AND bettype > 20000;
 
-		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, creator)
+		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, creator, IsDirectMember)
 		SELECT  RefNo,
 				CustID,
 				d.username,
@@ -119,9 +135,10 @@ SET NOCOUNT ON;
 				ISNULL(balance,0) as OldBalance,
 				ISNULL((balance + winlost - actual_stake),0)  AS NewBalance,
 				TransDesc,
-				creator
+				creator,
+				d.IsDirectMember
 		FROM dbo.Transfer b WITH (NOLOCK)  
-		CROSS APPLY (SELECT  d.username FROM #DownLineList d WHERE d.CustID = b.custid) d
+		CROSS APPLY (SELECT  d.username, IsDirectMember FROM #DownLineList d WHERE d.CustID = b.custid) d
 		WHERE  winlostdate BETWEEN @FDate AND @TDate AND bettype > 20000;
 		
 	END  
@@ -160,14 +177,14 @@ SET NOCOUNT ON;
 		select winlostdate from CTE_Winlostdate
 		OPTION (MAXRECURSION 0)
 
-		CREATE TABLE #DownLineWinlost (Winlostdate SMALLDATETIME, custID INT, username NVARCHAR(100))
-		INSERT INTO #DownLineWinlost (Winlostdate, custID, username)
-		SELECT a.winlostdate, b.CustID, b.username
+		CREATE TABLE #DownLineWinlost (Winlostdate SMALLDATETIME, custID INT, username NVARCHAR(100), IsDirectMember BIT DEFAULT(0))
+		INSERT INTO #DownLineWinlost (Winlostdate, custID, username, IsDirectMember)
+		SELECT a.winlostdate, b.CustID, b.username,b.IsDirectMember
 		FROM @winlostdateTable a CROSS JOIN #DownLineList b 
 
 		CREATE CLUSTERED INDEX cix_#DownLineWinlost ON #DownLineWinlost(Winlostdate, CustID)
 
-		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, creator)
+		INSERT INTO #DownlineTransferHistory(RefNo, CustID, username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, creator, IsDirectMember)
 		SELECT  refno AS RefNo,
 				custID	CustID,
 				d.username,
@@ -177,17 +194,21 @@ SET NOCOUNT ON;
 				ISNULL(balance,0) as OldBalance,
 				ISNULL((balance + credit - debit),0)  AS NewBalance,
 				transdesc as TransDesc,
-				creator
+				creator,
+				d.IsDirectMember
 		FROM  bodb_Archive.dbo.transfer_bk b WITH (NOLOCK)  
-		CROSS APPLY (SELECT  d.username FROM #DownLineWinlost d WHERE  d.Winlostdate = b.winlostdate AND  d.CustID = b.custid) d
+		CROSS APPLY (SELECT  d.username, d.IsDirectMember FROM #DownLineWinlost d WHERE  d.Winlostdate = b.winlostdate AND  d.CustID = b.custid) d
 		WHERE bettype > 20000;
 
 		DROP TABLE #DownLineWinlost
 	END  
 	
 
-	INSERT INTO #result(username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, rn)
-	SELECT d.username, d.TransDate, d.TransferType, d.TransferAmt, d.OldBalance, d.NewBalance, CASE WHEN c.roleid > @roleID THEN 'The transfer was done by upline' ELSE d.TransDesc END TransDesc , ROW_NUMBER() OVER (ORDER BY d.TransDate) AS rn
+	INSERT INTO #result(username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, IsDirectMember, rn)
+	SELECT d.username, d.TransDate, d.TransferType, d.TransferAmt, d.OldBalance, d.NewBalance
+		, CASE WHEN c.roleid > @roleID THEN 'The transfer was done by upline' ELSE d.TransDesc END TransDesc 
+		, d.IsDirectMember
+		, ROW_NUMBER() OVER (ORDER BY d.TransDate) AS rn
 	FROM #DownlineTransferHistory d
 	INNER JOIN #UplineTrans u ON d.RefNo = u.Refno
 	LEFT JOIN dbo.custInfo c ON d.creator = c.custid 
@@ -195,7 +216,7 @@ SET NOCOUNT ON;
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
-		SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
+		SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, IsDirectMember
 		FROM #result
 		ORDER BY TransDate
 
@@ -207,7 +228,7 @@ SET NOCOUNT ON;
 		SELECT @TotalRecords = count(1) FROM #result 
 	END
 
-	SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc 
+	SELECT username, TransDate, TransferType, TransferAmt, OldBalance, NewBalance, TransDesc, IsDirectMember
 	FROM #result
 	WHERE rn BETWEEN @RowStart AND @RowEnd;
 
