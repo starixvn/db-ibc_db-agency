@@ -10,7 +10,6 @@ ALTER PROCEDURE  [dbo].[Age_Transfer_InsClearBalance_DirectMember]
 	@ErrCode int = 0 OUTPUT,  
 	@ErrMsg nvarchar(4000) = '' OUTPUT,  
 	@CustStatus varchar(50)='',
-	@IsAllDayBalTransfer BIT = 0,
 	@IsAutoTransfer BIT = 0,
 	@AutoTransfer	TINYINT = 2
 AS  
@@ -26,7 +25,6 @@ AS
 	Param's Explanation:
 		• @FromCustID: list from custid
 		• @ToCustIDs: list to custid
-		  @IsAllDayBalTransfer: allow transfer many times per day
 		• @DirectMember: - 3: Master Direct Member;	- 4: Super Direct Member
 		• @AutoTransfer: 2: All; 1 --> Enabled, 0 --> Disabled
 
