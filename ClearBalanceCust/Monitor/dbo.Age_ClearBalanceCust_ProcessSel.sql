@@ -172,8 +172,8 @@ BEGIN
 			FROM CustDB.dbo.Customer c WITH(NOLOCK) 
 			WHERE c.CustId = p.ToCustId
 				AND 1 = CASE WHEN @LevelType = 0 THEN 1
-							WHEN @LevelType = 1 AND recommend > 0 THEN 1
-							WHEN @LevelType = 2 AND recommend < 0 THEN 1
+							WHEN @LevelType = 1 AND c.roleid <> 1 THEN 1
+							WHEN @LevelType = 2 AND c.roleid = 1 AND recommend < 0 THEN 1
 						ELSE 0 END
 		)c
 		LEFT JOIN #tmpDownline cte ON cte.custId = p.ToCustId
@@ -206,6 +206,7 @@ BEGIN
 		CASE 
 			WHEN @SortType = 0 AND @SortBy = 3 THEN p.Amount
 			WHEN @SortType = 0 AND @SortBy = 4 THEN ct.CompletedTimeSec
+			WHEN @SortType = 0 AND @SortBy = 5 THEN c.IsDirectMember
 			ELSE 0
 			END ASC,
 		------------ DESC
@@ -217,6 +218,7 @@ BEGIN
 		CASE 
 			WHEN @SortType = 1 AND @SortBy = 3 THEN p.Amount
 			WHEN @SortType = 1 AND @SortBy = 4 THEN ct.CompletedTimeSec
+			WHEN @SortType = 1 AND @SortBy = 5 THEN c.IsDirectMember
 			ELSE 0
 			END DESC
 	;

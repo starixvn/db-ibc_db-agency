@@ -677,7 +677,7 @@ BEGIN
 				FOR Detail IN ([1],[2],[-3],[3])
 			) AS u
 			WHERE (@RoleId = 4 OR u.Detail NOT IN (-3,3))
-			ORDER BY RowId
+			ORDER BY CASE WHEN u.Detail = -3 THEN 3 ELSE u.Detail END
 		END
 
 		DROP TABLE #Result

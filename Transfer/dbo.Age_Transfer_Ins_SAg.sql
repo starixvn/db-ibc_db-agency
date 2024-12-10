@@ -245,6 +245,7 @@ BEGIN
 		AND EXISTS (SELECT 1 FROM #customerList m WHERE c.mrecommend = m.CustId)
 
 	--Get direct member of Master
+	INSERT INTO #DirectMemberList(CustId)
 	SELECT c.CustId
 	FROM #CustomerList t	
 		INNER JOIN CustDB.dbo.CustInfo c WITH (NOLOCK)
