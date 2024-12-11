@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_SAg]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -45,6 +45,7 @@ Revisions:
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
 	- 20250402@Eden: Enhance sp [redmine: #222752]
 
 Param's Explanation:
