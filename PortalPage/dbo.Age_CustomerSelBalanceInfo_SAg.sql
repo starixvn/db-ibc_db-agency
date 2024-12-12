@@ -1,7 +1,6 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_SAg]
-	 @custid		INT, -- srecommend
-	 @MoveBetsDay	SMALLDATETIME -- not use
+	 @custid		INT -- srecommend
 AS
 
 /*
@@ -17,12 +16,13 @@ AS
 		- 20220429@Malcolm: Offer telegram bot service - [Redmine: #167819]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
         - 20240918@Lewis: Rebate Retention - RewardReceivable RewardPayable [RedmineId: #208503]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @username NVARCHAR(50), @givenCredit MONEY, @memberCredit MONEY, @Currency INT, @CurrencyName NVARCHAR(50)
+	DECLARE @username NVARCHAR(50), @givenCredit MONEY, @memberCredit MONEY, @Currency INT, @CurrencyName NVARCHAR(50), @DirectMemberCredit MONEY
 
 	SELECT @username = username, @givenCredit = ISNULL(Credit, 0), @Currency = currency
 	FROM dbo.custInfo WITH (NOLOCK)
@@ -30,9 +30,12 @@ BEGIN
 
 	SELECT @CurrencyName = e.currency FROM dbo.Exchange e WITH(NOLOCK) WHERE e.ExchangeId = @Currency
 
-	SELECT @memberCredit = ISNULL(SUM(credit), 0)
+	SELECT @memberCredit = ISNULL(SUM(CASE WHEN roleid = 3 THEN credit ELSE 0 END), 0)
+		,@DirectMemberCredit = ISNULL(SUM(CASE WHEN roleid = 1 THEN credit ELSE 0 END), 0)
 	FROM dbo.custInfo WITH (NOLOCK)
-	WHERE srecommend = @custid AND roleid = 3
+	WHERE srecommend = @custid 
+		AND 1 = CASE WHEN roleid = 3 THEN 1
+					WHEN roleid = 1 AND recommend = -4 THEN 1 ELSE 0 END
 
 	CREATE TABLE #BalanceInfo
 	(
@@ -100,7 +103,8 @@ BEGIN
 		--Reward
 		@RewardPending AS RewardPayable,
 		@RewardBalance AS RewardReceivable,
-		@RewardCurrency AS RewardCurrency
+		@RewardCurrency AS RewardCurrency,
+		@DirectMemberCredit AS DirectMemberCredit
 	FROM #BalanceInfo
 
 	DROP TABLE #BalanceInfo

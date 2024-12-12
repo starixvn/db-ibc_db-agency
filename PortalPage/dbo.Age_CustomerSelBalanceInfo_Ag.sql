@@ -1,7 +1,6 @@
 ﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelBalanceInfo_Ag]
-	 @custid		INT, -- recommend
-	 @MoveBetsDay	SMALLDATETIME -- not use
+	 @custid		INT -- recommend
 AS
 
 /*
@@ -17,6 +16,7 @@ AS
 		- 20220429@Malcolm: Offer telegram bot service - [Redmine: #167819]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
         - 20240918@Lewis: Rebate Retention - RewardReceivable RewardPayable [RedmineId: #208503]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 */
 
 BEGIN

@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBBOF-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="vnteam" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBBOF-bodb02" executers="wsv_alp,wsv_alpv" viewers="vnteam" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelStatisticsInfo_SAg]
 	 @custid INT
 AS
@@ -14,6 +14,7 @@ AS
 		- 20180731@Patrick: indexes revolution [RedmineId: #98757]
 		- 20201113@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 */
 
 BEGIN
@@ -33,7 +34,11 @@ BEGIN
 		@total_masterClosed		INT,
 		@total_masterSuspended	INT,
 		-- new members
-		@number_newMembers		INT
+		@number_newMembers		INT,
+		-- direct member
+		@total_DirectmemberActive		INT,
+		@total_DirectmemberClosed		INT,
+		@total_DirectmemberSuspended	INT
 
 	-- all downlines's status
 	;WITH custStatus AS
@@ -42,7 +47,8 @@ BEGIN
 			roleid,
 			SUM(CASE WHEN cs.IsClosed = 0 AND cs.IsSuspended = 0 THEN 1 ELSE 0 END) AS Active,
 			SUM(CASE WHEN cs.IsClosed = 1 THEN 1 ELSE 0 END) AS Closed,
-			SUM(CASE WHEN cs.IsSuspended = 1 AND cs.IsClosed = 0 THEN 1 ELSE 0 END) AS Suspended
+			SUM(CASE WHEN cs.IsSuspended = 1 AND cs.IsClosed = 0 THEN 1 ELSE 0 END) AS Suspended,
+			CASE WHEN roleid = 1 AND recommend = -4 THEN 1 ELSE 0 END AS IsDirectMember
 		FROM dbo.custInfo ci WITH (NOLOCK)
 			CROSS APPLY  
 			(
@@ -54,13 +60,13 @@ BEGIN
 			) AS cs
 		WHERE srecommend = @CustId
 			AND roleid <> 4
-		GROUP BY roleid
+		GROUP BY roleid, CASE WHEN roleid = 1 AND recommend = -4 THEN 1 ELSE 0 END
 	)
 	SELECT
 		-- member
-		@Total_memberActive    = ISNULL(CASE WHEN roleId = 1 THEN Active	ELSE @Total_memberActive	END, 0),
-		@Total_memberClosed    = ISNULL(CASE WHEN roleId = 1 THEN Closed	ELSE @Total_memberClosed	END, 0),
-		@Total_memberSuspended = ISNULL(CASE WHEN roleId = 1 THEN Suspended ELSE @Total_memberSuspended END, 0),
+		@Total_memberActive    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 0 THEN Active	ELSE @Total_memberActive	END, 0),
+		@Total_memberClosed    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 0 THEN Closed	ELSE @Total_memberClosed	END, 0),
+		@Total_memberSuspended = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 0 THEN Suspended ELSE @Total_memberSuspended END, 0),
 		-- agent
 		@Total_agentActive     = ISNULL(CASE WHEN roleId = 2 THEN Active	ELSE @Total_agentActive		END, 0),
 		@Total_agentClosed     = ISNULL(CASE WHEN roleId = 2 THEN Closed	ELSE @Total_agentClosed		END, 0),
@@ -68,7 +74,11 @@ BEGIN
 		-- master
 		@Total_masterActive    = ISNULL(CASE WHEN roleId = 3 THEN Active	ELSE @Total_masterActive	END, 0),
 		@Total_masterClosed    = ISNULL(CASE WHEN roleId = 3 THEN Closed	ELSE @Total_masterClosed	END, 0),
-		@Total_masterSuspended = ISNULL(CASE WHEN roleId = 3 THEN Suspended ELSE @Total_masterSuspended END, 0)
+		@Total_masterSuspended = ISNULL(CASE WHEN roleId = 3 THEN Suspended ELSE @Total_masterSuspended END, 0),
+		-- direct member
+		@Total_DirectmemberActive    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Active	ELSE @Total_memberActive	END, 0),
+		@Total_DirectmemberClosed    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Closed	ELSE @Total_memberClosed	END, 0),
+		@Total_DirectmemberSuspended = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Suspended ELSE @Total_memberSuspended END, 0)
 	FROM custStatus
 
 	-- new member of this month
@@ -102,7 +112,11 @@ BEGIN
 		-- master
 		@total_masterActive		AS total_masterActive,
 		@total_masterClosed		AS total_masterClosed,
-		@total_masterSuspended	AS total_masterSuspended
+		@total_masterSuspended	AS total_masterSuspended,
+		--Direct member
+		@total_DirectmemberActive		AS total_DirectmemberActive,
+		@total_DirectmemberClosed		AS total_DirectmemberClosed,
+		@total_DirectmemberSuspended	AS total_DirectmemberSuspended
 	FROM #Outstanding
 
 	DROP TABLE #Outstanding
