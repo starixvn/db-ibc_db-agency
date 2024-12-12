@@ -134,14 +134,14 @@ BEGIN
 			,cs.IsSuspended
 			,ci.credit
 			,cs.Locked
-		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
 				SELECT 
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs
 		WHERE 1 = ci.roleid 
@@ -183,14 +183,14 @@ BEGIN
 			,cs.IsSuspended
 			,ci.credit
 			,cs.Locked
-		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
 				SELECT 
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs
 		WHERE 1 = ci.roleid 
@@ -327,7 +327,7 @@ BEGIN
 			,c.creatdate AS CreatedDate
 			,ISNULL(balance.PendingTransfer3rd,0) AS PendingTransfer3rd
 		FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
-			INNER JOIN Customer c (NOLOCK) ON ci.custid = c.custid
+			INNER JOIN CustDB.dbo.Customer c (NOLOCK) ON ci.custid = c.custid
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid
 		ORDER BY RowNumber
 

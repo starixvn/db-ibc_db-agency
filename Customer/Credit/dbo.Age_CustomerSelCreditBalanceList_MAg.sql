@@ -7,6 +7,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg]
 	@Enabled	BIT = NULL,
 	@Closed		BIT = NULL,
 	@Suspended	BIT = NULL,
+	@LevelType	TINYINT = 0,
 	@TotalItems INT = 0 OUTPUT
 AS 
 /*
@@ -115,8 +116,8 @@ BEGIN
 			isnull(SUM(CASE WHEN roleid = 1 THEN credit ELSE 0 END), 0) AS UsedCredit,
 			0 AS IsDirectMember
 		FROM CustDB.dbo.custinfo as c (nolock)
-		WHERE mrecommend = @CustID 
-			AND roleid = 2
+		WHERE mrecommend = @CustID AND roleid < 3 AND recommend > 0
+			AND @Leveltype IN (0,1)
 		GROUP BY c.recommend
 		UNION ALL
 		SELECT
@@ -128,6 +129,7 @@ BEGIN
 			WHERE mrecommend = @CustID 
 				AND roleid = 1
 				AND recommend = -3			
+				AND @Leveltype IN (0,2)
 	)
 	INSERT INTO #tmp_customer ([custid],[enabled],[username],[iplogin],[closed],[suspended],[firstname],[lastname],[credit],[lastlogged],[usedCredit],Locked,CreatedDate,IsDirectMember)
 	SELECT t.CustId, ci.Enabled, ci.username, c.iplogin
