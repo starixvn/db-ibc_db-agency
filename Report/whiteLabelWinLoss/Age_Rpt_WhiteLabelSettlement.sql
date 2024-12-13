@@ -107,10 +107,10 @@ BEGIN
 	), wls AS
 	(
 		SELECT	ws.CustID, 
-			ws.AgentRate /100. AgentRate, 
-			ws.MasterRate/ 100. MasterRate, 
-			ws.SuperRate/ 100. SuperRate, 
-			ws.HeadlineRate/ 100. HeadlineRate, 
+			ws.AgentRate  AgentRate, 
+			ws.MasterRate MasterRate, 
+			ws.SuperRate SuperRate, 
+			ws.HeadlineRate HeadlineRate, 
 			CASE WHEN ws.FromDate < wl.LaunchedDate THEN CAST(wl.LaunchedDate AS DATE)  ELSE  CAST(ws.FromDate AS DATE) END FromDate, 
 			CAST(ws.ToDate AS DATE) ToDate
 		FROM WhiteLabelSetting ws WITH(NOLOCK)
@@ -140,10 +140,10 @@ BEGIN
 	), d AS
 	(
 		SELECT CustID, 
-				SUM(AgentRate * (NumberAffectedDay / x.TotalDayOfMonth)) AgentRate, 
-				SUM(MasterRate * (NumberAffectedDay / x.TotalDayOfMonth)) MasterRate, 
-				SUM(SuperRate * (NumberAffectedDay / x.TotalDayOfMonth)) SuperRate,
-				SUM(HeadlineRate * (NumberAffectedDay / x.TotalDayOfMonth)) HeadlineRate,
+				SUM(AgentRate * NumberAffectedDay) / MAX(x.TotalDayOfMonth) / 100.   AgentRate, 
+				SUM(MasterRate * NumberAffectedDay) / MAX(x.TotalDayOfMonth) / 100. MasterRate, 
+				SUM(SuperRate * NumberAffectedDay) / MAX(x.TotalDayOfMonth) / 100. SuperRate,
+				SUM(HeadlineRate * NumberAffectedDay) / MAX(x.TotalDayOfMonth) /100. HeadlineRate,
 				Month_,
 				DATEADD(DAY,1,EOMONTH(FromDate,-1)) FromDate,
 				EOMONTH(ToDate) ToDate
