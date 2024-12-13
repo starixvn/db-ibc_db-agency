@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_nap" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearCredit_All_Ins]
 	@UserId				INT,
 	@CustId				INT,
@@ -21,7 +21,7 @@ AS
 		- 20181102@Johnson: Apply service broker for logging [Redmine: #103547]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20230510@Eden: Scale out DBTRANS for Credit [Redmine: #181595]
-
+		- 20241206@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
 	Param's Explanation:`
 		@MemberAmountXML = '<ROOT>
 					  <R ID="1290" AM="2483.0000" />
@@ -207,8 +207,9 @@ BEGIN
 			WHILE @@FETCH_STATUS = 0
 			BEGIN
 				UPDATE c WITH (ROWLOCK, UPDLOCK)
-				SET c.credit = t.newCredit
-					OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
+				SET c.credit = t.newCredit,
+					RepUpdateTime = dbo.f_GetDateTime2()
+				OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
 				FROM dbo.CustInfo c
 					INNER JOIN #tblMember t ON c.custid = t.custid
 				WHERE c.recommend = @recommend
@@ -302,8 +303,9 @@ BEGIN
 				WHERE a.custid = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
 			
 			UPDATE c WITH (ROWLOCK, UPDLOCK)
-			SET c.credit = t.UpdCredit
-				OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
+			SET c.credit = t.UpdCredit,
+				RepUpdateTime = dbo.f_GetDateTime2()
+			OUTPUT DELETED.custid, DELETED.credit, INSERTED.credit INTO @UpdCredit (custid, oldCredit, newCredit)
 			FROM dbo.CustInfo c
 				INNER JOIN #tblrecommend t ON c.custid = t.custid
 
@@ -375,7 +377,8 @@ BEGIN
 				SELECT  @usedCreditMaster = ISNULL(@usedCreditMaster, 0)
 
 				UPDATE dbo.custInfo WITH (ROWLOCK, UPDLOCK)
-				SET credit = @usedCreditMaster
+				SET credit = @usedCreditMaster,
+					RepUpdateTime = dbo.f_GetDateTime2()
 				WHERE custId = @DownlineCustId
 
 				IF @@ERROR <> 0
