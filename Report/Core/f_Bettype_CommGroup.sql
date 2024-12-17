@@ -56,6 +56,7 @@ AS
 		- 20240905@Lewis: BaseBall AIO - Phase 1 - fix 8820 - commission 2 [Redmine: #207510]
 		- 20240816@Lewis: BaseBall AIO phase2 [Redmine: #209356]
 		- 20240911@Lewis: Add ON Casino [Redmine: #210024]
+		- 20241127@Lewis: Add GPI Live Casino [RedmineID: #213484]
 
 	- Columns:
 		- CommGroup:
@@ -218,6 +219,7 @@ FROM (
 		OR typeid BETWEEN 7901 AND 7999 -- Bitcoin product
 		OR typeid BETWEEN 10300 AND 10399 -- WE Live Casino
 		OR typeid BETWEEN 11850 AND 11899 -- ON Casino
+		OR typeid BETWEEN 11500 AND 11599 -- GPI Live Casino
 		
 ) AS A
 
