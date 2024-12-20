@@ -19,7 +19,7 @@ BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE @RoleID TINYINT
-	SELECT @RoleID = RoleID FROM bodb02.dbo.CustInfo WITH(NOLOCK) WHERE CustID = @CustID
+	SELECT @RoleID = RoleID FROM dbo.CustInfo WITH(NOLOCK) WHERE CustID = @CustID
 
 	SELECT wl.CustID, WhiteLabel
 	FROM WhiteLabelInfo  wl WITH(NOLOCK)

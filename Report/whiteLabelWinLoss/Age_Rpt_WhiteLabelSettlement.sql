@@ -3,7 +3,7 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WhiteLabelSettlement]
 	@CustID 		INT, --recommend/ mrecommend/ srecommend
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
-	@UserName		NVARCHAR(50) = '',
+	@UserName		VARCHAR(30) = '',
 	@WhiteLabelList VARCHAR(MAX) = ''
 AS
 /*
@@ -58,12 +58,12 @@ BEGIN
 
 	SELECT	@FDate = DATEADD(DAY,1,EOMONTH(@FromDate,-1))
 	SELECT  @TDate = CASE WHEN  EOMONTH(@ToDate) >= EOMONTH(GETDATE()) THEN DATEADD(MONTH, DATEDIFF(MONTH, -1, GETDATE())-1, -1) ELSE EOMONTH(@ToDate) END
-	SELECT @RoleID = RoleID FROM bodb02.dbo.CustInfo WITH(NOLOCK) WHERE CustID = @CustID
+	SELECT @RoleID = RoleID FROM dbo.CustInfo WITH(NOLOCK) WHERE CustID = @CustID
 
 	IF @Username <> ''
 	BEGIN
 		SELECT @UserName_CustId = ISNULL(Custid, -1), @UserName_RoleID = RoleID
-		FROM  bodb02.dbo.Customer WITH (NOLOCK) WHERE username = @UserName
+		FROM  dbo.Customer WITH (NOLOCK) WHERE username = @UserName
 	END
 	ELSE				
 	BEGIN
@@ -198,7 +198,7 @@ BEGIN
 				SUM(CASE WHEN w.TypeId IN (2,3,4,5,6) THEN Winloss ELSE 0 END ) Promotion,
 				SUM(CASE WHEN w.TypeId = 1 THEN Winloss 
 						 WHEN w.TypeID = 5 THEN -Winloss * 0.3 ELSE 0 END ) PromotionShare
-		FROM	WhiteLabelWinloss w WITH(NOLOCK)
+		FROM	bodb_WhiteLabel.dbo.WhiteLabelWinloss w WITH(NOLOCK)
 		INNER JOIN #tmpWLList tw ON w.CustID = tw.CustID 
 		WHERE w.WinlostDate <= @TDate AND w.WinlostDate >= tw.LaunchedDate
 		GROUP BY tw.CustID, EOMONTH (w.WinlostDate)
@@ -256,8 +256,8 @@ BEGIN
 
 		FROM #tmpCustWLByMonth t
 		INNER JOIN #tmpWhiteLabelSettingByMonth tls ON t.CustID = tls.CustID AND t.EndOfMonth BETWEEN tls.FromDate and tls.Todate
-		LEFT JOIN bodb02.dbo.Customer cm WITH(NOLOCK) ON tls.MRecommend = cm.CustID
-		LEFT JOIN bodb02.dbo.Customer cr WITH(NOLOCK) ON tls.Recommend = cr.CustID
+		LEFT JOIN dbo.Customer cm WITH(NOLOCK) ON tls.MRecommend = cm.CustID
+		LEFT JOIN dbo.Customer cr WITH(NOLOCK) ON tls.Recommend = cr.CustID
 		WHERE t.EndOfMonth BETWEEN @FDate AND @TDate
 		)
 		SELECT  "Month",
@@ -309,7 +309,7 @@ BEGIN
 
 		FROM #tmpCustWLByMonth t
 		INNER JOIN #tmpWhiteLabelSettingByMonth tls ON t.CustID = tls.CustID AND t.EndOfMonth BETWEEN tls.FromDate and tls.Todate
-		LEFT JOIN bodb02.dbo.Customer cr WITH(NOLOCK) ON tls.Recommend = cr.CustID
+		LEFT JOIN dbo.Customer cr WITH(NOLOCK) ON tls.Recommend = cr.CustID
 		WHERE t.EndOfMonth BETWEEN @FDate AND @TDate
 		)
 		SELECT  "Month",

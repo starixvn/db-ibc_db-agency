@@ -1,7 +1,7 @@
 /*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_WhiteLabelWinLoss]
 	@CustID 		INT, --recommend/ mrecommend/ srecommend
-	@UserName		NVARCHAR(50) = '',
+	@UserName		VARCHAR(30) = '',
 	@WhiteLabelList VARCHAR(MAX) = '',
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME
@@ -43,14 +43,14 @@ BEGIN
 	SELECT	@FDate = @FromDate, @TDate = @ToDate
 
 	DECLARE @RoleID TINYINT
-	SELECT @RoleID = RoleID FROM bodb02.dbo.CustInfo WITH(NOLOCK) WHERE CustID = @CustID
+	SELECT @RoleID = RoleID FROM dbo.CustInfo WITH(NOLOCK) WHERE CustID = @CustID
 
 	DECLARE @UserName_CustId INT, @UserName_RoleID TINYINT
 
 	IF @Username <> ''
 	BEGIN
 		SELECT @UserName_CustId = ISNULL(Custid, -1), @UserName_RoleID = RoleID
-		FROM  bodb02.dbo.Customer WITH (NOLOCK) WHERE username = @UserName
+		FROM  dbo.Customer WITH (NOLOCK) WHERE username = @UserName
 	END
 	ELSE				
 	BEGIN
@@ -93,7 +93,7 @@ BEGIN
 		SELECT	w.WinlostDate, 
 				SUM( CASE WHEN TypeID = 0 THEN  WinLoss ELSE 0 END) AS MemberWinloss,
 				SUM( CASE WHEN TypeID IN (2,3,4,5,6) THEN  WinLoss ELSE 0 END) AS Promotion
-		FROM   WhiteLabelWinloss w WITH(NOLOCK)
+		FROM   bodb_WhiteLabel.dbo.WhiteLabelWinloss w WITH(NOLOCK)
 		INNER JOIN #WhiteLabelList wlb ON w.CustID = wlb.custID
 		WHERE  w.WinlostDate BETWEEN @FDate AND @TDate AND w.WinlostDate >= wlb.LaunchedDate
 		GROUP BY w.WinlostDate
@@ -110,9 +110,9 @@ BEGIN
 				SUM( CASE WHEN TypeID = 0 THEN  WinLoss ELSE 0 END) AS MemberWinloss,
 				SUM( CASE WHEN TypeID IN (2,3,4,5,6) THEN  WinLoss ELSE 0 END) AS Promotion
 
-		FROM   WhiteLabelWinloss w WITH(NOLOCK)
+		FROM   bodb_WhiteLabel.dbo.WhiteLabelWinloss w WITH(NOLOCK)
 		INNER JOIN #WhiteLabelList wlb ON w.CustID = wlb.custID
-		LEFT JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON w.Recommend = c.CustID
+		LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.Recommend = c.CustID
 		WHERE  WinlostDate BETWEEN @FDate AND @TDate AND w.WinlostDate >= wlb.LaunchedDate
 		GROUP BY w.WinlostDate, w.Recommend, c.username, wlb.WhiteLabel
 		ORDER BY  w.WinlostDate,  c.username
@@ -126,10 +126,10 @@ BEGIN
 				cr.username AS Agent,
 				SUM( CASE WHEN TypeID = 0 THEN  WinLoss ELSE 0 END) AS MemberWinloss,
 				SUM( CASE WHEN TypeID IN (2,3,4,5,6) THEN  WinLoss ELSE 0 END) AS Promotion
-		FROM   WhiteLabelWinloss w WITH(NOLOCK)
+		FROM   bodb_WhiteLabel.dbo.WhiteLabelWinloss w WITH(NOLOCK)
 		INNER JOIN #WhiteLabelList wlb ON w.CustID = wlb.custID
-		LEFT JOIN bodb02.dbo.Customer cm WITH(NOLOCK) ON w.MRecommend = cm.CustID
-		LEFT JOIN bodb02.dbo.Customer cr WITH(NOLOCK) ON w.Recommend = cr.CustID
+		LEFT JOIN dbo.Customer cm WITH(NOLOCK) ON w.MRecommend = cm.CustID
+		LEFT JOIN dbo.Customer cr WITH(NOLOCK) ON w.Recommend = cr.CustID
 		WHERE   WinlostDate BETWEEN @FDate AND @TDate  AND w.WinlostDate >= wlb.LaunchedDate
 		GROUP BY w.WinlostDate, cm.username, cr.username, wlb.WhiteLabel
 		ORDER BY  w.WinlostDate,  cm.username, cr.username
