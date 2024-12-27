@@ -309,11 +309,11 @@ BEGIN
 	tmp.LeagueType,
 	CASE @Language 
 		WHEN 'E' THEN l.leaguename
-		--WHEN 'CS' THEN (CASE WHEN l.leaguenamecn= '' or l.leaguenamecn is null THEN l.leaguename ELSE l.leaguenamecn END)
-		--WHEN 'CT' THEN (CASE WHEN l.leaguenamec_uni= '' or l.leaguenamec_uni is null THEN l.leaguename ELSE l.leaguenamec_uni END)
-		--WHEN 'TH' THEN (CASE WHEN l.leaguenameth = '' or l.leaguenameth is null THEN l.leaguename ELSE l.leaguenameth END)
-		--WHEN 'J' THEN (CASE WHEN l.leaguenamej= '' or l.leaguenamej is null THEN l.leaguename ELSE l.leaguenamej END)
-		--WHEN 'KO' THEN (CASE WHEN l.leaguenameko= '' or l.leaguenameko is null THEN l.leaguename ELSE l.leaguenameko END)
+		WHEN 'CS' THEN (CASE WHEN l.LeagueNameSC= '' or l.LeagueNameSC is null THEN l.leaguename ELSE l.LeagueNameSC END)
+		WHEN 'CT' THEN (CASE WHEN l.LeagueNameTC= '' or l.LeagueNameTC is null THEN l.leaguename ELSE l.LeagueNameTC END)
+		WHEN 'TH' THEN (CASE WHEN l.leaguenameth = '' or l.leaguenameth is null THEN l.leaguename ELSE l.leaguenameth END)
+		WHEN 'J' THEN (CASE WHEN l.LeagueNameJP= '' or l.LeagueNameJP is null THEN l.leaguename ELSE l.LeagueNameJP END)
+		WHEN 'KO' THEN (CASE WHEN l.leaguenameko= '' or l.leaguenameko is null THEN l.leaguename ELSE l.leaguenameko END)
 		ELSE l.leaguename
 	END	AS leaguename
 	FROM #tmpLeagues tmp

@@ -190,8 +190,7 @@ BEGIN
 				AND s.EventType NOT IN (3,5) --- exclude VS HR	+ VS5				
 			GROUP BY m.matchid, m.ParentID, m.ChildMatchType, m.homeid, m.awayid, m.leagueid, m.matchcode, m.isNeutral,m.showtime,
 				CASE WHEN ISNULL(f.bettype,0) = 0 THEN b.bettype ELSE f.GroupTypeId END;
-			
-			
+					
 			-- match3rd
 			INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType)
 			SELECT  0 AS BetGroup,
@@ -445,7 +444,8 @@ BEGIN
 
 			END	
 		END
-
+		
+		--TODO: range14
 		IF @FromDate <= @MoveBetsDay
 		BEGIN			
 			
@@ -630,6 +630,7 @@ BEGIN
 				GROUP BY b.bettype		
 				HAVING ISNULL(COUNT(transid),0) > 0;
 			END
+
 			-- Mix parlay(14)
 			IF @showSB = 1 
 			BEGIN
@@ -797,14 +798,12 @@ BEGIN
 					AND b.statusID NOT IN (101, 102, 103) 
 				GROUP BY b.bettype
 				HAVING ISNULL(COUNT(transid), 0) > 0;
-				
-	
-			END		
-			
+			END			
 			--DROP TABLE #RecommendList
 		END
 	END
 
+	--TODO: Result
 	SELECT  BetGroup, 
 			CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END AS matchid, 
 			homeid, 
