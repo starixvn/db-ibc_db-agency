@@ -259,7 +259,7 @@ BEGIN
 			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*mpositiontaking) ELSE 0 END), 0)
+			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(CASE WHEN b.recommend = -3 THEN actual_stake*mpositiontaking ELSE actual_stake END) ELSE 0 END), 0)
 		FROM #DirectMemberList r
 			inner join dbo.bettransRnG b WITH(NOLOCK, index = IX_custid ) ON r.custid = b.custid
 		WHERE 	statusID IN (0, 1)
@@ -308,7 +308,7 @@ BEGIN
 			ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN mwinlost+acomm-comm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN awinlost+comm-playercomm ELSE 0 END), 0)
 				+ ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
-			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake*mpositiontaking) ELSE 0 END), 0)
+			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(CASE WHEN b.recommend = -3 THEN actual_stake*mpositiontaking ELSE actual_stake END) ELSE 0 END), 0)
 		FROM #DirectMemberList r
 			INNER JOIN dbo.bettransLC b WITH (NOLOCK,index = IX_custid) ON b.custid = r.CustId
 		WHERE 
@@ -341,7 +341,7 @@ BEGIN
 			0,
 			0,
 			0,
-			ISNULL(SUM(ABS(actual_stake*mpositiontaking)), 0)
+			ISNULL(SUM(ABS(CASE WHEN t.recommend = -3 THEN actual_stake*mpositiontaking ELSE actual_stake END)), 0)
 		FROM #DirectMemberList r
 			INNER JOIN  dbo.translog t WITH(NOLOCK,index = IX_custid ) ON t.custid = r.CustId
 		WHERE statusID IN (0, 1)
@@ -363,6 +363,7 @@ BEGIN
 	WHERE ruben = 0
 		AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
 	GROUP BY mrecommend
+
 	IF @IsExistDirect = 1
 	BEGIN
 		INSERT INTO #balance (mrecommend, YesterdayCashBalance, TotalCashBalance, YesterdayBalance, TotalBalance, Outstanding)
@@ -372,7 +373,7 @@ BEGIN
 			0,
 			0,
 			0,
-			ISNULL(SUM(ABS(actual_stake*mpositiontaking)), 0)
+			ISNULL(SUM(ABS(CASE WHEN b.recommend = -3 THEN actual_stake*mpositiontaking ELSE actual_stake END)), 0)
 		FROM #DirectMemberList r
 			INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX = IX_customerinfo) ON b.custid = r.CustId
 		WHERE ruben = 0

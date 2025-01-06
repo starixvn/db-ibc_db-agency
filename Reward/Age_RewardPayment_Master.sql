@@ -116,9 +116,11 @@ BEGIN
 				OR p.ProgramId IS NOT NULL
 			)	
 		AND 1 = CASE WHEN @PaymentStatus IS NULL THEN 1
-					 WHEN @PaymentStatus = 1 AND swt.PaymentStatus & 4 = 4 THEN 1
-					 WHEN @PaymentStatus = 0 AND swt.PaymentStatus & 4 <> 4 THEN 1
-					 ELSE 0 END
+					 WHEN @PaymentStatus = 1 AND swt.PaymentStatus & 4 = 4 AND swt.Mrecommend > 0 THEN 1
+					 WHEN @PaymentStatus = 1 AND swt.StatusId = 1 AND swt.Mrecommend = -4 THEN 1
+					 WHEN @PaymentStatus = 0 AND swt.PaymentStatus & 4 <> 4 AND swt.Mrecommend > 0 THEN 1
+					 WHEN @PaymentStatus = 0 AND swt.StatusId <> 1 AND swt.Mrecommend = -4 THEN 1
+					ELSE 0 END
 
 	--TODO: Result
 	SELECT 
