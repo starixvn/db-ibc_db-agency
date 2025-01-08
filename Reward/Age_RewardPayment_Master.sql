@@ -35,10 +35,14 @@ BEGIN
     SET NOCOUNT ON; 
 
 	-- @Username
-	DECLARE @Username_CustId INT = 0 -- 0: all 
+	DECLARE @Username_CustId INT = 0 -- 0: all
+		, @recommend INT
 	IF ISNULL(@Username,'') <> ''
 	BEGIN
-		SET @Username_CustId = ISNULL((SELECT custid FROM Customer WITH (NOLOCK) WHERE username = @Username),-1)
+		SELECT @Username_CustId = ISNULL(custid,-1)
+			,@recommend = recommend 
+		FROM Customer WITH (NOLOCK) 
+		WHERE username = @Username
 	END
 
 	--@Fromdate ,@Todate
@@ -105,7 +109,7 @@ BEGIN
 		AND swt.WinlostDate BETWEEN @Fromdate AND @Todate
 		AND 1 = CASE WHEN @Username_CustId = 0 THEN 1
 					WHEN swt.Mrecommend = @Username_CustId THEN 1
-					WHEN swt.CustID = @Username_CustId THEN 1
+					WHEN swt.CustID = @Username_CustId AND @recommend < 0 THEN 1
 				ELSE 0 END
 		AND 1 = CASE WHEN @LevelType = 0 THEN 1
 					WHEN @LevelType = 1 AND swt.Mrecommend > 0 THEN 1

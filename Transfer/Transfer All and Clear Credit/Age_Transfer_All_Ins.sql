@@ -1618,9 +1618,9 @@ BEGIN
 	UNION ALL
 	SELECT 2, @TransferredAgent, NULL
 	UNION ALL
-	SELECT 3, @TransferredDirectMember, @DirectmemberOutStanding
+	SELECT -3, @TransferredDirectMember, @DirectmemberOutStanding
 	UNION ALL
-	SELECT 4, @masterBalance, NULL
+	SELECT 3, @masterBalance, NULL
 	WHERE @RoleId = 4
 END
 GO

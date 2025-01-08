@@ -661,7 +661,8 @@ BEGIN
 			SELECT
 				Detail AS RowId,
 				u.TransferableAmount,
-				CASE WHEN u.Detail IN (1,-3) THEN @memberOutStanding ELSE NULL END AS MemberOutStanding
+				CASE WHEN u.Detail = 1 THEN @memberOutStanding 
+					WHEN u.Detail = -3 THEN @DirectmemberOutStanding ELSE NULL END AS MemberOutStanding
 			FROM
 			(
 				SELECT
