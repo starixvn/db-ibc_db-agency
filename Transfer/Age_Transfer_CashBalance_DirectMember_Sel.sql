@@ -138,18 +138,19 @@ BEGIN
 			)
 
 		-- transfer tickets
-		INSERT INTO #BalanceInfo (UplineCash, memberCash, memberOutstanding)
+		INSERT INTO #BalanceInfo (UplineCash, memberCash, memberOutstanding, PendingTransfer3rd)
 		SELECT
-			ISNULL(SUM(swinlost+scomm-acomm), 0) + ISNULL(SUM(CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE 0 END),0),
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE swinlost+scomm-acomm END), 0) 
+				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE 0 END END),0),
 			ISNULL(SUM(CASE WHEN CustId = @CustID THEN Winlost-Actual_Stake+PlayerComm END),0),
-			0 
+			0,
+			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.Transfer b WITH(NOLOCK)
 		WHERE b.srecommend = @uplineId
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 					ELSE 1 END
-			AND bettype NOT IN (21008, 21009)
 		SELECT
 			@CustID AS CustId,
 			1 AS RoleId,
@@ -220,11 +221,13 @@ BEGIN
 				OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
 			)
 		-- transfer tickets
-		INSERT INTO #BalanceInfo (UplineCash, memberCash, memberOutstanding)
+		INSERT INTO #BalanceInfo (UplineCash, memberCash, memberOutstanding, PendingTransfer3rd)
 		SELECT
-			ISNULL(SUM(mwinlost+acomm-comm), 0) + ISNULL(SUM(CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE 0 END),0),
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0) 
+				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE 0 END END),0),
 			ISNULL(SUM(CASE WHEN custid = @custid THEN Winlost-Actual_Stake+PlayerComm ELSE 0 END),0),
-			0
+			0,
+			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.Transfer b WITH(NOLOCK)
 		WHERE 
 			b.mrecommend = @uplineId
@@ -232,7 +235,6 @@ BEGIN
 						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 					ELSE 1 END
-			AND bettype NOT IN (21008, 21009)
 						
 		SELECT
 			@CustID AS CustId,

@@ -27,14 +27,14 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	DECLARE @RefNo BIGINT, @ToCustID INT
-		, @custid int,  @srecommend int, @TransID_from BIGINT,@TransID_to BIGINT, @mrecommend INT
+		, @custid int,  @srecommend int, @TransID_from BIGINT,@TransID_to BIGINT, @mrecommend INT, @upline_roleid TINYINT
 	DECLARE @currency int, @actualrate float, @currName nvarchar(10) , @User nvarchar(50)
 	DECLARE @Upline_UserName nvarchar(50), @ABSamount MONEY
 	DECLARE @SubAccName VARCHAR(30) = '', @Member_recommend INT,@member_mrecommend INT
 
 	SELECT @ToCustID = null
 	-- UplineID
-	SELECT @ToCustID = CustID
+	SELECT @ToCustID = CustID, @upline_roleid = roleid
 	FROM CustDB.dbo.customer WITH (NOLOCK) 
 	WHERE username = @ToUserName
 
@@ -102,12 +102,15 @@ BEGIN
 	--1		2		3		4		5		6		7		8
 	--isSun	isMon	isTue	isWed	isThurs	isFri	isSat	isWeekly
 	--0		1		0		0		1		0		1		1
-
-	EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
-		@CustID = @ToCustID,
-		@ErrMsg = @ErrMsg OUTPUT,
-		@ErrCode = @ErrCode OUTPUT,
-		@Language = @Language
+	-- do not need to check transfer condition for super
+	IF @upline_roleid < 4
+	BEGIN
+		EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
+			@CustID = @ToCustID,
+			@ErrMsg = @ErrMsg OUTPUT,
+			@ErrCode = @ErrCode OUTPUT,
+			@Language = @Language
+	END
 
 	IF @ErrCode <> 0  return
 

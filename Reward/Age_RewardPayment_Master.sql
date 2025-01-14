@@ -107,9 +107,9 @@ BEGIN
 	WHERE swt.WalletID = 2
 		AND swt.Srecommend = @CustId
 		AND swt.WinlostDate BETWEEN @Fromdate AND @Todate
-		AND 1 = CASE WHEN @Username_CustId = 0 THEN 1
+		AND 1 = CASE WHEN ISNULL(@Username, '') = '' THEN 1
 					WHEN swt.Mrecommend = @Username_CustId THEN 1
-					WHEN swt.CustID = @Username_CustId AND @recommend < 0 THEN 1
+					WHEN swt.CustID = @Username_CustId AND @recommend = -4 THEN 1
 				ELSE 0 END
 		AND 1 = CASE WHEN @LevelType = 0 THEN 1
 					WHEN @LevelType = 1 AND swt.Mrecommend > 0 THEN 1

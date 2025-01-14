@@ -722,7 +722,7 @@ BEGIN
 			UNION ALL
 			SELECT -3, @DirectMemberCredit, @DirectmemberClearableCredit WHERE @RoleId = 4
 			UNION ALL
-			SELECT 3, @masterCredit, @masterCredit - @memberCredit + @memberClearableCredit + @DirectmemberClearableCredit
+			SELECT 3, @masterCredit, @masterCredit - (@memberCredit + @DirectMemberCredit) + @memberClearableCredit + @DirectmemberClearableCredit
 			WHERE @RoleId = 4
 		END
 	END

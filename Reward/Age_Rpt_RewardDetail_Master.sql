@@ -153,7 +153,7 @@ BEGIN
 		,CASE WHEN swt.PaymentStatus & 4 = 4 THEN 1 ELSE 0 END AS MasterPaymentStatus
 		,swt.SPaymentDate AS MasterPaymentDate
 		--Direct member
-		,IIF(swt.Recommend < 0, 1, 0) AS IsDirectMember
+		,IIF(swt.Recommend = -4, 1, 0) AS IsDirectMember
 	FROM SabaWalletTicket swt WITH (NOLOCK) 
 	LEFT JOIN #ProgramList p
 		ON swt.ProgramId = p.ProgramId

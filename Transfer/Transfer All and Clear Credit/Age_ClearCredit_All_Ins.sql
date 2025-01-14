@@ -121,7 +121,8 @@ BEGIN
 		SELECT  @ErrMsg = 'Clear credit unsuccessfully. Please try again.'
 
 		DECLARE @GivenCreditMember MONEY = 0, @GivenCreditAgent MONEY = 0,
-				@ClearedCreditMember MONEY = 0, @ClearedCreditAgent MONEY = 0
+				@ClearedCreditMember MONEY = 0, @ClearedCreditAgent MONEY = 0,
+				@DirectMemberCredit MONEY = 0, @DirectmemberClearedCredit MONEY = 0
 		
 		-- for log
 		DECLARE @UpdCredit TABLE (custId INT, oldCredit MONEY, newCredit MONEY)
@@ -195,7 +196,9 @@ BEGIN
 
 		IF @IsErr = 0
 		BEGIN
-			SELECT @GivenCreditMember = SUM(credit) FROM #tblMember
+			SELECT @GivenCreditMember = SUM(CASE WHEN recommend > 0 THEN credit ELSE 0 END) 
+				, @DirectMemberCredit = SUM(CASE WHEN recommend = -3 THEN credit ELSE 0 END) 
+			FROM #tblMember
 
 			DELETE #tblMember WHERE betCredit <= 0
 
@@ -223,7 +226,9 @@ BEGIN
 					RETURN
 				END
 
-				SELECT @ClearedCreditMember = @ClearedCreditMember + SUM(oldCredit - newCredit) FROM @UpdCredit
+				SELECT @ClearedCreditMember = @ClearedCreditMember + SUM(CASE WHEN @recommend > 0 THEN (oldCredit - newCredit) ELSE 0 END) 
+					, @DirectmemberClearedCredit = @DirectmemberClearedCredit + SUM(CASE WHEN @recommend = -3 THEN (oldCredit - newCredit) ELSE 0 END)
+				FROM @UpdCredit
 
 				-- for log
 				SELECT @LogData = 'Clear Credit all:' + CASE @RoleId WHEN 4 THEN ' Master ' WHEN 3 THEN ' Agent ' END + @DownlineUsername
@@ -462,6 +467,8 @@ BEGIN
 		SELECT 1 AS RowId, @GivenCreditMember AS GivenCredit, @ClearedCreditMember AS ClearedCredit
 		UNION ALL
 		SELECT 2, @GivenCreditAgent, @ClearedCreditAgent
+		UNION ALL
+		SELECT -3, @DirectMemberCredit, @DirectmemberClearedCredit
 		UNION ALL
 		SELECT 3, @DownlineCredit, @DownlineCredit - @usedCreditMaster
 		WHERE @RoleId = 4

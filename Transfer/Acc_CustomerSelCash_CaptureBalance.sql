@@ -16,6 +16,7 @@ AS
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
     	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 		- 20240314@Bobby: EC enhancement [Redmine: #202276]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 	
 	Param's Explaination:
 		- @CustId: custid
