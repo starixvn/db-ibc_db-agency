@@ -142,7 +142,7 @@ BEGIN
 		SELECT
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE swinlost+scomm-acomm END), 0) 
 				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.srecommend THEN winlost-actual_stake ELSE 0 END END),0),
-			ISNULL(SUM(CASE WHEN CustId = @CustID THEN Winlost-Actual_Stake+PlayerComm END),0),
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN CustId = @CustID THEN Winlost-Actual_Stake+PlayerComm END END),0),
 			0,
 			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.Transfer b WITH(NOLOCK)
@@ -210,11 +210,11 @@ BEGIN
 		INSERT INTO #BalanceInfo (UplineCash, memberCash, memberOutstanding)
 		SELECT
 			SUM(mwinlost+acomm-comm),
-			SUM(CASE WHEN custid = @custid THEN winlost+actual_stake-playercomm ELSE 0 END),
+			SUM(CASE WHEN custid = @custid THEN winlost-actual_stake+playercomm ELSE 0 END),
 			0
 		FROM dbo.bettrans b WITH(NOLOCK)
 		WHERE b.mrecommend = @uplineId
-			AND b.statusID IN (111, 112, 113)
+				AND b.statusID IN (111, 112, 113)
 			AND winlostdate > @moveBetsDay
 			AND (
 				b.winlostdate < @yesterday
@@ -225,7 +225,7 @@ BEGIN
 		SELECT
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE mwinlost+acomm-comm END), 0) 
 				+ ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.mrecommend THEN winlost-actual_stake ELSE 0 END END),0),
-			ISNULL(SUM(CASE WHEN custid = @custid THEN Winlost-Actual_Stake+PlayerComm ELSE 0 END),0),
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = @custid THEN Winlost-Actual_Stake+PlayerComm ELSE 0 END END),0),
 			0,
 			SUM(CASE WHEN bettype IN (21008, 21009) AND custid = @custid THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.Transfer b WITH(NOLOCK)
