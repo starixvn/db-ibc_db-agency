@@ -1614,11 +1614,11 @@ BEGIN
 	ORDER BY RowId
 
 	-- Return transferred table
-	SELECT 1 AS RowId, @TransferredMember AS TransferredAmount, @memberOutStanding AS MemberOutStanding
+	SELECT 1 AS RowId, @TransferredMember AS TransferredAmount, ISNULL(@memberOutStanding,0) AS MemberOutStanding
 	UNION ALL
 	SELECT 2, @TransferredAgent, NULL
 	UNION ALL
-	SELECT -3, @TransferredDirectMember, @DirectmemberOutStanding
+	SELECT -3, @TransferredDirectMember, ISNULL(@DirectmemberOutStanding,0)
 	UNION ALL
 	SELECT 3, @masterBalance, NULL
 	WHERE @RoleId = 4
