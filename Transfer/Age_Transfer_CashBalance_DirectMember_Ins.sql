@@ -93,7 +93,7 @@ BEGIN
 		RETURN
 	END
 
-	IF @RoleId <> 3
+	IF @RoleId < 4
 	BEGIN
 		-- Check Transfer Condition
 		EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption

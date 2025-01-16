@@ -119,8 +119,10 @@ BEGIN
 				OR p.ProgramId IS NOT NULL
 			)	
 		AND 1 = CASE WHEN @PaymentStatus IS NULL THEN 1
-					 WHEN @PaymentStatus = 1 AND ISNULL(swt.PaymentStatus,0) & 2 = 2 THEN 1
-					 WHEN @PaymentStatus = 0 AND ISNULL(swt.PaymentStatus,0) & 2 <> 2 THEN 1
+					 WHEN @PaymentStatus = 1 AND ISNULL(swt.PaymentStatus,0) & 2 = 2 AND swt.Recommend > 0 THEN 1
+					 WHEN @PaymentStatus = 1 AND ISNULL(swt.StatusId,0) = 1 AND swt.Recommend = -3 THEN 1
+					 WHEN @PaymentStatus = 0 AND ISNULL(swt.PaymentStatus,0) & 2 <> 2 AND swt.Recommend > 0 THEN 1
+					 WHEN @PaymentStatus = 0 AND ISNULL(swt.StatusId,0) <> 1 AND swt.Recommend = -3 THEN 1
 					 ELSE 0 END
 
 
