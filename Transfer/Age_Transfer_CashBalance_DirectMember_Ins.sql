@@ -17,7 +17,7 @@ AS
 	DB: DBSIC.bodb02
 	
 	Revisions:
-		- 20241127@20241127: Init SP [RedmineID: #211969]
+		- 20241127@Max: Init SP [RedmineID: #211969]
 
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
