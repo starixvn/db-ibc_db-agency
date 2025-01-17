@@ -67,7 +67,7 @@ BEGIN
 	SELECT  @winlostdate = CONVERT(DATE, GETDATE())
 	SELECT  @yesterday = DATEADD(DAY, -1, @winlostdate)
 	
-	DECLARE @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @RoleId TINYINT, @Credit MONEY, @FutureCreditBalance MONEY
+	DECLARE @custid INT, @recommend INT, @mrecommend INT, @srecommend INT, @RoleId TINYINT, @Credit MONEY, @FutureCreditBalance MONEY, @upline_RoleId TINYINT
 
 	DECLARE @FromUsername NVARCHAR(50), @ToUsername NVARCHAR(50), @SubAccName VARCHAR(30),
 			@Currency INT, @CurrencyName NVARCHAR(100), @actualrate FLOAT,
@@ -85,6 +85,10 @@ BEGIN
 	FROM CustDB.dbo.Customer WITH(NOLOCK)
 	WHERE custid = @ToCustID
 
+	SELECT @FromUsername = username, @mrecommend = mrecommend, @srecommend = srecommend, @upline_RoleId = roleid
+	FROM CustDB.dbo.Customer WITH(NOLOCK)
+	WHERE custid = @FromCustID AND roleid IN (3,4)
+
 	IF @RoleId <> 1
 	BEGIN
 		SELECT
@@ -93,7 +97,7 @@ BEGIN
 		RETURN
 	END
 
-	IF @RoleId < 4
+	IF @upline_RoleId < 4
 	BEGIN
 		-- Check Transfer Condition
 		EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption
@@ -105,10 +109,6 @@ BEGIN
 		IF @ErrCode > 0
 			RETURN
 	END
-
-	SELECT @FromUsername = username, @mrecommend = mrecommend, @srecommend = srecommend
-	FROM CustDB.dbo.Customer WITH(NOLOCK)
-	WHERE custid = @FromCustID AND roleid IN (3,4)
 
 	IF @FromUsername IS NULL
 	BEGIN

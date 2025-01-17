@@ -226,8 +226,8 @@ BEGIN
 					RETURN
 				END
 
-				SELECT @ClearedCreditMember = @ClearedCreditMember + SUM(CASE WHEN @recommend > 0 THEN (oldCredit - newCredit) ELSE 0 END) 
-					, @DirectmemberClearedCredit = @DirectmemberClearedCredit + SUM(CASE WHEN @recommend = -3 THEN (oldCredit - newCredit) ELSE 0 END)
+				SELECT @ClearedCreditMember = @ClearedCreditMember + ISNULL(SUM(CASE WHEN @recommend > 0 THEN (oldCredit - newCredit) ELSE 0 END),0) 
+					, @DirectmemberClearedCredit = @DirectmemberClearedCredit + ISNULL(SUM(CASE WHEN @recommend = -3 THEN (oldCredit - newCredit) ELSE 0 END),0)
 				FROM @UpdCredit
 
 				-- for log

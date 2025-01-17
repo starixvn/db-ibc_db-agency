@@ -56,7 +56,7 @@ BEGIN
 		DELETE t
 		OUTPUT deleted.recommend INTO @DirectMember(CustId)
 		FROM @tblrecommend t
-		WHERE IsDirectMember = 0
+		WHERE IsDirectMember = 1
 
 		IF @@ROWCOUNT > 0
 		BEGIN

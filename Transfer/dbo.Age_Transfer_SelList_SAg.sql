@@ -531,13 +531,18 @@ BEGIN
 	IF @TotalPages = 0
 	BEGIN
 		IF isnull(@IsYesterdayBalance,0) = 0 
+		BEGIN
 			SELECT 
-				@TotalPages = count(1),@TotalPages=@TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end
+				@TotalPages = count(1)
+				,@TotalPages=CASE WHEN @PageSize < 10 THEN 1 ELSE @TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end END
 			FROM 
 				#CustomerList
+		END
 		ELSE
+		BEGIN
 			SELECT 
-				@TotalPages = count(1),@TotalPages=@TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end
+				@TotalPages = count(1)
+				,@TotalPages= CASE WHEN @PageSize < 10 THEN 1 ELSE @TotalPages/@PageSize + case when @TotalPages%@PageSize>0 then 1 else 0 end END
 			FROM #CustomerList c
 				LEFT JOIN #result_balance balance ON c.custid = balance.mrecommend
 			WHERE
@@ -545,6 +550,7 @@ BEGIN
 					WHEN @IsAllowTotalBalance = 0 THEN ISNULL(balance.YesterdayBalance, 0)
 					WHEN @IsAllowTotalBalance = 1 THEN ISNULL(balance.TotalBalance, 0)
 				END <> 0
+		END
 	END
 
 	CREATE TABLE #ClosedReason (custid INT, ClosedReason TINYINT)
