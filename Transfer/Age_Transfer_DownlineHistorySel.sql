@@ -1,7 +1,5 @@
-USE [bodb02]
-GO
-
-ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel_UAT2]  
+/*<info serverAlias="DBACC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel]
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,

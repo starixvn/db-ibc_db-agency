@@ -1,5 +1,4 @@
-USE [bodb02]
-GO
+﻿/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg_UAT2]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -50,7 +49,7 @@ Revisions:
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
 
 Param's Explanation:
-� @CustID: MAgentID
+• @CustID: MAgentID
 */
 
 BEGIN
