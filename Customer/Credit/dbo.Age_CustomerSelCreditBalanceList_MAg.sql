@@ -1,5 +1,5 @@
 ﻿/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg_UAT2]
+ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg]
 	@CustID		INT,
 	@PageSize	INT = 500,
 	@PageIndex	INT = 1,
