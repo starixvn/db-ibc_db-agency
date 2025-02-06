@@ -1,5 +1,7 @@
-/*<info serverAlias="DBACC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel]  
+USE [bodb02]
+GO
+
+ALTER PROCEDURE [dbo].[Age_Transfer_DownlineHistorySel_UAT2]  
 	@CustID 		INT, --SMA login
 	@FromDate 		SMALLDATETIME,
 	@ToDate 		SMALLDATETIME,
@@ -64,7 +66,7 @@ SET NOCOUNT ON;
 	BEGIN
 		INSERT INTO #DownLineList(CustID, username, IsDirectMember)
 		SELECT CustID, username 
-			,IIF(recommend = -4, 1, 0) AS IsDirectMember
+			,IIF(recommend = -3, 1, 0) AS IsDirectMember
 		FROM dbo.custInfo WITH(NOLOCK) 
 		WHERE 1 = CASE WHEN roleid = 2 AND @LevelType IN (0,1) THEN 1
 					WHEN roleid = 1 AND @LevelType IN (0,2) AND recommend = -3 THEN 1
@@ -242,3 +244,5 @@ SET NOCOUNT ON;
 END
 
 GO
+
+

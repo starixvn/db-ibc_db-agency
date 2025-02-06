@@ -1,5 +1,6 @@
-﻿/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg]
+USE [bodb02]
+GO
+ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_MAg_UAT2]
 	@CustID		INT,
 	@PageSize	INT = 500,
 	@PageIndex	INT = 1,
@@ -49,7 +50,7 @@ Revisions:
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
 
 Param's Explanation:
-• @CustID: MAgentID
+� @CustID: MAgentID
 */
 
 BEGIN
@@ -153,8 +154,8 @@ BEGIN
 	(
 		SELECT recommend AS custid,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) * apositiontaking ELSE 0 END), 0) AS outstanding,
-			ISNULL(SUM(awinlost+comm-playercomm), 0) AS balance,
-			ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0) AS yesterdaybalance,
+			ISNULL(SUM(awinlost+comm-playercomm),0) AS balance,
+			ISNULL(SUM(CASE WHEN  winlostdate <= @yesterday THEN awinlost+comm-playercomm ELSE 0 END), 0) AS yesterdaybalance,
 			0 AS PendingTransfer3rd
 		FROM  #tmp_customer c 
 			INNER JOIN dbo.bettrans b WITH (NOLOCK, index = IX_recommend) ON b.recommend = c.custid AND c.IsDirectMember = 0
@@ -246,8 +247,8 @@ BEGIN
 		(
 			SELECT c.custid AS custid,
 				ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0) AS outstanding,
-				ISNULL(SUM(winlost-actual_stake+playercomm), 0) AS balance,
-				ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS yesterdaybalance,
+				ISNULL(SUM(CASE WHEN statusID > 1 THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS balance,
+				ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS yesterdaybalance,
 				0 AS PendingTransfer3rd
 			FROM  #tmp_customer c 
 				INNER JOIN dbo.bettrans b WITH (NOLOCK, index = IX_customerinfo) ON b.custid = c.custid AND c.IsDirectMember = 1
@@ -353,7 +354,10 @@ BEGIN
 			isnull(balance.outstanding,0) AS outstanding, 
 			isnull(balance.balance,0) AS balance, 
 			isnull(balance.yesterdaybalance,0) AS yesterday_balance,
-			isnull(c.credit,0) - isnull(c.usedCredit,0) betCredit,
+			CASE 
+				 WHEN c.IsDirectMember = 0 THEN	isnull(c.credit,0) - isnull(c.usedCredit,0) 
+				 WHEN c.IsDirectMember = 1 THEN ISNULL(balance.balance, 0) + isnull(c.credit, 0) - isnull(balance.outstanding, 0) -ISNULL(balance.PendingTransfer3rd,0) 
+			END AS betCredit,
 			isnull(c.credit,0) credit,		
 			CONVERT(nvarchar(30), c.lastlogged, 121) as lastlogged,
 			c.Locked,
@@ -371,3 +375,5 @@ BEGIN
 	DROP TABLE #SportBettype
 END
 GO
+
+
