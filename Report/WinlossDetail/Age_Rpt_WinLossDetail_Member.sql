@@ -52,6 +52,7 @@ Revisions:
 	- 20240703@Lewis: Switch data source - from bettrans to bettranscompact [Redmine: #207517]
 	- 20240715@Kelvin: Alpha - Link WL Detail to My Watchlist [Redmine:#201733]
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
+	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -150,16 +151,14 @@ BEGIN
 	END
 
 	------Get @Srecommend
-	DECLARE @Srecommend int, @mrecommend int;
-	DECLARE @CurrencyCode VARCHAR(12)
+	DECLARE @Srecommend int, @mrecommend int, @CurrencyCode VARCHAR(12);
 	  
 	SELECT	@Srecommend =  Srecommend,
 			@Mrecommend =  Mrecommend,
-			@CurrencyCode = e.Code
+			@CurrencyCode	= e.Code
 	FROM dbo.CustInfo c WITH(NOLOCK) 
-	INNER JOIN dbo.Exchange e WITH (NOLOCK)
-		ON c.currency = e.ExchangeId
-	WHERE CustID = @CustID; 
+	INNER JOIN dbo.Exchange e WITH(NOLOCK) ON c.currency = e.ExchangeId
+	WHERE c.CustID = @CustID; 
 
 	-----Get Special Super to hide data of them before specific date 
 	DECLARE @IsHide BIT = 0;
@@ -184,7 +183,14 @@ BEGIN
 			@TDate = @ToDate, 
 			@CID = @custid;
 
-
+	DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX);
+	
+	SELECT 
+			@totalDownline	= COUNT(1), 
+			@downlineIds	= STRING_AGG(CAST(custid AS VARCHAR(MAX)), ',')
+	FROM dbo.Customer c WITH(NOLOCK)
+	WHERE recommend = @CID
+		AND RoleId = 1
 			
 	--TODO: bettrans range
 	IF @ToDate > @MoveBetsDay
@@ -193,11 +199,9 @@ BEGIN
 			,@TDate		= @ToDate
 
 		-- TODO: get data from bettrans_compact
-		;WITH CTE_Member AS (
-			SELECT custid
-			FROM dbo.Customer WITH(NOLOCK)
-			WHERE recommend = @CID
-				AND RoleId = 1
+		;WITH CTE_Downline AS (
+			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+			FROM STRING_SPLIT(@downlineIds, ',') AS c
 		)
 		INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
 		SELECT	b.custid,
@@ -210,7 +214,7 @@ BEGIN
 				SUM(b.comm - b.playercomm) AS AgComm,
 				SUM(b.betcount) AS NoOfTicket
 		FROM bodb_Age.dbo.bettrans_compact b WITH (NOLOCK)
-		INNER JOIN CTE_Member m ON m.custid = b.custid
+		INNER JOIN CTE_Downline m ON m.custid = b.custid
 		INNER JOIN (
 			SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
 			FROM (	
@@ -395,14 +399,17 @@ BEGIN
 	BEGIN
 		SELECT @FDate = @FromDate, @TDate = @ToDate
 
+		;WITH CTE_Downline AS (
+			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+			FROM STRING_SPLIT(@downlineIds, ',') AS c
+		)
 		INSERT INTO #AgWinLossDetails(CustID,RewardAmount)
-		SELECT CustID,SUM(Amount)
+		SELECT b.CustID,SUM(Amount)
 		FROM SabaWalletTicket b WITH (NOLOCK)
+		INNER JOIN CTE_Downline cte ON cte.custid = b.CustID
 		WHERE b.winlostdate BETWEEN @FDate AND @TDate
-			AND b.WalletID= 2
-			AND b.Recommend = @CID
-			AND (@UserName_CustId = 0 OR b.CustID = @UserName_CustId)
-		GROUP BY CustID
+			AND b.WalletID = 2
+		GROUP BY b.CustID
 	END
 
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
