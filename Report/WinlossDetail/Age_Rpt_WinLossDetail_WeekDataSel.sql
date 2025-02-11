@@ -21,6 +21,7 @@ Revisions:
 	- 20240211@Bobby: Init [RedmineID: #202084]
 	- 20240625@Lewis: Change custinfo into customer [RedmineID: #207026]
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
+	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	
 	Param's Explanation:
 */
@@ -106,16 +107,42 @@ BEGIN
 	--TODO: SabaWalletTicket
 	IF @IsReward = 1
 	BEGIN
-		INSERT INTO #WeekRange(winlostdate)
-		SELECT DISTINCT b.winlostdate
-		FROM SabaWalletTicket b WITH (NOLOCK)
-		WHERE b.winlostdate BETWEEN @FDate AND @TDate
-			AND WalletID = 2
-			AND 1 = CASE WHEN @roleId = 4 AND b.Srecommend = @CID THEN 1
-						 WHEN @roleId = 3 AND b.Mrecommend = @CID THEN 1
-						 WHEN @roleId = 2 AND b.Recommend = @CID THEN 1
-						 WHEN @roleId = 1 AND b.CustID = @CID THEN 1
-						 END
+		IF @roleId = 1
+		BEGIN
+			INSERT INTO #WeekRange(winlostdate)
+			SELECT DISTINCT b.winlostdate
+			FROM SabaWalletTicket b WITH (NOLOCK)
+			WHERE b.CustID = @CID
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND WalletID = 2
+		END
+		ELSE IF @roleId = 2
+		BEGIN
+			INSERT INTO #WeekRange(winlostdate)
+			SELECT DISTINCT b.winlostdate
+			FROM SabaWalletTicket b WITH (NOLOCK)
+			WHERE b.Recommend = @CID
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND WalletID = 2
+		END
+		ELSE IF @roleId = 3
+		BEGIN
+			INSERT INTO #WeekRange(winlostdate)
+			SELECT DISTINCT b.winlostdate
+			FROM SabaWalletTicket b WITH (NOLOCK)
+			WHERE b.Mrecommend = @CID
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND WalletID = 2
+		END
+		ELSE IF @roleId = 4
+		BEGIN
+			INSERT INTO #WeekRange(winlostdate)
+			SELECT DISTINCT b.winlostdate
+			FROM SabaWalletTicket b WITH (NOLOCK)
+			WHERE b.Srecommend = @CID
+				AND b.winlostdate BETWEEN @FDate AND @TDate
+				AND WalletID = 2
+		END
 	END
 				
 	--TODO: bettrans range

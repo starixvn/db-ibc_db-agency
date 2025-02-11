@@ -21,8 +21,9 @@ AS
 		- 20240321@Bobby: Change source bettrans to bettrans_compact [RedmineID: #202655]
 		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 		- 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
+		- 20241128@Bobby: Enhance Perf bettrans_compact [RedmineId: #214387]
 		- 20241205@Lewis: Hotfix filter range bk [RedmineId: #214813]
-
+		- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	
 	Param's Explanation:
 	
@@ -62,6 +63,7 @@ BEGIN
 		,SAgComm		MONEY
 		,NoOfTicket		INT
 		,RewardAmount	MONEY
+		,WalletType		TINYINT DEFAULT(0)
 	)
 
 	CREATE TABLE #TmpCondSumWL(
@@ -78,12 +80,6 @@ BEGIN
 	DECLARE @isTest BIT, @__ProductDetails XML
 
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
-
-	DECLARE @SeparateSabaSport_Cutoff SMALLDATETIME 
-
-	SELECT @SeparateSabaSport_Cutoff = CutoffDate
-	FROM dbo.f_GetCutoffDate()
-	WHERE TypeName = 'SabaSport'
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds)
 	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
@@ -115,24 +111,35 @@ BEGIN
 
 	--Avoid Parameter Sniffing for bettrans and sum_winloss
 	DECLARE @FDate SMALLDATETIME, @TDate SMALLDATETIME, @CID INT
+	DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX), @RewardCurrency VARCHAR(12);
 	    
 	SELECT	@FDate	= @FromDate
 			,@TDate = @ToDate
 			,@CID   = @custid
-			
+
+	SELECT @RewardCurrency	= e.Code
+	FROM dbo.CustInfo c WITH (NOLOCK)
+	INNER JOIN dbo.Exchange e WITH(NOLOCK) ON c.currency = e.ExchangeId
+	WHERE c.CustID = @CID
+	
+	SELECT 
+			@totalDownline	= COUNT(1), 
+			@downlineIds	= STRING_AGG(CAST(custid AS VARCHAR(MAX)), ',')
+	FROM dbo.Customer c WITH(NOLOCK)
+	WHERE srecommend = @CID
+		AND RoleId = 3
 
 	--TODO: bettrans range
 	IF @ToDate > @MoveBetsDay
 	BEGIN 	
+
 		SELECT @FDate	= IIF(@FromDate <= @MoveBetsDay, DATEADD(DD, 1, @MoveBetsDay), @FromDate)
 			,@TDate		= @ToDate
 
 		--TODO: bettrans_compact
-		;WITH CTE_Master AS (
-			SELECT custid
-			FROM dbo.Customer WITH(NOLOCK)
-			WHERE srecommend = @CID
-				AND RoleId = 3
+		;WITH CTE_Downline AS (
+			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+			FROM STRING_SPLIT(@downlineIds, ',') AS c
 		)
 		INSERT INTO #SAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, SAgWinLost, SAgComm, NoOfTicket)
 		SELECT	b.CustID,
@@ -149,7 +156,7 @@ BEGIN
 			SUM(b.scomm - b.acomm) AS SAgComm,
 			SUM(b.betcount) AS NoOfTicket
 		FROM bodb_AGE.dbo.bettrans_compact b WITH(NOLOCK)
-			INNER JOIN CTE_Master m ON m.custid = b.custid
+			INNER JOIN CTE_Downline m ON m.custid = b.custid
 			INNER JOIN (
 				SELECT f.ProductID, f.BetType, f.RefTable
 				FROM (	
@@ -376,58 +383,65 @@ BEGIN
 	END
 
 	--TODO: SabaWalletTicket
-	SELECT @FDate = @FromDate, @TDate = @ToDate
+	SELECT @FDate = @FromDate, @TDate = @ToDate;
 
-	INSERT INTO #SAgWinLossDetails(CustID,RewardAmount)
-	SELECT Mrecommend,SUM(Amount)
-	FROM SabaWalletTicket b WITH (NOLOCK)
+	;WITH CTE_Downline AS (
+		SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+		FROM STRING_SPLIT(@downlineIds, ',') AS c
+	)
+	INSERT INTO #SAgWinLossDetails(CustID, RewardAmount, WalletType)
+	SELECT b.Mrecommend, SUM(Amount) AS RewardAmount, 2
+	FROM dbo.SabaWalletTicket b WITH (NOLOCK)
+	INNER JOIN CTE_Downline cte ON cte.custid = b.Mrecommend
 	WHERE b.winlostdate BETWEEN @FDate AND @TDate
-		AND b.WalletID= 2
-		AND b.Srecommend = @CID
-	GROUP BY Mrecommend
+		AND b.WalletID = 2
+	GROUP BY b.Mrecommend
 	
 	--TODO: Result
-	SELECT 
-		wl.CustId
-		, wl.CustName
-		, wl.Turnover
-		, wl.TurnoverNoDraw
-		, wl.GrossComm
-		, wl.MemberWinLoss
-		, wl.MemberComm
-		, wl.AgWinLoss
-		, wl.AgComm
-		, wl.MAgWinLoss
-		, wl.MAgComm
-		, wl.SAgWinLoss
-		, wl.SAgComm
-		, wl.RewardAmount
-		, wl.RewardCurrency
-		, wl.NumberOfTickets
-		, wl.RowNum
-	FROM (
-		SELECT	w.CustID 			AS CustId 
-				,c.UserName 		AS CustName
-				,SUM(TurnOver) 		AS Turnover
-				,SUM(TurnoverNoDraw)AS TurnoverNoDraw
-				,SUM(GrossComm)		AS GrossComm
-				,SUM(MemberWinLost) AS MemberWinLoss
-				,SUM(PlayerComm) 	AS MemberComm
-				,SUM(AgWinlost) 	AS AgWinLoss
-				,SUM(AgComm) 		AS AgComm
-				,SUM(MAgWinlost) 	AS MAgWinLoss
-				,SUM(MAgComm) 		AS MAgComm
-				,SUM(SAgWinlost) 	AS SAgWinLoss
-				,SUM(SAgComm) 		AS SAgComm
-				,SUM(RewardAmount)  AS RewardAmount
-				,e.Code				AS RewardCurrency
-				,SUM(NoOfTicket) 	AS NumberOfTickets
-				,ROW_NUMBER() OVER(ORDER BY c.UserName) AS RowNum
-		FROM #SAgWinLossDetails w 
-			INNER JOIN dbo.custinfo c WITH(NOLOCK) ON w.CustID = c.CustID
-			INNER JOIN dbo.Exchange e WITH(NOLOCK) ON c.currency = e.ExchangeId
-		GROUP BY w.CustID, c.UserName, e.Code
-	) wl
+	;WITH CTE_Reward AS (
+		SELECT CustID, RewardAmount
+		FROM #SAgWinLossDetails
+		WHERE WalletType = 2
+	)
+	, CTE_Winloss AS (
+		SELECT 
+			CustID
+			,SUM(TurnOver) AS TurnOver	
+			,SUM(TurnoverNoDraw) AS TurnOverNoDraw
+			,SUM(GrossComm) AS GrossComm
+			,SUM(MemberWinLost) AS MemberWinLost
+			,SUM(PlayerComm) AS PlayerComm
+			,SUM(AgWinlost) AS AgWinlost
+			,SUM(AgComm) AS AgComm
+			,SUM(MAgWinlost) AS MAgWinlost
+			,SUM(MAgComm) AS MAgComm
+			,SUM(SAgWinlost) AS SAgWinlost
+			,SUM(SAgComm) AS SAgComm
+			,SUM(NoOfTicket) AS NoOfTicket	
+		FROM #SAgWinLossDetails
+		WHERE WalletType = 0
+		GROUP BY CustID
+	)
+	SELECT	ISNULL(w.CustID, r.custid)				AS CustId 
+			,c.UserName								AS CustName
+			,TurnOver								AS Turnover
+			,TurnoverNoDraw							AS TurnoverNoDraw
+			,GrossComm								AS GrossComm
+			,MemberWinLost							AS MemberWinLoss
+			,PlayerComm								AS MemberComm
+			,AgWinlost								AS AgWinLoss
+			,AgComm									AS AgComm
+			,MAgWinlost								AS MAgWinLoss
+			,MAgComm								AS MAgComm
+			,SAgWinlost								AS SAgWinLoss
+			,SAgComm								AS SAgComm
+			,r.RewardAmount							AS RewardAmount
+			,@RewardCurrency						AS RewardCurrency
+			,NoOfTicket								AS NumberOfTickets
+			,ROW_NUMBER() OVER(ORDER BY c.UserName)	AS RowNum
+	FROM CTE_Winloss w
+		FULL JOIN CTE_Reward r ON r.custid = w.custid
+		INNER JOIN dbo.custinfo c WITH(NOLOCK) ON c.CustID = ISNULL(w.custid, r.custid)
 
 	SELECT	NULL 				AS CustId
 			,'Total' 			AS CustName
@@ -443,12 +457,10 @@ BEGIN
 			,SUM(SAgWinlost) 	AS SAgWinLoss
 			,SUM(SAgComm) 		AS SAgComm
 			,SUM(RewardAmount)  AS RewardAmount
-			,e.Code				AS RewardCurrency
+			,@RewardCurrency	AS RewardCurrency
 			,SUM(NoOfTicket) 	AS NumberOfTickets
 	FROM #SAgWinLossDetails w
-		INNER JOIN dbo.custInfo c WITH(NOLOCK) ON w.CustID = c.CustID 
-		INNER JOIN dbo.Exchange e WITH(NOLOCK) ON c.currency = e.ExchangeId
-	GROUP BY e.Code
+	HAVING SUM(NoOfTicket) > 0 OR SUM(RewardAmount) > 0
 
 END
 
