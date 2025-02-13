@@ -36,7 +36,7 @@ BEGIN
 	DECLARE @custid int  
 	DECLARE @currency INT, @actualrate FLOAT, @currName NVARCHAR(10)    
 	DECLARE @User NVARCHAR(50)  
-	DECLARE @RefNo BIGINT, @ToCustID INT, @Amount FLOAT, @MRecommend1 INT, @srecommend1 INT  
+	DECLARE @RefNo BIGINT, @ToCustID INT, @Amount FLOAT, @mrecommend INT, @srecommend INT  
 	DECLARE @Outstanding MONEY, @credit MONEY, @FutureBetCredit MONEY, @ABSamount MONEY, @PendingTransfer3rd MONEY
 
 	DECLARE @UplineUserName NVARCHAR(50), @UplineID INT, @TransID_from BIGINT, @TransID_to BIGINT, @recommend_member INT, @mrecommend_member INT, @srecommend_member INT
@@ -65,7 +65,7 @@ BEGIN
 	END
 
 	SELECT @UplineUserName = ci.username , @currency = ci.currency, @actualrate = e.actualrate, @currName = e.currency
-		, @MRecommend1 = ci.mrecommend, @srecommend1 = ci.srecommend, @UplineRoleID = ci.roleid 
+		, @mrecommend = ci.mrecommend, @srecommend = ci.srecommend, @UplineRoleID = ci.roleid 
 	FROM CustDB.dbo.custinfo ci (nolock) 
 		INNER JOIN CustDB.dbo.Exchange e with (NOLOCK) on ci.currency = e.exchangeid 
 	WHERE custid = @FromCustID AND @DirectMember IN (-3,-4)
@@ -91,8 +91,8 @@ BEGIN
 	SELECT @UplineID = @FromCustID  
 	
 	SELECT @recommend_member = @DirectMember
-		, @mrecommend_member = IIF (@DirectMember = -4 , -4 , @MRecommend1)
-		, @srecommend_member = @srecommend1
+		, @mrecommend_member = IIF (@DirectMember = -4 , -4 , @mrecommend)
+		, @srecommend_member = @srecommend
 
 	---- #1 CHECK UM TRANSFER FUNCTION
 	DECLARE @ToTimeConfig DATETIME;
@@ -574,7 +574,7 @@ BEGIN
 							winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)  
 					VALUES 
 						(@TransID_from, @creator, @UplineID, @UplineUserName, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @User + @extraTransDesc, 
-							@amount, 0, @WinlostDate, @currency, @actualrate, @currName, 0, @MRecommend1, @srecommend1, 0, 0,@ip,131, SYSDATETIME())  
+							@amount, 0, @WinlostDate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 0, 0,@ip,131, SYSDATETIME())  
 				
 				END TRY
 				BEGIN CATCH
@@ -621,7 +621,7 @@ BEGIN
 							winlostdate, currency, actualrate,currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance, RepUpdateTime)  
 					VALUES 
 						(@TransID_to, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @UplineUserName + @extraTransDesc, 
-							0, @amount,  @WinlostDate, @currency, @actualrate, @currName, @DirectMember, @MRecommend1, @srecommend1, 0, 0,@ip,131, @TotalCash1, SYSDATETIME())  
+							0, @amount,  @WinlostDate, @currency, @actualrate, @currName, @DirectMember, @mrecommend_member, @srecommend_member, 0, 0,@ip,131, @TotalCash1, SYSDATETIME())  
 				END TRY
 				BEGIN CATCH
 					--Manually rollback
@@ -669,7 +669,7 @@ BEGIN
 							winlostdate, currency,actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, RepUpdateTime)  
 					VALUES 
 						(@TransID_from, @creator, @UplineID, @UplineUserName, @RefNo, CURRENT_TIMESTAMP, 21004, 'To Customer :: ' + @User + @extraTransDesc, 
-							0, abs(@amount),@WinlostDate, @currency, @actualrate, @currName, 0, @MRecommend1, @srecommend1, 0, 0,@ip,131, SYSDATETIME())  
+							0, abs(@amount),@WinlostDate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 0, 0,@ip,131, SYSDATETIME())  
 				
 				END TRY
 				BEGIN  CATCH
@@ -697,7 +697,7 @@ BEGIN
 							winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost,ip,statusID, balance, RepUpdateTime)  
 					VALUES 
 						(@TransID_to, @creator, @custid, @User, @RefNo, CURRENT_TIMESTAMP, 21004, 'From Customer :: ' + @UplineUserName + @extraTransDesc, 
-							abs(@amount), 0, @WinlostDate, @currency, @actualrate, @currName, @DirectMember, @MRecommend1, @srecommend1, 0, 0,@ip,131, @TotalCash3, SYSDATETIME())  
+							abs(@amount), 0, @WinlostDate, @currency, @actualrate, @currName, @DirectMember, @mrecommend_member, @srecommend_member, 0, 0,@ip,131, @TotalCash3, SYSDATETIME())  
 				END TRY 
 				
 				BEGIN CATCH
