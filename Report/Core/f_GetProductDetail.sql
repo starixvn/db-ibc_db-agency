@@ -25,6 +25,7 @@ AS
 		- 20240626@Lewis: Add FastSpin [RedmineID: #205740]
 		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
 		- 20240826@Lewis: Add FA CHAI - Promotion Prize [RedmineID: #209893]
+		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #219675]
 		
 */
 RETURN
@@ -105,3 +106,9 @@ RETURN
 	SELECT 'ProductDetail' AS RefId, '30' AS ResourceId, 89 AS ProductId, 146 AS Sporttype, 0 AS Bettype, 30 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '31' AS ResourceId, 89 AS ProductId, 146 AS Sporttype, 11399 AS Bettype, 31 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+	
+	--- ASKMESLOT
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '32' AS ResourceId, 103 AS ProductId, 130 AS Sporttype, 0 AS Bettype, 32 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '33' AS ResourceId, 103 AS ProductId, 130 AS Sporttype, 15199 AS Bettype, 33 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
