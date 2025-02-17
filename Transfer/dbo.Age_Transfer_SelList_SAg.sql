@@ -155,7 +155,7 @@ BEGIN
 			SELECT 
 				c.mrecommend AS custid,
 				ISNULL(SUM(CASE WHEN roleid = 3 THEN credit ELSE 0 END), 0) AS magentCredit,
-				ISNULL(SUM(CASE WHEN roleid = 1 THEN credit ELSE 0 END), 0) AS magentUsedCredit,
+				ISNULL(SUM(CASE WHEN roleid = 2 OR recommend = -3 THEN credit ELSE 0 END), 0) AS magentUsedCredit,
 				0 AS IsDirectMember
 			FROM CustDB.dbo.custinfo as c (nolock)
 			WHERE srecommend = @SAgID AND roleid < 4 AND mrecommend > 0

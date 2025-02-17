@@ -1034,7 +1034,7 @@ BEGIN
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 				BEGIN TRY
 					INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
-					VALUES (@TransID, @UserID, @memberId, @memberName, @refno, @Now, 21004, 'To Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
+					VALUES (@TransID, @UserID, @memberId, @memberName, @refno, @Now, 21004, 'To Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 0, 
 							@memberBalance, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashDirectMem, SYSDATETIME())
 				END TRY
 				BEGIN CATCH
@@ -1055,7 +1055,7 @@ BEGIN
 
 				-- log data
 				SELECT @LogData = 'Transfer all:'
-									+ ' Transfer from Direct Member ' + @memberName + ' to Master ' + @agentName + ' with amount ' + CONVERT(VARCHAR(20), @memberBalance)
+									+ ' Transfer from Direct Member ' + @memberName + ' to Master ' + @masterName + ' with amount ' + CONVERT(VARCHAR(20), @memberBalance)
 									+ ' Ref.No ' + CONVERT(VARCHAR(20), @refno)
 
 				-- Reset yesterday balance for games
@@ -1131,7 +1131,7 @@ BEGIN
 				EXEC Get_Bettrans_TransID @TransID = @TransID OUTPUT
 				BEGIN TRY
 					INSERT INTO dbo.Transfer (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, scomm, swinlost, ip, statusID, balance, RepUpdateTime)
-					VALUES (@TransID, @UserID, @memberId, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @agentName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
+					VALUES (@TransID, @UserID, @memberId, @memberName, @refno, CURRENT_TIMESTAMP, 21004, 'From Customer::' + @masterName + CASE WHEN @SubAccID > 0 THEN ' (By ' + @SubAccName + ')' ELSE '' END, 
 							ABS(@memberBalance), 0, CONVERT(NVARCHAR(10), @Now, 120), @currency, @actualrate, @currencyName, @agentId, @masterId, @superId, 0, 0, @IP, 131, @TotalCashDirectMemNev, SYSDATETIME())
 				END TRY
 				BEGIN CATCH
@@ -1154,7 +1154,7 @@ BEGIN
 
 				-- log data
 				SELECT @LogData = 'Transfer all:'
-									+ ' Transfer from Master ' + @agentName + ' to Direct Member ' + @memberName + ' with amount ' + CONVERT(VARCHAR(20), @memberBalance)
+									+ ' Transfer from Master ' + @masterName + ' to Direct Member ' + @memberName + ' with amount ' + CONVERT(VARCHAR(20), @memberBalance)
 									+ ' Ref.No ' + CONVERT(VARCHAR(20), @refno)
 
 				-- Reset yesterday balance for games
