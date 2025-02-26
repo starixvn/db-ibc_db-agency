@@ -450,7 +450,8 @@ BEGIN
 					FROM OPENQUERY(DBCUST, ''SELECT m.CustID, m.ClosedReason
 											FROM CustDB.dbo.CustLoginInfo m WITH(NOLOCK)
 												INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON m.CustID = c.custid
-											WHERE c.roleid = 2 AND c.mrecommend = ' + CONVERT(VARCHAR(30), @masterid) + ''')'
+											WHERE (c.roleid = 2 OR (c.roleid = 1 AND c.recommend = -3))  
+												AND c.mrecommend = ' + CONVERT(VARCHAR(30), @masterid) + ''')'
 	INSERT INTO #ClosedReason (custid, ClosedReason)
 	EXEC (@SQL)
 
