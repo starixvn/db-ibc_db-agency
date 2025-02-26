@@ -141,7 +141,15 @@ BEGIN
 	FROM cte t
 		INNER JOIN CustDB.dbo.CustInfo ci with (NOLOCK) ON t.custid = ci.custid 
 		INNER JOIN CustDB.dbo.Customer c with (NOLOCK) on ci.custid = c.custid 
-		INNER JOIN CustDB.dbo.CustProductStatus cs WITH(NOLOCK) ON cs.CustID = ci.custid
+		CROSS APPLY  
+		(
+			SELECT 
+				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS CloseInfo
+				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS SuspendInfo
+				, ISNULL(Locked, 0) AS Locked
+			FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
+			WHERE cs.CustID = ci.custid
+		) AS cs
 	WHERE (ci.username like '%' + @Username + '%' OR @Username = '')
 		AND enabled = case when coalesce(@Closed,@Suspended) is not null then 1 else coalesce(@enabled, enabled) end
 		AND	isnull(cs.CloseInfo,0) = case when @Suspended = 1 then 0 else coalesce(@closed, isnull(cs.CloseInfo, 0)) end
