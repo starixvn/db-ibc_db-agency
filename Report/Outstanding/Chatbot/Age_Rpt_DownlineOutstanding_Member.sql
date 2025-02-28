@@ -13,6 +13,7 @@ AS
 		- 20181026@Kan: Create new [RedmineId: #103467]
 		- 20181108@Paul: Add more code [RedmineId: #103467]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
+		- 20240523@Lewis: Potential Winning [RedmineId: #202427]  
 */
 
 BEGIN
@@ -30,17 +31,28 @@ BEGIN
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest) s
 		LEFT JOIN dbo.f_GroupProduct() p ON s.ProductID = p.ProductId;
 
-	CREATE TABLE #OutStanding (ProductId INT, MemberOutstanding MONEY, AgentOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY);
+	CREATE TABLE #OutStanding (ProductId INT, MemberOutstanding MONEY, AgentOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, AgentRisk MONEY, MasterRisk MONEY, SuperRisk MONEY, IsSB BIT);
  
 	-- bettrans
-	INSERT INTO #OutStanding (ProductId, MemberOutstanding, AgentOutstanding, MasterOutstanding, SuperOutstanding)
+	INSERT INTO #OutStanding (ProductId, MemberOutstanding, AgentOutstanding, MasterOutstanding, SuperOutstanding, ToWin, AgentRisk, MasterRisk, SuperRisk, IsSB)
 	SELECT
 		s.ProductID,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * apositiontaking) AS AgentOutstanding,
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
-		SUM(actual_stake * spositiontaking) AS SuperOutstanding
-	FROM dbo.bettrans b WITH (NOLOCK)  
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
+		SUM(pa.PayoutAdjust - actual_stake),
+		SUM((pa.PayoutAdjust - actual_stake) * apositiontaking),
+		SUM((pa.PayoutAdjust - actual_stake) * mpositiontaking),
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking),
+		ISNULL(pa.IsSB,0)
+	FROM dbo.bettrans b WITH (NOLOCK) 
+		OUTER APPLY (
+						SELECT	TOP 1
+								1 AS IsSB
+								,ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
+						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/xml/p1') = 1
+					) pa
 		INNER JOIN (
 			SELECT DISTINCT ProductID, bettype
 			FROM #SportBettype
@@ -48,7 +60,7 @@ BEGIN
 		) s ON s.bettype = b.bettype
 	WHERE statusId IN (0,1)
 		AND b.custid = @DownlineId
-	GROUP BY s.ProductID;
+	GROUP BY s.ProductID,ISNULL(pa.IsSB,0);;
 	
 	-- translog
 	INSERT INTO #OutStanding (ProductId, MemberOutstanding, AgentOutstanding, MasterOutstanding, SuperOutstanding)
@@ -109,7 +121,11 @@ BEGIN
 		SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 		SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
 		SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
-		SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding
+		SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+		SUM(ISNULL(ToWin,0)) AS ToWin,
+		SUM(ISNULL(AgentRisk,0)) AS AgentRisk,
+		SUM(ISNULL(MasterRisk,0)) AS MasterRisk,
+		SUM(ISNULL(SuperRisk,0)) AS SuperRisk
 	FROM #OutStanding
 	GROUP BY ProductId;
 

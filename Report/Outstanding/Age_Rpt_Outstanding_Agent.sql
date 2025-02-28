@@ -59,7 +59,8 @@ BEGIN
 		ISNULL(pa.IsSB,0)
 	FROM dbo.bettrans b WITH (NOLOCK)  
 		OUTER APPLY (
-						SELECT 1 AS IsSB
+						SELECT TOP 1 
+								1 AS IsSB
 								, ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
 						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/xml/p1') = 1
 					) pa
