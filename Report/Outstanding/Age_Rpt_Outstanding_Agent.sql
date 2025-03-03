@@ -5,9 +5,12 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Agent]
 	@IsChatBot BIT = 0,
 	@PageSize INT = 0,
 	@PageIndex INT = 1,
-	@TotalMemberOutstanding	Money = 0 OUTPUT,
-	@TotalMasterOutstanding	Money = 0 OUTPUT,
-	@TotalSuperOutstanding	Money = 0 OUTPUT
+	@TotalMemberOutstanding	MONEY = 0 OUTPUT,
+	@TotalMasterOutstanding	MONEY = 0 OUTPUT,
+	@TotalSuperOutstanding	MONEY = 0 OUTPUT,
+	@TotalMemberRiskAmount	MONEY = 0 OUTPUT,
+	@TotalMasterRiskAmount	MONEY = 0 OUTPUT,
+	@TotalSuperRiskAmount	MONEY = 0 OUTPUT
 AS
 
 /*
@@ -45,7 +48,7 @@ BEGIN
 
 	-- #OutStanding
 	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, MasterRisk MONEY, SuperRisk MONEY, IsSB BIT);
- 
+
 	-- bettrans
 	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding, ToWin, MasterRisk, SuperRisk, IsSB)
 	SELECT
@@ -57,13 +60,13 @@ BEGIN
 		SUM((pa.PayoutAdjust - actual_stake) * mpositiontaking),
 		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking),
 		ISNULL(pa.IsSB,0)
-	FROM dbo.bettrans b WITH (NOLOCK)  
+	FROM dbo.bettrans b WITH (NOLOCK) 
 		OUTER APPLY (
 						SELECT TOP 1 
 								1 AS IsSB
 								, ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
 						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/xml/p1') = 1
-					) pa
+					) pa	
 	WHERE statusId IN (0, 1)
 		AND EXISTS 
 		(
@@ -74,9 +77,9 @@ BEGIN
 			AND s.RefTable = 0
 			AND s.BetType = b.bettype
 		)
-		AND mrecommend =  @CustID		
+		AND mrecommend =  @CustID
 	GROUP BY recommend,ISNULL(pa.IsSB,0);
-	
+
 	-- translog
 	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
 	SELECT
@@ -141,6 +144,7 @@ BEGIN
 	GROUP BY recommend;
 	
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
+	BEGIN
 		WITH rt AS (
 			SELECT
 				rt.recommend,
@@ -170,8 +174,9 @@ BEGIN
 			rt
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum;
-
+	END
 	ELSE -- Using for chatbot IsChatBot = 1, order by MasterOutstanding
+	BEGIN
 		WITH rt AS (
 			SELECT
 				recommend,
@@ -199,10 +204,13 @@ BEGIN
 					ON rt.recommend = c.custid
 			WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 			ORDER BY RowNum
-
+	END
 	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
 			@TotalSuperOutstanding = SUM(ISNULL(SuperOutstanding, 0)) ,
-			@TotalMasterOutstanding = SUM(ISNULL(MasterOutstanding, 0))
+			@TotalMasterOutstanding = SUM(ISNULL(MasterOutstanding, 0)),
+			@TotalMemberRiskAmount = SUM(ISNULL(ToWin, 0)),
+			@TotalSuperRiskAmount = SUM(ISNULL(SuperRisk, 0)) ,
+			@TotalMasterRiskAmount = SUM(ISNULL(MasterRisk, 0))
 	FROM #OutStanding
 
 	DROP TABLE #OutStanding;

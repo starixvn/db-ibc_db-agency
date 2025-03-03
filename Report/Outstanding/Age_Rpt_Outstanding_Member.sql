@@ -5,9 +5,13 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Member]
 	@IsChatBot BIT = 0,
 	@PageSize INT = 0,
 	@PageIndex INT = 1,
-	@TotalMemberOutstanding	Money = 0 OUTPUT,
-	@TotalMasterOutstanding	Money = 0 OUTPUT,
-	@TotalAgentOutstanding	Money = 0 OUTPUT
+	@TotalMemberOutstanding	MONEY = 0 OUTPUT,
+	@TotalMasterOutstanding	MONEY = 0 OUTPUT,
+	@TotalAgentOutstanding	MONEY = 0 OUTPUT,
+	@TotalMemberRiskAmount	MONEY = 0 OUTPUT,
+	@TotalMasterRiskAmount	MONEY = 0 OUTPUT,
+	@TotalAgentRiskAmount	MONEY = 0 OUTPUT,
+	@TotalSuperRiskAmount	MONEY = 0 OUTPUT
 AS
 
 /*
@@ -50,8 +54,8 @@ BEGIN
 	;
 
 	-- #OutStanding
-	CREATE TABLE #OutStanding (custid INT, MemberOutstanding MONEY, AgentOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, AgentRisk MONEY, MasterRisk MONEY, SuperRisk MONEY, IsSB BIT);
- 
+	CREATE TABLE #OutStanding (custid INT, MemberOutstanding MONEY, AgentOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, AgentRisk MONEY, MasterRisk MONEY, SuperRisk MONEY, IsSB BIT DEFAULT(0));
+
 	-- bettrans
 	INSERT INTO #OutStanding (custid, MemberOutstanding, AgentOutstanding, MasterOutstanding, SuperOutstanding, ToWin, AgentRisk, MasterRisk, SuperRisk, IsSB)
 	SELECT
@@ -65,7 +69,7 @@ BEGIN
 		SUM((pa.PayoutAdjust - actual_stake) * mpositiontaking),
 		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking),
 		ISNULL(pa.IsSB,0)
-	FROM dbo.bettrans b WITH (NOLOCK)
+	FROM dbo.bettrans b WITH (NOLOCK)	
 		OUTER APPLY (
 						SELECT	TOP 1
 								1 AS IsSB
@@ -79,10 +83,9 @@ BEGIN
 			FROM #SportBettype s
 			WHERE s.RefTable = 0 AND s.bettype = b.bettype
 		)
-
-		AND recommend =  @CustID		
+		AND recommend =  @CustID
 	GROUP BY custid,ISNULL(pa.IsSB,0);
-	
+
 	-- translog
 	INSERT INTO #OutStanding (custid, MemberOutstanding, AgentOutstanding, MasterOutstanding, SuperOutstanding)
 	SELECT
@@ -141,41 +144,43 @@ BEGIN
 	GROUP BY custid;
 
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
+	BEGIN
 		WITH rt AS (
+				SELECT
+					rt.custid,
+					SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
+					SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
+					SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
+					SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+					SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.ToWin,0)))AS ToWin,
+					SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.AgentRisk,0))) AS AgentRisk,
+					SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.MasterRisk,0))) AS MasterRisk,
+					SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.SuperRisk,0))) AS SuperRisk,
+					ROW_NUMBER() OVER(ORDER BY c.username ) RowNum ,
+					c.username
+				FROM #OutStanding rt
+				INNER JOIN 	dbo.custInfo c WITH (NOLOCK) 
+						ON 	rt.custid = c.custid
+				GROUP BY rt.custid,c.username
+			)
 			SELECT
-				rt.custid,
-				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
-				SUM(ISNULL(AgentOutstanding, 0))  AS AgentOutstanding,
-				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
-				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.ToWin,0)))AS ToWin,
-				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.AgentRisk,0))) AS AgentRisk,
-				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.MasterRisk,0))) AS MasterRisk,
-				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.SuperRisk,0))) AS SuperRisk,
-				ROW_NUMBER() OVER(ORDER BY c.username ) RowNum ,
-				c.username
-			FROM #OutStanding rt
-			INNER JOIN 	dbo.custInfo c WITH (NOLOCK) 
-					ON 	rt.custid = c.custid
-			GROUP BY rt.custid,c.username
-		)
-		SELECT
-			rt.custid AS CustId,
-			rt.username AS CustName,
-			rt.MemberOutstanding,
-			rt.AgentOutstanding,
-			rt.MasterOutstanding,
-			rt.SuperOutstanding,
-			rt.ToWin,
-			rt.AgentRisk,
-			rt.MasterRisk,
-			rt.SuperRisk
-		FROM	
-			rt
-		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
-		ORDER BY RowNum;
-
+				rt.custid AS CustId,
+				rt.username AS CustName,
+				rt.MemberOutstanding,
+				rt.AgentOutstanding,
+				rt.MasterOutstanding,
+				rt.SuperOutstanding,
+				rt.ToWin,
+				rt.AgentRisk,
+				rt.MasterRisk,
+				rt.SuperRisk
+			FROM	
+				rt
+			WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
+			ORDER BY RowNum;
+	END
 	ELSE -- Using for chatbot IsChatBot = 1, order by AgentOutstanding
+	BEGIN
 		WITH rt AS (
 		SELECT
 			custid,
@@ -205,10 +210,15 @@ BEGIN
 				ON rt.custid = c.custid
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum
+	END
 
 	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
 			@TotalMasterOutstanding	= SUM(ISNULL(MasterOutstanding, 0)),
-			@TotalAgentOutstanding = SUM(ISNULL(AgentOutstanding, 0))	
+			@TotalAgentOutstanding = SUM(ISNULL(AgentOutstanding, 0)),
+			@TotalMemberRiskAmount = SUM(ISNULL(ToWin,0)),
+			@TotalAgentRiskAmount = SUM(ISNULL(AgentRisk, 0)),
+			@TotalMasterRiskAmount = SUM(ISNULL(MasterRisk, 0)),
+			@TotalSuperRiskAmount = SUM(ISNULL(SuperRisk, 0))
 	FROM #OutStanding
 
 	DROP TABLE #OutStanding;

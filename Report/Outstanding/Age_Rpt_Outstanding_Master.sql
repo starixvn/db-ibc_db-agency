@@ -5,8 +5,10 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
 	@IsChatBot BIT = 0,
 	@PageSize INT = 0,
 	@PageIndex INT = 1,
-	@TotalMemberOutstanding	Money = 0 OUTPUT,
-	@TotalSuperOutstanding	Money = 0 OUTPUT
+	@TotalMemberOutstanding	MONEY = 0 OUTPUT,
+	@TotalSuperOutstanding	MONEY = 0 OUTPUT,
+	@TotalMemberRiskAmount	MONEY = 0 OUTPUT,
+	@TotalSuperRiskAmount	MONEY = 0 OUTPUT
 
 AS
 
@@ -63,7 +65,8 @@ BEGIN
 		ISNULL(pa.IsSB,0) AS IsSB
 	FROM dbo.bettrans b WITH (NOLOCK)  
 		OUTER APPLY (
-						SELECT 1 AS IsSB
+						SELECT TOP 1
+								1 AS IsSB
 							   ,ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
 						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/xml/p1') = 1
 					) pa
@@ -73,9 +76,9 @@ BEGIN
 			FROM #SportBettype s
 			WHERE s.RefTable = 0 AND s.bettype = b.bettype
 		) -- bet tickets
-		AND srecommend = @CustID		
+		AND srecommend = @CustID
 	GROUP BY mrecommend,ISNULL(pa.IsSB,0);
-	
+
 	-- translog
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
 	SELECT
@@ -125,6 +128,7 @@ BEGIN
 	GROUP BY mrecommend;
 
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
+	BEGIN
 		WITH rt AS (
 			SELECT
 				rt.mrecommend,
@@ -150,8 +154,9 @@ BEGIN
 			rt
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum;
-
+	END
 	ELSE -- Using for chatbot IsChatBot = 1, order by SuperOutstanding
+	BEGIN
 		WITH rt AS (
 		SELECT
 			mrecommend,
@@ -175,9 +180,12 @@ BEGIN
 					ON rt.mrecommend = c.custid
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum
-		
+	END	
+
 	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
-			@TotalSuperOutstanding = SUM(ISNULL(SuperOutstanding, 0)) 
+			@TotalSuperOutstanding = SUM(ISNULL(SuperOutstanding, 0)),
+			@TotalMemberRiskAmount = SUM(ISNULL(ToWin, 0)),
+			@TotalSuperRiskAmount = SUM(ISNULL(SuperRisk, 0)) 
 	FROM #OutStanding
 
 	DROP TABLE #SportBettype;

@@ -126,9 +126,9 @@ BEGIN
 		SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 		SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 		SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-		SUM(ISNULL(ToWin,0)) AS ToWin,
-		SUM(ISNULL(MasterRisk,0)) AS MasterRisk,
-		SUM(ISNULL(SuperRisk,0)) AS SuperRisk
+		SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(ToWin,0))) AS ToWin,
+		SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(MasterRisk,0))) AS MasterRisk,
+		SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(SuperRisk,0))) AS SuperRisk
 	FROM #OutStanding
 	GROUP BY ProductId;
 
