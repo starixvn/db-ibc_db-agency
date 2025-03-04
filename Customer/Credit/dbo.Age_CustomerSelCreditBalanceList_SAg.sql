@@ -415,16 +415,25 @@ BEGIN
 	IF @IsExistDirect = 1
 	BEGIN
 		INSERT INTO #balance(custid, outstanding, balance, yesterdaybalance, PendingTransfer3rd)
-		SELECT
-			CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END AS mrecommend,
+		SELECT CASE WHEN b.recommend = -3 THEN b.mrecommend ELSE r.custid END AS mrecommend,
 			ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN CASE WHEN b.recommend = -3 THEN ABS(actual_stake) * mpositiontaking ELSE ABS(actual_stake) END ELSE 0 END),0) AS outstanding,
+
+			--Helen 
+			ISNULL(SUM(CASE WHEN statusID > 1 AND b.recommend = -3 THEN mwinlost+acomm-comm 
+							WHEN statusID > 1 AND b.recommend = -4 THEN winlost-actual_stake+playercomm	ELSE  0 END),0) AS balance,
+				
+			ISNULL(SUM(CASE WHEN statusID > 1 AND b.recommend = -3 AND  winlostdate = @yesterday THEN mwinlost+acomm-comm 
+							WHEN statusID > 1 AND b.recommend = -4 AND  winlostdate = @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END),0) AS yesterdaybalance,
+			/* -- code MAX
 			ISNULL(SUM(CASE WHEN statusID > 1 THEN mwinlost+acomm-comm ELSE  0 END),0) 
 				+ ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0)AS balance,
-			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE 0 END),0) 
+			
+			ISNULL(SUM(CASE WHEN statusID > 1 AND winlostdate = @yesterday THEN mwinlost+acomm-comm ELSE  0 END),0) 
 				+ ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0) AS yesterdaybalance,
+			*/
 			0 AS PendingTransfer3rd
 		FROM  #DirectMemberList r
-			INNER JOIN dbo.bettransLC b WITH (NOLOCK,index = IX_custid) ON b.custid = r.CustId
+			inner join dbo.bettransLC b WITH(NOLOCK, index = IX_custid ) ON r.custid = b.custid
 		WHERE (
 					statusID IN (0, 1)
 					OR winlostdate >= @yesterday
