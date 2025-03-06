@@ -44,14 +44,6 @@ BEGIN
 	
 	CREATE TABLE #custid (CustId INT)
 	DECLARE @tblResultMember TABLE(CustId INT PRIMARY KEY, UserName VARCHAR(50), MsgId INT, ErrType VARCHAR(50), ErrMsg NVARCHAR(4000), RefNo BIGINT);
-
-	/*
-	EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption   
-		@CustID = @FromCustID,  
-		@ErrMsg = @ErrMsg OUTPUT,  
-		@ErrCode = @ErrCode OUTPUT,  
-		@Language = @Language  
-	*/
    
 	IF @ErrCode > 0  
 	BEGIN  
@@ -94,6 +86,15 @@ BEGIN
 		, @mrecommend_member = IIF (@DirectMember = -4 , -4 , @mrecommend)
 		, @srecommend_member = @srecommend
 
+	IF @UplineRoleID < 4
+	BEGIN
+		EXEC DBCUST.CustDB.dbo.Age_Transfer_CheckTransferOption   
+			@CustID = @FromCustID,  
+			@ErrMsg = @ErrMsg OUTPUT,  
+			@ErrCode = @ErrCode OUTPUT,  
+			@Language = @Language  
+	END
+	
 	---- #1 CHECK UM TRANSFER FUNCTION
 	DECLARE @ToTimeConfig DATETIME;
 	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
