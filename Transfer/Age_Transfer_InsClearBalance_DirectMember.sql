@@ -94,6 +94,7 @@ BEGIN
 			@ErrCode = @ErrCode OUTPUT,  
 			@Language = @Language  
 	END
+	IF @ErrCode <> 0  return
 	
 	---- #1 CHECK UM TRANSFER FUNCTION
 	DECLARE @ToTimeConfig DATETIME;
