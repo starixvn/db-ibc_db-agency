@@ -44,40 +44,34 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, PRIMARY KEY CLUSTERED (RefTable, bettype));
+	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, ProductId INT, PRIMARY KEY CLUSTERED (RefTable, bettype));
 
-	INSERT INTO #SportBettype (bettype, RefTable)
-	SELECT bettype, RefTable
+	INSERT INTO #SportBettype (bettype, RefTable, ProductId)
+	SELECT bettype, RefTable, ProductId
 	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest)
 	;
 
 	-- #OutStanding
-	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, SuperRisk MONEY, IsSB BIT);
+	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, SuperRisk MONEY);
 
 	-- bettrans
-	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding, ToWin, SuperRisk, IsSB)
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding, ToWin, SuperRisk)
 	SELECT
 		mrecommend,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
 		SUM(pa.PayoutAdjust - actual_stake),
-		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking),
-		ISNULL(pa.IsSB,0) AS IsSB
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
 	FROM dbo.bettrans b WITH (NOLOCK)  
+		INNER JOIN #SportBettype s
+			ON s.RefTable = 0 AND s.bettype = b.bettype
 		OUTER APPLY (
-						SELECT TOP 1
-								1 AS IsSB
-							   ,ISNULL(CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY'), 0) AS PayoutAdjust
-						WHERE CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).exist('/xml/p1') = 1
-					) pa
+			SELECT CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY') AS PayoutAdjust
+			WHERE s.ProductId = 1
+		) pa
 	WHERE statusId IN (0, 1)
-		AND EXISTS (
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 0 AND s.bettype = b.bettype
-		) -- bet tickets
 		AND srecommend = @CustID
-	GROUP BY mrecommend,ISNULL(pa.IsSB,0);
+	GROUP BY mrecommend;
 
 	-- translog
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
@@ -134,8 +128,8 @@ BEGIN
 				rt.mrecommend,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.ToWin,0))) AS ToWin,
-				SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(rt.SuperRisk,0))) AS SuperRisk,
+				SUM(rt.ToWin) AS ToWin,
+				SUM(rt.SuperRisk) AS SuperRisk,
 				ROW_NUMBER() OVER (ORDER BY c.username) RowNum,
 				c.username
 			FROM #OutStanding rt
@@ -162,8 +156,8 @@ BEGIN
 			mrecommend,
 			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
-			SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(ToWin,0))) AS ToWin,
-			SUM(IIF(ISNULL(IsSB,0) = 0,NULL,ISNULL(SuperRisk,0))) AS SuperRisk,
+			SUM(ToWin) AS ToWin,
+			SUM(SuperRisk) AS SuperRisk,
 			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(SuperOutstanding, 0)) DESC) RowNum
 		FROM #OutStanding
 		GROUP BY mrecommend
@@ -183,9 +177,9 @@ BEGIN
 	END	
 
 	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
-			@TotalSuperOutstanding = SUM(ISNULL(SuperOutstanding, 0)),
-			@TotalMemberRiskAmount = SUM(ISNULL(ToWin, 0)),
-			@TotalSuperRiskAmount = SUM(ISNULL(SuperRisk, 0)) 
+			@TotalSuperOutstanding 	= SUM(ISNULL(SuperOutstanding, 0)),
+			@TotalMemberRiskAmount 	= SUM(ToWin),
+			@TotalSuperRiskAmount 	= SUM(SuperRisk) 
 	FROM #OutStanding
 
 	DROP TABLE #SportBettype;
