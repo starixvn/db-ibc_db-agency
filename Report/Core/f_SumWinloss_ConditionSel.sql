@@ -79,6 +79,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20241127@Lewis: Add GPI Live Casino [RedmineID: #213484]
 		- 20241127@Lewis: Add PLAY STAR RNG Casino [RedmineID: #208022]
 		- 20241211@Lewis: Add SABA Keno [RedmineID: #214757]
+		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #216975]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -172,7 +173,9 @@ RETURN
 				(48, 145, 0, 0, 0), --GPI RNG Casino
 				(90, 144, 0, 0, 0), --GPI Live Casino
 				(91, 143, 0, 0, 0), --PLAY STAR RNG Casino
-				(102, 133, 0, 0, 0) --SABA Keno
+				(102, 133, 0, 0, 0), --SABA Keno
+				(103, 130, 0, 0, 0), --ASKMESLOT
+				(103, 130, 15199, 0, 0) -- ASKMESLOT PromotionPrize
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
