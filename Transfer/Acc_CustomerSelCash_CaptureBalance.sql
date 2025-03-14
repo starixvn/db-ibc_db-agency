@@ -38,6 +38,7 @@ BEGIN
 
 		DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 		DECLARE @IsDiff	SMALLINT = 1, @NewMoveBetDate SMALLDATETIME = NULL,@NewBalanceUpDate SMALLDATETIME = NULL
+		DECLARE @IsExistsDirect BIT = 0
 
 		--TODO: Get MBU days
 		EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @moveBetsDay OUTPUT
@@ -73,12 +74,13 @@ BEGIN
 			RETURN
 		END
 
-		DECLARE @transdate DATETIME, @UsedCredit MONEY, @transid BIGINT
+		DECLARE @transdate DATETIME, @transid BIGINT
 	
 		-- Get Balance Information 
 		DECLARE @tblTotalCash TABLE (TableName VARCHAR(100), TotalCash MONEY)
 
-		CREATE TABLE #recommend (CustId INT)	
+		CREATE TABLE #recommend (CustId INT)
+		CREATE TABLE #DirectMember (CustId INT)
 
 		IF @roleid = 1
 		BEGIN
@@ -223,12 +225,22 @@ BEGIN
 
 		END
 		ELSE IF @roleid = 3
-		BEGIN
-	   
+		BEGIN	   
 			INSERT INTO #recommend (CustId)
 			SELECT custid
 			FROM CustDB.dbo.custInfo c WITH(NOLOCK)
 			WHERE c.roleid = 2 AND mrecommend = @CustId
+
+			--Get master direct member if exists
+			INSERT INTO #DirectMember (CustId)
+			SELECT CustId
+			FROM CustDB.dbo.custInfo c WITH(NOLOCK)
+			WHERE c.roleid = 1 AND mrecommend = @CustId AND recommend = -3
+
+			IF @@ROWCOUNT > 0
+			BEGIN
+				SET @IsExistsDirect = 1
+			END
 
 			-- bettransRNG
 			INSERT INTO @tblTotalCash (TotalCash)
@@ -239,6 +251,18 @@ BEGIN
 					AND IsSum = 0
 					AND winlostdate >= @yesterday
 					AND statusID IN (111,112,113)
+
+			IF @IsExistsDirect = 1
+			BEGIN
+				INSERT INTO @tblTotalCash (TotalCash)
+				SELECT SUM(mwinlost+acomm-comm)
+				FROM  #DirectMember r 
+				INNER JOIN  dbo.bettransRNG b WITH(NOLOCK) ON r.CustId = b.custid
+				WHERE    b.productID IN (SELECT SportType FROM @tblSportTypeRNG)
+						AND IsSum = 0
+						AND winlostdate >= @yesterday
+						AND statusID IN (111,112,113)
+			END
 		
 			-- bettransLC
 			INSERT INTO @tblTotalCash (TotalCash)
@@ -249,6 +273,18 @@ BEGIN
 					AND IsSum = 0
 					AND winlostdate >= @yesterday
 					AND statusID IN (111,112,113)
+
+			IF @IsExistsDirect = 1
+			BEGIN
+				INSERT INTO @tblTotalCash (TotalCash)
+				SELECT SUM(mwinlost+acomm-comm)
+				FROM  #DirectMember r 
+				INNER JOIN  dbo.bettransLC b WITH(NOLOCK)  ON r.CustId = b.custid
+				WHERE    b.productID IN (SELECT SportType FROM @tblSportTypeLC)
+						AND IsSum = 0
+						AND winlostdate >= @yesterday
+						AND statusID IN (111,112,113)
+			END
 
 			WHILE (@IsDiff = 1)
 			BEGIN
@@ -272,6 +308,27 @@ BEGIN
 							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 							ELSE 1 END
 					AND bettype NOT IN (21008, 21009)
+
+				IF @IsExistsDirect = 1
+				BEGIN
+					-- bettrans
+					INSERT INTO @tblTotalCash (TableName, TotalCash)
+					SELECT 'tblBettrans', SUM(mwinlost+acomm-comm)
+					FROM  #DirectMember r 
+					INNER JOIN  dbo.bettrans b WITH(NOLOCK, INDEX = IX_customerinfo) ON r.CustId = b.custid
+					WHERE b.statusID IN (111,112,113) 
+						AND winlostdate > @moveBetsDay
+					-- transfer
+					INSERT INTO @tblTotalCash (TableName, TotalCash)
+					SELECT 'tblTransfer', SUM(mwinlost+acomm-comm)
+					FROM  #DirectMember r 
+					INNER JOIN  dbo.Transfer b WITH(NOLOCK, INDEX = IX_CustId) ON r.CustId = b.CustId
+					WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+								WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+								WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+								ELSE 1 END
+						AND bettype NOT IN (21008, 21009)
+				END
 
 				-- sum, balance, transfer tickets of this master
 				INSERT INTO @tblTotalCash (TableName, TotalCash)
@@ -309,11 +366,21 @@ BEGIN
 		END
 		ELSE IF @roleid = 4
 		BEGIN    	
-		
 			INSERT INTO #recommend (CustId)
 			SELECT custid
 			FROM CustDB.dbo.custInfo c WITH(NOLOCK)
 			WHERE c.roleid = 2 AND srecommend = @CustId
+
+			--Get super/master direct member if exists
+			INSERT INTO #DirectMember (CustId)
+			SELECT custid
+			FROM CustDB.dbo.custInfo c WITH(NOLOCK)
+			WHERE c.roleid = 1 AND srecommend = @CustId AND recommend IN (-3,-4)
+
+			IF @@ROWCOUNT > 0
+			BEGIN
+				SET @IsExistsDirect = 1
+			END
 
 			-- bettransRNG
 			INSERT INTO @tblTotalCash (TotalCash)
@@ -325,6 +392,19 @@ BEGIN
 					AND winlostdate >= @yesterday
 					AND statusID IN (111,112,113)
 
+			IF @IsExistsDirect = 1
+			BEGIN
+				-- bettransLC
+				INSERT INTO @tblTotalCash (TotalCash)
+				SELECT SUM(swinlost+scomm-acomm)
+				FROM	#DirectMember r 
+				INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON r.CustId = b.custid
+				WHERE    b.productID IN (SELECT SportType FROM @tblSportTypeLC)
+						AND IsSum = 0
+						AND winlostdate >= @yesterday
+						AND statusID IN (111,112,113)
+			END
+
 			-- bettransLC
 			INSERT INTO @tblTotalCash (TotalCash)
 			SELECT SUM(swinlost+scomm-acomm)
@@ -334,6 +414,19 @@ BEGIN
 					AND IsSum = 0
 					AND winlostdate >= @yesterday
 					AND statusID IN (111,112,113)
+
+			IF @IsExistsDirect = 1
+			BEGIN
+				-- bettransLC
+				INSERT INTO @tblTotalCash (TotalCash)
+				SELECT SUM(swinlost+scomm-acomm)
+				FROM	#DirectMember r 
+				INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON r.CustId = b.custid
+				WHERE    b.productID IN (SELECT SportType FROM @tblSportTypeLC)
+						AND IsSum = 0
+						AND winlostdate >= @yesterday
+						AND statusID IN (111,112,113)
+			END
 
 			WHILE (@IsDiff = 1)
 			BEGIN
@@ -357,6 +450,27 @@ BEGIN
 							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 							ELSE 1 END
 					AND bettype NOT IN (21008, 21009)
+
+				IF @IsExistsDirect = 1
+				BEGIN
+					-- bettrans 
+					INSERT INTO @tblTotalCash (TableName, TotalCash)
+					SELECT 'tblBettrans', SUM(swinlost+scomm-acomm)
+					FROM	#DirectMember r
+					INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX = IX_customerinfo) ON r.CustId = b.custid
+					WHERE b.statusID IN (111,112,113)
+						AND winlostdate > @moveBetsDay
+					-- Transfer 
+					INSERT INTO @tblTotalCash (TableName, TotalCash)
+					SELECT 'tblTransfer', SUM(swinlost+scomm-acomm)
+					FROM	#DirectMember r
+					INNER JOIN dbo.Transfer b WITH(NOLOCK, INDEX = IX_custid)  ON r.CustId = b.CustId
+					WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+								WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+								WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+								ELSE 1 END
+						AND bettype NOT IN (21008, 21009)
+				END
 				
 				-- sum, balance, transfer tickets of this super
 				INSERT INTO @tblTotalCash (TableName, TotalCash)
@@ -393,5 +507,6 @@ BEGIN
 		END
 		DROP TABLE #recommend
 		DROP TABLE #SportBettype
+		DROP TABLE #DirectMember
 	END
 END
