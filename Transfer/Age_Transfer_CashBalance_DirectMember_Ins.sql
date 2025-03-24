@@ -473,11 +473,7 @@ BEGIN
 			RETURN
 		END CATCH
 
-		SELECT @LogUsername = CASE @RoleId
-								WHEN 1 THEN 'from Customer ' + @ToUsername + ' to Agent' + @FromUsername
-								WHEN 2 THEN 'from Agent ' + @ToUsername + ' to Master' + @FromUsername
-								WHEN 3 THEN 'from Master ' + @ToUsername + ' to Super' + @FromUsername
-								END
+		SELECT @LogUsername = 'from DirectMember ' + @ToUsername + ' to Upline' + @FromUsername
 		SELECT @LogData = 'Transfer ' + @LogUsername + ' with amount ' + CONVERT(VARCHAR(20), @Amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
 			
 	END
@@ -557,11 +553,7 @@ BEGIN
 			END
 		END
 		
-		SELECT @LogUsername = CASE @RoleId
-								WHEN 1 THEN 'from Agent ' + @FromUsername + ' to Customer' + @ToUsername
-								WHEN 2 THEN 'from Master ' + @FromUsername + ' to Agent' + @ToUsername
-								WHEN 3 THEN 'from Super ' + @FromUsername + ' to Master' + @ToUsername
-								END
+		SELECT @LogUsername = 'from DirectMember ' + @FromUsername + ' to Upline' + @ToUsername
 		SELECT @LogData = 'Transfer ' + @LogUsername + ' with amount ' + CONVERT(VARCHAR(20), @Amount) + ' Ref.No ' + CONVERT(VARCHAR(20), @RefNo)
 
 		IF @RoleId = 1 AND @CashBalance > 0
@@ -569,7 +561,7 @@ BEGIN
 			SELECT @FutureCreditBalance = ISNULL(@Credit, 0) + ISNULL(@CashBalance, 0) - ISNULL(@Outstanding, 0) - ISNULL(@Amount, 0)
 			
 			IF @FutureCreditBalance < 0
-				SELECT @LogData = @LogData + '. The agent decided to transfer after the warning so the bet credit of this member turned to negative value (' + CONVERT(VARCHAR(100), @FutureCreditBalance, 2) + ') caused by having outstanding balance value ('+ CONVERT(VARCHAR(100), -@Outstanding, 2) +')  '
+				SELECT @LogData = @LogData + '. The upline decided to transfer after the warning so the bet credit of this direct member turned to negative value (' + CONVERT(VARCHAR(100), @FutureCreditBalance, 2) + ') caused by having outstanding balance value ('+ CONVERT(VARCHAR(100), -@Outstanding, 2) +')  '
 		END
 	END
 		
