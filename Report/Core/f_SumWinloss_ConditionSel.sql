@@ -80,6 +80,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20241127@Lewis: Add PLAY STAR RNG Casino [RedmineID: #208022]
 		- 20241211@Lewis: Add SABA Keno [RedmineID: #214757]
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #216975]
+		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -175,7 +176,8 @@ RETURN
 				(91, 143, 0, 0, 0), --PLAY STAR RNG Casino
 				(102, 133, 0, 0, 0), --SABA Keno
 				(103, 130, 0, 0, 0), --ASKMESLOT
-				(103, 130, 15199, 0, 0) -- ASKMESLOT PromotionPrize
+				(103, 130, 15199, 0, 0), -- ASKMESLOT PromotionPrize
+				(104, 131, 0, 0, 0) -- Funky Games (FG)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
