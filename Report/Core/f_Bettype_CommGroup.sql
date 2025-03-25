@@ -57,6 +57,7 @@ AS
 		- 20240816@Lewis: BaseBall AIO phase2 [Redmine: #209356]
 		- 20240911@Lewis: Add ON Casino [Redmine: #210024]
 		- 20241127@Lewis: Add GPI Live Casino [RedmineID: #213484]
+		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
 
 	- Columns:
 		- CommGroup:
@@ -220,6 +221,7 @@ FROM (
 		OR typeid BETWEEN 10300 AND 10399 -- WE Live Casino
 		OR typeid BETWEEN 11850 AND 11899 -- ON Casino
 		OR typeid BETWEEN 11500 AND 11599 -- GPI Live Casino
+		OR typeid BETWEEN 15200 AND 15399 -- Funky Games - FG
 		
 ) AS A
 

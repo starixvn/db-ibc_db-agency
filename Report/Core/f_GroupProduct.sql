@@ -22,6 +22,7 @@ AS
 		- 20230713@Lewis: Add Virtual Sports 3 (New) - Leap Gaming [RedmineID: #189207]
 		- 20240119@Lewis: Add VS4 [RedmineID: #198621]
 		- 20240711@Lewis: Add VS5 [RedmineID: #206527]
+		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
 */
 
 RETURN
@@ -38,6 +39,11 @@ RETURN
 	UNION ALL
 	SELECT 88, 5
 
+	-- Funky Games
+	UNION ALL
+	SELECT 50, 104
+	UNION ALL
+	SELECT 104, 104
 	
 	/*
 	-- Macau Games: Macau Games, Pragmatic, Card Club, Spadegaming
