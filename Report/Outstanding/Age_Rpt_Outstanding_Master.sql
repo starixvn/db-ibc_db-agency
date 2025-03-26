@@ -5,8 +5,10 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
 	@IsChatBot BIT = 0,
 	@PageSize INT = 0,
 	@PageIndex INT = 1,
-	@TotalMemberOutstanding	Money = 0 OUTPUT,
-	@TotalSuperOutstanding	Money = 0 OUTPUT
+	@TotalMemberOutstanding	MONEY = 0 OUTPUT,
+	@TotalSuperOutstanding	MONEY = 0 OUTPUT,
+	@TotalMemberRiskAmount	MONEY = 0 OUTPUT,
+	@TotalSuperRiskAmount	MONEY = 0 OUTPUT
 
 AS
 
@@ -24,6 +26,7 @@ AS
 		- 20200612@Sol: added index to temp table #SportBettype [RedmineId: #134967]
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
+		- 20240523@Lewis: Potential Winning [RedmineId: #202427]  
 */
 
 BEGIN
@@ -41,30 +44,35 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, PRIMARY KEY CLUSTERED (RefTable, bettype));
+	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, ProductId INT, PRIMARY KEY CLUSTERED (RefTable, bettype));
 
-	INSERT INTO #SportBettype (bettype, RefTable)
-	SELECT bettype, RefTable
-	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest);
+	INSERT INTO #SportBettype (bettype, RefTable, ProductId)
+	SELECT bettype, RefTable, ProductId
+	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest)
+	;
 
-	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY);
+	-- #OutStanding
+	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, SuperRisk MONEY);
 
 	-- bettrans
-	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
+	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding, ToWin, SuperRisk)
 	SELECT
 		mrecommend,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
-		SUM(actual_stake * spositiontaking) AS SuperOutstanding
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
+		SUM(pa.PayoutAdjust - actual_stake),
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
 	FROM dbo.bettrans b WITH (NOLOCK)  
+		INNER JOIN #SportBettype s
+			ON s.RefTable = 0 AND s.bettype = b.bettype
+		OUTER APPLY (
+			SELECT CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY') AS PayoutAdjust
+			WHERE s.ProductId = 1
+		) pa
 	WHERE statusId IN (0, 1)
-		AND EXISTS (
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 0 AND s.bettype = b.bettype
-		) -- bet tickets
-		AND srecommend = @CustID		
+		AND srecommend = @CustID
 	GROUP BY mrecommend;
-	
+
 	-- translog
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
 	SELECT
@@ -114,11 +122,14 @@ BEGIN
 	GROUP BY mrecommend;
 
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
+	BEGIN
 		WITH rt AS (
 			SELECT
 				rt.mrecommend,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+				SUM(rt.ToWin) AS ToWin,
+				SUM(rt.SuperRisk) AS SuperRisk,
 				ROW_NUMBER() OVER (ORDER BY c.username) RowNum,
 				c.username
 			FROM #OutStanding rt
@@ -130,18 +141,23 @@ BEGIN
 			rt.mrecommend AS CustId,
 			rt.username AS CustName,
 			rt.MemberOutstanding,
-			rt.SuperOutstanding
+			rt.SuperOutstanding,
+			rt.ToWin,
+			rt.SuperRisk
 		FROM	
 			rt
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum;
-
+	END
 	ELSE -- Using for chatbot IsChatBot = 1, order by SuperOutstanding
+	BEGIN
 		WITH rt AS (
 		SELECT
 			mrecommend,
 			SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 			SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+			SUM(ToWin) AS ToWin,
+			SUM(SuperRisk) AS SuperRisk,
 			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(SuperOutstanding, 0)) DESC) RowNum
 		FROM #OutStanding
 		GROUP BY mrecommend
@@ -150,15 +166,20 @@ BEGIN
 			rt.mrecommend AS CustId,
 			c.username AS CustName,
 			rt.MemberOutstanding,
-			rt.SuperOutstanding
+			rt.SuperOutstanding,
+			rt.ToWin,
+			rt.SuperRisk
 		FROM 		rt
 		INNER JOIN 	dbo.custInfo c WITH (NOLOCK) 
 					ON rt.mrecommend = c.custid
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum
-		
+	END	
+
 	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
-			@TotalSuperOutstanding = SUM(ISNULL(SuperOutstanding, 0)) 
+			@TotalSuperOutstanding 	= SUM(ISNULL(SuperOutstanding, 0)),
+			@TotalMemberRiskAmount 	= SUM(ToWin),
+			@TotalSuperRiskAmount 	= SUM(SuperRisk) 
 	FROM #OutStanding
 
 	DROP TABLE #SportBettype;

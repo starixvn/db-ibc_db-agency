@@ -5,9 +5,12 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Agent]
 	@IsChatBot BIT = 0,
 	@PageSize INT = 0,
 	@PageIndex INT = 1,
-	@TotalMemberOutstanding	Money = 0 OUTPUT,
-	@TotalMasterOutstanding	Money = 0 OUTPUT,
-	@TotalSuperOutstanding	Money = 0 OUTPUT
+	@TotalMemberOutstanding	MONEY = 0 OUTPUT,
+	@TotalMasterOutstanding	MONEY = 0 OUTPUT,
+	@TotalSuperOutstanding	MONEY = 0 OUTPUT,
+	@TotalMemberRiskAmount	MONEY = 0 OUTPUT,
+	@TotalMasterRiskAmount	MONEY = 0 OUTPUT,
+	@TotalSuperRiskAmount	MONEY = 0 OUTPUT
 AS
 
 /*
@@ -25,6 +28,7 @@ AS
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20220418@Sol: Alpha - Enhance performance of Outstanding [RedmineID: #171382]
 		- 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
+		- 20240523@Lewis: Potential Winning [RedmineId: #202427]  
 */
 
 BEGIN
@@ -42,29 +46,38 @@ BEGIN
 
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 
-	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY);
- 
+	DROP TABLE IF EXISTS #SportBettype;
+	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, ProductId INT, PRIMARY KEY CLUSTERED (RefTable, bettype));
+
+	INSERT INTO #SportBettype (bettype, RefTable, ProductId)
+	SELECT bettype, RefTable, ProductId
+	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest)
+	;
+	-- #OutStanding
+	CREATE TABLE #OutStanding (recommend INT, MemberOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, MasterRisk MONEY, SuperRisk MONEY);
+
 	-- bettrans
-	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
+	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding, ToWin, MasterRisk, SuperRisk)
 	SELECT
 		recommend,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
-		SUM(actual_stake * spositiontaking) AS SuperOutstanding
-	FROM dbo.bettrans b WITH (NOLOCK)  
+		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
+		SUM(pa.PayoutAdjust - actual_stake),
+		SUM((pa.PayoutAdjust - actual_stake) * mpositiontaking),
+		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
+	FROM dbo.bettrans b WITH (NOLOCK) 
+		INNER JOIN #SportBettype s
+			ON s.RefTable = 0 AND s.bettype = b.bettype
+		OUTER APPLY (
+			SELECT 
+				CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY') AS PayoutAdjust
+			WHERE s.ProductId = 1
+		) pa	
 	WHERE statusId IN (0, 1)
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
-			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
-			and IsTest <= @isTest
-			AND s.RefTable = 0
-			AND s.BetType = b.bettype
-		)
-		AND mrecommend =  @CustID		
+		AND mrecommend =  @CustID
 	GROUP BY recommend;
-	
+
 	-- translog
 	INSERT INTO #OutStanding (recommend, MemberOutstanding, MasterOutstanding, SuperOutstanding)
 	SELECT
@@ -73,17 +86,10 @@ BEGIN
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.translog t WITH (NOLOCK)
+		INNER JOIN #SportBettype s
+			ON s.RefTable = 3 AND s.bettype = t.gameID
 	WHERE t.statusID IN (0, 1)
 		AND mrecommend =  @CustID
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
-			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
-			and IsTest <= @isTest
-			AND s.RefTable = 3
-			AND s.BetType = t.gameID
-		)
 	GROUP BY recommend;
 
 	-- bettransRnG
@@ -94,16 +100,9 @@ BEGIN
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettransRnG b WITH (NOLOCK)  
+		INNER JOIN #SportBettype s
+			ON s.RefTable = 1 AND s.bettype = b.gameID
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
-			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
-			and IsTest <= @isTest
-			AND s.RefTable = 1
-			AND s.BetType = b.gameID
-		)
 		AND mrecommend =  @CustID		
 	GROUP BY recommend;
 
@@ -115,26 +114,23 @@ BEGIN
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettransLC b WITH (NOLOCK)  
+		INNER JOIN #SportBettype s
+			ON s.RefTable = 2 AND s.bettype = b.gameID
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM dbo.SportBettypeMatrix s WITH (NOLOCK)
-			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), ProductID) + ',%'
-			and IsTest <= @isTest
-			AND s.RefTable = 2
-			AND s.BetType = b.gameID
-		)
 		AND mrecommend =  @CustID		
 	GROUP BY recommend;
-
+	
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
+	BEGIN
 		WITH rt AS (
 			SELECT
 				rt.recommend,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+				SUM(rt.ToWin) AS ToWin,
+				SUM(rt.MasterRisk) AS MasterRisk,
+				SUM(rt.SuperRisk) AS SuperRisk,
 				ROW_NUMBER() OVER (ORDER BY c.username) RowNum, 
 				c.username
 			FROM #OutStanding rt
@@ -147,19 +143,26 @@ BEGIN
 			rt.username AS CustName,
 			rt.MemberOutstanding,
 			rt.MasterOutstanding,
-			rt.SuperOutstanding
+			rt.SuperOutstanding,
+			rt.ToWin,
+			rt.MasterRisk,
+			rt.SuperRisk
 		FROM	
 			rt
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum;
-
+	END
 	ELSE -- Using for chatbot IsChatBot = 1, order by MasterOutstanding
+	BEGIN
 		WITH rt AS (
 			SELECT
 				recommend,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(MasterOutstanding, 0)) AS MasterOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
+				SUM(ToWin) AS ToWin,
+				SUM(MasterRisk) AS MasterRisk,
+				SUM(SuperRisk) AS SuperRisk,
 				ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(MasterOutstanding, 0)) DESC) RowNum
 			FROM #OutStanding
 			GROUP BY recommend
@@ -169,16 +172,22 @@ BEGIN
 				c.username AS CustName,
 				rt.MemberOutstanding,
 				rt.MasterOutstanding,
-				rt.SuperOutstanding
+				rt.SuperOutstanding,
+				rt.ToWin,
+				rt.MasterRisk,
+				rt.SuperRisk
 			FROM 		rt
 			INNER JOIN dbo.custInfo c WITH (NOLOCK) 
 					ON rt.recommend = c.custid
 			WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 			ORDER BY RowNum
-
+	END
 	SELECT 	@TotalMemberOutstanding = SUM(ISNULL(MemberOutstanding, 0)),
-			@TotalSuperOutstanding = SUM(ISNULL(SuperOutstanding, 0)) ,
-			@TotalMasterOutstanding = SUM(ISNULL(MasterOutstanding, 0))
+			@TotalSuperOutstanding 	= SUM(ISNULL(SuperOutstanding, 0)) ,
+			@TotalMasterOutstanding = SUM(ISNULL(MasterOutstanding, 0)),
+			@TotalMemberRiskAmount 	= SUM(ToWin),
+			@TotalSuperRiskAmount 	= SUM(SuperRisk) ,
+			@TotalMasterRiskAmount 	= SUM(MasterRisk)
 	FROM #OutStanding
 
 	DROP TABLE #OutStanding;
