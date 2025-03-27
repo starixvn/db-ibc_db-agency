@@ -23,6 +23,7 @@ AS
 		- 20240119@Lewis: Add VS4 [RedmineID: #198621]
 		- 20240711@Lewis: Add VS5 [RedmineID: #206527]
 		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
+		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
 */
 
 RETURN
@@ -38,6 +39,8 @@ RETURN
 	SELECT 83, 5
 	UNION ALL
 	SELECT 88, 5
+	UNION ALL
+	SELECT 106, 5
 
 	-- Funky Games
 	UNION ALL
