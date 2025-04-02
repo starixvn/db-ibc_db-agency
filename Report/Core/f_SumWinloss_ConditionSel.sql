@@ -184,10 +184,11 @@ RETURN
 				,(105, 128, 0, 0, 0) -- ODIN GAMING (ODG)
 				,(105, 128, 15499, 0, 0) -- ODIN GAMING (Promotion)
 				,(107, 124, 0, 0, 0) -- Microgaming Live (MGLC)
-				,(107, 124, 13999, 0, 0) -- Microgaming Live (Promotion)
-				,(84, 132, 0, 0, 0) -- GPI Lottery Live (GPILT)
+				,(107, 124, 13995, 0, 0) -- Microgaming Live (Promotion)
+				/*,(84, 132, 0, 0, 0) -- GPI Lottery Live (GPILT)*/
 				,(101, 129, 0, 0, 0) -- Playtech Live Casino (PTLC)
-				,(101, 129, 15799, 0, 0) -- Playtech Live Casino (Jackpot)
+				,(101, 129, 15798, 0, 0) -- Playtech Live Casino (Jackpot Contribution)
+				,(101, 129, 15799, 0, 0) -- Playtech Live Casino (Jackpot Prize)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
