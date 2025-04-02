@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalClosedReason_MAg]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -16,7 +16,7 @@ AS
 	Revisions:
 		- 20180802@Paul: Create new, splitted from DBAGE.bodb02.Age_CustomerSelCreditBalanceList_MAg [Redmine: #97678]
 		- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
-
+		- 20250402@Eden: Enhance sp [redmine: #222752]
 */
 BEGIN
 	SET NOCOUNT ON
@@ -43,7 +43,7 @@ BEGIN
 				INNER JOIN dbo.CustLoginInfo m WITH(NOLOCK) ON m.CustID = ci.custid
 				CROSS APPLY  
 				(
-					SELECT 
+					SELECT TOP 1
 						CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 						, ISNULL(Locked, 0) AS Locked
@@ -83,7 +83,7 @@ BEGIN
 				INNER JOIN dbo.CustLoginInfo m WITH(NOLOCK) ON m.CustID = ci.custid
 				CROSS APPLY  
 				(
-					SELECT 
+					SELECT TOP 1
 						CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 						, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 						, ISNULL(Locked, 0) AS Locked
