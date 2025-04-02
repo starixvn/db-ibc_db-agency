@@ -124,17 +124,19 @@ RETURN
 	UNION ALL
 	SELECT 'ProductDetail' AS RefId, '36' AS ResourceId, 107 AS ProductId, 124 AS Sporttype, 0 AS Bettype, 36 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '37' AS ResourceId, 107 AS ProductId, 124 AS Sporttype, 11999 AS Bettype, 37 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+	SELECT 'ProductDetail' AS RefId, '37' AS ResourceId, 107 AS ProductId, 124 AS Sporttype, 13995 AS Bettype, 37 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
 
 	--- ODG
 	UNION ALL
 	SELECT 'ProductDetail' AS RefId, '38' AS ResourceId, 105 AS ProductId, 128 AS Sporttype, 0 AS Bettype, 38 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '39' AS ResourceId, 105 AS ProductId, 128 AS Sporttype, 11999 AS Bettype, 39 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+	SELECT 'ProductDetail' AS RefId, '39' AS ResourceId, 105 AS ProductId, 128 AS Sporttype, 15499 AS Bettype, 39 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
 	
 	--- PTLC
 	UNION ALL
 	SELECT 'ProductDetail' AS RefId, '40' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 0 AS Bettype, 40 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '41' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 11999 AS Bettype, 41 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Jackpot Price
+	SELECT 'ProductDetail' AS RefId, '41' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 15798 AS Bettype, 41 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Jackpot Contribution
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '42' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 15799 AS Bettype, 42 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Jackpot Prize
 	
