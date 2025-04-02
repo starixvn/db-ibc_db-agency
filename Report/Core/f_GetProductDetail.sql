@@ -26,6 +26,7 @@ AS
 		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
 		- 20240826@Lewis: Add FA CHAI - Promotion Prize [RedmineID: #209893]
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #219675]
+		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
 		
 */
 RETURN
