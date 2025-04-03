@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Transfer_Credit_All_Sel]
 	@CustId					INT,
 	@DownlineUsername		NVARCHAR(50),
