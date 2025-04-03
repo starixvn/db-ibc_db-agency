@@ -30,4 +30,6 @@ Report\Outstanding\Age_Rpt_Outstanding_Member.sql
 Report\Outstanding\Chatbot\Age_Rpt_DownlineOutstanding_Agent.sql
 Report\Outstanding\Chatbot\Age_Rpt_DownlineOutstanding_Master.sql
 Report\Outstanding\Chatbot\Age_Rpt_DownlineOutstanding_Member.sql
-
+Report\CommbyBettype\Age_Rpt_CommByBettype_Master.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Agent.sql
+Report\CommbyBettype\Age_Rpt_CommByBettype_Member.sql
