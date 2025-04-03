@@ -1,4 +1,5 @@
 Report\Core\f_AddRelatedProducts.sql
+Report/Core/f_ProductDetail_ConditionSel.sql
 Report/Charting/Age_Chart_WinlossAnalysis_Agent.sql
 Report/Charting/Age_Chart_WinlossAnalysis_Master.sql
 Report/Charting/Age_Chart_WinlossAnalysis_Member.sql
