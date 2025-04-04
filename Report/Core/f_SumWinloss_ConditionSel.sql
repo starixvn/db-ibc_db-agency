@@ -189,6 +189,9 @@ RETURN
 				,(101, 129, 0, 0, 0) -- Playtech Live Casino (PTLC)
 				,(101, 129, 15798, 0, 0) -- Playtech Live Casino (Jackpot Contribution)
 				,(101, 129, 15799, 0, 0) -- Playtech Live Casino (Jackpot Prize)
+				,(106, 125, 0, 0, 0) --VS7 Virtual Steeple Chase
+				,(106, 126, 0, 0, 0) --VS7 Virtual Harness Racing
+				,(106, 127, 0, 0, 0) --VS7 Virtual Motor Racing
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
