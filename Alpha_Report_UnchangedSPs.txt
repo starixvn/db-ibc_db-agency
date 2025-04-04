@@ -33,3 +33,8 @@ Report\Outstanding\Chatbot\Age_Rpt_DownlineOutstanding_Member.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Master.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Agent.sql
 Report\CommbyBettype\Age_Rpt_CommByBettype_Member.sql
+Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master.sql
+Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master_ByLeague.sql
+Report\MatchWinloss\Age_Rpt_MatchWinlossDetail_Master_All.sql
+Report\MatchWinloss\Age_Rpt_MatchWinLossDetail_Agent.sql
+Report\MatchWinloss\Age_Rpt_MatchWinLossDetail_Member.sql 
