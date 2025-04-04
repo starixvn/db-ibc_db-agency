@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_SAg]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -45,6 +45,7 @@ Revisions:
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+	- 20250402@Eden: Enhance sp [redmine: #222752]
 
 Param's Explanation:
 • @CustID: SAgentID
@@ -213,19 +214,23 @@ BEGIN
 		)
 		SELECT 
 			c.custid, ci.enabled, c.username, c.iplogin, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
-			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit,
+			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = c.custid) AS usedCredit,
 			cs.Locked, c.creatdate
-		FROM 
-			CustInfo ci WITH (NOLOCK) 
-			inner join Customer c (nolock) on ci.custid = c.custid
+		FROM Customer c WITH(NOLOCK, INDEX = ix_sma) 
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1 ci.username, ci.Enabled,ci.credit
+				FROM dbo.CustInfo ci WITH(NOLOCK)
+				WHERE ci.CustID = c.custid
+			) AS ci
+			CROSS APPLY  
+			(
+				SELECT TOP 1
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
 				FROM dbo.CustProductStatus cs WITH(NOLOCK)
-				WHERE cs.CustID = ci.custid
+				WHERE cs.CustID = c.custid
 			) AS cs
 		WHERE 
 			c.roleid=3 AND c.srecommend=@CustID 
@@ -251,22 +256,26 @@ BEGIN
 		)
 		SELECT 
 			c.custid, ci.enabled, c.username, c.iplogin, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.lastlogged,
-			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = ci.custid) AS usedCredit,
+			(SELECT SUM(credit) FROM custInfo WITH(NOLOCK) WHERE roleid = 2 AND mrecommend = c.custid) AS usedCredit,
 			cs.Locked, c.creatdate
-		FROM 
-			CustInfo ci WITH (NOLOCK) 
-			inner join Customer c (nolock) on ci.custid = c.custid
+		FROM Customer c WITH(NOLOCK, INDEX = ix_sma) 
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1 ci.username, ci.Enabled,ci.credit
+				FROM dbo.CustInfo ci WITH(NOLOCK)
+				WHERE ci.CustID = c.custid
+			) AS ci
+			CROSS APPLY  
+			(
+				SELECT TOP 1
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
 				FROM dbo.CustProductStatus cs WITH(NOLOCK)
-				WHERE cs.CustID = ci.custid
+				WHERE cs.CustID = c.custid
 			) AS cs
 		WHERE 
-			c.roleid=3 AND c.srecommend=@CustID AND c.username like '%' + @Username + '%'  
+			c.roleid=3 AND c.srecommend=@CustID AND ci.username like '%' + @Username + '%'
 			AND enabled = CASE WHEN coalesce(@Closed,@Suspended) is not null THEN 1 ELSE  coalesce(@enabled, enabled) END
 			AND isnull(cs.IsClosed,0) = CASE WHEN @Suspended = 1 THEN 0 ELSE  coalesce(@closed, isnull(cs.IsClosed, 0)) END  
 			AND isnull(cs.IsSuspended,0) = CASE WHEN @Closed = 0 THEN 0 ELSE  coalesce(@Suspended, isnull(cs.IsSuspended, 0))end
