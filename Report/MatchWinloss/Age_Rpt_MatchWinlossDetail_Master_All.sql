@@ -30,7 +30,7 @@ AS
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
-		- 20250404@Dave: 3rdProduct Integration (For VS7 EventType = 3, modify step get leagueType) [RedmineID: #221188]
+		- 20250404@Dave: 3rdProduct Integration (For VS7 EventType = 3, modify step get leagueType, LeagueType = 2) [RedmineID: #221188]
 */
 
 BEGIN
@@ -388,7 +388,7 @@ BEGIN
 						'' matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
 						r.EventTime AS showtime,
-						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END AS LeagueType
+						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END AS LeagueType
 				FROM bettrans b WITH (NOLOCK)
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
@@ -400,7 +400,7 @@ BEGIN
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3				
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END;	
+				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END;	
 				
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,
@@ -740,7 +740,7 @@ BEGIN
 						'' AS matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
 						r.EventTime AS showtime,
-						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END AS LeagueType
+						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END AS LeagueType
 				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = b.matchid
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
@@ -753,7 +753,7 @@ BEGIN
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3					
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END;
+				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END;
 
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,
@@ -823,7 +823,7 @@ BEGIN
 			matchcode,	
 			isNeutral,
 			showtime,
-			ISNULL(s.LeagueType,0) AS LeagueType -- 0: league, 1: League3rd
+			ISNULL(s.LeagueType,0) AS LeagueType -- 0: league, 1: League3rd, 2: League3rd (vsouright)
 	FROM #SAgMatchWLDetails s 
 	LEFT JOIN League l  WITH (NOLOCK) ON s.leagueid = l.leagueid and ISNULL(s.LeagueType,0) = 0
 	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, s.leagueid, ISNULL(l.LeagueGroupID,0), race, matchcode, isNeutral, showtime, ISNULL(s.LeagueType,0)

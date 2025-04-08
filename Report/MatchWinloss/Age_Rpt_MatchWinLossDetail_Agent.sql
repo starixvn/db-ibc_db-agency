@@ -36,7 +36,7 @@ AS
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
-		- 20250404@Dave: 3rdProduct Integration (For VS7 EventType = 3) [RedmineID: #221188]
+		- 20250404@Dave: 3rdProduct Integration (For VS7 EventType = 3, LeagueType = 2, League3rd (vsouright)) [RedmineID: #221188]
 */
 
 BEGIN
@@ -339,7 +339,7 @@ BEGIN
 						'' matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
 						r.EventTime as showtime,
-						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END AS LeagueType
+						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END AS LeagueType
 				FROM bettrans b WITH (NOLOCK)
 					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
 					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
@@ -352,7 +352,7 @@ BEGIN
 					AND s.ProductID = 5
 					AND s.EventType = 3
 				GROUP BY 
-					r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END;
+					r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END;
 
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 as BetGroup,
@@ -670,7 +670,7 @@ BEGIN
 						'' matchcode,
 						CONVERT (BIT, 0) AS IsNeutral,
 						r.EventTime as showtime,
-						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END AS LeagueType
+						CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END AS LeagueType
 				FROM bettrans14 b WITH (NOLOCK)
 					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = b.matchid
 					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
@@ -682,7 +682,7 @@ BEGIN
 					AND isnull(r.betstatus, '') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3
-				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 1 END;
+				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype, CASE WHEN r.SportType IN (198,177,125,126,127) THEN 2 END;
 
 				INSERT INTO #MAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 as BetGroup,
@@ -1208,7 +1208,7 @@ BEGIN
 					'' as matchcode,
 					0 as IsNeutral,
 					ISNULL(r.EventTime,'') as showtime,
-					1 AS LeagueType
+					2 AS LeagueType
 			FROM bettrans b WITH (NOLOCK)
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
 				INNER JOIN @tmpLeague3rd l  ON r.LeagueID = l.League3rdId
@@ -1305,7 +1305,7 @@ BEGIN
 					'' as matchcode,
 					0 as IsNeutral,
 					ISNULL(r.EventTime,'') as showtime,
-					1 AS LeagueType
+					2 AS LeagueType
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = b.matchid
 				INNER JOIN @tmpLeague3rd l  ON r.LeagueID = l.League3rdId

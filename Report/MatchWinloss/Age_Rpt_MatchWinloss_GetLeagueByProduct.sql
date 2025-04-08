@@ -27,7 +27,7 @@ AS
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
-		- 20250304@Dave: 3rdProduct Integration (For VS7 EventType = 3, modify step get leagueid) [RedmineID: #221188]
+		- 20250304@Dave: 3rdProduct Integration (For VS7 EventType = 3, modify step get leagueid, LeagueType = 2, League3rd (vsouright)) [RedmineID: #221188]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -142,7 +142,7 @@ BEGIN
 			AND l.isTest <= @IsShowAll;
 
 		INSERT INTO #tmpLeagues (leagueid, LeagueType)
-		SELECT DISTINCT l.League3rdId, 1
+		SELECT DISTINCT l.League3rdId, 2
 		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
 			INNER JOIN dbo.League3rd l WITH (NOLOCK) ON r.leagueid = l.League3rdId
@@ -241,7 +241,7 @@ BEGIN
 			AND l.isTest <= @IsShowAll;
 
 		INSERT INTO #tmpLeagues (leagueid, LeagueType)
-		SELECT DISTINCT l.League3rdId, 1
+		SELECT DISTINCT l.League3rdId, 2
 		FROM dbo.VSRaceInfo14 r WITH (NOLOCK) 
 			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
 			INNER JOIN dbo.League3rd l WITH (NOLOCK) ON r.leagueid = l.League3rdId
@@ -302,7 +302,7 @@ BEGIN
 	END	AS leaguename
 	FROM #tmpLeagues tmp
 		INNER JOIN League3rd l WITH (NOLOCK) ON l.League3rdId = tmp.leagueid
-	WHERE tmp.LeagueType = 1
+	WHERE tmp.LeagueType IN (1, 2)
 	ORDER BY sporttype;
 	
 	DROP TABLE #tmpLeagues;

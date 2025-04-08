@@ -30,7 +30,7 @@ AS
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
-		- 20250404@Dave: 3rdProduct Integration (For VS7 EventType = 3) [RedmineID: #221188]
+		- 20250404@Dave: 3rdProduct Integration (For VS7 EventType = 3, LeagueType = 2, League3rd (vsouright)) [RedmineID: #221188]
 */
 
 BEGIN 
@@ -580,7 +580,7 @@ BEGIN
 					'' as matchcode,
 					0 as IsNeutral,
 					ISNULL(r.EventTime,'') as showtime,
-					1 AS LeagueType
+					2 AS LeagueType
 			FROM bettrans b WITH (NOLOCK)
 				INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
 				INNER JOIN #tmpLeague3rd l  ON r.LeagueID = l.League3rdId
@@ -683,7 +683,7 @@ BEGIN
 					'' as matchcode,
 					0 as IsNeutral,
 					ISNULL(r.EventTime,'') as showtime,
-					1 AS LeagueType
+					2 AS LeagueType
 			FROM bettrans14 b WITH (NOLOCK)
 				INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = b.matchid
 				INNER JOIN #tmpLeague3rd l  ON r.LeagueID = l.League3rdId
