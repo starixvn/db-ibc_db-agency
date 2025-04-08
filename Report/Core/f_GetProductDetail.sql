@@ -26,6 +26,7 @@ AS
 		- 20240718@Lewis: Add VGaming PromotionPrize [RedmineID: #203763]
 		- 20240826@Lewis: Add FA CHAI - Promotion Prize [RedmineID: #209893]
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #219675]
+		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
 		
 */
 RETURN
@@ -112,3 +113,30 @@ RETURN
 	SELECT 'ProductDetail' AS RefId, '32' AS ResourceId, 103 AS ProductId, 130 AS Sporttype, 0 AS Bettype, 32 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '33' AS ResourceId, 103 AS ProductId, 130 AS Sporttype, 15199 AS Bettype, 33 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+
+	--- HOTDOG
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '34' AS ResourceId, 95 AS ProductId, 139 AS Sporttype, 0 AS Bettype, 34 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '35' AS ResourceId, 95 AS ProductId, 139 AS Sporttype, 11999 AS Bettype, 35 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+
+	--- MGLC
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '36' AS ResourceId, 107 AS ProductId, 124 AS Sporttype, 0 AS Bettype, 36 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '37' AS ResourceId, 107 AS ProductId, 124 AS Sporttype, 13995 AS Bettype, 37 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+
+	--- ODG
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '38' AS ResourceId, 105 AS ProductId, 128 AS Sporttype, 0 AS Bettype, 38 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '39' AS ResourceId, 105 AS ProductId, 128 AS Sporttype, 15499 AS Bettype, 39 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
+	
+	--- PTLC
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '40' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 0 AS Bettype, 40 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '41' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 15798 AS Bettype, 41 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Jackpot Contribution
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '42' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 15799 AS Bettype, 42 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Jackpot Prize
+	

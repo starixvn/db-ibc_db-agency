@@ -23,6 +23,7 @@ RETURN
 		- 20240119@Lewis: merge bettype for VirtualSport (1,2,3) [RedmineID: #198008]
 		- 20240119@Lewis: merge bettype for VirtualSport (4) [RedmineID: #198621]
 		- 20240711@Lewis: Add VS5 [RedmineID: #206527]
+		- 20250404@Dave: Add VS7 3rdProduct Integration [RedmineID: #221188]
 
 	Remark: Sportsbook only + VS
 */
@@ -31,7 +32,7 @@ RETURN
 		SELECT bt.typeid AS bettype, bt.DisplayedTypeId AS GroupTypeId
 		FROM dbo.bettype bt WITH (NOLOCK)
 		WHERE bt.typeid <> bt.DisplayedTypeId
-			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId IN (1,5,27,49,77,83,88))
+			AND EXISTS (SELECT 1 FROM dbo.SportBettypeMatrix s WITH (NOLOCK) WHERE bt.typeid = s.bettype AND s.ProductId IN (1,5,27,49,77,83,88,106))
 	)
 	SELECT DISTINCT t.bettype, t.GroupTypeId
 	FROM CTE_bettype b
