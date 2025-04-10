@@ -81,6 +81,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20241211@Lewis: Add SABA Keno [RedmineID: #214757]
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #216975]
 		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
+		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -178,6 +179,19 @@ RETURN
 				(103, 130, 0, 0, 0), --ASKMESLOT
 				(103, 130, 15199, 0, 0), -- ASKMESLOT PromotionPrize
 				(104, 131, 0, 0, 0) -- Funky Games (FG)
+				,(95, 139, 0, 0, 0) -- HOTDOG (HOT)
+				,(95, 139, 11999, 0, 0) -- HOTDOG (Promotion)
+				,(105, 128, 0, 0, 0) -- ODIN GAMING (ODG)
+				,(105, 128, 15499, 0, 0) -- ODIN GAMING (Promotion)
+				,(107, 124, 0, 0, 0) -- Microgaming Live (MGLC)
+				,(107, 124, 13995, 0, 0) -- Microgaming Live (Promotion)
+				/*,(84, 132, 0, 0, 0) -- GPI Lottery Live (GPILT)*/
+				,(101, 129, 0, 0, 0) -- Playtech Live Casino (PTLC)
+				,(101, 129, 15798, 0, 0) -- Playtech Live Casino (Jackpot Contribution)
+				,(101, 129, 15799, 0, 0) -- Playtech Live Casino (Jackpot Prize)
+				,(106, 125, 0, 0, 0) --VS7 Virtual Steeple Chase
+				,(106, 126, 0, 0, 0) --VS7 Virtual Harness Racing
+				,(106, 127, 0, 0, 0) --VS7 Virtual Motor Racing
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
