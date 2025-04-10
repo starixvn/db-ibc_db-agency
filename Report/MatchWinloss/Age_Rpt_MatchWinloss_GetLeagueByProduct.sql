@@ -27,6 +27,7 @@ AS
 		- 20200622@Sol: Archive VSRaceInfo - changed to use VSRaceInfo14 [RedmineID: #135963]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
+		- 20250304@Dave: 3rdProduct Integration (For VS7 EventType = 3, modify step get leagueid, LeagueType = 2, League3rd (vsouright)) [RedmineID: #221188]
 
 	Param's Explanation:
 		Output: LeagueType (0: league, 1: league3rd)
@@ -75,7 +76,7 @@ BEGIN
 		BEGIN
 
 			INSERT INTO #tmpmatchid (matchid, EventType)
-			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
+			SELECT DISTINCT matchid, tbl.EventType
 			FROM dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.srecommend = @CustID
@@ -87,7 +88,7 @@ BEGIN
 		ELSE IF @RoleID = 3
 		BEGIN
 			INSERT INTO #tmpmatchid (matchid, EventType)
-			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
+			SELECT DISTINCT matchid, tbl.EventType
 			FROM dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.mrecommend = @custid 
@@ -99,7 +100,7 @@ BEGIN
 		ELSE IF @RoleID = 2
 		BEGIN
 			INSERT INTO #tmpmatchid (matchid, EventType)
-			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
+			SELECT DISTINCT matchid, tbl.EventType
 			FROM dbo.bettrans b WITH (NOLOCK)
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.recommend = @custid 
@@ -132,12 +133,34 @@ BEGIN
 		INSERT INTO #tmpLeagues (leagueid, LeagueType)
 		SELECT DISTINCT l.leagueid, 0
 		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
 			INNER JOIN dbo.league l WITH (NOLOCK) ON r.leagueid = l.leagueid
-			INNER JOIN dbo.VSOutright o WITH (NOLOCK) ON r.EventID = o.EventID
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
-		WHERE o.eventdate BETWEEN @fdate AND @tdate
-			AND o.eventstatus = 'completed'
+		WHERE r.SportType NOT IN (198,177,125,126,127) 
+			AND r.eventstatus = 'completed'
 			AND tmp.EventType = 3
+			AND r.EventTime >= @fdate AND r.EventTime < DATEADD(DAY, 1, CAST(@tdate AS DATE))
+			AND l.isTest <= @IsShowAll;
+
+		INSERT INTO #tmpLeagues (leagueid, LeagueType)
+		SELECT DISTINCT l.League3rdId, 1
+		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
+			INNER JOIN dbo.League3rd l WITH (NOLOCK) ON r.leagueid = l.League3rdId
+		WHERE r.SportType IN (198,177) 
+			AND r.eventstatus = 'completed'
+			AND tmp.EventType = 3
+			AND r.EventTime >= @fdate AND r.EventTime < DATEADD(DAY, 1, CAST(@tdate AS DATE))
+			AND l.isTest <= @IsShowAll;
+
+		INSERT INTO #tmpLeagues (leagueid, LeagueType)
+		SELECT DISTINCT l.League3rdId, 2
+		FROM dbo.VSRaceInfo r WITH (NOLOCK) 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
+			INNER JOIN dbo.League3rd l WITH (NOLOCK) ON r.leagueid = l.League3rdId
+		WHERE r.SportType IN (125,126,127) 
+			AND r.eventstatus = 'completed'
+			AND tmp.EventType = 3
+			AND r.EventTime >= @fdate AND r.EventTime < DATEADD(DAY, 1, CAST(@tdate AS DATE))
 			AND l.isTest <= @IsShowAll;
 
 		INSERT INTO #tmpLeagues(leagueid, LeagueType) 
@@ -164,7 +187,7 @@ BEGIN
 			DECLARE @n INT = 2147483647
 			
 			INSERT INTO #tmpmatchid (matchid, EventType)
-			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
+			SELECT DISTINCT matchid, tbl.EventType
 			FROM dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.srecommend = @CustID
@@ -176,7 +199,7 @@ BEGIN
 		ELSE IF @RoleID = 3
 		BEGIN
 			INSERT INTO #tmpmatchid (matchid, EventType)
-			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
+			SELECT DISTINCT matchid, tbl.EventType
 			FROM dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.mrecommend = @custid 
@@ -188,7 +211,7 @@ BEGIN
 		BEGIN
 
 			INSERT INTO #tmpmatchid (matchid, EventType)
-			SELECT DISTINCT CASE WHEN tbl.EventType IN (1, 2, 5) THEN matchid ELSE oddsid END, tbl.EventType
+			SELECT DISTINCT matchid, tbl.EventType
 			FROM dbo.bettrans14 b WITH (NOLOCK)
 				INNER JOIN #SportBettype tbl ON tbl.bettype = b.bettype
 			WHERE b.recommend = @custid 
@@ -220,12 +243,34 @@ BEGIN
 		INSERT INTO #tmpLeagues (leagueid, LeagueType)
 		SELECT DISTINCT l.leagueid, 0
 		FROM dbo.VSRaceInfo14 r WITH (NOLOCK) 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
 			INNER JOIN dbo.league l WITH (NOLOCK) ON r.leagueid = l.leagueid
-			INNER JOIN dbo.VSOutright14 o WITH (NOLOCK) ON r.EventID = o.EventID
-			INNER JOIN #tmpmatchid tmp ON tmp.matchid = o.orid
-		WHERE o.eventdate BETWEEN @fdate AND @tdate
-			AND o.eventstatus = 'completed'
+		WHERE r.SportType NOT IN (198,177,125,126,127) 
+			AND r.eventstatus = 'completed'
 			AND tmp.EventType = 3
+			AND r.EventTime >= @fdate AND r.EventTime < DATEADD(DAY, 1, CAST(@tdate AS DATE))
+			AND l.isTest <= @IsShowAll;
+
+		INSERT INTO #tmpLeagues (leagueid, LeagueType)
+		SELECT DISTINCT l.League3rdId, 1
+		FROM dbo.VSRaceInfo14 r WITH (NOLOCK) 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
+			INNER JOIN dbo.League3rd l WITH (NOLOCK) ON r.leagueid = l.League3rdId
+		WHERE r.SportType IN (198,177) 
+			AND r.eventstatus = 'completed'
+			AND tmp.EventType = 3
+			AND r.EventTime >= @fdate AND r.EventTime < DATEADD(DAY, 1, CAST(@tdate AS DATE))
+			AND l.isTest <= @IsShowAll;
+
+		INSERT INTO #tmpLeagues (leagueid, LeagueType)
+		SELECT DISTINCT l.League3rdId, 2
+		FROM dbo.VSRaceInfo14 r WITH (NOLOCK) 
+			INNER JOIN #tmpmatchid tmp ON tmp.matchid = r.EventID
+			INNER JOIN dbo.League3rd l WITH (NOLOCK) ON r.leagueid = l.League3rdId
+		WHERE r.SportType IN (125,126,127) 
+			AND r.eventstatus = 'completed'
+			AND tmp.EventType = 3
+			AND r.EventTime >= @fdate AND r.EventTime < DATEADD(DAY, 1, CAST(@tdate AS DATE))
 			AND l.isTest <= @IsShowAll;
 
 		INSERT INTO #tmpLeagues(leagueid, LeagueType) 
@@ -279,7 +324,7 @@ BEGIN
 	END	AS leaguename
 	FROM #tmpLeagues tmp
 		INNER JOIN League3rd l WITH (NOLOCK) ON l.League3rdId = tmp.leagueid
-	WHERE tmp.LeagueType = 1
+	WHERE tmp.LeagueType IN (1, 2)
 	ORDER BY sporttype;
 	
 	DROP TABLE #tmpLeagues;

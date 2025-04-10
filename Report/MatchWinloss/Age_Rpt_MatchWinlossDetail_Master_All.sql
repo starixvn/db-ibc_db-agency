@@ -30,6 +30,7 @@ AS
 		- 20221229@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20240104@Lewis: Add LeagueGroupId [Redmine: #197160]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
+		- 20250404@Dave: 3rdProduct Integration (For VS7 EventType = 3, modify step get leagueType, LeagueType = 2) [RedmineID: #221188]
 */
 
 BEGIN
@@ -399,7 +400,57 @@ BEGIN
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
 					AND s.EventType = 3				
+					AND r.SportType NOT IN (198,177,125,126,127)
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype;	
+
+
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType)
+				SELECT  0 AS BetGroup,
+						b.matchid,
+						0 AS ParentID,
+						0 AS ChildMatchType,
+						0 AS homeid,
+						0 AS awayid,
+						b.bettype,
+						0 AS liveindicator,
+						r.leagueid,
+						SUM(ABS(stake)) AS turnover,
+						SUM(CASE 
+							WHEN s.RefTable IN (1,2) THEN 0 
+							WHEN tpositiontaking = 1 THEN 0 
+							ELSE scomm/(1 - tpositiontaking) 
+						END) AS GrossComm,
+						SUM(winlost - actual_stake) AS MemberWinLoss,
+						SUM(playercomm) AS MemberComm,
+						SUM(awinlost) AS AgWinLoss,
+						SUM(comm - playercomm) AS  AgComm,
+						SUM(mwinlost) AS MAgWinLoss,
+						SUM(acomm - comm) AS  MAgComm,
+						SUM(swinlost) AS SAgWinLoss,
+						SUM(scomm - acomm) AS  SAgComm,						
+						'' AS Race,
+						'' matchcode,
+						CONVERT (BIT, 0) AS IsNeutral,
+						ISNULL(r.EventTime,'') as showtime,
+						CASE WHEN r.SportType IN (198,177) THEN 1
+							WHEN r.SportType IN (125,126,127) THEN 2
+						END AS LeagueType
+				FROM bettrans b WITH (NOLOCK)
+					INNER JOIN VSRaceInfo r WITH (NOLOCK) ON r.EventID = b.matchid
+					INNER JOIN #SportBettype s ON s.Bettype = b.bettype
+				WHERE b.srecommend = @custid
+					AND b.statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND b.winlostdate BETWEEN @FDate AND @TDate
+					AND r.eventstatus = 'completed'
+					AND ISNULL(r.betstatus,'') <> 'refund'
+					AND s.ProductID = 5
+					AND s.EventType = 3				
+					AND r.SportType IN (198,177,125,126,127)
+				GROUP BY b.matchid, r.LeagueID, r.EventTime, b.bettype,
+						CASE WHEN r.SportType IN (198,177) THEN 1
+							WHEN r.SportType IN (125,126,127) THEN 2
+						END;	
 				
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,
@@ -751,8 +802,59 @@ BEGIN
 					AND o.eventstatus = 'completed' 
 					AND ISNULL(r.betstatus,'') <> 'refund'
 					AND s.ProductID = 5
-					AND s.EventType = 3					
+					AND s.EventType = 3	
+					AND r.SportType NOT IN (198,177,125,126,127)				
 				GROUP BY r.LeagueID, r.EventTime, r.eventID, b.bettype;
+
+				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime, LeagueType) 
+				SELECT  0 AS BetGroup,
+						b.matchid,
+						0 AS ParentID,
+						0 AS ChildMatchType,
+						0 AS homeid,
+						0 AS awayid,
+						b.bettype,
+						0 AS liveindicator,
+						r.leagueid,
+						SUM(ABS(stake)) AS turnover,
+						SUM(CASE 
+							WHEN s.RefTable IN (1,2) THEN 0 
+							WHEN tpositiontaking = 1 THEN 0 
+							ELSE scomm/(1 - tpositiontaking) 
+						END) AS GrossComm,
+						SUM(winlost - actual_stake) AS MemberWinLoss,
+						SUM(playercomm) AS MemberComm,
+						SUM(awinlost) AS AgWinLoss,
+						SUM(comm - playercomm) AS  AgComm,
+						SUM(mwinlost) AS MAgWinLoss,
+						SUM(acomm - comm) AS  MAgComm,
+						SUM(swinlost) AS SAgWinLoss,
+						SUM(scomm - acomm) AS  SAgComm,				
+						'' AS Race,
+						'' AS matchcode,
+						CONVERT (BIT, 0) AS IsNeutral,
+						r.EventTime AS showtime,
+						CASE WHEN r.SportType IN (198,177) THEN 1
+							WHEN r.SportType IN (125,126,127) THEN 2
+						END AS LeagueType
+				FROM bettrans14 b WITH (NOLOCK)
+					INNER JOIN VSRaceInfo14 r WITH (NOLOCK) ON r.EventID = b.matchid
+					INNER JOIN #SportBettype s ON b.bettype = s.Bettype
+				WHERE b.statusID NOT IN (101, 102, 103)
+					AND b.ruben = 1
+					AND b.srecommend = @CustId
+					AND b.winlostdate BETWEEN @FDate AND @TDate
+					AND r.eventstatus = 'completed' 
+					AND ISNULL(r.betstatus,'') <> 'refund'
+					AND s.ProductID = 5
+					AND s.EventType = 3					
+					AND r.SportType IN (198,177,125,126,127)
+				GROUP BY r.LeagueID, r.EventTime, b.matchid, b.bettype, 
+						CASE WHEN r.SportType IN (198,177) THEN 1
+							WHEN r.SportType IN (125,126,127) THEN 2
+						END;
+
+
 
 				INSERT INTO #SAgMatchWLDetails(BetGroup, matchid, ParentID, ChildMatchType, homeid, awayid, bettype, liveindicator, leagueid, turnover, GrossComm, MemberWinLoss, MemberComm, AgWinLoss, AgComm, MAgWinLoss, MAgComm, SAgWinLoss, SAgComm, race, matchcode, isNeutral, showtime)
 				SELECT  3 AS BetGroup,
@@ -822,9 +924,9 @@ BEGIN
 			matchcode,	
 			isNeutral,
 			showtime,
-			ISNULL(s.LeagueType,0) AS LeagueType -- 0: league, 1: League3rd
+			ISNULL(s.LeagueType,0) AS LeagueType -- 0: league, 1: League3rd, 2: League3rd (vsouright)
 	FROM #SAgMatchWLDetails s 
-	LEFT JOIN League l  WITH (NOLOCK) ON s.leagueid = l.leagueid
+	LEFT JOIN League l  WITH (NOLOCK) ON s.leagueid = l.leagueid and ISNULL(s.LeagueType,0) = 0
 	GROUP BY BetGroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, homeid, awayid, bettype, liveindicator, s.leagueid, ISNULL(l.LeagueGroupID,0), race, matchcode, isNeutral, showtime, ISNULL(s.LeagueType,0)
 	ORDER BY betgroup, CASE WHEN ChildMatchType = 200 THEN ParentID ELSE matchid END, leagueid, race, bettype, liveindicator, matchcode;
 
