@@ -445,12 +445,6 @@ BEGIN
 	SELECT custid, SUM(outstanding), SUM(balance), SUM(yesterdaybalance), SUM(ISNULL(PendingTransfer3rd, 0))
 	FROM #balance
 	GROUP BY custid
-				FROM dbo.CustInfo ci WITH(NOLOCK)
-				WHERE ci.CustID = c.custid
-			) AS ci
-			CROSS APPLY  
-			(
-				SELECT TOP 1
 
 	--Calc total pages
 	IF @TotalItems = 0
