@@ -1,10 +1,10 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
-ALTER PROCEDURE [Age_Transfer_SelList_Ag_delete]
+/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+ALTER PROCEDURE [dbo].[Age_Transfer_SelList_Ag_ForDBTrans]
 	@CustID int,
 	@PageSize int=500,
 	@PageIndex int=1,
 	@Username nvarchar(50)=null,
-	@CustStatus varchar(50)='Open',
+	@CustStatus varchar(50)='Open' ,
 	@AutoTransfer	TINYINT = 2,
 	@IsYesterdayBalance bit = null,
 	@IsAllowTotalBalance bit = null,
@@ -21,8 +21,11 @@ AS
 
 /*
 Task : Select transfer list of Agent
-DB: DBAGE/bodb02
-Original: 
+DB: DBTRANS.bodb02
+Original: Age_Transfer_SelList_Ag on DB052/bodb02
+	- Important NOTES: must maintain SP(s) below, keep them as the same business. 
+			+ DB052/DB053/bodb02/Age_Transfer_SelList_Ag 
+			+ DBTRANS/BODB02/Age_Transfer_SelList_Ag_ForDBTrans
 
 Revisions:
 	- 20060320: split table Customer
@@ -46,11 +49,14 @@ Revisions:
 	- 20161028@Percy: Support Fishing World [RedmineID: #65731]
 	- 20170620@Percy: Apply new formula yesterday balance [RedmineID: #74291]
 	- 20170622@Percy: Return ClosedReason column to apply color for closed accounts [RedmineID : #74494]
+	- 20190312@Helen: Create version for dbtrans, tuning code - due to replication latency - [RedmineID: #107963]
 	- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
+	- 20210218@Percy: Force index on bettransRnG, bettransLC [RedmineID: #150278]
 	- 20210603@Sol: Alpha - All Sites - Lock account & indirect close account - [RedmineID: #148600]
 	- 20210723@Evan: Replace parameter @enabled,@suspended,@closed with @CustStatus
 	- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
-	- 20211111@Evan: Alpha/NAP/EXT - Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+	- 20220714@Evan: Modify sp to avoid dump (remove code select into) - [Redmine: #175450]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
@@ -59,18 +65,18 @@ Param's Explanation:
 	• @CustID: AgentID
 	• @IsAllowTotalBalance: filter data based on total balance transfer
 	• @AutoTransfer: 
-				- 0: NOT Allow
-				- 1: Allow
-				- 2: All
+					- 0: NOT Allow
+					- 1: Allow
+					- 2: All
+
 */
 BEGIN
-
 	SET NOCOUNT ON
 
 	-- SportBettypeMatrix
 	DECLARE @isTest BIT
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID)
-
+	
 	CREATE TABLE #SportBettype (ProductID INT, bettype INT, RefTable TINYINT)
 	INSERT INTO #SportBettype (ProductID, bettype, RefTable)
 	SELECT ProductID, bettype, RefTable FROM dbo.f_SportBettypeMatrix_Sel(0,0,0,2,'','',@isTest)
@@ -120,6 +126,16 @@ BEGIN
 		PendingTransfer3rd money
 	)
 
+	CREATE TABLE #bettrans_tmp 
+	(
+		custid INT,
+		winlostdate SMALLDATETIME,
+		ruben TINYINT,
+		bettype SMALLINT,
+		actual_stake_total MONEY,
+		TotalBalance MONEY
+	)
+
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
 	DECLARE @tblMoveBetBalanceUp AS TABLE (BalanceUpDay SMALLDATETIME, MoveBetsDay SMALLDATETIME)
@@ -137,7 +153,7 @@ BEGIN
 		ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 		ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
-	FROM dbo.bettransRnG WITH(NOLOCK)
+	FROM dbo.bettransRnG WITH(NOLOCK, INDEX = ix_recommend)
 	WHERE recommend = @CustID
 		AND (
 			statusID IN (0, 1)
@@ -152,7 +168,7 @@ BEGIN
 		ISNULL(SUM(CASE WHEN winlostdate = @yesterday AND statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 		ISNULL(SUM(CASE WHEN statusID IN (111, 112, 113) THEN winlost-actual_stake+playercomm ELSE 0 END), 0),
 		ISNULL(SUM(CASE WHEN statusID IN (0, 1) THEN ABS(actual_stake) ELSE 0 END), 0)
-	FROM dbo.bettransLC WITH(NOLOCK)
+	FROM dbo.bettransLC WITH(NOLOCK, INDEX = ix_recommend)
 	WHERE recommend = @CustID
 		AND (
 			statusID IN (0, 1)
@@ -173,51 +189,66 @@ BEGIN
 	GROUP BY custid
 
 	-- bettrans
+
+	INSERT INTO #bettrans_tmp (custid, winlostdate,ruben,bettype,actual_stake_total,TotalBalance)
+	SELECT custid, winlostdate,ruben,bettype, SUM(actual_stake) AS actual_stake_total, SUM(winlost-actual_stake+playercomm) AS TotalBalance
+	FROM dbo.bettrans b WITH(NOLOCK, INDEX = ix_recommend)
+	WHERE 
+		recommend = @CustID
+		AND winlostdate > @moveBetsDay 
+	GROUP BY custid,winlostdate,ruben,bettype
+	OPTION (MAXDOP 1)
+	
+	INSERT INTO #bettrans_tmp (custid, winlostdate,ruben,bettype,actual_stake_total,TotalBalance)
+	SELECT custid, winlostdate,1,bettype, SUM(actual_stake) AS actual_stake_total, SUM(winlost-actual_stake+playercomm) AS TotalBalance
+	FROM dbo.Transfer b WITH(NOLOCK)
+	WHERE 
+		recommend = @CustID
+		AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+					WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+					WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+				ELSE 1 END
+	GROUP BY custid,winlostdate,bettype
+	OPTION (MAXDOP 1)
+
 		-- running ticket
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
 		custid,
 		0,
 		0,
-		ISNULL(SUM(ABS(actual_stake)), 0)
-	FROM dbo.bettrans b WITH(NOLOCK)
-	WHERE recommend = @CustID
-		AND ruben = 0
+		ISNULL(SUM(ABS(actual_stake_total)), 0)
+	FROM #bettrans_tmp b WITH(NOLOCK)
+	WHERE ruben = 0
 		AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
 	GROUP BY custid
-
+	
 		-- settle ticket
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 	SELECT
 		custid,
-		ISNULL(SUM(CASE WHEN winlostdate <= @yesterday THEN winlost-actual_stake+playercomm ELSE 0 END ), 0),
-		ISNULL(SUM(winlost-actual_stake+playercomm ), 0),
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE TotalBalance END), 0),
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE TotalBalance END), 0),
 		0,
-		0
-	FROM dbo.bettrans b WITH(NOLOCK)
-	WHERE recommend = @CustID
-		AND b.statusID IN (111, 112, 113)
-		AND (
-					b.winlostdate < @yesterday
-					OR NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable IN (1, 2))
-				)
-		AND winlostdate > @moveBetsDay 
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -TotalBalance ELSE 0 END), 0)
+	FROM #bettrans_tmp b WITH(NOLOCK)
+	WHERE ruben = 1
+		AND winlostdate < @yesterday
 	GROUP BY custid
 
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 	SELECT
 		custid,
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END), 0),
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN winlostdate = @yesterday OR bettype > 20000 THEN TotalBalance ELSE 0 END END), 0),
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE TotalBalance END), 0),
 		0,
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
-	FROM dbo.Transfer b WITH(NOLOCK)
-	WHERE recommend = @CustID
-	AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-				WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-				WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-			ELSE 1 END
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -TotalBalance ELSE 0 END), 0)
+	FROM #bettrans_tmp b WITH(NOLOCK)
+	WHERE ruben = 1
+		AND winlostdate >= @yesterday
+		AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable IN (1,2))
 	GROUP BY custid
+	
 	/* End Balance Info */
 
 	INSERT INTO #result_balance (custid, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
@@ -243,8 +274,8 @@ BEGIN
 		)
 		SELECT 
 			c.custid, ci.enabled, ci.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, ISNULL(cs.Locked, 0)
-		FROM CustInfo as ci with (NOLOCK,index=IX_custinfo_1) 
-			INNER JOIN Customer c (NOLOCK) on c.custid = ci.custid 
+		FROM CUSTDB.dbo.CustInfo as ci with (NOLOCK,index=IX_custinfo_1) 
+			INNER JOIN CUSTDB.dbo.Customer c (NOLOCK) on c.custid = ci.custid 
 			CROSS APPLY  
 			(
 				SELECT 
@@ -253,21 +284,21 @@ BEGIN
 					, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs	
-		WHERE	@CustID = ci.recommend AND ci.roleid = 1   
+		WHERE	@CustID = ci.recommend AND ci.roleid = 1 
 				AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
-						else	case @CustStatus  
-								when 'Disabled' then 0   
-								else 1 end  
-						end
+					else	case @CustStatus  
+							when 'Disabled' then 0   
+							else 1 end  
+					end
 				AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0  then 1
 									when @CustStatus = 'Suspended' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 then 1
 									when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
 									when @CustStatus = 'Disabled' then 1
 									when @CustStatus = 'All' then 1
-									else 0 end		
+									else 0 end			
 	ELSE
 		INSERT INTO #tmp_customer
 		(
@@ -285,8 +316,8 @@ BEGIN
 		)
 		SELECT 
 			c.custid, ci.enabled, ci.username, cs.IsClosed, cs.IsSuspended, c.firstname, c.lastname, ci.credit, c.recommend, c.mrecommend, ISNULL(cs.Locked, 0)
-		FROM CustInfo as ci with (NOLOCK,index=IX_custinfo_1) 
-			INNER JOIN Customer c (NOLOCK) on c.custid = ci.custid 
+		FROM CUSTDB.dbo.CustInfo as ci with (NOLOCK,index=IX_custinfo_1) 
+			INNER JOIN CUSTDB.dbo.Customer c (NOLOCK) on c.custid = ci.custid 
 			CROSS APPLY  
 			(
 				SELECT 
@@ -295,21 +326,21 @@ BEGIN
 					, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs	
-		WHERE	@CustID = ci.recommend AND ci.roleid = 1  AND ci.username like '%' + @Username + '%'  
+		WHERE	@CustID = ci.recommend AND ci.roleid = 1 AND ci.username like '%' + @Username + '%'    
 				AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
-						else	case @CustStatus  
-								when 'Disabled' then 0   
-								else 1 end  
-						end
+					else	case @CustStatus  
+							when 'Disabled' then 0   
+							else 1 end  
+					end
 				AND 1 =  case	when @CustStatus = 'Open' and cs.CloseInfo = 0 and cs.SuspendInfo = 0  then 1
 									when @CustStatus = 'Suspended' and cs.CloseInfo = 0 and cs.SuspendInfo > 0 then 1
 									when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
 									when @CustStatus = 'Disabled' then 1
 									when @CustStatus = 'All' then 1
-									else 0 end				
+									else 0 end			
 
 	IF @TotalPages = 0
 	BEGIN
@@ -353,6 +384,7 @@ BEGIN
 	INSERT INTO #ClearBalanceCust_Setting (FromCustID, ToCustID, ScheduleOption)
 	EXEC (@SQL_CBS)
 
+
 	IF isnull(@IsYesterdayBalance,0) = 0
 	BEGIN 
 		SELECT * FROM
@@ -369,7 +401,7 @@ BEGIN
 				isnull(b.outstanding,0) outstanding,
 				isnull(b.YesterdayBalance,0) yesterday_balance,
 				isnull(b.TotalBalance,0) balance,
-				isnull(b.PendingTransfer3rd, 0) PendingTransfer3rd,
+				isnull(b.PendingTransfer3rd,0) PendingTransfer3rd,
 				c.credit AS credit,
 				c.credit - isnull(b.outstanding,0) + isnull(b.TotalBalance,0) - isnull(b.YesterdayBalance,0) FutureBetCredit,
 				c.recommend as member_recommend,
@@ -433,7 +465,7 @@ BEGIN
 				isnull(b.outstanding,0) outstanding,
 				isnull(b.YesterdayBalance,0) yesterday_balance,
 				isnull(b.TotalBalance,0) balance,
-				isnull(b.PendingTransfer3rd, 0) PendingTransfer3rd,
+				isnull(b.PendingTransfer3rd,0) PendingTransfer3rd,
 				c.credit AS credit,
 				c.credit - isnull(b.outstanding,0) + isnull(b.TotalBalance,0) - isnull(b.YesterdayBalance,0) FutureBetCredit,
 				c.recommend as member_recommend,
@@ -497,5 +529,6 @@ BEGIN
 	DROP TABLE #tmp_customer
 	DROP TABLE #SportBettype
 	DROP TABLE #ClosedReason
+
 END
 GO
