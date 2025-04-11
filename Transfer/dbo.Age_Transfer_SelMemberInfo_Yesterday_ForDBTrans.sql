@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Transfer_SelMemberInfo_Yesterday_ForDBTrans]
 	@custid int,--member 
 	@IsAllowTotalBalance bit = null,
@@ -44,6 +44,7 @@ Original: Age_Transfer_SelMemberInfo_Yesterday on db052/bodb02
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20220216@Evan: Remove unused columns - [Redmine: #164280]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master - Replace account [Redmine: #211969]
 		
 */
 BEGIN
