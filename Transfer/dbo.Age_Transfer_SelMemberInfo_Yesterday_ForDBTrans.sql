@@ -2,7 +2,7 @@
 ALTER PROCEDURE [dbo].[Age_Transfer_SelMemberInfo_Yesterday_ForDBTrans]
 	@custid int,--member 
 	@IsAllowTotalBalance bit = null,
-	@username varchar(20) OUTPUT,--member 
+	@username varchar(30) OUTPUT,--member 
 	@CashBalance money OUTPUT,
 	@Oustanding money OUTPUT,
 	@GivenCredit money OUTPUT,
