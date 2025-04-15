@@ -3,7 +3,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_CommByBettype_Agent]
 	@CustID			INT, 
 	@FromDate		SMALLDATETIME,
 	@ToDate			SMALLDATETIME,
-	@MoveBetsDay	SMALLDATETIME 
+	@MoveBetsDay	SMALLDATETIME,
+	@LevelType		TINYINT = 0
 AS
 
 /*
@@ -21,6 +22,10 @@ AS
 		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]   
 		- 20240717@Lewis: Change Old SQL account [Redmine: #207510]   
 		- 20241030@Lewis: Remove column MyanmarOddsComm [Redmine: #201396]
+		- 20241119@Lewis: Direct Member [RedmineId: #211969]  
+
+	Param Explanation:
+		- @LevelType:	0: All; 1: Master Agent/ Agent; 2: Direct Member
 */
 
 BEGIN
@@ -45,7 +50,8 @@ BEGIN
 	FROM dbo.f_Bettype_CommGroup ();
 
 	CREATE CLUSTERED INDEX CIX_bettype ON #Bettype_CommGroup (Bettype)
-
+	
+	--TODO: range bettrans
 	IF @Todate > @MoveBetsDay
 	BEGIN
 		IF @FromDate <= @MoveBetsDay
@@ -56,41 +62,51 @@ BEGIN
 		INSERT INTO #tmp(ma_comm, CommGroup, recommend)
 		SELECT  SUM(ISNULL(acomm,0) - ISNULL(comm,0)) AS ma_comm,
 				CommGroup,
-				recommend
+				CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END
 		FROM dbo.bettrans b WITH(NOLOCK) 
 			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype
 		WHERE b.mrecommend = @CustID 
 			AND ruben = 1 
 			AND winlostdate BETWEEN @FDate AND @ToDate 
+			AND 1 = CASE 
+					WHEN @LevelType IN (0,1) AND b.recommend <> -3 THEN 1 --Master Agent
+					WHEN @LevelType IN (0,2) AND b.recommend = -3 THEN 1 --Direct Member
+				ELSE 0 END
 		GROUP BY
 			CommGroup,
-			recommend;
+			CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END;
 	END
 
+	--TODO: range 14
 	IF @Fromdate <= @MoveBetsDay		
 	BEGIN
 		IF @ToDate > @MoveBetsDay
 			SET @TDate = @MoveBetsDay;
 		ELSE
 			SET @TDate = @ToDate;
-		
+
 		INSERT INTO #tmp(ma_comm, CommGroup, recommend)
 		SELECT  SUM(ISNULL(acomm,0) - ISNULL(comm,0)) AS ma_comm,
 				CommGroup,
-				b.recommend
+				CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END
 		FROM dbo.bettrans14 b with(nolock) 
 			INNER JOIN #Bettype_CommGroup s ON b.bettype = s.Bettype
 		WHERE b.mrecommend = @CID
 			AND winlostdate BETWEEN @FromDate AND @TDate
+			AND 1 = CASE 
+					WHEN @LevelType IN (0,1) AND b.recommend <> -3 THEN 1 --Master Agent
+					WHEN @LevelType IN (0,2) AND b.recommend = -3 THEN 1 --Direct Member
+				ELSE 0 END
 		GROUP BY
 			CommGroup,
-			b.recommend;
+			CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END;
 	END
 		
 	SELECT	pvt.recommend AS CustId,
 			c.username AS CustName, 
 			c.FirstName,
 			c.LastName,
+			CASE WHEN c.recommend = -3 THEN 1 ELSE 0 END AS IsDirectMember,
 			ISNULL([1],0) AS Comm1,
 			ISNULL([2],0) AS Comm2,
 			ISNULL([3],0) AS Comm3,

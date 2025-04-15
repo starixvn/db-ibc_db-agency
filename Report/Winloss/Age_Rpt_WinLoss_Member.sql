@@ -16,7 +16,7 @@ AS
 	Original: Age_Rpt_WinLoss_Member
     
 	Revisions:
-        - 20161111@Paul: Microsite for Report - [Redmine: #66991]
+		- 20161111@Paul: Microsite for Report - [Redmine: #66991]
 		- 20170622@Percy: Combine Betradar Virtual Sports with Virtual Sports [RedmineID: #78339]
 		- 20180518@Sophia: WC2018 - Enhance Performance at Sum_winloss_old table [Redmind: #91107]
 		- 20180914@Percy: Poker Games - Modify GrossComm [RedmineID: #101550]
@@ -28,11 +28,14 @@ AS
 		- 20230104@Bobby: Enhance GrossComm figure [RedmineID: #182155]
 		- 20230328@Malcolm: Add firstname, lastname [RedmineId: #185313]  
 		- 20230630@Lewis: Add Saba Tennis [RedmineID: #190459]
+		- 20240219@Bobby: Apply CDC bettrans_compact [RedmineID: #195357]
 		- 20240125@Lewis: Show Archived User [RedmineID: #199410]
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
+		- 20240320@Lewis: Change metadat wsv_alp,wsv_alpv [RedmineID: #201129]
 		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 		- 20241205@Lewis: Change data source bettrans_compact [Redmine: #214836]
+		- 20241119@Lewis: Direct Member ==> Clean un-used code [RedmineId: #211969]  
 	
 	Param's Explanation:
 	  @ProductDetails:		
@@ -93,12 +96,6 @@ BEGIN
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
 
-	DECLARE @SeparateSabaSport_Cutoff SMALLDATETIME 
-
-	SELECT @SeparateSabaSport_Cutoff = CutoffDate
-	FROM dbo.f_GetCutoffDate()
-	WHERE TypeName = 'SabaSport'
-
 	INSERT INTO @ExistingProductDetails(ProductId,Sporttype,Bettype,LeagueGroupID,TicketType)
 	SELECT ProductId,Sporttype,Bettype,LeagueGroupID,TicketType
 	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails)
@@ -119,20 +116,6 @@ BEGIN
 			@Mrecommend =  Mrecommend 
 	FROM dbo.CustInfo WITH (NOLOCK)
 	WHERE CustID = @CustID;
-
-	-----Get Special Super to hide data of them before specific date 
-	DECLARE @IsHide BIT = 0;
-
-	IF EXISTS (	SELECT 1 
-				FROM dbo.f_SpecialSuper()
-				WHERE Srecommend = @Srecommend)
-	BEGIN
-		SELECT @IsHide = 1;
-	END
-
-	----Get Account Login to detect Interal or not
-	DECLARE @LoginName NVARCHAR(128);
-	SELECT @LoginName = SUSER_NAME();
 
 	--Avoid Parameter Sniffing
 	DECLARE @FDate	SMALLDATETIME,
