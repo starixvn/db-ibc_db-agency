@@ -11,8 +11,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLossDetail_Agent]
 	@PageIndex		INT = 0,
 	@TotalRecords	INT = 0 OUTPUT,
 	@UserName		VARCHAR(30) = '',
-	@IsReward		BIT = 1
-
+	@IsReward		BIT = 1,
+	@LevelType		TINYINT = 0
 AS
 
 /*
@@ -53,45 +53,37 @@ Revisions:
 	- 20240703@Lewis: Switch data source - from bettrans to bettranscompact [Redmine: #207517]
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
+	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	
 	Param's Explanation:
-	 @ProductDetails:		
-		N'<ROOT>
-                <ProductDetail ProductId="32" Sporttype="248" Bettype="0" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="32" Sporttype="248" Bettype="4297" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="32" Sporttype="248" Bettype="4298" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="45" Sporttype="243" Bettype="0" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="45" Sporttype="243" Bettype="3150" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="36" Sporttype="247" Bettype="0" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="36" Sporttype="247" Bettype="4599" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="36" Sporttype="247" Bettype="4600" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="21" Sporttype="211" Bettype="0" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="21" Sporttype="211" Bettype="2499" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="0" Bettype="0" LeagueGroupId="0" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="0" Bettype="0" LeagueGroupId="0" TicketType="1"/>
-                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="42" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="74" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="108" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="2" Bettype="0" LeagueGroupId="42" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="50" Bettype="0" LeagueGroupId="42" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="113" TicketType="0"/>
-                <ProductDetail ProductId="1" Sporttype="2" Bettype="0" LeagueGroupId="122" TicketType="0"/>
-            </ROOT>'
+		- @ProductDetails:		
+			N'<ROOT>
+					<ProductDetail ProductId="32" Sporttype="248" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="32" Sporttype="248" Bettype="4297" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="32" Sporttype="248" Bettype="4298" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="45" Sporttype="243" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="45" Sporttype="243" Bettype="3150" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="36" Sporttype="247" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="36" Sporttype="247" Bettype="4599" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="36" Sporttype="247" Bettype="4600" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="21" Sporttype="211" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="21" Sporttype="211" Bettype="2499" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="0" Bettype="0" LeagueGroupId="0" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="0" Bettype="0" LeagueGroupId="0" TicketType="1"/>
+					<ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="42" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="74" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="108" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="2" Bettype="0" LeagueGroupId="42" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="50" Bettype="0" LeagueGroupId="42" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="1" Bettype="0" LeagueGroupId="113" TicketType="0"/>
+					<ProductDetail ProductId="1" Sporttype="2" Bettype="0" LeagueGroupId="122" TicketType="0"/>
+				</ROOT>'
+
+		- @LevelType:	0: All; 1: Master Agent/ Agent; 2: Direct Member
 */
 
 BEGIN
 	SET NOCOUNT ON;
-
-	DECLARE @UserName_CustId INT
-
-	IF @Username <> ''	--@USERNAME IS NOT NULL		=> -1: No Data || >0: Exactly Username
-	BEGIN
-		SET @UserName_CustId = ISNULL((SELECT Custid FROM Customer WITH (NOLOCK) WHERE username = @UserName),-1)
-	END
-	ELSE				--@USERNAME IS NULL			=> Run all
-	BEGIN
-		SET @UserName_CustId = 0
-	END
 
 	DECLARE @RowStart	INT,
 			@RowEnd		INT;
@@ -129,12 +121,6 @@ BEGIN
 	DECLARE @isTest BIT, @__ProductDetails XML;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);	
 
-	DECLARE @SeparateSabaSport_Cutoff SMALLDATETIME 
-
-	SELECT @SeparateSabaSport_Cutoff = CutoffDate
-	FROM dbo.f_GetCutoffDate()
-	WHERE TypeName = 'SabaSport'
-
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
 
@@ -152,52 +138,64 @@ BEGIN
 	END
 
 	------Get @Srecommend
-	DECLARE @Srecommend int, @CurrencyCode VARCHAR(12);
+	DECLARE @Srecommend int;
+	DECLARE @CurrencyCode VARCHAR(12);
 
 	SELECT @Srecommend = Srecommend,
 		   @CurrencyCode = e.Code
 	FROM dbo.CustInfo c WITH(NOLOCK)
-	INNER JOIN dbo.Exchange e WITH(NOLOCK) ON c.currency = e.ExchangeId
+	INNER JOIN dbo.Exchange e WITH (NOLOCK)
+		ON c.currency = e.ExchangeId
 	WHERE CustID = @CustID;
-
-	-----Get Special Super to hide data of them before specific date 
-	DECLARE @IsHide BIT = 0;
-
-	IF EXISTS (	SELECT 1 
-				FROM dbo.f_SpecialSuper() 
-				WHERE Srecommend = @Srecommend)
-	BEGIN
-		SELECT @IsHide = 1;
-	END
-		
-	----Get Account Login to detect Interal or not
-	DECLARE @LoginName NVARCHAR(128);
-	SELECT @LoginName = SUSER_NAME();
 
 	--Avoid Parameter Sniffing for bettrans and sum_winloss
 	DECLARE @FDate	SMALLDATETIME,
 			@TDate	SMALLDATETIME,
 			@CID	INT;
 	    
-	SELECT	@FDate = @FromDate,
-			@TDate = @ToDate, 
-			@CID = @custid;
+	SELECT	@CID = @custid;
 
-	DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX);
+	--Username
+	DECLARE @UserName_CustId INT
 
+	IF ISNULL(@Username,'') <> ''	--@USERNAME IS NOT NULL		=> -1: No Data || >0: Exactly Username
+	BEGIN
+		SET @UserName_CustId = ISNULL((SELECT Custid FROM Customer WITH (NOLOCK) WHERE username = @UserName),-1)
+	END
+
+	--DownlineList
+	DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX)
+
+	;WITH cte_downline AS(
+		SELECT ci.custid
+		FROM dbo.custinfo ci WITH(NOLOCK)
+		WHERE mrecommend = @CID
+			AND ci.RoleId = 2
+			AND @LevelType IN (0,1)
+
+		UNION ALL
+
+		SELECT ci.custid
+		FROM dbo.custinfo ci WITH(NOLOCK)
+		WHERE mrecommend = @CID
+			AND ci.RoleId = 1
+			AND recommend = -3
+			AND @LevelType IN (0,2)
+	)
 	SELECT 
-			@totalDownline	= COUNT(1), 
-			@downlineIds	= STRING_AGG(CAST(custid AS VARCHAR(MAX)), ',')
-	FROM dbo.Customer c WITH(NOLOCK)
-	WHERE mrecommend = @CID
-		AND RoleId = 2
-				
-	--TODO: bettrans range
-	IF @ToDate > @MoveBetsDay
-	BEGIN 	
-		SELECT @FDate	= IIF(@FromDate <= @MoveBetsDay, DATEADD(DD, 1, @MoveBetsDay), @FromDate)
-			,@TDate		= @ToDate
+		@totalDownline	= COUNT(1), 
+		@downlineIds	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
+	FROM cte_downline cte
+	WHERE cte.custid = @UserName_CustId OR @UserName_CustId IS NULL
+	
 
+	--TODO: bettrans range
+	SELECT @FDate = FromDate , @TDate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 1
+
+	IF @FDate IS NOT NULL
+	BEGIN
 		-- TODO: get data from bettrans_compact	
 		;WITH CTE_Downline AS (
 			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
@@ -243,7 +241,7 @@ BEGIN
 
 		-- bettransRnG
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
-		SELECT b.recommend AS CustId
+		SELECT CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END AS CustId
 			,SUM(CASE WHEN cont.ContributionBettype IS NULL THEN b.BetStake ELSE 0 END) AS TurnoverNoDraw
 			,SUM(b.BetStake * b.adiscount) AS GrossComm
 		FROM dbo.bettransRnG b WITH(NOLOCK)
@@ -279,11 +277,11 @@ BEGIN
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND statusID IN (111, 112, 113) 
 			AND mrecommend = @CID
-		GROUP BY b.recommend
+		GROUP BY CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END
 		
 		-- bettransLC
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
-		SELECT b.recommend AS CustId
+		SELECT CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END AS CustId
 			,SUM(CASE WHEN cont.ContributionBettype IS NULL THEN b.NetStake ELSE 0 END) AS TurnoverNoDraw
 			,SUM(b.NetStake * b.adiscount) AS GrossComm
 		FROM dbo.bettransLC b WITH(NOLOCK)
@@ -319,7 +317,7 @@ BEGIN
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND statusID IN (111, 112, 113) 
 			AND mrecommend = @CID
-		GROUP BY b.recommend
+		GROUP BY CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END
 
 		IF EXISTS (SELECT 1 FROM #GrossComm)
 		BEGIN
@@ -332,14 +330,36 @@ BEGIN
 				) c ON t.CustId = c.CustId
 		END
 	END		
-	--TODO: sum_winloss range
-	IF @FromDate <= @MoveBetsDay
-	BEGIN
-		SELECT @FDate	= IIF(@FromDate >= @BalanceUpDay, @FromDate, @BalanceUpDay)
-			, @TDate	= IIF(@ToDate > @MoveBetsDay, @MoveBetsDay, @ToDate);
 	
+	--TODO: sum_winloss range
+	SELECT @FDate = NULL, @TDate = NULL
+	SELECT @FDate = FromDate , @TDate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 2
+
+	IF @FDate IS NOT NULL
+	BEGIN
+		;WITH CTE_Winlostdate (winlostdate) AS
+		(
+			SELECT @FDate AS winlostdate
+			UNION ALL
+			SELECT DATEADD(DAY, 1, winlostdate)
+			FROM CTE_Winlostdate
+			WHERE winlostdate < @TDate
+		), CTE_Downline AS (
+			SELECT TOP (@totalDownline * (DATEDIFF(DAY,@FDate,@TDate) + 1))
+				ci.custid AS custid
+				,ci.srecommend
+				,ci.mrecommend
+				,ci.recommend
+				,ci.roleid
+				,w.winlostdate
+			FROM STRING_SPLIT(@downlineIds, ',') AS c
+			INNER JOIN custInfo ci WITH (NOLOCK) ON CAST(c.[value] AS INT) = ci.custid
+			CROSS APPLY CTE_Winlostdate w
+		)
 		INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
-		SELECT	CustID,			
+		SELECT	b.CustID,			
 				SUM(ABS(TurnOver)) AS TurnOver,
 				SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
 				SUM(grosscomm) AS GrossComm,
@@ -351,32 +371,52 @@ BEGIN
 				SUM(acomm) - SUM(comm) AS MAgComm,
 				SUM(betcount) AS NoOfTicket
 		FROM dbo.SUM_winloss b WITH(NOLOCK)
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
-		WHERE winlostdate BETWEEN @FDate AND @TDate			
-			AND MRecommend = @CID
-			AND RoleID = 2
-		GROUP BY CustID;
+		INNER JOIN CTE_Downline cte 
+			ON  b.winlostdate = cte.winlostdate
+			AND b.srecommend = cte.srecommend
+			AND b.mrecommend = cte.mrecommend 
+			AND b.recommend = cte.recommend 
+			AND b.RoleID = cte.roleid
+			AND b.Custid = cte.Custid
+		INNER JOIN #TmpCondSumWL t 
+			ON b.sporttype = t.sporttype
+			AND b.bettype = t.bettype 
+			AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID 
+			AND ISNULL(b.ticketType,0) = t.TicketType
+		GROUP BY b.CustID
+		OPTION (MAXRECURSION 0);
 	END
 
 	--TODO: sum_winloss_old range
-	IF @FromDate < @BalanceUpDay 
+	SELECT @FDate = NULL, @TDate = NULL
+	SELECT @FDate = FromDate , @TDate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 3
+
+	IF @FDate IS NOT NULL
 	BEGIN
-		SELECT @FDate	= @FromDate
-			,@TDate		= IIF(@ToDate >= @BalanceUpDay, DATEADD(DD, -1, @BalanceUpDay), @ToDate);
-
-
 		-- using cte to remove predicate when seek on sum_winloss_old
-		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype, leagueGroupID, ticketType) AS
+		;WITH CTE_Winlostdate (winlostdate) AS
 		(
-			SELECT @FDate AS winlostdate, SportType, BetType, leagueGroupID, ticketType
-			FROM #TmpCondSumWL
+			SELECT @FDate AS winlostdate
 			UNION ALL
-			SELECT DATEADD(DAY, 1, winlostdate), SportType, BetType, leagueGroupID, ticketType
+			SELECT DATEADD(DAY, 1, winlostdate)
 			FROM CTE_Winlostdate
 			WHERE winlostdate < @TDate
+		), CTE_Downline AS (
+			SELECT TOP (@totalDownline * (DATEDIFF(DAY,@FDate,@TDate) + 1))
+				ci.custid AS custid
+				,ci.srecommend
+				,ci.mrecommend
+				,ci.recommend
+				,ci.roleid
+				,w.winlostdate
+			FROM STRING_SPLIT(@downlineIds, ',') AS c
+			INNER JOIN custInfo ci WITH (NOLOCK) ON CAST(c.[value] AS INT) = ci.custid
+			CROSS APPLY CTE_Winlostdate w
 		)
 		INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
-		SELECT	CustID,			
+		SELECT	b.CustID,			
 				SUM(ABS(TurnOver)) AS TurnOver,
 				SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
 				SUM(grosscomm) AS GrossComm,
@@ -387,38 +427,47 @@ BEGIN
 				SUM(mwinlost) AS MAgWinlost,
 				SUM(acomm) - SUM(comm) AS MAgComm,
 				SUM(betcount) AS NoOfTicket
-		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
-			CROSS APPLY CTE_Winlostdate w
-		WHERE b.winlostdate = w.winlostdate
-			AND b.srecommend = @srecommend
-			AND b.mrecommend = @custid
-			AND b.recommend = b.recommend
-			AND b.RoleID = 2
-			AND b.sporttype = w.sporttype
-			AND b.bettype = w.bettype
-			AND ISNULL(b.leagueGroupID,0) = w.leagueGroupID
-			AND ISNULL(b.ticketType,0) = w.ticketType
-		GROUP BY CustID
+		FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK)
+		INNER JOIN CTE_Downline cte 
+			ON  b.winlostdate = cte.winlostdate
+			AND b.srecommend = cte.srecommend
+			AND b.mrecommend = cte.mrecommend 
+			AND b.recommend = cte.recommend 
+			AND b.RoleID = cte.roleid
+			AND b.Custid = cte.Custid
+		INNER JOIN #TmpCondSumWL bt 
+			ON b.sporttype = bt.sporttype
+			AND b.bettype = bt.bettype
+			AND ISNULL(b.LeagueGroupID,0) = bt.LeagueGroupID
+			AND ISNULL(b.TicketType,0) = bt.TicketType
+		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
 	END	
-
 
 	--TODO: SabaWalletTicket
 	IF @IsReward = 1
 	BEGIN
 		SELECT @FDate = @FromDate, @TDate = @ToDate
 		
-		;WITH CTE_Downline AS (
+		;WITH CTE_TransId AS (
+			SELECT TransId 
+			FROM SabaWalletTicket WITH (NOLOCK) 
+			WHERE Mrecommend = @CID 
+				AND WinlostDate BETWEEN @FDate AND @TDate
+		), CTE_Downline AS (
 			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
 			FROM STRING_SPLIT(@downlineIds, ',') AS c
 		)
 		INSERT INTO #MAgWinLossDetails(CustID,RewardAmount)
-		SELECT Recommend,SUM(Amount)
-		FROM SabaWalletTicket b WITH (NOLOCK)
-		INNER JOIN CTE_Downline cte ON b.Recommend = cte.custid
-		WHERE b.winlostdate BETWEEN @FDate AND @TDate
-			AND b.WalletID= 2
-		GROUP BY Recommend
+		SELECT CustID, RewardAmount
+		FROM (
+				SELECT CASE WHEN swt.Recommend = -3 THEN swt.CustID ELSE swt.Recommend END AS CustID, SUM(Amount) AS RewardAmount
+				FROM SabaWalletTicket swt WITH (NOLOCK)
+				INNER JOIN CTE_TransId cte ON swt.TransId = cte.TransId
+				WHERE swt.WalletID = 2
+				GROUP BY CASE WHEN swt.Recommend = -3 THEN swt.CustID ELSE swt.Recommend END
+			) a
+		WHERE EXISTS (SELECT TOP 1 1 FROM CTE_Downline cte WHERE cte.custid = a.CustID)
 	END
 	
 	--TODO: Result
@@ -433,19 +482,22 @@ BEGIN
 					SUM(TurnOver) AS Turnover,
 					SUM(TurnoverNoDraw) as NetTurnover,
 					SUM(GrossComm) AS GrossComm,
+					--mem
 					SUM(MemberWinLost) AS MemberWinLoss,
 					SUM(PlayerComm) AS MemberComm,
+					--agent
 					SUM(AgWinlost) AS AgWinLoss,
 					SUM(AgComm) AS AgComm,
+					--master
 					SUM(MAgWinlost) AS MAgWinLoss,
 					SUM(MAgComm) AS MAgComm,
 					SUM(NoOfTicket) AS NumberOfTickets,
 					SUM(w.RewardAmount) AS RewardAmount,
-					@CurrencyCode AS RewardCurrency
+					@CurrencyCode AS RewardCurrency,
+					CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END AS IsDirectMember
 			FROM #MAgWinLossDetails w 
-				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END
 			ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
 
 			SELECT	NULL AS CustId,
@@ -453,17 +505,19 @@ BEGIN
 					SUM(TurnOver) AS Turnover,
 					SUM(TurnoverNoDraw) as NetTurnover,
 					SUM(GrossComm) AS GrossComm,
+					--mem
 					SUM(MemberWinLost) AS MemberWinLoss,
 					SUM(PlayerComm) AS MemberComm,
+					--agent
 					SUM(AgWinlost) AS AgWinLoss,
 					SUM(AgComm) AS AgComm,
+					--master
 					SUM(MAgWinlost) AS MAgWinLoss,
 					SUM(MAgComm) AS MAgComm,
 					SUM(NoOfTicket) AS NumberOfTickets,
 					SUM(RewardAmount) AS RewardAmount,
 					@CurrencyCode AS RewardCurrency
-			FROM #MAgWinLossDetails
-			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+			FROM #MAgWinLossDetails w;
 		END
 		ELSE
 		BEGIN
@@ -474,17 +528,20 @@ BEGIN
 					SUM(TurnOver) AS Turnover,
 					SUM(TurnoverNoDraw) as NetTurnover,
 					SUM(GrossComm) AS GrossComm,
+					--mem
 					SUM(MemberWinLost) AS MemberWinLoss,
 					SUM(PlayerComm) AS MemberComm,
+					--agent
 					SUM(AgWinlost) AS AgWinLoss,
 					SUM(AgComm) AS AgComm,
+					--master
 					SUM(MAgWinlost) AS MAgWinLoss,
 					SUM(MAgComm) AS MAgComm,
-					SUM(NoOfTicket) AS NumberOfTickets
+					SUM(NoOfTicket) AS NumberOfTickets,
+					CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END AS IsDirectMember
 			FROM #MAgWinLossDetails w 
-				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END
 			ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
 
 			SELECT	NULL AS CustId,
@@ -500,7 +557,6 @@ BEGIN
 					SUM(MAgComm) AS MAgComm,
 					SUM(NoOfTicket) AS NumberOfTickets
 			FROM #MAgWinLossDetails
-			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
 		END
 	END
 	ELSE
@@ -511,7 +567,6 @@ BEGIN
 			FROM (
 				SELECT CustID
 				FROM #MAgWinLossDetails
-				WHERE @UserName_CustId = 0 OR custid = @UserName_CustId
 				GROUP BY CustID
 			) tmp; 
 		END
@@ -536,11 +591,11 @@ BEGIN
 						SUM(NoOfTicket) AS NumberOfTickets,
 						SUM(w.RewardAmount) AS RewardAmount,
 						@CurrencyCode AS RewardCurrency,
-						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum
+						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum,
+						CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END AS IsDirectMember
 				FROM #MAgWinLossDetails w
-					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-				WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END
 			) wl
 			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
@@ -558,8 +613,7 @@ BEGIN
 					SUM(NoOfTicket) AS NumberOfTickets,
 					SUM(RewardAmount) AS RewardAmount,
 					@CurrencyCode AS RewardCurrency
-			FROM #MAgWinLossDetails
-			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+			FROM #MAgWinLossDetails;
 		END
 		ELSE
 		BEGIN
@@ -579,11 +633,11 @@ BEGIN
 						SUM(MAgWinlost) AS MAgWinLoss,
 						SUM(MAgComm) AS MAgComm,
 						SUM(NoOfTicket) AS NumberOfTickets,
-						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum
+						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum,
+						CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END AS IsDirectMember
 				FROM #MAgWinLossDetails w
-					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-				WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
+					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID
+				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, CASE WHEN c.roleid = 1 THEN 1 ELSE 0 END
 			) wl
 			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
@@ -599,12 +653,10 @@ BEGIN
 					SUM(MAgWinlost) AS MAgWinLoss,
 					SUM(MAgComm) AS MAgComm,
 					SUM(NoOfTicket) AS NumberOfTickets
-			FROM #MAgWinLossDetails
-			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+			FROM #MAgWinLossDetails;
 		END
 		
 	END
-
 
 	DROP TABLE #MAgWinLossDetails;
 	DROP TABLE #TmpCondSumWL;

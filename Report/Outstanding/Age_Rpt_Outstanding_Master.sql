@@ -8,8 +8,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_Outstanding_Master]
 	@TotalMemberOutstanding	MONEY = 0 OUTPUT,
 	@TotalSuperOutstanding	MONEY = 0 OUTPUT,
 	@TotalMemberRiskAmount	MONEY = 0 OUTPUT,
-	@TotalSuperRiskAmount	MONEY = 0 OUTPUT
-
+	@TotalSuperRiskAmount	MONEY = 0 OUTPUT,
+	@LevelType TINYINT = 0
 AS
 
 /*
@@ -27,6 +27,10 @@ AS
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
 		- 20240523@Lewis: Potential Winning [RedmineId: #202427]  
+		- 20241119@Lewis: Direct Member [RedmineId: #211969]  
+
+	Param Explanation:
+		- @LevelType:	0: All; 1: Master Agent/ Agent; 2: Direct Member
 */
 
 BEGIN
@@ -57,7 +61,7 @@ BEGIN
 	-- bettrans
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding, ToWin, SuperRisk)
 	SELECT
-		mrecommend,
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding,
 		SUM(pa.PayoutAdjust - actual_stake),
@@ -71,12 +75,17 @@ BEGIN
 		) pa
 	WHERE statusId IN (0, 1)
 		AND srecommend = @CustID
-	GROUP BY mrecommend;
+		AND (
+				(@LevelType IN (0,2) AND mrecommend = -4)
+			 OR (@LevelType IN (0,1) AND mrecommend <> -4)
+			)
+	GROUP BY 
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END;
 
 	-- translog
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
 	SELECT
-		t.mrecommend,
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.translog t WITH (NOLOCK)
@@ -87,12 +96,17 @@ BEGIN
 			FROM #SportBettype s
 			WHERE s.RefTable = 3 AND s.bettype = t.gameID
 		)
-	GROUP BY t.mrecommend;
+		AND (
+				(@LevelType IN (0,2) AND mrecommend = -4)
+			 OR (@LevelType IN (0,1) AND mrecommend <> -4)
+			)
+	GROUP BY 
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END;
 
 	-- bettransRnG
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
 	SELECT
-		mrecommend,
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettransRnG b WITH (NOLOCK)  
@@ -102,13 +116,18 @@ BEGIN
 			FROM #SportBettype s
 			WHERE s.RefTable = 1 AND s.bettype = b.gameID
 		)
-		AND srecommend =  @CustID		
-	GROUP BY mrecommend;
+		AND srecommend =  @CustID
+		AND (
+				(@LevelType IN (0,2) AND mrecommend = -4)
+			 OR (@LevelType IN (0,1) AND mrecommend <> -4)
+			)
+	GROUP BY 
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END;
 
 	-- bettransLC
 	INSERT INTO #OutStanding (mrecommend, MemberOutstanding, SuperOutstanding)
 	SELECT
-		mrecommend,
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettransLC b WITH (NOLOCK)  
@@ -118,14 +137,21 @@ BEGIN
 			FROM #SportBettype s
 			WHERE s.RefTable = 2 AND s.bettype = b.gameID
 		)
-		AND srecommend =  @CustID		
-	GROUP BY mrecommend;
+		AND srecommend =  @CustID
+		AND (
+				(@LevelType IN (0,2) AND mrecommend = -4)
+			 OR (@LevelType IN (0,1) AND mrecommend <> -4)
+			)
+	GROUP BY 
+		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END;
 
+	--TODO: Result
 	IF @IsChatBot = 0 -- Using for report IsChatBot = 0, order by Username
 	BEGIN
 		WITH rt AS (
 			SELECT
 				rt.mrecommend,
+				CASE WHEN c.mrecommend = -4 THEN 1 ELSE 0 END AS IsDirectMember,
 				SUM(ISNULL(MemberOutstanding, 0)) AS MemberOutstanding,
 				SUM(ISNULL(SuperOutstanding, 0))  AS SuperOutstanding,
 				SUM(rt.ToWin) AS ToWin,
@@ -135,11 +161,12 @@ BEGIN
 			FROM #OutStanding rt
 			INNER JOIN dbo.custInfo c WITH (NOLOCK) 
 					ON rt.mrecommend = c.custid
-			GROUP BY rt.mrecommend,c.username
+			GROUP BY rt.mrecommend,CASE WHEN c.mrecommend = -4 THEN 1 ELSE 0 END,c.username
 		)
 		SELECT
 			rt.mrecommend AS CustId,
 			rt.username AS CustName,
+			rt.IsDirectMember,
 			rt.MemberOutstanding,
 			rt.SuperOutstanding,
 			rt.ToWin,
@@ -159,19 +186,20 @@ BEGIN
 			SUM(ToWin) AS ToWin,
 			SUM(SuperRisk) AS SuperRisk,
 			ROW_NUMBER() OVER(ORDER BY SUM(ISNULL(SuperOutstanding, 0)) DESC) RowNum
-		FROM #OutStanding
+		FROM #OutStanding 
 		GROUP BY mrecommend
 		)
 		SELECT
 			rt.mrecommend AS CustId,
 			c.username AS CustName,
+			CASE WHEN c.mrecommend = -4 THEN 1 ELSE 0 END AS IsDirectMember,
 			rt.MemberOutstanding,
 			rt.SuperOutstanding,
 			rt.ToWin,
 			rt.SuperRisk
-		FROM 		rt
-		INNER JOIN 	dbo.custInfo c WITH (NOLOCK) 
-					ON rt.mrecommend = c.custid
+		FROM rt
+		INNER JOIN dbo.custInfo c WITH (NOLOCK) 
+			ON rt.mrecommend = c.custid
 		WHERE @PageSize <= 0 OR (RowNum BETWEEN @RowStart AND @RowEnd)
 		ORDER BY RowNum
 	END	

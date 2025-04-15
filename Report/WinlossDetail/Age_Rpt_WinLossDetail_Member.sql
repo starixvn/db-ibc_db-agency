@@ -53,6 +53,7 @@ Revisions:
 	- 20240715@Kelvin: Alpha - Link WL Detail to My Watchlist [Redmine:#201733]
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
+	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -131,12 +132,6 @@ BEGIN
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
 	SELECT @__ProductDetails = CONVERT(XML, @ProductDetails)
 
-	DECLARE @SeparateSabaSport_Cutoff SMALLDATETIME 
-
-	SELECT @SeparateSabaSport_Cutoff = CutoffDate
-	FROM dbo.f_GetCutoffDate()
-	WHERE TypeName = 'SabaSport'
-
 	INSERT INTO @ExistingProductDetails(ProductId,Sporttype,Bettype,LeagueGroupID,TicketType)
 	SELECT ProductId,Sporttype,Bettype,LeagueGroupID,TicketType
 	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails)
@@ -160,44 +155,27 @@ BEGIN
 	INNER JOIN dbo.Exchange e WITH(NOLOCK) ON c.currency = e.ExchangeId
 	WHERE c.CustID = @CustID; 
 
-	-----Get Special Super to hide data of them before specific date 
-	DECLARE @IsHide BIT = 0;
-
-	IF EXISTS (	SELECT 1 
-				FROM dbo.f_SpecialSuper()
-				WHERE Srecommend = @Srecommend)
-	BEGIN
-		SELECT @IsHide = 1;
-	END
-		
-	----Get Account Login to detect Interal or not
-	DECLARE @LoginName NVARCHAR(128);
-	SELECT @LoginName = SUSER_NAME();
-
 	--Avoid Parameter Sniffing
 	DECLARE @FDate	SMALLDATETIME,
 			@TDate	SMALLDATETIME,
 			@CID	INT;
 	    
-	SELECT	@FDate = @FromDate,
-			@TDate = @ToDate, 
-			@CID = @custid;
-
+	SELECT	@CID = @custid;
+		
 	DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX);
-	
 	SELECT 
 			@totalDownline	= COUNT(1), 
 			@downlineIds	= STRING_AGG(CAST(custid AS VARCHAR(MAX)), ',')
 	FROM dbo.Customer c WITH(NOLOCK)
 	WHERE recommend = @CID
 		AND RoleId = 1
-			
 	--TODO: bettrans range
-	IF @ToDate > @MoveBetsDay
-	BEGIN 	
-		SELECT @FDate	= IIF(@FromDate <= @MoveBetsDay, DATEADD(DD, 1, @MoveBetsDay), @FromDate)
-			,@TDate		= @ToDate
-
+	SELECT @FDate = FromDate , @TDate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 1
+	
+	IF @FDate IS NOT NULL
+	BEGIN
 		-- TODO: get data from bettrans_compact
 		;WITH CTE_Downline AS (
 			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
@@ -328,12 +306,15 @@ BEGIN
 				) c ON t.CustId = c.CustId
 		END
 	END	
+	
 	--TODO: sum_winloss range
-	IF @FromDate <= @MoveBetsDay
+	SELECT @FDate = NULL, @TDate = NULL
+	SELECT @FDate = FromDate , @TDate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 2
+	
+	IF @FDate IS NOT NULL
 	BEGIN
-		SELECT @FDate	= IIF(@FromDate >= @BalanceUpDay, @FromDate, @BalanceUpDay)
-			, @TDate	= IIF(@ToDate > @MoveBetsDay, @MoveBetsDay, @ToDate);
-		
 		INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
 		SELECT	CustID,			
 				SUM(ABS(TurnOver)) AS TurnOver,
@@ -353,12 +334,13 @@ BEGIN
 	END
 
 	--TODO: sum_winloss_old range
-	IF @FromDate < @BalanceUpDay 
+	SELECT @FDate = NULL, @TDate = NULL
+	SELECT @FDate = FromDate , @TDate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 3
+	
+	IF @FDate IS NOT NULL
 	BEGIN
-		SELECT @FDate	= @FromDate
-			,@TDate		= IIF(@ToDate >= @BalanceUpDay, DATEADD(DD, -1, @BalanceUpDay), @ToDate);
-
-
 		-- using cte to remove predicate when seek on sum_winloss_old
 		;WITH CTE_Winlostdate (winlostdate, sporttype, bettype, leagueGroupID, ticketType) AS
 		(
@@ -412,6 +394,7 @@ BEGIN
 		GROUP BY b.CustID
 	END
 
+	--TODO: Result
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
 		IF @IsReward = 1

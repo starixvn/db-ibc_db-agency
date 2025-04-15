@@ -1,4 +1,4 @@
-/*<info serverAlias="DBBAH-bodb02" executers="bodbAdminNet,bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
+/*<info serverAlias="DBBAH-bodb02" executers="wsv_nap,wsv_alp,wsv_alpv" viewers="" isFunction="0"></info>*/
 ALTER PROC dbo.Age_Rpt_StatementMovement
 (
 	@FromDate DATETIME,
@@ -22,6 +22,7 @@ AS
 		- 20220531@Sol: Alpha - Limit date range on Bet Credit Tracking - [RedmineID: #173447]
 		- 20230615@Lewis: Alpha - Excluding SUM on MemberWinLoss, MemberComm, MemberTotal columns - [RedmineID: #189725]
 		- 20230922@Lewis: Alpha - Enhance Move Statement History RPT - [RedmineID: #193722]
+		- 20241119@Lewis: Direct Member [RedmineId: #211969]
 
 	Description:
 		@IsVariance : 0 view Main rpt -- 1 view Variance rpt
@@ -230,9 +231,22 @@ BEGIN
 		FROM #tblFinalResult AS rs
 		WHERE IsMultipleMoved = 0
 
-		SELECT CustId, SUM(MemberWinloss) MemberWinloss, SUM(MemberComm) MemberComm, SUM(MemberTotal) MemberTotal
-		FROM #DataGrid
-		GROUP BY CustId
+		SELECT d.CustId
+				, SUM(MemberWinloss) MemberWinloss
+				, SUM(MemberComm) MemberComm
+				, SUM(MemberTotal) MemberTotal
+				, CASE 
+						WHEN @LoggedRoleId = 4 AND c.recommend = -4 THEN 1
+						WHEN @LoggedRoleId = 3 AND c.recommend = -3 THEN 1
+						ELSE 0 
+				END AS IsDirectMember
+		FROM #DataGrid d
+		INNER JOIN Customer c WITH (NOLOCK) ON d.CustId = c.custid
+		GROUP BY d.CustId
+				, CASE 
+					WHEN @LoggedRoleId = 4 AND c.recommend = -4 THEN 1
+					WHEN @LoggedRoleId = 3 AND c.recommend = -3 THEN 1
+					ELSE 0 END
 
 		--Data Summary Section
 		SELECT 
@@ -296,9 +310,22 @@ BEGIN
 		FROM #tblFinalResult AS rs
 		WHERE IsMultipleMoved = 0
 
-		SELECT CustId, SUM(MemberWinloss) MemberWinloss, SUM(MemberComm) MemberComm, SUM(MemberTotal) MemberTotal
-		FROM #DataGrid
-		GROUP BY CustId
+		SELECT c.CustId
+			, SUM(MemberWinloss) MemberWinloss
+			, SUM(MemberComm) MemberComm
+			, SUM(MemberTotal) MemberTotal
+			, CASE 
+					WHEN @LoggedRoleId = 4 AND c.recommend = -4 THEN 1
+					WHEN @LoggedRoleId = 3 AND c.recommend = -3 THEN 1
+					ELSE 0 
+			END AS IsDirectMember
+		FROM #DataGrid d
+		INNER JOIN Customer c WITH (NOLOCK) ON d.CustId = c.custid
+		GROUP BY c.CustId, CASE 
+					WHEN @LoggedRoleId = 4 AND c.recommend = -4 THEN 1
+					WHEN @LoggedRoleId = 3 AND c.recommend = -3 THEN 1
+					ELSE 0 
+			END
 	END
 	----remove temp tables
 	DROP TABLE #SportBettype

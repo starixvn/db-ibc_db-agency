@@ -48,6 +48,7 @@ AS
 		- 20240103@Lewis: Hotfix - Incorrect Owner's Turnover formula at Master, Agent Level [RedmineID: #199262]
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
+		- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -791,8 +792,11 @@ BEGIN
 					   AND t.ticketType = ISNULL(s.ticketType,0)
 				       AND ( 
 					        (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
-							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid = 2) OR
-							(t.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
+							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.recommend > 0 AND s.roleid = 2) OR
+							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.recommend < 0 AND s.roleid = 1) OR
+							(t.RoleID = 4 AND s.srecommend = t.custid AND s.mrecommend > 0 AND s.roleid = 3) OR
+							(t.RoleID = 4 AND s.srecommend = t.custid AND s.mrecommend < 0 AND s.roleid = 1)
+							)
 						) s
 		
 		IF @isSAg = 1
@@ -992,10 +996,13 @@ BEGIN
 					   AND s.bettype = t.bettype
 					   AND ISNULL(s.ticketType,0) = t.ticketType
 					   AND ( 
-					         (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
-							 (t.RoleID = 3 AND s.mrecommend = t.custid AND s.roleid = 2) OR
-				             (t.RoleID = 4 AND s.srecommend = t.custid AND s.roleid = 3))
-							) s
+					        (t.RoleID = 2 AND s.recommend = t.custid AND s.roleid = 1) OR 
+							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.recommend > 0 AND s.roleid = 2) OR
+							(t.RoleID = 3 AND s.mrecommend = t.custid AND s.recommend < 0 AND s.roleid = 1) OR
+							(t.RoleID = 4 AND s.srecommend = t.custid AND s.mrecommend > 0 AND s.roleid = 3) OR
+							(t.RoleID = 4 AND s.srecommend = t.custid AND s.mrecommend < 0 AND s.roleid = 1)
+							)
+						) s
 	--Super	
 		IF @isSAg = 1
 		BEGIN
@@ -1215,6 +1222,9 @@ BEGIN
 		GROUP BY ProductID, custID, username, currency, roleid
 		ORDER BY breakdown, username
 	END
-
+	
+	DROP TABLE #TmpCondSumWL
+	DROP TABLE #TmpCust
+	DROP TABLE #SportBettype
 END
 GO
