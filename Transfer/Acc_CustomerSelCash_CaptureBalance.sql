@@ -399,7 +399,7 @@ BEGIN
 				SELECT SUM(swinlost+scomm-acomm)
 				FROM	#DirectMember r 
 				INNER JOIN dbo.bettransRNG b WITH(NOLOCK) ON r.CustId = b.custid
-				WHERE    b.productID IN (SELECT SportType FROM @tblSportTypeLC)
+				WHERE    b.productID IN (SELECT SportType FROM @tblSportTypeRNG)
 						AND IsSum = 0
 						AND winlostdate >= @yesterday
 						AND statusID IN (111,112,113)
