@@ -68,9 +68,9 @@ BEGIN
 		@Total_agentClosed     = ISNULL(CASE WHEN roleId = 2 THEN Closed	ELSE @Total_agentClosed		END, 0),
 		@Total_agentSuspended  = ISNULL(CASE WHEN roleId = 2 THEN Suspended ELSE @Total_agentSuspended	END, 0),
 		-- direct member
-		@total_DirectmemberActive    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Active	ELSE @Total_memberActive	END, 0),
-		@Total_DirectmemberClosed    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Closed	ELSE @Total_memberClosed	END, 0),
-		@Total_DirectmemberSuspended = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Suspended ELSE @Total_memberSuspended END, 0)
+		@total_DirectmemberActive    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Active	ELSE @total_DirectmemberActive	END, 0),
+		@Total_DirectmemberClosed    = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Closed	ELSE @Total_DirectmemberClosed	END, 0),
+		@Total_DirectmemberSuspended = ISNULL(CASE WHEN roleId = 1 AND IsDirectMember = 1 THEN Suspended ELSE @Total_DirectmemberSuspended END, 0)
 	FROM custStatus
 
 	-- new member of this month
