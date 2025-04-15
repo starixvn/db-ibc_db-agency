@@ -469,6 +469,7 @@ BEGIN
 		SELECT 2, @GivenCreditAgent, @ClearedCreditAgent
 		UNION ALL
 		SELECT -3, @DirectMemberCredit, @DirectmemberClearedCredit
+		WHERE @RoleId = 4
 		UNION ALL
 		SELECT 3, @DownlineCredit, @DownlineCredit - @usedCreditMaster
 		WHERE @RoleId = 4
