@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-CustDB" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0"></info>*/
+/*<info serverAlias="DBTXN-CustDB" executers="wsv_alp,wsv_alp" viewers="" isFunction="0"></info>*/
 ALTER PROCEDURE	dbo.Age_CustomerSelWinlimitInfo
 					@CustId			INT
 				,	@BetType		SMALLINT
@@ -7,6 +7,7 @@ ALTER PROCEDURE	dbo.Age_CustomerSelWinlimitInfo
 				,	@username		NVARCHAR(50)	= ''
 				,	@PageSize		INT				= 500
 				,	@PageIndex		INT				= 1
+				,	@isDirectDownline BIT
 				,	@TotalRows		INT				= 0			OUTPUT
 AS
 /*
@@ -24,7 +25,8 @@ AS
 		- 20210729@Elodie: Change use CustProductStatus.CloseInfo instead of CustInfo.closed [Redmine: #148600]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
-		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20241107@Helios: Offer Direct Member for Super/Master [redmine: #211969]
 	Param's Explanation:
 		- @CustID: SAgentID
 */
@@ -68,37 +70,75 @@ BEGIN
 	
 	IF @RoleId = 4
 	BEGIN
-		INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
-		SELECT c.custid,c.enabled, 
-			CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
-			CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
-			c.username
-		FROM dbo.CustInfo c WITH(NOLOCK)
-			INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
-		WHERE c.srecommend = @CustId
-			AND roleid = 1
-			AND c.mrecommend = @mrecommend
-			AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
-			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-			AND c.Enabled = 1
+		IF @isDirectDownline = 0			-- Get Normal Member 
+		BEGIN
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			SELECT c.custid,c.enabled, 
+				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
+				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
+				c.username
+			FROM dbo.CustInfo c WITH(NOLOCK)
+				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
+			WHERE c.srecommend = @CustId
+				AND roleid = 1
+				AND c.mrecommend = @mrecommend
+				AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
+				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+				AND c.Enabled = 1
+		END
+		ELSE							-- Get Super Direct Member
+		BEGIN
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			SELECT c.custid,c.enabled, 
+				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
+				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
+				c.username
+			FROM dbo.CustInfo c WITH(NOLOCK)
+				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
+			WHERE c.srecommend = @CustId
+				AND roleid = 1
+				AND c.mrecommend = -4
+				AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
+				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+				AND c.Enabled = 1
+		END
 			
 	END
 	ELSE IF @RoleId = 3
 	BEGIN
-		INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
-		SELECT c.custid,c.enabled, 
-			CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
-			CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
-				c.username
-		FROM dbo.CustInfo c WITH(NOLOCK)
-			INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
-		WHERE c.mrecommend = @CustId
-			AND roleid = 1
-			AND c.srecommend = @srecommend 
-			AND c.recommend = @recommend
-			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
-			AND c.Enabled = 1
-		
+		IF @isDirectDownline = 0			-- Get Normal Member 
+		BEGIN
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			SELECT c.custid,c.enabled, 
+				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
+				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
+					c.username
+			FROM dbo.CustInfo c WITH(NOLOCK)
+				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
+			WHERE c.mrecommend = @CustId
+				AND roleid = 1
+				AND c.srecommend = @srecommend 
+				AND c.recommend = @recommend
+				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+				AND c.Enabled = 1
+		END
+		ELSE							-- Get Master Direct Member
+		BEGIN
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			SELECT c.custid,c.enabled, 
+				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
+				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
+					c.username
+			FROM dbo.CustInfo c WITH(NOLOCK)
+				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
+			WHERE c.mrecommend = @CustId
+				AND roleid = 1
+				AND c.srecommend = @srecommend 
+				AND c.recommend = -3
+				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+				AND c.Enabled = 1
+		END
+
 	END
 	ELSE IF @RoleId = 2
 	BEGIN
