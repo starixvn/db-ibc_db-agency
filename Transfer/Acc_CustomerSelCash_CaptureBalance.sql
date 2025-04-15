@@ -398,7 +398,7 @@ BEGIN
 				INSERT INTO @tblTotalCash (TotalCash)
 				SELECT SUM(swinlost+scomm-acomm)
 				FROM	#DirectMember r 
-				INNER JOIN dbo.bettransLC b WITH(NOLOCK) ON r.CustId = b.custid
+				INNER JOIN dbo.bettransRNG b WITH(NOLOCK) ON r.CustId = b.custid
 				WHERE    b.productID IN (SELECT SportType FROM @tblSportTypeLC)
 						AND IsSum = 0
 						AND winlostdate >= @yesterday
