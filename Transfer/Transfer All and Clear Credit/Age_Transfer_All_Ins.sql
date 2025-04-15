@@ -1619,6 +1619,7 @@ BEGIN
 	SELECT 2, @TransferredAgent, NULL
 	UNION ALL
 	SELECT -3, @TransferredDirectMember, ISNULL(@DirectmemberOutStanding,0)
+	WHERE @RoleId = 4
 	UNION ALL
 	SELECT 3, @masterBalance, NULL
 	WHERE @RoleId = 4
