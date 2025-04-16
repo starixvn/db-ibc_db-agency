@@ -1,4 +1,4 @@
-/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBLOG-bodb_CustomerLog" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessHistorySel]
 	@FromCustId		INT,
 	@FromDate		DATE,
@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessHistorySel]
 	@SortType		BIT = 0,
 	@PageIndex		INT = 1,
 	@PageSize		INT = 500,
+	@LevelType		TINYINT = 0,
 	@TotalRow		INT = 0 OUTPUT
 AS
 /*
@@ -20,8 +21,13 @@ AS
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230822@Bobby: Support unicode FirstName/LastName [RedmineID: #193017]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
+		• @Leveltype: 
+			- 0: All
+			- 1: Master Agent/ Agent
+			- 2: Directmember
 
 */
 BEGIN
@@ -95,6 +101,10 @@ BEGIN
 				c.LastName LIKE '%' + @CheckName + '%'
 			)
 			AND @RoleId = 3
+			AND 1 = CASE WHEN @LevelType = 0 THEN 1
+						WHEN @LevelType = 1 AND c.recommend <> -3 THEN 1
+						WHEN @LevelType = 2 AND c.recommend = -3 THEN 1
+					ELSE 0 END
 		UNION ALL
 		SELECT custid
 		FROM bodb02.dbo.Customer c WITH(NOLOCK)
@@ -105,6 +115,10 @@ BEGIN
 				c.LastName LIKE '%' + @CheckName + '%'
 			)
 			AND @RoleId = 4
+			AND 1 = CASE WHEN @LevelType = 0 THEN 1
+						WHEN @LevelType = 1 AND c.recommend <> -4 THEN 1
+						WHEN @LevelType = 2 AND c.recommend = -4 THEN 1
+					ELSE 0 END
 	END
 	
 	-- TOTO: OUTPUT Result
@@ -119,10 +133,11 @@ BEGIN
 		[Status]		VARCHAR(15),
 		Reason			NVARCHAR(4000),
 		CompletedTime	VARCHAR(100),
-		TotalRow		INT
+		TotalRow		INT,
+		IsDirectMember	BIT
 	);
 
-	INSERT INTO #pageResult (UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, TotalRow)
+	INSERT INTO #pageResult (UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, TotalRow,IsDirectMember)
 	SELECT c.UserName, c.FirstName, c.LastName,  
 		CASE 
 			WHEN p.StartTime IS NOT NULL THEN p.Amount
@@ -134,10 +149,19 @@ BEGIN
 			ELSE ct.Reason END AS Reason,
 		CASE WHEN ct.CompletedTimeSec > 0 THEN FORMAT(DATEADD(SECOND, ct.CompletedTimeSec, @BASELINE_DATE), 'MM/dd/yyyy HH:mm:ss tt') ELSE '' END AS CompletedTime,
 		COUNT(1) OVER() AS TotalRow
-		
+		,c.IsDirectMember
 	FROM dbo.Age_ClearBalanceCust_ProcessHistory p WITH(NOLOCK)
 		INNER JOIN @tmpStatus tmp ON tmp.[Status] = p.[Status]
-		INNER JOIN bodb02.dbo.Customer c WITH(NOLOCK) ON c.CustId = p.ToCustId
+		CROSS APPLY (
+			SELECT c.custid, c.username, c.firstname, c.lastname
+				, CASE WHEN recommend < 0 THEN 1 ELSE 0 END AS IsDirectMember
+			FROM bodb02.dbo.Customer c WITH(NOLOCK) 
+			WHERE c.CustId = p.ToCustId
+				AND 1 = CASE WHEN @LevelType = 0 THEN 1
+							WHEN @LevelType = 1 AND c.roleid <> 1 THEN 1
+							WHEN @LevelType = 2 AND c.roleid = 1 AND recommend < 0 THEN 1
+						ELSE 0 END
+		)c
 		LEFT JOIN #tmpDownline cte ON cte.custId = p.ToCustId
 		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
@@ -167,6 +191,7 @@ BEGIN
 		CASE 
 			WHEN @SortType = 0 AND @SortBy = 3 THEN p.Amount
 			WHEN @SortType = 0 AND @SortBy = 4 THEN ct.CompletedTimeSec
+			WHEN @SortType = 0 AND @SortBy = 5 THEN c.IsDirectMember
 			ELSE 0
 			END ASC,
 		------------ DESC
@@ -178,6 +203,7 @@ BEGIN
 		CASE 
 			WHEN @SortType = 1 AND @SortBy = 3 THEN p.Amount
 			WHEN @SortType = 1 AND @SortBy = 4 THEN ct.CompletedTimeSec
+			WHEN @SortType = 1 AND @SortBy = 5 THEN c.IsDirectMember
 			ELSE 0
 			END DESC
 
@@ -188,7 +214,7 @@ BEGIN
 	FROM #pageResult
 	;
 
-	SELECT UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime
+	SELECT UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsDirectMember
 	FROM #pageResult
 	ORDER BY rIdx ASC
 	;

@@ -1,4 +1,4 @@
-﻿/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBCTG-bodb02,DBSIC-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_Ag]
 	@CustID		INT,
 	@PageSize	INT = 500,
@@ -11,7 +11,7 @@ ALTER PROCEDURE [dbo].[Age_CustomerSelCreditBalanceList_Ag]
 AS
 /*
 Task : Credit/Balance of Agent
-DB: DBAGE/bodb02
+DB: DBCTG-bodb02,DBSIC-bodb02
 Original: CustAccountSelCreditList_Ag_1
 
 Revisions:
@@ -47,6 +47,8 @@ Revisions:
 	- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
+
 Param's Explanation:
 
 • @CustID: AgentID
@@ -132,14 +134,14 @@ BEGIN
 			,cs.IsSuspended
 			,ci.credit
 			,cs.Locked
-		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
 				SELECT 
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs
 		WHERE 1 = ci.roleid 
@@ -181,14 +183,14 @@ BEGIN
 			,cs.IsSuspended
 			,ci.credit
 			,cs.Locked
-		FROM CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
+		FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
 				SELECT 
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
-				FROM dbo.CustProductStatus cs WITH(NOLOCK)
+				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
 			) AS cs
 		WHERE 1 = ci.roleid 
@@ -325,7 +327,7 @@ BEGIN
 			,c.creatdate AS CreatedDate
 			,ISNULL(balance.PendingTransfer3rd,0) AS PendingTransfer3rd
 		FROM (SELECT TOP (@PageSize) * FROM #tmp_customer WHERE RowNumber BETWEEN @RowStart AND @RowEND) ci
-			INNER JOIN Customer c (NOLOCK) ON ci.custid = c.custid
+			INNER JOIN CustDB.dbo.Customer c (NOLOCK) ON ci.custid = c.custid
 			LEFT JOIN #balance AS balance ON c.custid = balance.custid
 		ORDER BY RowNumber
 

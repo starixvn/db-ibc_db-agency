@@ -1,4 +1,4 @@
-/*<info serverAlias="DBTXN-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBTXN-bodb02" executers="wsv_alp" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Age_Customer_TotalAmount_Sel]
 	@CustId INT,
 	@RoleId TINYINT
@@ -15,6 +15,7 @@ AS
 		- 20210817@Sol: Allow more time to transfer (phase 2) - [RedmineID: #160019]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 */
 
 BEGIN
@@ -41,9 +42,26 @@ BEGIN
 
 	IF @RoleId = 3
 	BEGIN
-		DECLARE @tblrecommend TABLE (recommend INT PRIMARY KEY)
-		INSERT INTO @tblrecommend (recommend)
-		SELECT custid FROM CustDB.dbo.custInfo WITH (NOLOCK) WHERE mrecommend = @custId AND roleId = 2
+		DECLARE @tblrecommend TABLE (recommend INT PRIMARY KEY, IsDirectMember BIT)
+		DECLARE @DirectMember TABLE (CustId INT PRIMARY KEY)
+		DECLARE @ExistsDirectMember BIT = 0
+
+		INSERT INTO @tblrecommend (recommend, IsDirectMember)
+		SELECT custid, CASE WHEN roleId = 1 THEN 1 ELSE 0 END 
+		FROM CustDB.dbo.custInfo WITH (NOLOCK) 
+		WHERE mrecommend = @custId 
+			AND 1 = CASE WHEN roleid = 2 THEN 1
+						WHEN roleid = 1 AND recommend = -3 THEN 1 ELSE 0 END
+
+		DELETE t
+		OUTPUT deleted.recommend INTO @DirectMember(CustId)
+		FROM @tblrecommend t
+		WHERE IsDirectMember = 1
+
+		IF @@ROWCOUNT > 0
+		BEGIN
+			SET @ExistsDirectMember = 1
+		END
 
 		-- bettrans
 		INSERT INTO #tempData
@@ -60,6 +78,25 @@ BEGIN
 		GROUP BY
 			b.winlostdate, b.bettype, b.statusId,
 			b.custid
+		
+		IF @ExistsDirectMember = 1
+		BEGIN
+			INSERT INTO #tempData
+			(
+				winlostdate, bettype, statusId,
+				custid, amount
+			)
+			SELECT
+				b.winlostdate, b.bettype, b.statusId,
+				b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
+			FROM dbo.bettrans b WITH (NOLOCK)
+				INNER JOIN @DirectMember r ON b.custid = r.CustId
+			WHERE winlostdate > @moveBetsDay 
+			GROUP BY
+				b.winlostdate, b.bettype, b.statusId,
+				b.custid
+		END
+
 		-- transfer
 		INSERT INTO #tempData
 		(
@@ -79,6 +116,28 @@ BEGIN
 		GROUP BY
 			b.winlostdate, b.bettype, 
 			b.custid
+
+		IF @ExistsDirectMember = 1
+		BEGIN
+			INSERT INTO #tempData
+			(
+				winlostdate, bettype, statusId,
+				custid, amount
+			)
+			SELECT
+				b.winlostdate, b.bettype, 131,
+				b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
+			FROM dbo.Transfer b WITH (NOLOCK)
+				INNER JOIN @DirectMember r ON b.CustId = r.CustId
+			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
+				AND bettype NOT IN (21008, 21009)
+			GROUP BY
+				b.winlostdate, b.bettype, 
+				b.custid
+		END
 
 		DELETE t
 		FROM #tempData t
@@ -107,6 +166,19 @@ BEGIN
 		WHERE (b.statusId IN (0,1) OR b.winlostdate >= @yesterday)
 		GROUP BY b.custid
 
+		IF @ExistsDirectMember = 1
+		BEGIN
+			INSERT INTO #tempData
+			(
+				custid, amount
+			)
+			SELECT b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
+			FROM dbo.bettransRnG b WITH (NOLOCK)
+				INNER JOIN @DirectMember r ON b.custid = r.CustId
+			WHERE (b.statusId IN (0,1) OR b.winlostdate >= @yesterday)
+			GROUP BY b.custid
+		END
+
 		-- bettransLC
 		INSERT INTO #tempData
 		(
@@ -118,6 +190,19 @@ BEGIN
 		WHERE (b.statusId IN (0,1) OR b.winlostdate >= @yesterday)
 		GROUP BY b.custid
 
+		IF @ExistsDirectMember = 1
+		BEGIN
+			INSERT INTO #tempData
+			(
+				custid, amount
+			)
+			SELECT b.custid, SUM(b.winlost-b.actual_stake+b.playercomm)
+			FROM dbo.bettransLC b WITH (NOLOCK)
+				INNER JOIN @DirectMember r ON b.custid = r.CustId
+			WHERE (b.statusId IN (0,1) OR b.winlostdate >= @yesterday)
+			GROUP BY b.custid
+		END
+
 		-- translog
 		INSERT INTO #tempData
 		(
@@ -128,6 +213,19 @@ BEGIN
 			INNER JOIN @tblrecommend r ON t.recommend = r.recommend
 		WHERE t.statusId IN (0,1)
 		GROUP BY t.custid
+
+		IF @ExistsDirectMember = 1
+		BEGIN
+			INSERT INTO #tempData
+			(
+				custid, amount
+			)
+			SELECT t.custid, SUM(-t.actual_stake)
+			FROM dbo.translog t WITH (NOLOCK)
+				INNER JOIN @DirectMember r ON t.custid = r.CustId
+			WHERE t.statusId IN (0,1)
+			GROUP BY t.custid
+		END
 
 		-- netPostion
 		INSERT INTO #tempData

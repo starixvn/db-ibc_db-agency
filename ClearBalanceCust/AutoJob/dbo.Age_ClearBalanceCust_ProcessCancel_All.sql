@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_ProcessCancel_All]
 	@FromCustId		INT, 
 	@Creator		INT,
@@ -14,6 +14,7 @@ AS
 
 	Revisions:
 		- 20231018@Bobby: Support cancel ALL [RedmineID: #195443]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
 		• @FromCustID: S/M/A's custid
@@ -60,7 +61,9 @@ BEGIN
 		AND 1 = CASE 
 					WHEN @RoleID = 2 AND ck.RoleID = 1 AND ck.recommend = @Creator THEN 1
 					WHEN @RoleID = 3 AND ck.RoleID = 2 AND ck.mrecommend = @Creator THEN 1
+					WHEN @RoleID = 3 AND ck.roleid = 1 AND ck.recommend = -3 AND ck.mrecommend = @Creator THEN 1
 					WHEN @RoleID = 4 AND ck.RoleID = 3 AND ck.srecommend = @Creator THEN 1
+					WHEN @RoleID = 4 AND ck.roleid = 1 AND ck.recommend = -4 AND ck.srecommend = @Creator THEN 1
 					ELSE 0
 				END
 

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_Start]
 	@Environment	VARCHAR(10),
 	@RunningMode	VARCHAR(15),
@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
+		- 20241206@Helen: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
 		• @PairOfBatch: The number pairs of batch
@@ -72,6 +73,7 @@ BEGIN
 		
 			DROP TABLE IF EXISTS #tmpClearBalanceCust
 			CREATE TABLE #tmpClearBalanceCust(FromCustId INT, ToCustId INT PRIMARY KEY NONCLUSTERED, RoleId TINYINT, SuperId INT, IsAllDayBalTransfer BIT
+				, DirectMember INT DEFAULT (0)
 				, INDEX CIX_SuperRole CLUSTERED (SuperId, RoleId)
 			);
 
@@ -96,6 +98,12 @@ BEGIN
 				RETURN;
 			END
 
+			UPDATE t
+				SET DirectMember = ci.recommend
+			FROM #tmpClearBalanceCust t
+				INNER JOIN CUSTDB.dbo.Custinfo ci WITH (NOLOCK) ON t.ToCustId = ci.custid
+			WHERE ci.recommend IN (-3,-4) AND t.RoleId IN (3,4) AND ci.roleid = 1
+
 			--TODO: Process batching
 			DROP TABLE IF EXISTS #tmpClearBalanceCust_RunningSuper;
 			DROP TABLE IF EXISTS #tmpClearBalanceCust_Process;
@@ -103,6 +111,7 @@ BEGIN
 			CREATE TABLE #tmpClearBalanceCust_RunningSuper(SuperId INT PRIMARY KEY, TotalDownline INT)
 			CREATE TABLE #tmpClearBalanceCust_Process(
 				SuperId INT, FromCustId INT, ToCustId INT PRIMARY KEY NONCLUSTERED, RoleID TINYINT, IsAllDayBalTransfer BIT, BatchNo INT
+				, DirectMember INT
 				,INDEX CIX_SuperBatch CLUSTERED (SuperId, BatchNo)
 			);
 
@@ -112,17 +121,16 @@ BEGIN
 			FROM #tmpClearBalanceCust
 			GROUP BY SuperID;
 
-
 			-- TODO: Batching by Super
-			INSERT INTO #tmpClearBalanceCust_Process (SuperID, FromCustId, ToCustId, RoleID, IsAllDayBalTransfer, BatchNo)
-			SELECT SuperID, FromCustId, ToCustId, RoleID, IsAllDayBalTransfer
+			INSERT INTO #tmpClearBalanceCust_Process (SuperID, FromCustId, ToCustId, RoleID, IsAllDayBalTransfer, DirectMember, BatchNo)
+			SELECT SuperID, FromCustId, ToCustId, RoleID, IsAllDayBalTransfer, t.DirectMember
 				,SUM(CASE WHEN t.superIdx%@PairOfBatch = 1 THEN 1 ELSE 0 END) OVER (ORDER BY t.rIdx) AS BatchNo
 			FROM(
-				SELECT rc.SuperID, rc.FromCustId, rc.ToCustId, rc.RoleID, rc.IsAllDayBalTransfer
-					,ROW_NUMBER() OVER (ORDER BY rs.TotalDownline DESC, rs.SuperID, rc.RoleID, rc.FromCustId, rc.ToCustId) AS rIdx
+				SELECT rc.SuperID, rc.FromCustId, rc.ToCustId, rc.RoleID, rc.IsAllDayBalTransfer, rc.DirectMember
+					,ROW_NUMBER() OVER (ORDER BY rs.TotalDownline DESC, rs.SuperID, IIF(rc.DirectMember < 0, rc.DirectMember, rc.RoleID), rc.FromCustId, rc.ToCustId) AS rIdx
 					,ROW_NUMBER() OVER (
-						PARTITION BY rs.TotalDownline, rs.SuperID, rc.RoleID, rc.FromCustId 
-						ORDER BY rs.TotalDownline DESC, rs.SuperID, rc.RoleID, rc.FromCustId
+						PARTITION BY rs.TotalDownline, rs.SuperID, IIF(rc.DirectMember < 0, rc.DirectMember, rc.RoleID), rc.FromCustId 
+						ORDER BY rs.TotalDownline DESC, rs.SuperID, IIF(rc.DirectMember < 0, rc.DirectMember, rc.RoleID), rc.FromCustId
 					) AS superIdx
 				FROM #tmpClearBalanceCust rc
 				INNER JOIN #tmpClearBalanceCust_RunningSuper rs ON rs.SuperID = rc.SuperID
@@ -153,6 +161,7 @@ BEGIN
 					,ModifiedTime
 					,Creator
 					,Environment
+					,DirectMember
 				)
 			SELECT BatchNo
 				,SuperID
@@ -165,6 +174,7 @@ BEGIN
 				,GETDATE() AS ModifiedTime
 				,@Creator AS Creator
 				,@Environment AS Environment
+				,DirectMember
 			FROM #tmpClearBalanceCust_Process p;
 
 			-- SET output

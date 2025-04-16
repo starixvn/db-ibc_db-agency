@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" selecters="bodbDownlineNet" isFunction="1" isNested="1"></info>*/
+/*<info serverAlias="DBCUST-CustDB" selecters="wsv_alp" isFunction="1" isNested="1"></info>*/
 ALTER FUNCTION dbo.f_Age_ClearBalanceCust_Snapshot(@SiteDBGroupID SMALLINT, @TestSuperIds VARCHAR(200), @Environment VARCHAR(10)) 
 RETURNS TABLE
 RETURN
@@ -11,7 +11,7 @@ RETURN
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230822@Bobby: Enhance checking cross level [RedmineID: #193021]
 		- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
-
+		- 20241206@Helen: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 */
 WITH CTE_Setting AS (
 	SELECT DISTINCT c.roleid, s.FromCustID, CAST(GETDATE() AS DATE) AS SessionDate, cs.custid AS SuperId
@@ -55,16 +55,14 @@ FROM CTE_SMASetting s
 WHERE cs.EffectiveDate <= s.SessionDate
 	AND 1 = CASE 
 				WHEN cs.ScheduleOption > 0 THEN IIF(cs.ScheduleOption & POWER(2, DATEPART(WEEKDAY, CURRENT_TIMESTAMP)) > 0, 1, 0)
-				--WHEN s.RoleId = 4 THEN 1 -- by pass cheking super vs master 
-				--WHEN ISNULL(s.TransferOption, 0) = 0 THEN 1 -- Daily mode
-				--WHEN ((ISNULL(s.TransferOption,0)/POWER(2*1, 0))% 2) = 1 -- Weekly mode
-				--	AND ((ISNULL(s.TransferOption,0)/POWER(2*1, 8-DATEPART(WEEKDAY, CURRENT_TIMESTAMP)))% 2) = 1 THEN 1 -- WEEKDAY enabled
 			ELSE 0 
 		END
 	AND 1 = CASE 
 				WHEN s.roleid = 2 AND c.roleid = 1 and c.recommend = s.FromCustId THEN 1	--direct agent/member
 				WHEN s.roleid = 3 AND c.roleid = 2 and c.mrecommend = s.FromCustId THEN 1	--direct master/agent
+				WHEN s.roleid = 3 AND c.roleid = 1 and c.mrecommend = s.FromCustId AND c.recommend = -3 THEN 1	--master direct member
 				WHEN s.roleid = 4 AND c.roleid = 3 and c.srecommend = s.FromCustId THEN 1	--direct super/master
+				WHEN s.roleid = 4 AND c.roleid = 1 and c.srecommend = s.FromCustId AND c.recommend = -4 THEN 1	--super direct member
 				ELSE 0
 			END
 	AND s.IsAllDayBalTransfer = 0 -- NOT support Cash model

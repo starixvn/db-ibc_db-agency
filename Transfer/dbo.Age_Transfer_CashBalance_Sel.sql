@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [Age_Transfer_CashBalance_Sel]
 	@CustID INT
 AS
@@ -6,7 +6,7 @@ AS
 /*
 	Created by: Percy
 	Task: Get Cash Balance Info of @CustID and Upline
-	DB: DBAGE.bodb02
+	DB: DBSIC-bodb02,DBCTG-bodb02
 	
 	Revisions:
 		- 20170609@Percy: Create new [RedmineID: #74291]
@@ -15,6 +15,7 @@ AS
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
 		- @CustID: custid of Master/Agent/Member
@@ -293,7 +294,7 @@ BEGIN
 		INSERT INTO #BalanceInfo (superCash, masterCash, masterOutstanding)
 		SELECT 0, 0, SUM(ABS(actual_stake*mpositiontaking))
 		FROM dbo.bettrans b WITH(NOLOCK)
-		WHERE EXISTS (SELECT TOP 1 1 FROM dbo.custInfo c WITH(NOLOCK) WHERE b.recommend = c.custid AND c.mrecommend = @CustID AND c.roleid = 2)
+		WHERE b.mrecommend = @CustID
 			AND b.ruben = 0
 			AND NOT EXISTS (SELECT TOP 1 1 FROM #SportBettype s WHERE s.Bettype = b.bettype AND s.RefTable <> 0)
 

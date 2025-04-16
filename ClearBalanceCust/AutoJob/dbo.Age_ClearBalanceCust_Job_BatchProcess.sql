@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_BatchProcess]
 	@Environment	VARCHAR(5),
 	@BatchNo		INT,
@@ -16,6 +16,7 @@ AS
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
 		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
+		- 20241206@Helen: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
 		• @FromCustID: S/M/A's custid
@@ -36,7 +37,8 @@ BEGIN
 		, @Creator			INT -- StarixIT
 		, @IsAllDayBalTransfer	BIT = 1
 		, @IsAutoJobTransfer	BIT = 1
-		, @BatchLogIdIns		INT;
+		, @BatchLogIdIns		INT
+		, @DirectMember INT = 0
 
 	SELECT @SuperId		= 0,
 		@RoleID			= 0,
@@ -69,6 +71,7 @@ BEGIN
 		, @RoleCount		= COUNT(DISTINCT p.RoleId)
 		, @FromCustIdCount  = COUNT(DISTINCT p.FromCustId)
 		, @IsAllDayBalTransfer = p.IsAllDayBalTransfer
+		, @DirectMember = MIN(p.DirectMember)
 	FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
 	INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
 	WHERE p.BatchNo = @BatchNo AND p.Environment = @Environment
@@ -92,8 +95,9 @@ BEGIN
 		
 		SELECT @procName = CASE 
 							WHEN @RoleID = 2 THEN 'dbo.Age_Transfer_InsClearBalance_Ag'
-							WHEN @RoleID = 3 THEN 'dbo.Age_Transfer_Ins_MAg'
-							WHEN @RoleID = 4 THEN 'dbo.Age_Transfer_Ins_SAg'
+							WHEN @RoleID = 3 AND @DirectMember = 0 THEN 'dbo.Age_Transfer_Ins_MAg'
+							WHEN @RoleID = 4 AND @DirectMember = 0 THEN 'dbo.Age_Transfer_Ins_SAg'
+							WHEN @RoleID IN (3,4) AND @DirectMember IN (-3,-4) THEN 'dbo.Age_Transfer_InsClearBalance_DirectMember'
 							ELSE 'NA'
 						END;
 		SELECT @commandExec = CASE 
@@ -105,20 +109,28 @@ BEGIN
 										', @IsAutoTransfer=', @IsAutoJobTransfer
 									)
 
-								WHEN @RoleID = 3 THEN CONCAT('EXEC ', @procName, 
+								WHEN @RoleID = 3 AND @DirectMember = 0 THEN CONCAT('EXEC ', @procName, 
 										' @MasterID=', @FromCustID,
 										', @ToCustIDs=''', @ToCustIDs, '''',
 										', @Creator=', @Creator,
 										', @FullTransfer=1',
 										', @IsAutoTransfer=', @IsAutoJobTransfer
 									)
-								WHEN @RoleID = 4 THEN CONCAT('EXEC ', @procName, 
+								WHEN @RoleID = 4 AND @DirectMember = 0 THEN CONCAT('EXEC ', @procName, 
 										' @SAgID=', @FromCustID,
 										', @ToCustIDs=''', @ToCustIDs, '''',
 										', @Creator=', @Creator,
 										', @FullTransfer=1',
 										', @IsAutoTransfer=', @IsAutoJobTransfer
 									)
+								WHEN @RoleID IN (3,4) AND @DirectMember IN (-3,-4) THEN CONCAT('EXEC ', @procName, 
+										' @FromCustID=', @FromCustID,
+										', @ToCustIDs=''', @ToCustIDs, '''',
+										', @Creator=', @Creator,
+										', @DirectMember=', @DirectMember,
+										', @IsAutoTransfer=', @IsAutoJobTransfer
+									)
+
 							END
 									
 		INSERT INTO dbo.Age_ClearBalanceCust_BatchLog(BatchNo, SuperId, Command, StartTime, BatchStatus, RunningMode, Environment)

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
 	@FromCustId		INT,
 	@Language		VARCHAR(2)= 'E', 
@@ -8,6 +8,7 @@ ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_ProcessSel]
 	@SortType		BIT = 0,
 	@PageIndex		INT = 1,
 	@PageSize		INT = 500,
+	@LevelType		TINYINT = 0,
 	@TotalRow		INT = 0 OUTPUT,
 	@TotalCancelAll	INT = 0 OUTPUT,
 	@TotalPending	INT = 0 OUTPUT,
@@ -23,6 +24,7 @@ AS
 		- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 		- 20230822@Bobby: Support unicode FirstName/LastName [RedmineID: #193017]
 		- 20231018@Bobby: Support cancel ALL [RedmineID: #195443]
+		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
 		- @SortBy:
@@ -30,6 +32,12 @@ AS
 			+ 2: Status
 			+ 3: Amount
 			+ 4: CompletedTime
+
+		• @Leveltype: 
+			- 0: All
+			- 1: Master Agent/ Agent
+			- 2: Directmember
+
 			
 
 */
@@ -101,6 +109,10 @@ BEGIN
 				c.LastName LIKE '%' + @CheckName + '%'
 			)
 			AND @RoleId = 3
+			AND 1 = CASE WHEN @LevelType = 0 THEN 1
+						WHEN @LevelType = 1 AND c.recommend <> -3 THEN 1
+						WHEN @LevelType = 2 AND c.recommend = -3 THEN 1
+					ELSE 0 END
 		UNION ALL
 		SELECT custid
 		FROM CustDB.dbo.Customer c WITH(NOLOCK)
@@ -111,6 +123,10 @@ BEGIN
 				c.LastName LIKE '%' + @CheckName + '%'
 			)
 			AND @RoleId = 4
+			AND 1 = CASE WHEN @LevelType = 0 THEN 1
+						WHEN @LevelType = 1 AND c.recommend <> -4 THEN 1
+						WHEN @LevelType = 2 AND c.recommend = -4 THEN 1
+					ELSE 0 END
 	END
 	
 	-- TOTO: OUTPUT Result
@@ -127,10 +143,11 @@ BEGIN
 		Reason			NVARCHAR(4000),
 		CompletedTime	VARCHAR(100),
 		IsAllowCancel	BIT,
+		IsDirectMember	BIT,
 		TotalRow		INT
 	);
 
-	INSERT INTO #pageResult (CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel, TotalRow)
+	INSERT INTO #pageResult (CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel, TotalRow, IsDirectMember)
 	SELECT c.custid, c.UserName, c.FirstName, c.LastName,  
 		CASE 
 			WHEN p.StartTime IS NOT NULL THEN p.Amount
@@ -146,10 +163,19 @@ BEGIN
 			ELSE 0 
 		END AS IsAllowCancel,
 		COUNT(1) OVER() AS TotalRow
-	
+		,c.IsDirectMember
 	FROM bodb02.dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 		INNER JOIN @tmpStatus tmp ON tmp.[Status] = p.[Status]
-		INNER JOIN CustDB.dbo.Customer c WITH(NOLOCK) ON c.CustId = p.ToCustId
+		CROSS APPLY (
+			SELECT c.custid, c.username, c.firstname, c.lastname
+				, CASE WHEN recommend < 0 THEN 1 ELSE 0 END AS IsDirectMember
+			FROM CustDB.dbo.Customer c WITH(NOLOCK) 
+			WHERE c.CustId = p.ToCustId
+				AND 1 = CASE WHEN @LevelType = 0 THEN 1
+							WHEN @LevelType = 1 AND c.roleid <> 1 THEN 1
+							WHEN @LevelType = 2 AND c.roleid = 1 AND recommend < 0 THEN 1
+						ELSE 0 END
+		)c
 		LEFT JOIN #tmpDownline cte ON cte.custId = p.ToCustId
 		LEFT JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		OUTER APPLY (
@@ -180,6 +206,7 @@ BEGIN
 		CASE 
 			WHEN @SortType = 0 AND @SortBy = 3 THEN p.Amount
 			WHEN @SortType = 0 AND @SortBy = 4 THEN ct.CompletedTimeSec
+			WHEN @SortType = 0 AND @SortBy = 5 THEN c.IsDirectMember
 			ELSE 0
 			END ASC,
 		------------ DESC
@@ -191,6 +218,7 @@ BEGIN
 		CASE 
 			WHEN @SortType = 1 AND @SortBy = 3 THEN p.Amount
 			WHEN @SortType = 1 AND @SortBy = 4 THEN ct.CompletedTimeSec
+			WHEN @SortType = 1 AND @SortBy = 5 THEN c.IsDirectMember
 			ELSE 0
 			END DESC
 	;
@@ -221,7 +249,7 @@ BEGIN
 		,@TotalFailed		= SUM(CASE WHEN StatusCount = 'Failed' THEN 1 ELSE 0 END)
 	FROM CTE_CountInfo;
 
-	SELECT CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel
+	SELECT CustId, UserName, FirstName, LastName, Amount, [Status], Reason, CompletedTime, IsAllowCancel, IsDirectMember
 	FROM #pageResult
 	ORDER BY rIdx ASC
 	OFFSET ((@PageIndex-1)*@PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY

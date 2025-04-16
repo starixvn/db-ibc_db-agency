@@ -1,4 +1,4 @@
-/*<info serverAlias="DBCUST-CustDB" executers="bodbDownlineNet,wsv_alp" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBCUST-CustDB" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_ClearBalanceCust_SettingUpdate]
 	@FromCustId		INT,
 	@ToCustId		INT,
@@ -25,6 +25,7 @@ AS
 		- 20231009@Bobby: Enhance constraint temp table [RedmineID: #195213]
 		- 20231101@Luke: Alpha - Enhance auto transfer function (phase 2) [Redmine: #195135]
 		- 20240326@Luke: Alpha - Enhance auto transfer function (phase 3) [Redmine: #195551]
+		- 20241125@Helen: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 
 	Param's Explanation:
 		• @FromCustID: The direct UplineID
@@ -171,7 +172,10 @@ BEGIN
 			WHERE 1 = CASE 
 					WHEN @RoleID = 2 AND c.recommend = @FromCustID AND c.RoleID = 1 THEN 1 -- direct agent/member
 					WHEN @RoleID = 3 AND c.mrecommend = @FromCustID AND c.RoleID = 2 THEN 1 --direct master/agent
+					WHEN @RoleID = 3 AND c.mrecommend = @FromCustID AND c.RoleID = 1 AND c.recommend = -3  THEN 1 --master direct member
 					WHEN @RoleID = 4 AND c.srecommend = @FromCustID AND c.RoleID = 3 THEN 1 --direct super/master
+					WHEN @RoleID = 4 AND c.srecommend = @FromCustID AND c.RoleID = 1 AND c.recommend = -4 THEN 1 --super direct member
+
 					ELSE 0
 				END
 		);
