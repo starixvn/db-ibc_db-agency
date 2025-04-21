@@ -30,6 +30,7 @@ AS
 		- 20211115@Malcolm: Exclude Matchs are deleted [Redmine: #164321]
 		- 20220422@Evan: Remove Using IsDeleted field in League Table [Redmine: #171699]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
+		- 20250421@Dave: Exclude VS6 - enhance report [RedmineID: #224890]
 */
  
 BEGIN
@@ -113,6 +114,7 @@ BEGIN
 	FROM dbo.Match3rd m WITH (NOLOCK)
 		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.League3rdId = l.League3rdId
 	WHERE m.EventDate BETWEEN @FromDate AND @ToDate
+		AND m.sporttype NOT IN (134 )
 		AND m.EventStatus <> 'closed'
 		AND l.isTest <= @IncludeTestData 
 	GROUP BY m.eventdate, m.sporttype
