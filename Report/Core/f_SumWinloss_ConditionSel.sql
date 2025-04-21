@@ -82,6 +82,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #216975]
 		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
 		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
+		- 20250421@Dave: Add Rich Gaming [Redmine: #224863]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -192,6 +193,7 @@ RETURN
 				,(106, 125, 0, 0, 0) --VS7 Virtual Steeple Chase
 				,(106, 126, 0, 0, 0) --VS7 Virtual Harness Racing
 				,(106, 127, 0, 0, 0) --VS7 Virtual Motor Racing
+				,(108, 123, 0, 0, 0) -- RGRNG Rich Gaming
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
