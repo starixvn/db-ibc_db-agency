@@ -31,6 +31,7 @@ AS
 		- 20220422@Evan: Remove Using IsDeleted field in League Table [Redmine: #171699]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
 		- 20250421@Dave: Exclude VS6 - enhance report [RedmineID: #224890]
+		- 20250411@Dave: Add VS7 - EventType = 3, League3rd [RedmineID: #221188]
 */
  
 BEGIN
@@ -98,11 +99,33 @@ BEGIN
 			INNER JOIN VSOutright o WITH (NOLOCK) ON o.EventID = r.EventID
 		WHERE o.EventDate BETWEEN @FromDate AND @ToDate
 			AND r.EventStatus <> 'closed'
+			AND r.SportType BETWEEN 181 AND 185  /*VS2 - old*/
 		GROUP BY r.LeagueID, o.EventDate, r.EventTime
 	) AS m
 		INNER JOIN dbo.League l WITH (NOLOCK) ON m.LeagueID = l.LeagueID
 	WHERE l.isTest <= @IncludeTestData 
-	GROUP BY m.EventDate, l.sporttype
+	GROUP BY m.EventDate, l.sporttype;
+
+	-- VSRaceInfo, VSOutright, League3rd
+	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
+	SELECT
+		CASE WHEN DATEDIFF(DAY, @ToDate, m.eventdate) = 0 THEN 1 ELSE 0 END AS IsToday,
+		m.eventdate, l.sporttype,
+		SUM(CASE WHEN m.eventstatus IN ('completed', 'refund') THEN 1 ELSE 0 END) AS Entered,
+		SUM(CASE WHEN m.eventstatus NOT IN ('completed', 'refund') THEN 1 ELSE 0 END) AS NonEntered
+	FROM
+	(
+		SELECT r.LeagueID, o.EventDate, MAX(r.EventStatus) AS eventstatus
+		FROM VSRaceInfo r WITH (NOLOCK)
+			INNER JOIN VSOutright o WITH (NOLOCK) ON o.EventID = r.EventID
+		WHERE o.EventDate BETWEEN @FromDate AND @ToDate
+			AND r.EventStatus <> 'closed'
+			AND r.SportType NOT IN (177, 198) /*VS2 - NEW - offer deposit only*/
+		GROUP BY r.LeagueID, o.EventDate, r.EventTime
+	) AS m
+		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.LeagueID = l.League3rdId
+	WHERE l.isTest <= @IncludeTestData 
+	GROUP BY m.EventDate, l.sporttype;
 
 	-- match3rd
 	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
@@ -114,7 +137,7 @@ BEGIN
 	FROM dbo.Match3rd m WITH (NOLOCK)
 		INNER JOIN dbo.League3rd l WITH (NOLOCK) ON m.League3rdId = l.League3rdId
 	WHERE m.EventDate BETWEEN @FromDate AND @ToDate
-		AND m.sporttype NOT IN (134 )
+		AND m.sporttype NOT IN (134 ) /*VS6 offer only deposit*/
 		AND m.EventStatus <> 'closed'
 		AND l.isTest <= @IncludeTestData 
 	GROUP BY m.eventdate, m.sporttype
