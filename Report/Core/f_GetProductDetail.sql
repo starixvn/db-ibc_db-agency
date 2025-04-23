@@ -27,6 +27,7 @@ AS
 		- 20240826@Lewis: Add FA CHAI - Promotion Prize [RedmineID: #209893]
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #219675]
 		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
+		- 20250421@Dave: Add Rich Gaming [Redmine: #224863]
 		
 */
 RETURN
@@ -140,3 +141,8 @@ RETURN
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '42' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 15799 AS Bettype, 42 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Jackpot Prize
 	
+	--- RGRNG
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '43' AS ResourceId, 108 AS ProductId, 123 AS Sporttype, 0 AS Bettype, 43 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
+	UNION ALL
+	SELECT 'ProductDetail' AS RefId, '44' AS ResourceId, 108 AS ProductId, 123 AS Sporttype, 15899 AS Bettype, 44 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Promotion Bets
