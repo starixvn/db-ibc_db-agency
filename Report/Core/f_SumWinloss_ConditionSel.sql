@@ -193,7 +193,8 @@ RETURN
 				,(106, 125, 0, 0, 0) --VS7 Virtual Steeple Chase
 				,(106, 126, 0, 0, 0) --VS7 Virtual Harness Racing
 				,(106, 127, 0, 0, 0) --VS7 Virtual Motor Racing
-				,(108, 123, 0, 0, 0) -- RGRNG Rich Gaming
+				,(108, 123, 0, 0, 0) -- RGRNG Rich Gaming 
+				,(108, 123, 15899, 0, 0) -- RGRNG Rich Gaming (PromotionPrize)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
