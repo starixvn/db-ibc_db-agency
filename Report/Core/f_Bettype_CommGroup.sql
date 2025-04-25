@@ -59,7 +59,6 @@ AS
 		- 20241127@Lewis: Add GPI Live Casino [RedmineID: #213484]
 		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
 		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
-		- 20250421@Dave: Add Rich Gaming [Redmine: #224863]
 
 	- Columns:
 		- CommGroup:
@@ -228,7 +227,6 @@ FROM (
 		OR typeid BETWEEN 15400 AND 15499 -- ODG
 		OR typeid BETWEEN 13900 AND 13999 -- MGLC
 		OR typeid BETWEEN 15600 AND 15799 -- PTLC
-		OR typeid BETWEEN 15800 AND 15899 -- RGRNG
 ) AS A
 
 GO
