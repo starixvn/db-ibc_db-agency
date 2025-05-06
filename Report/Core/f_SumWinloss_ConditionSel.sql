@@ -82,6 +82,8 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #216975]
 		- 20250312@Bobby: Add Funky Games [RedmineID: #218176]
 		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
+		- 20250421@Dave: Add Rich Gaming [Redmine: #224863]
+		- 20250506@Dave: Remove sportType (126, 127) of VS7 (106) [RedmineID: #221188]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -190,8 +192,8 @@ RETURN
 				,(101, 129, 15798, 0, 0) -- Playtech Live Casino (Jackpot Contribution)
 				,(101, 129, 15799, 0, 0) -- Playtech Live Casino (Jackpot Prize)
 				,(106, 125, 0, 0, 0) --VS7 Virtual Steeple Chase
-				,(106, 126, 0, 0, 0) --VS7 Virtual Harness Racing
-				,(106, 127, 0, 0, 0) --VS7 Virtual Motor Racing
+				,(108, 123, 0, 0, 0) -- RGRNG Rich Gaming 
+				,(108, 123, 15899, 0, 0) -- RGRNG Rich Gaming (PromotionPrize)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
