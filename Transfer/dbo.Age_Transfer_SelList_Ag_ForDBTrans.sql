@@ -61,6 +61,7 @@ Revisions:
 	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - Replace account [Redmine: #211969]
+	- 20250425@Elodie: Enhance SP [Redmine: #225506]
 	
 Param's Explanation:
 	• @CustID: AgentID
@@ -279,7 +280,7 @@ BEGIN
 			INNER JOIN CUSTDB.dbo.Customer c (NOLOCK) on c.custid = ci.custid 
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1
 					CloseInfo
 					, SuspendInfo
 					, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
@@ -321,7 +322,7 @@ BEGIN
 			INNER JOIN CUSTDB.dbo.Customer c (NOLOCK) on c.custid = ci.custid 
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1 
 					CloseInfo
 					, SuspendInfo
 					, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
