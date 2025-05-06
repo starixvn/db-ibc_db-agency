@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [Age_Transfer_SelList_Ag]
 	@CustID int,
 	@PageSize int=500,
@@ -54,7 +54,8 @@ Revisions:
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
-	
+	- 20250425@Elodie: Enhance SP [Redmine: #225506]
+
 Param's Explanation:
 	• @CustID: AgentID
 	• @IsAllowTotalBalance: filter data based on total balance transfer
@@ -247,7 +248,7 @@ BEGIN
 			INNER JOIN Customer c (NOLOCK) on c.custid = ci.custid 
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1
 					CloseInfo
 					, SuspendInfo
 					, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
@@ -289,7 +290,7 @@ BEGIN
 			INNER JOIN Customer c (NOLOCK) on c.custid = ci.custid 
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1
 					CloseInfo
 					, SuspendInfo
 					, CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
