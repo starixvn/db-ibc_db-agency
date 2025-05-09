@@ -47,8 +47,8 @@ Revisions:
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
+	- 20250509@Elodie: Tune SP - [Redmine: #226747]
 	- 20250707@Bobby: Transfer changes for Cash Service [Redmine: #232421]
-
 Param's Explanation:
 • @CustID: MAgentID
 */
@@ -152,7 +152,7 @@ BEGIN
 		LEFT JOIN CTE_CashAccumCredit cac ON t.CustId = cac.CustId
 		CROSS APPLY  
 		(
-			SELECT 
+			SELECT TOP 1
 				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS CloseInfo
 				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS SuspendInfo
 				, ISNULL(Locked, 0) AS Locked

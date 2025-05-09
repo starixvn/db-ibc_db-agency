@@ -159,7 +159,7 @@ BEGIN
 		INNER JOIN CustDB.dbo.Customer c with (NOLOCK) on ci.custid = c.custid 
 		CROSS APPLY  
 		(
-			SELECT 
+			SELECT TOP 1
 				CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS CloseInfo
 				, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS SuspendInfo
 				, ISNULL(Locked, 0) AS Locked

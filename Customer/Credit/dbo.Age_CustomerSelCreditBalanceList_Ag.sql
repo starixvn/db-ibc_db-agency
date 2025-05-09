@@ -48,8 +48,8 @@ Revisions:
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
+	- 20250509@Elodie: Tune SP - [Redmine: #226747]
 	- 20250707@Bobby: Transfer changes for Cash Service [Redmine: #232421]
-
 Param's Explanation:
 
 • @CustID: AgentID
@@ -138,7 +138,7 @@ BEGIN
 		FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
@@ -188,7 +188,7 @@ BEGIN
 		FROM CustDB.dbo.CustInfo AS ci WITH (NOLOCK, INDEX = ix_custinfo_1)
 			CROSS APPLY  
 			(
-				SELECT 
+				SELECT TOP 1
 					CASE WHEN CloseInfo > 0 THEN 1 ELSE 0 END AS IsClosed
 					, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END AS IsSuspended
 					, ISNULL(Locked, 0) AS Locked
