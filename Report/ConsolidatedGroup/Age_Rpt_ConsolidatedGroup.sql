@@ -49,6 +49,7 @@ AS
 		- 20240306@Lewis: Add Virtual Ice Hockey [RedmineID: #201129]
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 		- 20241119@Lewis: Direct Member [RedmineId: #211969]
+		- 20250512@Dave: Change datatype for ExchangeID [RedmineID: #226762]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -98,7 +99,7 @@ BEGIN
 		winlostdate     DATETIME,
 		custid		    INT,	
 		username		VARCHAR(30),	
-		currency		TINYINT,								
+		currency		SMALLINT,								
 		ProductID	    TINYINT,
 		RoleID		    INT,
 		turnover	    MONEY,
@@ -116,7 +117,7 @@ BEGIN
 	DECLARE @GrossComm TABLE (winlostdate DATETIME, custid INT, ProductId TINYINT, GrossComm MONEY)
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype SMALLINT,Bettype INT, LeagueGroupID SMALLINT, TicketType TINYINT)
 	CREATE TABLE #TmpCondSumWL (ProductID TINYINT, sporttype SMALLINT, bettype SMALLINT, LeagueGroupID SMALLINT, TicketType TINYINT)
-	CREATE TABLE #TmpCust (CustID INT, RoleID INT, username VARCHAR(30), currency TINYINT)
+	CREATE TABLE #TmpCust (CustID INT, RoleID INT, username VARCHAR(30), currency SMALLINT)
 
 	DECLARE	@isSAg	INT,
 			@isMAg	INT,
@@ -753,7 +754,7 @@ BEGIN
 
 		---Insert tmptable
 		CREATE TABLE #Tmpsum_winloss ( winlostdate Datetime, custid int, recommend INT, mrecommend INT, srecommend INT, 
-		                          username VARCHAR(30), currency TINYINT, RoleID int, 								  
+		                          username VARCHAR(30), currency SMALLINT, RoleID int, 								  
 								  ProductID TINYINT, sporttype smallint,bettype smallint, BetCount int,
 								  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
 								  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money, LeagueGroupID SMALLINT, ticketType TINYINT
@@ -960,7 +961,7 @@ BEGIN
 
 
 		---Insert tmptable
-		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int,recommend INT, mrecommend INT, srecommend INT,username VARCHAR(30), currency TINYINT, RoleID int, 
+		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int,recommend INT, mrecommend INT, srecommend INT,username VARCHAR(30), currency SMALLINT, RoleID int, 
 									  ProductID TINYINT, sporttype smallint,bettype smallint, BetCount int,
 									  turnover Money, playercomm Money, scomm Money, acomm Money, Comm Money,
 									  awinlost Money, mwinlost Money, swinlost Money, winlost Money, netTurnover Money, grosscomm Money, LeagueGroupID SMALLINT, ticketType TINYINT

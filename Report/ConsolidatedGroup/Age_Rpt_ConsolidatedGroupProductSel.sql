@@ -35,6 +35,7 @@ AS
 		- 20230731@Eden: Simplify Live Casino Customer Setting - [Redmine: #189389]
 		- 20230928@Luke: Modify SPs to adapt in-house replication setup [Redmine: #194414]
 		- 20231117@Tacy: ExtNAP/Alpha - Return Offered product lists by site/currency [Redmine: #196141]
+		- 20250512@Dave: Change datatype for ExchangeID [RedmineID: #226762]
 
 	Param's Explanation:
 
@@ -43,7 +44,7 @@ AS
 BEGIN 
 	SET NOCOUNT ON 
 	
-	DECLARE @TmpSiteCurrency TABLE(OrderID INT IDENTITY (1,1),Currency TINYINT, Site VARCHAR(10))
+	DECLARE @TmpSiteCurrency TABLE(OrderID INT IDENTITY (1,1),Currency SMALLINT, Site VARCHAR(10))
 	DECLARE @CheckEnableProduct TABLE (ProductID TINYINT, ProductName VARCHAR(50), EndOfSupportDate date, IsHidden BIT,[Type] tinyint,OrderNo int)
 
 	--Get: site/currency of all lines belong to a group headline
@@ -55,7 +56,7 @@ BEGIN
 	WHERE A.CustID = @CustID AND A.IsGroupHeadLine = 1 and A.IsRptConsol = 1
 	
 	--Check Show product by Site/Currency
-	DECLARE @Site VARCHAR(10), @Currency TINYINT, @ID INT= 1
+	DECLARE @Site VARCHAR(10), @Currency SMALLINT, @ID INT= 1
 	 
 	WHILE EXISTS (SELECT 1 FROM	@TmpSiteCurrency WHERE OrderID = @ID)
 	BEGIN 
