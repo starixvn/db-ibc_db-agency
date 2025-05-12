@@ -50,6 +50,7 @@ AS
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 		- 20241119@Lewis: Direct Member [RedmineId: #211969]
 		- 20250512@Dave: Change datatype for ExchangeID [RedmineID: #226762]
+		- 20250513@Andy: Add Reward & Reward Currency columns [RedmineId: #226209]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -112,6 +113,28 @@ BEGIN
 		company		    MONEY,
 		betcount	    INT,
 		GrossComm       MONEY
+	)
+
+	DECLARE @AgencyWinlossWithReward AS TABLE 
+	(
+		breakdown     VARCHAR(10),
+		custid		    INT,	
+		username		VARCHAR(30),	
+		currency		TINYINT,
+		RoleID		    INT,
+		turnover	    MONEY,
+		winlost		    MONEY,
+		playercomm	    MONEY,
+		playertotal     MONEY,
+		ownerturnover   MONEY,
+		ownerwinlost    MONEY,
+		ownercomm	    MONEY,
+		ownertotal      MONEY,
+		company		    MONEY,
+		betcount	    INT,
+		GrossComm       MONEY,
+		rewardamount    MONEY,
+		rewardcurrency VARCHAR(12)
 	)
 
 	DECLARE @GrossComm TABLE (winlostdate DATETIME, custid INT, ProductId TINYINT, GrossComm MONEY)
@@ -1153,13 +1176,34 @@ BEGIN
 
 		DROP TABLE #TmpSum_WinLoss_Old
 	END
-
+	
 	IF @ReportType = 1
 	BEGIN
+		INSERT INTO @AgencyWinlossWithReward
+		(
+			breakdown,
+			custid,	
+			username,	
+			currency,
+			RoleID,
+			turnover,
+			winlost,
+			playercomm,
+			playertotal,
+			ownerturnover,
+			ownerwinlost,
+			ownercomm,
+			ownertotal,
+			company,
+			betcount,
+			GrossComm,
+			rewardamount,
+			rewardcurrency
+		)
 		SELECT	custID AS breakdown
 				,custID 
 				,username
-				,currency
+				,A.currency
 				,roleid
 				,SUM(turnover) AS turnover
 				,SUM(winlost) AS member_winlost
@@ -1172,17 +1216,41 @@ BEGIN
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
 				,SUM(GrossComm) AS GrossComm
+				,0 AS rewardamount
+				,e.Code
 		FROM @AgencyWinloss A
-		GROUP BY custID, username, currency, roleid
+		INNER JOIN Exchange e WITH (NOLOCK) ON A.currency = e.ExchangeId
+		GROUP BY custID, username, A.currency, roleid, e.Code
 		ORDER BY username
 	END
 	
 	IF @ReportType = 2
 	BEGIN
+		INSERT INTO @AgencyWinlossWithReward
+		(
+			breakdown,
+			custid,	
+			username,	
+			currency,
+			RoleID,
+			turnover,
+			winlost,
+			playercomm,
+			playertotal,
+			ownerturnover,
+			ownerwinlost,
+			ownercomm,
+			ownertotal,
+			company,
+			betcount,
+			GrossComm,
+			rewardamount,
+			rewardcurrency
+		)
 		SELECT	CONVERT(VARCHAR(10), winlostdate, 111) AS breakdown
 				,custID 
 				,username
-				,currency
+				,A.currency
 				,roleid
 				,SUM(turnover) AS turnover
 				,SUM(winlost) AS member_winlost
@@ -1195,18 +1263,42 @@ BEGIN
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
 				,SUM(GrossComm) AS GrossComm
+				,0 AS rewardamount
+				,e.Code
 		FROM @AgencyWinloss A
+		INNER JOIN Exchange e WITH (NOLOCK) ON A.currency = e.ExchangeId
 		GROUP BY CONVERT(VARCHAR(10), winlostdate, 111)  
-				, custID, username, currency, roleid
+				, custID, username, A.currency, roleid, e.Code
 		ORDER BY breakdown, username
 	END
 
 	IF @ReportType = 3
 	BEGIN
+		INSERT INTO @AgencyWinlossWithReward
+		(
+			breakdown,
+			custid,	
+			username,	
+			currency,
+			RoleID,
+			turnover,
+			winlost,
+			playercomm,
+			playertotal,
+			ownerturnover,
+			ownerwinlost,
+			ownercomm,
+			ownertotal,
+			company,
+			betcount,
+			GrossComm,
+			rewardamount,
+			rewardcurrency
+		)
 		SELECT	ProductID AS breakdown
 				,custID 
 				,username
-				,currency
+				,A.currency
 				,roleid
 				,SUM(turnover) AS turnover
 				,SUM(winlost) AS member_winlost
@@ -1219,11 +1311,126 @@ BEGIN
 				,-SUM(company) AS company
 				,SUM(betcount) AS betcount 
 				,SUM(GrossComm) AS GrossComm
+				,0 AS rewardamount
+				,e.Code
 		FROM @AgencyWinloss A
-		GROUP BY ProductID, custID, username, currency, roleid
+		INNER JOIN Exchange e WITH (NOLOCK) ON A.currency = e.ExchangeId
+		GROUP BY ProductID, custID, username, A.currency, roleid, e.Code
 		ORDER BY breakdown, username
 	END
+
+	DECLARE @roleid INT
+	DECLARE cur_custinfo CURSOR FOR
+	SELECT custid, roleid FROM @AgencyWinlossWithReward
+	OPEN cur_custinfo
+	FETCH NEXT FROM cur_custinfo INTO @custid, @roleid
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+		IF @roleid = 1
+		BEGIN
+			WITH CTE_TransId AS (
+				SELECT TransId, CustID
+				FROM SabaWalletTicket WITH (NOLOCK) 
+				WHERE custid = @custid 
+					AND WalletID = 2
+					AND WinlostDate BETWEEN @FromDate AND @ToDate
+			)
+			UPDATE @AgencyWinlossWithReward
+			SET rewardamount = a.Amount
+			FROM (
+				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
+				FROM CTE_TransId cte
+				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
+				GROUP BY cte.CustID
+			) a
+			INNER JOIN @AgencyWinlossWithReward b ON a.CustID = b.CustID
+		END
+		ELSE IF @roleid = 2
+		BEGIN
+			WITH CTE_TransId AS (
+				SELECT TransId, recommend AS CustID
+				FROM SabaWalletTicket WITH (NOLOCK) 
+				WHERE recommend = @custid 
+					AND WalletID = 2
+					AND WinlostDate BETWEEN @FromDate AND @ToDate
+			)
+			UPDATE @AgencyWinlossWithReward
+			SET rewardamount = a.Amount
+			FROM (
+				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
+				FROM CTE_TransId cte
+				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
+				GROUP BY cte.CustID
+			) a
+			INNER JOIN @AgencyWinlossWithReward b ON a.CustID = b.CustID
+		END
+		ELSE IF @roleid = 3
+		BEGIN
+			WITH CTE_TransId AS (
+				SELECT TransId, mrecommend AS CustID
+				FROM SabaWalletTicket WITH (NOLOCK) 
+				WHERE mrecommend = @custid 
+					AND WalletID = 2
+					AND WinlostDate BETWEEN @FromDate AND @ToDate
+			)
+			UPDATE @AgencyWinlossWithReward
+			SET rewardamount = a.Amount
+			FROM (
+				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
+				FROM CTE_TransId cte
+				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
+				GROUP BY cte.CustID
+			) a
+			INNER JOIN @AgencyWinlossWithReward b ON a.CustID = b.CustID
+		END
+		ELSE IF @roleid = 4
+		BEGIN	
+			WITH CTE_TransId AS (
+				SELECT TransId, srecommend AS CustID
+				FROM SabaWalletTicket WITH (NOLOCK) 
+				WHERE srecommend = @custid 
+					AND WalletID = 2
+					AND WinlostDate BETWEEN @FromDate AND @ToDate
+			)
+			UPDATE @AgencyWinlossWithReward
+			SET rewardamount = a.Amount
+			FROM (
+				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
+				FROM CTE_TransId cte
+				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
+				GROUP BY cte.CustID
+			) a
+			INNER JOIN @AgencyWinlossWithReward b ON a.CustID = b.CustID
+		END
+
+		FETCH NEXT FROM cur_custinfo INTO @custid, @roleid
+	END
 	
+	CLOSE cur_custinfo
+	DEALLOCATE cur_custinfo
+	
+	SELECT	
+		breakdown,
+		custid,	
+		username,	
+		currency,
+		RoleID,
+		turnover,
+		winlost AS member_winlost,
+		playercomm AS member_comm,
+		playertotal AS member_total,
+		ownerturnover AS owner_turnover,
+		ownerwinlost AS owner_winlost,
+		ownercomm AS owner_comm,
+		ownertotal AS owner_total,
+		company,
+		betcount,
+		GrossComm,
+		RewardAmount,
+		RewardCurrency
+	FROM @AgencyWinlossWithReward
+	ORDER BY breakdown, username
+
 	DROP TABLE #TmpCondSumWL
 	DROP TABLE #TmpCust
 	DROP TABLE #SportBettype
