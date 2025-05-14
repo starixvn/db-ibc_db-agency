@@ -50,6 +50,7 @@ AS
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 		- 20241119@Lewis: Direct Member [RedmineId: #211969]
 		- 20250512@Dave: Change datatype for ExchangeID [RedmineID: #226762]
+		- 20250514@Dave: Add Saba Soccer Marble Spinner - leaguegroupid = 252 [RedmineID: #223130]
 	
 	Param's Explanation:
 		. @ReportType:  1: Report by UserName
@@ -224,11 +225,11 @@ BEGIN
 					LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4,47)
 					LEFT JOIN (
 						SELECT LeagueGroupID, leagueid
-						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
+						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151,252)
 					 ) AS l  ON m.leagueid = l.leagueid
 					 OUTER APPLY (
 						SELECT CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
@@ -238,7 +239,7 @@ BEGIN
 								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 						ELSE 0 END sporttype, 
 						CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
@@ -359,11 +360,11 @@ BEGIN
 					LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4,47)
 					LEFT JOIN (
 						SELECT LeagueGroupID, leagueid
-						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
+						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151,252)
 					 ) AS l  ON m.leagueid = l.leagueid
 					OUTER APPLY (
 						SELECT CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
@@ -373,7 +374,7 @@ BEGIN
 								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 						ELSE 0 END sporttype, 
 						CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
@@ -497,11 +498,11 @@ BEGIN
 					LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4,47)
 					LEFT JOIN (
 						SELECT LeagueGroupID, leagueid
-						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
+						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151,252)
 					) AS l  ON m.leagueid = l.leagueid
 					OUTER APPLY (
 						SELECT CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
@@ -511,7 +512,7 @@ BEGIN
 								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 						ELSE 0 END sporttype, 
 						CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
@@ -632,11 +633,11 @@ BEGIN
 					LEFT JOIN dbo.match m WITH(NOLOCK) ON b.matchid = m.matchid AND m.eventdate = b.winlostdate AND m.sporttype IN (1,2,50,43,5,4,47)
 					LEFT JOIN (
 						SELECT LeagueGroupID, leagueid
-						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151)
+						FROM dbo.League l WITH(NOLOCK) WHERE l.LeagueGroupID IN (42,74,108,113,122,151,252)
 					) AS l  ON m.leagueid = l.leagueid
 					OUTER APPLY (
 						SELECT CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
@@ -646,7 +647,7 @@ BEGIN
 								  ) AND b.betdaqid <> -2 AND b.winlostdate >= @SeparateSabaSport_Cutoff THEN m.sporttype
 						ELSE 0 END sporttype, 
 						CASE WHEN ( 
-									(l.LeagueGroupID IN (42,74,108,113) AND m.sporttype = 1 ) 
+									(l.LeagueGroupID IN (42,74,108,113,252) AND m.sporttype = 1 ) 
 									 OR (l.LeagueGroupID IN (122, 42) AND m.sporttype = 2 )
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 50)
 									 OR (l.LeagueGroupID = 42 AND m.sporttype = 5) --SabaTennis
