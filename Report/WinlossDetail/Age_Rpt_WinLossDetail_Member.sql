@@ -54,6 +54,8 @@ Revisions:
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
+	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
+	
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -83,23 +85,16 @@ Revisions:
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @UserName_CustId INT
-
-	IF @Username <> ''	--@USERNAME IS NOT NULL		=> -1: No Data || >0: Exactly Username
-	BEGIN
-		SET @UserName_CustId = ISNULL((SELECT Custid FROM Customer WITH (NOLOCK) WHERE username = @UserName),-1)
-	END
-	ELSE				--@USERNAME IS NULL			=> Run all
-	BEGIN
-		SET @UserName_CustId = 0
-	END
-
 	DECLARE @RowStart	INT,
 			@RowEnd		INT;
 		
 	SELECT	@PageIndex = @PageIndex - 1,
 			@RowStart = @PageSize * @PageIndex + 1,
 			@RowEnd = @RowStart + @PageSize - 1;
+
+	DROP TABLE IF EXISTS #AgWinLossDetails;
+	DROP TABLE IF EXISTS #TmpCondSumWL;
+	DROP TABLE IF EXISTS #GrossComm;
 
 	CREATE TABLE #AgWinLossDetails(
 		CustID			INT,
@@ -113,7 +108,6 @@ BEGIN
 		NoOfTicket		INT,
 		RewardAmount	MONEY
 	);
-
 
 	CREATE TABLE #GrossComm (CustId INT, TurnoverNoDraw MONEY, GrossComm MONEY)
 
@@ -161,14 +155,37 @@ BEGIN
 			@CID	INT;
 	    
 	SELECT	@CID = @custid;
-		
-	DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX);
-	SELECT 
+
+	DECLARE @UserName_CustId INT,
+		@totalDownline INT, 
+		@downlineIds VARCHAR(MAX);
+
+	IF ISNULL(@Username,'') <> ''	--@USERNAME IS NOT NULL		=> -1: No Data || >0: Exactly Username
+	BEGIN
+		SET @UserName_CustId = ISNULL((SELECT Custid FROM Customer WITH (NOLOCK) WHERE username = @UserName),-1)
+		IF @UserName_CustId = -1
+			GOTO OUTPUT_RESULT;
+			
+		SELECT 
 			@totalDownline	= COUNT(1), 
 			@downlineIds	= STRING_AGG(CAST(custid AS VARCHAR(MAX)), ',')
-	FROM dbo.Customer c WITH(NOLOCK)
-	WHERE recommend = @CID
-		AND RoleId = 1
+		FROM dbo.Customer c WITH(NOLOCK)
+		WHERE c.custid = @UserName_CustId
+			AND recommend = @CID
+			AND RoleId = 1
+			
+	END
+	ELSE	
+	BEGIN
+		SET @UserName_CustId = 0; --> suport archived members
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@downlineIds	= STRING_AGG(CAST(custid AS VARCHAR(MAX)), ',')
+		FROM dbo.Customer c WITH(NOLOCK)
+		WHERE recommend = @CID
+			AND RoleId = 1
+	END
+
 	--TODO: bettrans range
 	SELECT @FDate = FromDate , @TDate = ToDate
 	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
@@ -395,6 +412,7 @@ BEGIN
 	END
 
 	--TODO: Result
+	OUTPUT_RESULT:
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
 		IF @IsReward = 1
@@ -433,8 +451,8 @@ BEGIN
 				SUM(NoOfTicket) AS NumberOfTickets,
 				SUM(RewardAmount) AS RewardAmount,
 				@CurrencyCode AS RewardCurrency
-		FROM #AgWinLossDetails
-		WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+			FROM #AgWinLossDetails
+			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
 		END
 		ELSE
 		BEGIN
@@ -470,7 +488,7 @@ BEGIN
 				SUM(NoOfTicket) AS NumberOfTickets
 		FROM #AgWinLossDetails
 		WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
-		END
+	END
 	END
 	ELSE
 	BEGIN
@@ -488,30 +506,30 @@ BEGIN
 		IF @IsReward = 1
 		BEGIN
 			SELECT wl.*
-		FROM (
-			SELECT	c.CustID AS CustId,
-					c.UserName AS CustName,
-					c.FirstName, 
-					c.LastName,
-					ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
-					SUM(TurnOver) AS Turnover,
-					SUM(TurnoverNoDraw) AS NetTurnover,
-					SUM(GrossComm) AS GrossComm,
-					SUM(MemberWinLost) AS MemberWinLoss,
-					SUM(PlayerComm) AS MemberComm,
-					SUM(AgWinlost) AS AgWinLoss,
-					SUM(AgComm) AS AgComm,
-					SUM(NoOfTicket) AS NumberOfTickets,
-					SUM(w.RewardAmount) AS RewardAmount,
-					@CurrencyCode AS RewardCurrency,
-					ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum	
-			FROM #AgWinLossDetails w 
-				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
-				OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl
-			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
-			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, ISNULL(wl.IsExistedWatchList,0)
-		) wl
-		WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+			FROM (
+				SELECT	c.CustID AS CustId,
+						c.UserName AS CustName,
+						c.FirstName, 
+						c.LastName,
+						ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
+						SUM(TurnOver) AS Turnover,
+						SUM(TurnoverNoDraw) AS NetTurnover,
+						SUM(GrossComm) AS GrossComm,
+						SUM(MemberWinLost) AS MemberWinLoss,
+						SUM(PlayerComm) AS MemberComm,
+						SUM(AgWinlost) AS AgWinLoss,
+						SUM(AgComm) AS AgComm,
+						SUM(NoOfTicket) AS NumberOfTickets,
+						SUM(w.RewardAmount) AS RewardAmount,
+						@CurrencyCode AS RewardCurrency,
+						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum	
+				FROM #AgWinLossDetails w 
+					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
+					OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl
+				WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
+				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, ISNULL(wl.IsExistedWatchList,0)
+			) wl
+			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
 
 			SELECT	NULL AS CustId,
 				'Total' AS CustName,
@@ -525,8 +543,8 @@ BEGIN
 				SUM(NoOfTicket) AS NumberOfTickets,
 				SUM(RewardAmount) AS RewardAmount,
 				@CurrencyCode AS RewardCurrency
-		FROM #AgWinLossDetails
-		WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
+			FROM #AgWinLossDetails
+			WHERE @UserName_CustId = 0 OR custid = @UserName_CustId;
 		END
 		ELSE
 		BEGIN
@@ -569,10 +587,6 @@ BEGIN
 		END
 	END
 
-	DROP TABLE #AgWinLossDetails;
-	DROP TABLE #TmpCondSumWL;
-	DROP TABLE #GrossComm;
-
-	SET NOCOUNT OFF;
+	
 END
 GO

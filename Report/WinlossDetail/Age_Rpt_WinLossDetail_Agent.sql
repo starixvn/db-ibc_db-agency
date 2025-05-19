@@ -54,6 +54,7 @@ Revisions:
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
+	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -91,6 +92,10 @@ BEGIN
 	SELECT	@PageIndex = @PageIndex - 1,
 			@RowStart = @PageSize * @PageIndex + 1,
 			@RowEnd = @RowStart + @PageSize - 1;
+	
+	DROP TABLE IF EXISTS #MAgWinLossDetails;
+	DROP TABLE IF EXISTS #TmpCondSumWL;
+	DROP TABLE IF EXISTS #GrossComm;
 
 	CREATE TABLE #MAgWinLossDetails
 	(
@@ -141,12 +146,12 @@ BEGIN
 	DECLARE @Srecommend int;
 	DECLARE @CurrencyCode VARCHAR(12);
 
-	SELECT @Srecommend = Srecommend,
+	SELECT @Srecommend = c.Srecommend,
 		   @CurrencyCode = e.Code
 	FROM dbo.CustInfo c WITH(NOLOCK)
 	INNER JOIN dbo.Exchange e WITH (NOLOCK)
 		ON c.currency = e.ExchangeId
-	WHERE CustID = @CustID;
+	WHERE c.CustID = @CustID;
 
 	--Avoid Parameter Sniffing for bettrans and sum_winloss
 	DECLARE @FDate	SMALLDATETIME,
@@ -155,40 +160,64 @@ BEGIN
 	    
 	SELECT	@CID = @custid;
 
-	--Username
-	DECLARE @UserName_CustId INT
+	--TODO: Search downline by username
+	DECLARE @UserName_CustId INT,
+		@totalDownline INT, 
+		@downlineIds VARCHAR(MAX)
 
 	IF ISNULL(@Username,'') <> ''	--@USERNAME IS NOT NULL		=> -1: No Data || >0: Exactly Username
 	BEGIN
-		SET @UserName_CustId = ISNULL((SELECT Custid FROM Customer WITH (NOLOCK) WHERE username = @UserName),-1)
+		SET @UserName_CustId = ISNULL((SELECT Custid FROM dbo.Customer WITH (NOLOCK) WHERE username = @UserName),-1)
+		IF @UserName_CustId = -1
+			GOTO OUTPUT_RESULT;
+
+		WITH cte_downline AS(
+			SELECT ci.custid
+			FROM dbo.Customer ci WITH(NOLOCK)
+			WHERE ci.custid = @UserName_CustId
+				AND mrecommend = @CID
+				AND ci.RoleId = 2
+				AND @LevelType IN (0,1)
+
+			UNION ALL
+
+			SELECT ci.custid
+			FROM dbo.Customer ci WITH(NOLOCK)
+			WHERE ci.custid = @UserName_CustId
+				AND mrecommend = @CID
+				AND ci.RoleId = 1
+				AND ci.recommend = -3
+				AND @LevelType IN (0,2)
+		)
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@downlineIds	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
+		FROM cte_downline cte
 	END
+	ELSE 
+	BEGIN
+		WITH cte_downline AS(
+			SELECT ci.custid
+			FROM dbo.Customer ci WITH(NOLOCK)
+			WHERE mrecommend = @CID
+				AND ci.RoleId = 2
+				AND @LevelType IN (0,1)
 
-	--DownlineList
-	DECLARE @totalDownline INT, @downlineIds VARCHAR(MAX)
+			UNION ALL
 
-	;WITH cte_downline AS(
-		SELECT ci.custid
-		FROM dbo.custinfo ci WITH(NOLOCK)
-		WHERE mrecommend = @CID
-			AND ci.RoleId = 2
-			AND @LevelType IN (0,1)
-
-		UNION ALL
-
-		SELECT ci.custid
-		FROM dbo.custinfo ci WITH(NOLOCK)
-		WHERE mrecommend = @CID
-			AND ci.RoleId = 1
-			AND recommend = -3
-			AND @LevelType IN (0,2)
-	)
-	SELECT 
-		@totalDownline	= COUNT(1), 
-		@downlineIds	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
-	FROM cte_downline cte
-	WHERE cte.custid = @UserName_CustId OR @UserName_CustId IS NULL
+			SELECT ci.custid
+			FROM dbo.Customer ci WITH(NOLOCK)
+			WHERE mrecommend = @CID
+				AND ci.RoleId = 1
+				AND recommend = -3
+				AND @LevelType IN (0,2)
+		)
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@downlineIds	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
+		FROM cte_downline cte
+	END
 	
-
 	--TODO: bettrans range
 	SELECT @FDate = FromDate , @TDate = ToDate
 	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
@@ -471,6 +500,7 @@ BEGIN
 	END
 	
 	--TODO: Result
+	OUTPUT_RESULT:
 	IF ((@PageSize <= 0) AND (@PageIndex <= 0))
 	BEGIN
 		IF @IsReward = 1
@@ -655,13 +685,6 @@ BEGIN
 					SUM(NoOfTicket) AS NumberOfTickets
 			FROM #MAgWinLossDetails;
 		END
-		
 	END
-
-	DROP TABLE #MAgWinLossDetails;
-	DROP TABLE #TmpCondSumWL;
-	DROP TABLE #GrossComm;
-
-	SET NOCOUNT OFF;
 END
 GO
