@@ -1623,7 +1623,7 @@ BEGIN
 					AND WalletID = 2
 					AND WinlostDate BETWEEN @FromDate AND @ToDate
 			)
-			UPDATE @AgencyWinlossWithReward
+			UPDATE @AgencyWinlossWithRewardTotal
 			SET rewardamount = a.Amount
 			FROM (
 				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
@@ -1631,7 +1631,7 @@ BEGIN
 				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
 				GROUP BY cte.CustID
 			) a
-			INNER JOIN @AgencyWinlossWithReward b ON a.CustID = b.CustID
+			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
 		END
 		ELSE IF @roleid = 2
 		BEGIN
@@ -1642,7 +1642,7 @@ BEGIN
 					AND WalletID = 2
 					AND WinlostDate BETWEEN @FromDate AND @ToDate
 			)
-			UPDATE @AgencyWinlossWithReward
+			UPDATE @AgencyWinlossWithRewardTotal	
 			SET rewardamount = a.Amount
 			FROM (
 				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
@@ -1650,7 +1650,7 @@ BEGIN
 				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
 				GROUP BY cte.CustID
 			) a
-			INNER JOIN @AgencyWinlossWithReward b ON a.CustID = b.CustID
+			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
 		END
 		ELSE IF @roleid = 3
 		BEGIN
@@ -1661,7 +1661,7 @@ BEGIN
 					AND WalletID = 2
 					AND WinlostDate BETWEEN @FromDate AND @ToDate
 			)
-			UPDATE @AgencyWinlossWithReward
+			UPDATE @AgencyWinlossWithRewardTotal
 			SET rewardamount = a.Amount
 			FROM (
 				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
@@ -1669,7 +1669,7 @@ BEGIN
 				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
 				GROUP BY cte.CustID
 			) a
-			INNER JOIN @AgencyWinlossWithReward b ON a.CustID = b.CustID
+			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
 		END
 		ELSE IF @roleid = 4
 		BEGIN
