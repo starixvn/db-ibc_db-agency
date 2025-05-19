@@ -1715,8 +1715,9 @@ BEGIN
 		sum(betcount) AS betcount,
 		sum(GrossComm) AS grosscomm,
 		sum(RewardAmount) AS rewardamount,
-		RewardCurrency
+		rewardcurrency
 	FROM @AgencyWinlossWithRewardTotal
+	WHERE currency = CASE WHEN @currency = 0 THEN currency ELSE @currency END
 	GROUP BY breakdown, custid, username, currency, roleid, rewardcurrency
 	ORDER BY breakdown, username
 
