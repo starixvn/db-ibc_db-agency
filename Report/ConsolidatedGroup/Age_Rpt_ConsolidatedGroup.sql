@@ -1607,11 +1607,11 @@ BEGIN
 		GROUP BY b.breakdown, b.custID, b.username, b.rewardcurrency, b.roleid, b.currency
 	END
 
-	DECLARE @roleid INT
+	DECLARE @roleid INT,@breakdown VARCHAR(30)
 	DECLARE cur_custinfo CURSOR FOR
-	SELECT custid, roleid FROM @AgencyWinlossWithRewardTotal
+	SELECT custid, roleid, breakdown FROM @AgencyWinlossWithRewardTotal
 	OPEN cur_custinfo
-	FETCH NEXT FROM cur_custinfo INTO @custid, @roleid
+	FETCH NEXT FROM cur_custinfo INTO @custid, @roleid, @breakdown
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
 		IF @roleid = 1
@@ -1621,7 +1621,8 @@ BEGIN
 				FROM SabaWalletTicket WITH (NOLOCK) 
 				WHERE custid = @custid 
 					AND WalletID = 2
-					AND WinlostDate BETWEEN @FromDate AND @ToDate
+					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
+						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
 			)
 			UPDATE @AgencyWinlossWithRewardTotal
 			SET rewardamount = a.Amount
@@ -1632,6 +1633,8 @@ BEGIN
 				GROUP BY cte.CustID
 			) a
 			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
+			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
+				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
 		END
 		ELSE IF @roleid = 2
 		BEGIN
@@ -1640,7 +1643,8 @@ BEGIN
 				FROM SabaWalletTicket WITH (NOLOCK) 
 				WHERE recommend = @custid 
 					AND WalletID = 2
-					AND WinlostDate BETWEEN @FromDate AND @ToDate
+					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
+						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
 			)
 			UPDATE @AgencyWinlossWithRewardTotal	
 			SET rewardamount = a.Amount
@@ -1651,6 +1655,8 @@ BEGIN
 				GROUP BY cte.CustID
 			) a
 			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
+			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
+				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
 		END
 		ELSE IF @roleid = 3
 		BEGIN
@@ -1659,7 +1665,8 @@ BEGIN
 				FROM SabaWalletTicket WITH (NOLOCK) 
 				WHERE mrecommend = @custid 
 					AND WalletID = 2
-					AND WinlostDate BETWEEN @FromDate AND @ToDate
+					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
+						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
 			)
 			UPDATE @AgencyWinlossWithRewardTotal
 			SET rewardamount = a.Amount
@@ -1670,6 +1677,8 @@ BEGIN
 				GROUP BY cte.CustID
 			) a
 			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
+			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
+				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
 		END
 		ELSE IF @roleid = 4
 		BEGIN
@@ -1678,7 +1687,8 @@ BEGIN
 				FROM SabaWalletTicket WITH (NOLOCK) 
 				WHERE srecommend = @custid 
 					AND WalletID = 2
-					AND WinlostDate BETWEEN @FromDate AND @ToDate
+					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
+						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
 			)
 			UPDATE @AgencyWinlossWithRewardTotal
 			SET rewardamount = a.Amount
@@ -1689,9 +1699,11 @@ BEGIN
 				GROUP BY cte.CustID
 			) a
 			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
+			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
+				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
 		END
 
-		FETCH NEXT FROM cur_custinfo INTO @custid, @roleid
+		FETCH NEXT FROM cur_custinfo INTO @custid, @roleid, @breakdown
 	END
 	
 	CLOSE cur_custinfo
