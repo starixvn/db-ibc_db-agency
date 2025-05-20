@@ -1199,162 +1199,29 @@ BEGIN
 		DROP TABLE #TmpSum_WinLoss_Old
 	END
 	
-	IF @isSAg = 1
-	BEGIN		
-		;WITH CTE_TransId AS (
-			SELECT TransId, srecommend AS CustID
-				, CASE WHEN @ReportType = 1 THEN srecommend WHEN @ReportType = 2 THEN winlostdate ELSE 1 END AS breakdown
-			FROM SabaWalletTicket WITH (NOLOCK) 
-			WHERE srecommend = @custid 
-				AND WalletID = 2
-				AND WinlostDate BETWEEN @FromDate AND @ToDate
-		)
-				
-		INSERT INTO @AgencyWinlossWithReward
-		(
-			breakdown,
-			custid,
-			username,
-			currency,
-			roleid,
-			rewardcurrency
-		)
-		
-		SELECT
-			a.breakdown,
-			c.custid,
-			c.username,
-			c.currency,
-			c.roleid,
-			e.Code
-		FROM (
-			SELECT cte.CustID, cte.breakdown
-			FROM CTE_TransId cte
-			INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-			GROUP BY cte.CustID, cte.breakdown
-		) a
-		INNER JOIN custInfo c WITH(NOLOCK) ON c.custid = a.custid
-		INNER JOIN Exchange e WITH(NOLOCK) ON e.ExchangeId = c.currency
-		GROUP BY c.custid, e.Code, c.username, c.currency, c.roleid, a.breakdown
-	END
+	INSERT INTO @AgencyWinlossWithReward
+	(
+		breakdown,
+		custid,
+		username,
+		currency,
+		roleid,
+		rewardcurrency
+	)
+	SELECT CASE WHEN @ReportType = 2 THEN swt.WinlostDate WHEN @ReportType = 3 THEN 1 ELSE c.custid END AS breakdown,
+		c.custid,
+		c.username,
+		c.currency,
+		c.roleid,
+		e.Code
+	FROM SabaWalletTicket swt WITH(NOLOCK)
+	INNER JOIN #TmpCust c ON c.custid = CASE WHEN c.roleid = 4 THEN swt.srecommend
+											 WHEN c.roleid = 3 THEN swt.mrecommend
+											 WHEN c.roleid = 2 THEN swt.recommend
+											 ELSE swt.custid END
+	INNER JOIN Exchange e WITH(NOLOCK) ON e.ExchangeId = c.currency
+	WHERE swt.WinlostDate BETWEEN @FromDate AND @ToDate
 	
-	IF @isMAg = 1
-	BEGIN		
-		;WITH CTE_TransId AS (
-			SELECT TransId, mrecommend AS CustID
-				, CASE WHEN @ReportType = 1 THEN mrecommend WHEN @ReportType = 2 THEN winlostdate ELSE 1 END AS breakdown
-			FROM SabaWalletTicket WITH (NOLOCK) 
-			WHERE mrecommend = @custid 
-				AND WalletID = 2
-				AND WinlostDate BETWEEN @FromDate AND @ToDate
-		)
-				
-		INSERT INTO @AgencyWinlossWithReward
-		(
-			breakdown,
-			custid,
-			username,
-			currency,
-			roleid,
-			rewardcurrency
-		)
-		
-		SELECT
-			a.breakdown,
-			c.custid,
-			c.username,
-			c.currency,
-			c.roleid,
-			e.Code
-		FROM (
-			SELECT cte.CustID, cte.breakdown
-			FROM CTE_TransId cte
-			INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-			GROUP BY cte.CustID, cte.breakdown
-		) a
-		INNER JOIN custInfo c WITH(NOLOCK) ON c.custid = a.custid
-		INNER JOIN Exchange e WITH(NOLOCK) ON e.ExchangeId = c.currency
-		GROUP BY c.custid, e.Code, c.username, c.currency, c.roleid, a.breakdown
-	END
-	
-	IF @isAg = 1
-	BEGIN		
-		;WITH CTE_TransId AS (
-			SELECT TransId, recommend AS CustID
-				, CASE WHEN @ReportType = 1 THEN recommend WHEN @ReportType = 2 THEN winlostdate ELSE 1 END AS breakdown
-			FROM SabaWalletTicket WITH (NOLOCK) 
-			WHERE recommend = @custid 
-				AND WalletID = 2
-				AND WinlostDate BETWEEN @FromDate AND @ToDate
-		)
-				
-		INSERT INTO @AgencyWinlossWithReward
-		(
-			breakdown,
-			custid,
-			username,
-			currency,
-			roleid,
-			rewardcurrency
-		)
-		
-		SELECT
-			a.breakdown,
-			c.custid,
-			c.username,
-			c.currency,
-			c.roleid,
-			e.Code
-		FROM (
-			SELECT cte.CustID, cte.breakdown
-			FROM CTE_TransId cte
-			INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-			GROUP BY cte.CustID, cte.breakdown
-		) a
-		INNER JOIN custInfo c WITH(NOLOCK) ON c.custid = a.custid
-		INNER JOIN Exchange e WITH(NOLOCK) ON e.ExchangeId = c.currency
-		GROUP BY c.custid, e.Code, c.username, c.currency, c.roleid, a.breakdown
-	END
-	
-	IF @isMem = 1
-	BEGIN		
-		;WITH CTE_TransId AS (
-			SELECT TransId, CustID
-				, CASE WHEN @ReportType = 1 THEN CustID WHEN @ReportType = 2 THEN winlostdate ELSE 1 END AS breakdown
-			FROM SabaWalletTicket WITH (NOLOCK) 
-			WHERE CustID = @custid 
-				AND WalletID = 2
-				AND WinlostDate BETWEEN @FromDate AND @ToDate
-		)
-				
-		INSERT INTO @AgencyWinlossWithReward
-		(
-			breakdown,
-			custid,
-			username,
-			currency,
-			roleid,
-			rewardcurrency
-		)
-		
-		SELECT
-			a.breakdown,
-			c.custid,
-			c.username,
-			c.currency,
-			c.roleid,
-			e.Code
-		FROM (
-			SELECT cte.CustID, cte.breakdown
-			FROM CTE_TransId cte
-			INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-			GROUP BY cte.CustID, cte.breakdown
-		) a
-		INNER JOIN custInfo c WITH(NOLOCK) ON c.custid = a.custid
-		INNER JOIN Exchange e WITH(NOLOCK) ON e.ExchangeId = c.currency
-		GROUP BY c.custid, e.Code, c.username, c.currency, c.roleid, a.breakdown
-	END
-
 	IF @ReportType = 1
 	BEGIN
 		INSERT INTO @AgencyWinlossWithRewardTotal
