@@ -1443,7 +1443,7 @@ BEGIN
 		AND a.roleid = r.roleid;
 
 	SELECT	
-		CASE WHEN @ReportType = 2 THEN CONVERT(VARCHAR(10), CAST(breakdown AS DATETIME), 111) ELSE breakdown END AS breakdown,
+		CASE WHEN @ReportType = 2 THEN CONVERT(VARCHAR(10), CAST(breakdown AS SMALLDATETIME), 111) ELSE breakdown END AS breakdown,
 		custid,	
 		username,	
 		currency,
@@ -1463,7 +1463,7 @@ BEGIN
 		rewardcurrency
 	FROM @AgencyWinlossWithRewardTotal
 	WHERE currency = CASE WHEN @currency = 0 THEN currency ELSE @currency END
-	ORDER BY breakdown, username
+	ORDER BY CASE WHEN @ReportType = 2 THEN CAST(REPLACE(CONVERT(VARCHAR(10), CAST(breakdown AS SMALLDATETIME), 111), '/', '') AS INT) ELSE CAST(breakdown AS INT) END, username
 
 	DROP TABLE #TmpCondSumWL
 	DROP TABLE #TmpCust
