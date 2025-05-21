@@ -1397,108 +1397,51 @@ BEGIN
 		GROUP BY b.breakdown, b.custID, b.username, b.rewardcurrency, b.roleid, b.currency
 	END
 
-	DECLARE @roleid INT,@breakdown VARCHAR(30)
-	DECLARE cur_custinfo CURSOR FOR
-	SELECT custid, roleid, breakdown FROM @AgencyWinlossWithRewardTotal
-	OPEN cur_custinfo
-	FETCH NEXT FROM cur_custinfo INTO @custid, @roleid, @breakdown
-	WHILE @@FETCH_STATUS = 0
-	BEGIN
-		IF @roleid = 1
-		BEGIN
-			WITH CTE_TransId AS (
-				SELECT TransId, CustID
-				FROM SabaWalletTicket WITH (NOLOCK) 
-				WHERE custid = @custid 
-					AND WalletID = 2
-					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
-						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
+	-- Replace cursor-based reward processing with set-based approach
+	;WITH CTE_RewardProcessing AS (
+		SELECT 
+			a.breakdown,
+			a.custid,
+			a.roleid,
+			a.rewardcurrency,
+			swt.WinlostDate,
+			swt.TransId,
+			swt.Amount,
+			swt.WalletID,
+			CASE 
+				WHEN a.roleid = 1 THEN swt.custid
+				WHEN a.roleid = 2 THEN swt.recommend
+				WHEN a.roleid = 3 THEN swt.mrecommend
+				WHEN a.roleid = 4 THEN swt.srecommend
+			END AS RoleCustID
+		FROM @AgencyWinlossWithRewardTotal a
+		INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON 
+			swt.WinlostDate BETWEEN 
+				CASE WHEN @ReportType = 2 THEN a.breakdown ELSE @FromDate END AND 
+				CASE WHEN @ReportType = 2 THEN a.breakdown ELSE @ToDate END
+			AND swt.WalletID = 2
+			AND (
+				(a.roleid = 1 AND swt.custid = a.custid) OR
+				(a.roleid = 2 AND swt.recommend = a.custid) OR
+				(a.roleid = 3 AND swt.mrecommend = a.custid) OR
+				(a.roleid = 4 AND swt.srecommend = a.custid)
 			)
-			UPDATE @AgencyWinlossWithRewardTotal
-			SET rewardamount = a.Amount
-			FROM (
-				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
-				FROM CTE_TransId cte
-				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-				GROUP BY cte.CustID
-			) a
-			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
-			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
-				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
-		END
-		ELSE IF @roleid = 2
-		BEGIN
-			WITH CTE_TransId AS (
-				SELECT TransId, recommend AS CustID
-				FROM SabaWalletTicket WITH (NOLOCK) 
-				WHERE recommend = @custid 
-					AND WalletID = 2
-					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
-						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
-			)
-			UPDATE @AgencyWinlossWithRewardTotal	
-			SET rewardamount = a.Amount
-			FROM (
-				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
-				FROM CTE_TransId cte
-				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-				GROUP BY cte.CustID
-			) a
-			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
-			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
-				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
-		END
-		ELSE IF @roleid = 3
-		BEGIN
-			WITH CTE_TransId AS (
-				SELECT TransId, mrecommend AS CustID
-				FROM SabaWalletTicket WITH (NOLOCK) 
-				WHERE mrecommend = @custid 
-					AND WalletID = 2
-					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
-						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
-			)
-			UPDATE @AgencyWinlossWithRewardTotal
-			SET rewardamount = a.Amount
-			FROM (
-				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
-				FROM CTE_TransId cte
-				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-				GROUP BY cte.CustID
-			) a
-			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
-			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
-				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
-		END
-		ELSE IF @roleid = 4
-		BEGIN
-			WITH CTE_TransId AS (
-				SELECT TransId, srecommend AS CustID
-				FROM SabaWalletTicket WITH (NOLOCK) 
-				WHERE srecommend = @custid 
-					AND WalletID = 2
-					AND WinlostDate BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE @FromDate END AND 
-						CASE WHEN @ReportType = 2 THEN @breakdown ELSE @ToDate END
-			)
-			UPDATE @AgencyWinlossWithRewardTotal
-			SET rewardamount = a.Amount
-			FROM (
-				SELECT cte.CustID, SUM(ISNULL(swt.Amount,0)) AS Amount
-				FROM CTE_TransId cte
-				INNER JOIN SabaWalletTicket swt WITH (NOLOCK) ON cte.TransId = swt.TransId
-				GROUP BY cte.CustID
-			) a
-			INNER JOIN @AgencyWinlossWithRewardTotal b ON a.CustID = b.CustID
-			WHERE b.breakdown BETWEEN CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END AND
-				CASE WHEN @ReportType = 2 THEN @breakdown ELSE b.breakdown END
-		END
+	)
+	UPDATE a
+	SET a.rewardamount = ISNULL(r.TotalAmount, 0)
+	FROM @AgencyWinlossWithRewardTotal a
+	LEFT JOIN (
+		SELECT 
+			breakdown,
+			custid,
+			roleid,
+			SUM(Amount) as TotalAmount
+		FROM CTE_RewardProcessing
+		GROUP BY breakdown, custid, roleid
+	) r ON a.breakdown = r.breakdown 
+		AND a.custid = r.custid 
+		AND a.roleid = r.roleid;
 
-		FETCH NEXT FROM cur_custinfo INTO @custid, @roleid, @breakdown
-	END
-	
-	CLOSE cur_custinfo
-	DEALLOCATE cur_custinfo
-	
 	SELECT	
 		CASE WHEN @ReportType = 2 THEN CONVERT(VARCHAR(10), CAST(breakdown AS DATETIME), 111) ELSE breakdown END AS breakdown,
 		custid,	
