@@ -84,6 +84,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
 		- 20250421@Dave: Add Rich Gaming [Redmine: #224863]
 		- 20250506@Dave: Remove sportType (126, 127) of VS7 (106) [RedmineID: #221188]
+		- 20250513@Dave: Add Saba Soccer Marble Spinner & W Casino [RedmineID: #223130]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -103,6 +104,7 @@ RETURN
 				(1, 4, 0, 42, 0), -- Virtual Ice Hockey,
 				(1, 47, 0, 42, 0), -- SABA Kabaddi,
 				(1, 1, 0, 113, 0), -- SABA Soccer PinGoal,
+				(1, 1, 0, 252, 0), -- Saba Soccer Marble Spinner
 				(1, 2, 0, 122, 0), -- SABA Basketball PinGoal,
 				(1, 43, 0, 151, 0), -- SABA ESports PinGoal
 				(6, 251, 71, 0, 0), (6, 208, 0, 0, 0), (6, 209, 0, 0, 0), (6, 210, 0, 0, 0), --RNG Casino
@@ -194,6 +196,7 @@ RETURN
 				,(106, 125, 0, 0, 0) --VS7 Virtual Steeple Chase
 				,(108, 123, 0, 0, 0) -- RGRNG Rich Gaming 
 				,(108, 123, 15899, 0, 0) -- RGRNG Rich Gaming (PromotionPrize)
+				,(98, 136, 0, 0, 0) -- W Casino (WLC)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
