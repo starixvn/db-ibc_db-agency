@@ -28,6 +28,7 @@ AS
 		- 20250213@Lewis: Add ASKMESLOT [RedmineID: #219675]
 		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
 		- 20250421@Dave: Add Rich Gaming [Redmine: #224863]
+		- 20250509@Dave:  Add Saba Soccer Marble Spinner [Redmine: #223130]
 		
 */
 RETURN
@@ -74,6 +75,8 @@ RETURN
 	SELECT 'ProductDetail' AS RefId, '24' AS ResourceId, 1 AS ProductId, 47 AS Sporttype, 0 AS Bettype, 16 AS [Order], 42 AS LeagueGroupID,  0 AS TicketType, 25 AS ChildResourceId -- SABA Kabaddi
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '15' AS ResourceId, 1 AS ProductId, 1 AS Sporttype, 0 AS Bettype, 18 AS [Order], 113 AS LeagueGroupID,  0 AS TicketType, NULL AS ChildResourceId -- SABA Soccer PinGoal
+	UNION ALL 
+	SELECT 'ProductDetail' AS RefId, '15' AS ResourceId, 1 AS ProductId, 1 AS Sporttype, 0 AS Bettype, 18 AS [Order], 252 AS LeagueGroupID,  0 AS TicketType, 45 AS ChildResourceId -- Saba Soccer Marble
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '16' AS ResourceId, 1 AS ProductId, 2 AS Sporttype, 0 AS Bettype, 19 AS [Order], 122 AS LeagueGroupID,  0 AS TicketType, NULL AS ChildResourceId -- SABA Basketball PinGoal
 	UNION ALL 
