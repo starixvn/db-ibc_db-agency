@@ -32,6 +32,7 @@ AS
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
 		- 20250421@Dave: Exclude VS6 - enhance report [RedmineID: #224890]
 		- 20250411@Dave: Add VS7 - EventType = 3, League3rd [RedmineID: #221188]
+		- 20250427@Dave: HotFix - Exclude Matchs, Outright are deleted [RedmineID: #228680]
 */
  
 BEGIN
@@ -53,6 +54,7 @@ BEGIN
 		FROM dbo.match WITH (NOLOCK)
 		WHERE eventdate BETWEEN @FromDate AND @ToDate
 			AND eventStatus <> 'closed'
+			AND IsDeleted <> 1
 		GROUP BY leagueid, eventdate
 	)
 	INSERT INTO #tmp (IsToday, EventDate, Sporttype, Entered, NonEntered)
@@ -80,6 +82,7 @@ BEGIN
 		WHERE m.eventdate BETWEEN @FromDate AND @ToDate
 			AND m.OddsStatus <> 'closed'
 			AND l.isTest <= @IncludeTestData
+			AND m.IsDeleted <> 1
 			
 		GROUP BY m.LeagueID, l.sporttype, m.eventdate, m.GroupMatch
 	) AS match
