@@ -1,7 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02" executers="wsv_CashService" isFunction="0" isNested=""></info>*/
 ALTER PROCEDURE  [dbo].[Age_CashServiceBilling_DailyTransFee_Ins]
 	@CustId         INT, -- Customer ID of the agent
-    @CashTransFees  VARCHAR(MAX), -- JSON string containing transaction fees
+    @ChargeDate     SMALLDATETIME, -- Date for the charge
     @IP             VARCHAR(15) = '127.0.0.1',
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
@@ -16,35 +16,34 @@ AS
 
     Description:
         - @CustId: Customer ID of the agent
-        - @CashTransFees: [{"TransactionType":2,"NumTrans":5,"TransIds":"123,456"}]
+        - @ChargeDate: Date for the charge
 */
 BEGIN
     SET NOCOUNT ON;
 
     DECLARE 
         @Today              SMALLDATETIME,  -- Current date without time
-		@Yesterday			SMALLDATETIME,
+        @PreviousDay        SMALLDATETIME,  -- Previous day date
         @transdate          DATETIME = GETDATE(), -- Transaction date
         @winlostdate        SMALLDATETIME,
-        @bettype_MANUAL_DEPOSIT     INT = 31005,
-        @bettype_AUTO_DEPOSIT       INT = 31006,
-        @bettype_MANUAL_WITHDRAW    INT = 31007
+        @bettype_FEE        INT = 31005
         ;
 
     SELECT @winlostdate = CAST(@transdate AS DATE)
         , @Today = CAST(GETDATE() AS DATE)
         , @ErrCode = 0
         , @ErrMsg = ''
-		, @Yesterday = DATEADD(DAY, -10, @Today)
+        , @ChargeDate = ISNULL(@ChargeDate, @Today) -- Default to today if not provided
+        , @PreviousDay = DATEADD(DAY, -1, @ChargeDate) -- Previous day date
     ;
 
-    -- Check if the agent already has a daily fee record for today
+    -- Check if the agent already has a daily fee record for charge date
     IF EXISTS (
         SELECT 1
         FROM dbo.[transfer] WITH (NOLOCK)
-        WHERE custid = @custid 
-            AND Winlostdate = @Today 
-            AND bettype IN (@bettype_MANUAL_DEPOSIT, @bettype_AUTO_DEPOSIT, @bettype_MANUAL_WITHDRAW) -- Daily fee types
+        WHERE custid = @CustId 
+            AND Winlostdate = @ChargeDate 
+            AND bettype IN (@bettype_FEE) -- Daily fee types
     )
     BEGIN
         SET @ErrCode = 101;
@@ -53,7 +52,7 @@ BEGIN
     END
 
     -- Initialize variables
-    DECLARE @amount MONEY, @chargeFEE MONEY = 0.150, @numTrans INT = 0,
+    DECLARE @amount MONEY, @chargeFEE MONEY = 0.150,
         @agentid INT, @agUser VARCHAR(50),
         @transDesc_FEE VARCHAR(1000),
         @mrecommend INT, @maUser VARCHAR(50),
@@ -76,7 +75,7 @@ BEGIN
         @currName = e.currency,
         @actualrate = e.actualrate,
         @agUser = ci.username
-    FROM CustDB.dbo.custInfo ci WITH(NOLOCK) 
+    FROM CustDB.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
     INNER JOIN CustDB.dbo.Exchange e WITH(NOLOCK) ON ci.currency = e.exchangeId
 	WHERE ci.CustId = @CustId
     AND ci.roleId  = 2 -- Ensure the customer is an agent
@@ -85,7 +84,7 @@ BEGIN
     SELECT 
         @saUser = IIF(custid=srecommend,username,@saUser),
         @maUser = IIF(custid=mrecommend,username,@maUser)
-    FROM CustDB.dbo.custInfo ci WITH(NOLOCK) 
+    FROM CustDB.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
 	WHERE CustId IN (@srecommend, @mrecommend)
 
     -- Get the creator's custid based on username
@@ -122,37 +121,50 @@ BEGIN
         SET @ErrMsg = 'Do not support cross currency transfer.';
         RETURN;
     END
-    
-    -- Use WHILE loop to process each row in @transactionFee
-    DECLARE @RowNum INT = 1;
-    DECLARE @MaxRowNum INT;
-    DECLARE @bettype_FEE INT, @transIds_FEE VARCHAR(MAX);
 
     -- Create temp table to store transaction fee summary
-    DECLARE @transactionFee TABLE (
-        RowNum INT IDENTITY(1,1),
-        --TransactionType INT,
+    DECLARE @FeeRowCount INT;
+    DECLARE @AgentTransactionFee TABLE (
+        RowNum INT IDENTITY(1,1) PRIMARY KEY,
+        AgentId INT,
+        CompletedDate SMALLDATETIME,
         NumTrans INT,
-		TransIds VARCHAR(MAX)
+        TransIds VARCHAR(MAX)
     );
-    -- Insert rows into @transactionFee from JSON variable @CashTransFees
-    INSERT INTO @transactionFee (NumTrans, TransIds)
-    SELECT 
-        --JSON_VALUE([value], '$.TransactionType') AS TransactionType,
-        JSON_VALUE([value], '$.NumTrans') AS NumTrans,
-        JSON_VALUE([value], '$.TransIds') AS TransIds
-    FROM OPENJSON(@CashTransFees)
-    ;SET @MaxRowNum = @@ROWCOUNT;
 
+    INSERT INTO @AgentTransactionFee(AgentId, CompletedDate, numTrans, TransIds)
+    SELECT 
+        ci.recommend AS AgentId
+        , TRY_CAST(ct.OperatedTime AS DATE) AS CompletedDate
+        , COUNT(1) AS numTrans
+        , STRING_AGG(CAST(TransId AS VARCHAR(MAX)), ',') AS TransIds
+    FROM dbo.[CashTransaction] ct WITH (NOLOCK)
+    INNER JOIN CustDB.dbo.vw_CashService_Customer ci (NOLOCK) ON ci.custid = ct.CustId
+    WHERE 
+        ci.recommend = @CustId
+        AND ct.OperatedTime >= @PreviousDay AND ct.OperatedTime < @ChargeDate
+        AND ct.statusID = 4 -- Only consider successful transactions
+        AND ct.PaymentType = 2 -- Only consider bank transactions
+        AND ct.TransactionTypeID IN (1, 2, 3) -- Only consider deposits and withdrawals
+        AND TRY_CAST(JSON_VALUE(ct.ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) IS NULL
+    GROUP BY ci.recommend
+        , TRY_CAST(ct.OperatedTime AS DATE)
+    HAVING COUNT(1) > 0
+    ;SET @FeeRowCount = @@ROWCOUNT;
+    
     -- Check if there are any transactions in @transactionFee
-    IF NOT EXISTS (SELECT 1 FROM @transactionFee)
+    IF @FeeRowCount = 0
     BEGIN
         SET @ErrCode = 103;
         SET @ErrMsg = 'There is No CASH transactions found for the agent.';
         RETURN;
     END
 
-    
+        
+    -- Use WHILE loop to process each row in @transactionFee
+    DECLARE @RowNum INT;
+    DECLARE @numTrans INT = 0, @CompletedDate SMALLDATETIME, @transIds_FEE VARCHAR(MAX);
+
     -- Generate reference numbers for the fee and period records
     DECLARE 
           @RefNo_FEE_1      BIGINT
@@ -166,10 +178,10 @@ BEGIN
         , @transId_FEE_6    BIGINT = 0  
     ;
     
-    WHILE @RowNum <= @MaxRowNum
+    SET @RowNum = 1;
+    WHILE @RowNum <= @FeeRowCount
     BEGIN
-        SELECT @bettype_FEE = 31005 -- Default bet type for fees
-            , @numTrans = 0
+        SELECT @numTrans = 0
             , @RefNo_FEE_1 = 0, @RefNo_FEE_2 = 0, @RefNo_FEE_3 = 0
             , @transId_FEE_1 = 0, @transId_FEE_2 = 0, @transId_FEE_3 = 0
             , @transId_FEE_4 = 0, @transId_FEE_5 = 0, @transId_FEE_6 = 0
@@ -179,9 +191,10 @@ BEGIN
 
         -- Get the current transaction type and number of transactions
         SELECT 
-            @numTrans = NumTrans,
-			@transIds_FEE = TransIds
-        FROM @transactionFee
+            @numTrans       = cf.NumTrans,
+			@transIds_FEE   = cf.TransIds,
+            @CompletedDate  = cf.CompletedDate
+        FROM @AgentTransactionFee cf
         WHERE RowNum = @RowNum;
 
         -- Initialize variables for the current transaction type
@@ -249,14 +262,14 @@ BEGIN
                         AND RefNo > 0 -- Ensure the reference number is valid
                 
                 )
-                --SELECT * FROM CTE_Transfer
+                --SELECT * FROM CTE_Transfer;
                 INSERT INTO [Transfer]
                 (transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-                    winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-                    scomm, swinlost,ip,statusID, RepUpdateTime)
+                   winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+                   scomm, swinlost,ip,statusID, RepUpdateTime)
                 SELECT transid, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
-                    winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
-                    scomm, swinlost,ip,statusID, RepUpdateTime
+                   winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
+                   scomm, swinlost,ip,statusID, RepUpdateTime
                 FROM CTE_Transfer
 
 				-- UPDATE CashTransaction
@@ -265,7 +278,11 @@ BEGIN
 					FROM STRING_SPLIT(@transIds_FEE, ',')
 				)
 				UPDATE ct
-				SET ct.ExtraInfo = JSON_MODIFY(ISNULL(ct.ExtraInfo, '{}'), '$.ChargedAt', FORMAT(GETDATE(), 'yyyy-MM-dd HH:mm:ss'))
+				SET ct.ExtraInfo = JSON_MODIFY(
+									JSON_MODIFY(
+										JSON_MODIFY(ISNULL(ct.ExtraInfo, '{}'), '$.ChargedAt', FORMAT(GETDATE(), 'yyyy-MM-dd HH:mm:ss'))
+										, '$.Fee', TRY_CAST(@chargeFEE AS VARCHAR(10))
+									), '$.CompletedDate', FORMAT(@CompletedDate, 'yyyy-MM-dd'))
 				FROM dbo.CashTransaction ct WITH(ROWLOCK, UPDLOCK)
 				INNER JOIN CTE_TransID cte ON cte.TransId = ct.TransId
 				;
@@ -289,26 +306,26 @@ BEGIN
 
     -- Log the successful insertion
     BEGIN TRY	
-      DECLARE @LogData NVARCHAR(4000);
-      DECLARE @FromCustID INT = 0; -- Initialize FromCustID
-      SELECT @FromCustID = @HouseId
-          , @LogData = 'Insert Daily Cash Transaction Fee for Agent: custid=' + CAST(@agentId AS NVARCHAR(10)) + ', username: ' + CAST(@agUser AS NVARCHAR(20))+ ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd');
-      EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                              @UserID		= @Creator, 
-                              @FromCustID   = @FromCustID, 
-                              @ToCustID	    = @custID, 
-                              @IP			= @IP, 
-                              @Doing		= @LogData 
+     DECLARE @LogData NVARCHAR(4000);
+     DECLARE @FromCustID INT = 0; -- Initialize FromCustID
+     SELECT @FromCustID = @HouseId
+         , @LogData = 'Insert Daily Cash Transaction Fee for Agent: custid=' + CAST(@agentId AS NVARCHAR(10)) + ', username: ' + CAST(@agUser AS NVARCHAR(20))+ ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd');
+     EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+                             @UserID		= @Creator, 
+                             @FromCustID   = @FromCustID, 
+                             @ToCustID	    = @custID, 
+                             @IP			= @IP, 
+                             @Doing		= @LogData 
     END TRY
     BEGIN CATCH
-      SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
+     SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
     
-      EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                          @UserID		= @Creator, 
-                          @FromCustID   = @FromCustID, 
-                          @ToCustID	    = @custID, 
-                          @IP			= @IP, 
-                          @Doing		= @LogData
+     EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+                         @UserID		= @Creator, 
+                         @FromCustID   = @FromCustID, 
+                         @ToCustID	    = @custID, 
+                         @IP			= @IP, 
+                         @Doing		= @LogData
     END CATCH
 
 END
