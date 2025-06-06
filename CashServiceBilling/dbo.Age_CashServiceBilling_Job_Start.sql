@@ -99,20 +99,34 @@ BEGIN
 		OR @TotalInputCount <> @TotalAgentCount
 	BEGIN
 		SELECT @ErrCode = 100
-			,@ErrMsg	= 'No valid agent data found in the input list.'
-		RETURN
+			,@ErrMsg	= 'Invalid AgentList input. Please check the input data.';
+		GOTO LOG_DATA; -- Exit the loop and go to log data section
 	END
+
+	-- Log the start of the job
+	DECLARE @tmp_LogData AS TABLE (
+		RowNum INT IDENTITY(1,1) PRIMARY KEY
+		,LogTypeId TINYINT --1: Insert Transfer
+		,UserID	INT
+		,FromCustID	INT
+		,ToCustID	INT
+		,IP	VARCHAR(45)
+		,Doing	VARCHAR(1000)
+	)
 
 	-- TODO: Issue Cash Service Fees & Free Periods
 	DECLARE @AgentId 	INT, 
 		@TrialEndTime 	SMALLDATETIME,
 		@ServiceType 	TINYINT,
-		@Row 			INT = 1
+		@Row 			INT = 1,
+		@LogItem 		NVARCHAR(MAX)
+	;
 
 	WHILE EXISTS (SELECT 1 FROM #tmpAgent WHERE RowNum = @Row)
 	BEGIN
 		SELECT @ErrCode		= 0,
-				@ErrMsg		= ''
+			@ErrMsg			= '',
+			@LogItem		= '';
 
 		SELECT 
 			@AgentId 		= AgentId,
@@ -127,6 +141,7 @@ BEGIN
 			EXEC dbo.Age_CashServiceBilling_DailyFee_Ins 
 				@CustId			= @AgentId,
 				@TrialEndTime	= @TrialEndTime,
+				@LogData 		= @LogItem OUTPUT,
 				@ErrCode		= @ErrCode OUTPUT,
 				@ErrMsg			= @ErrMsg OUTPUT;
 
@@ -134,7 +149,22 @@ BEGIN
 			BEGIN
 				-- If there is an error, log it and exit the loop
 				SELECT @ErrMsg = 'Error processing Service Fees AgentId: ' + CAST(@AgentId AS NVARCHAR(10)) + ' - ' + @ErrMsg;
-				RETURN;
+				GOTO LOG_DATA; -- Exit the loop and go to log data section
+			END
+			ELSE 
+			BEGIN
+				-- Parse JSON log details and insert into @tmp_LogData
+				INSERT INTO @tmp_LogData (
+					LogTypeId, UserID, FromCustID, ToCustID, IP, Doing)
+				SELECT 
+					1 AS LogTypeId,
+					TRY_CAST(JSON_VALUE([value], '$.UserID') AS INT) AS UserID,
+					TRY_CAST(JSON_VALUE([value], '$.FromCustID') AS INT),
+					TRY_CAST(JSON_VALUE([value], '$.ToCustID') AS INT),
+					TRY_CAST(JSON_VALUE([value], '$.IP') AS VARCHAR(15)),
+					TRY_CAST(JSON_VALUE([value], '$.Doing') AS VARCHAR(1000))
+				FROM OPENJSON(@LogItem)
+				WHERE @ErrCode = 0; -- Only insert if no error occurred
 			END
 		END
 
@@ -180,7 +210,8 @@ BEGIN
 	BEGIN
 		SELECT @AgentId		= 0,
 			@ErrCode 		= 0,
-			@ErrMsg 		= ''
+			@ErrMsg 		= '',
+			@LogItem 		= '';
 
 		SELECT 
 			@AgentId		= AgentId
@@ -191,13 +222,29 @@ BEGIN
 		EXEC dbo.Age_CashServiceBilling_DailyTransFee_Ins 
 			@custid			= @AgentId,
 			@ChargeDate		= @Today,
+			@LogData 		= @LogItem OUTPUT,
 			@ErrCode		= @ErrCode OUTPUT,
 			@ErrMsg			= @ErrMsg OUTPUT;
 
 		IF @ErrCode > 110 -- DB error code for cash transaction fee processing
 		BEGIN
 			SELECT @ErrMsg = 'Error processing Transaction Fees AgentId: ' + CAST(@AgentId AS NVARCHAR(10)) + ' - ' + @ErrMsg;
-			RETURN;
+			GOTO LOG_DATA; -- Exit the loop and go to log data section
+		END
+		ELSE 
+		BEGIN
+			-- Parse JSON log details and insert into @tmp_LogData
+			INSERT INTO @tmp_LogData (
+				LogTypeId, UserID, FromCustID, ToCustID, IP, Doing)
+			SELECT 
+				1 AS LogTypeId,
+				TRY_CAST(JSON_VALUE([value], '$.UserID') AS INT) AS UserID,
+				TRY_CAST(JSON_VALUE([value], '$.FromCustID') AS INT),
+				TRY_CAST(JSON_VALUE([value], '$.ToCustID') AS INT),
+				TRY_CAST(JSON_VALUE([value], '$.IP') AS VARCHAR(15)),
+				TRY_CAST(JSON_VALUE([value], '$.Doing') AS VARCHAR(1000))
+			FROM OPENJSON(@LogItem)
+			WHERE @ErrCode = 0; -- Only insert if no error occurred
 		END
 
 		SET @FeeRow = @FeeRow + 1;
@@ -211,5 +258,30 @@ BEGIN
 		FROM dbo.SystemSettings s WITH (ROWLOCK, UPDLOCK)
 		WHERE s.VName = @CashBilling_VName;
 	END
+
+	LOG_DATA:
+	-- Paging: Output @tmp_LogData in pages of 100 rows as JSON array of arrays
+	DECLARE @pageSize INT = 10;
+	WITH LogPages AS (
+		SELECT 
+			((ROW_NUMBER() OVER (ORDER BY (SELECT 1)) - 1) / @pageSize + 1) AS [Page],
+			UserID, FromCustID, ToCustID, IP, Doing
+		FROM @tmp_LogData
+	)
+	, PageJson AS (
+		SELECT 
+			[Page],
+			(
+				SELECT UserID, FromCustID, ToCustID, IP, Doing
+				FROM LogPages lp2
+				WHERE lp2.[Page] = lp.[Page]
+				FOR JSON AUTO
+			) AS LogData
+		FROM LogPages lp
+		GROUP BY [Page]
+	)
+	SELECT [Page], LogData
+	FROM PageJson
+	ORDER BY [Page];
 END
 GO

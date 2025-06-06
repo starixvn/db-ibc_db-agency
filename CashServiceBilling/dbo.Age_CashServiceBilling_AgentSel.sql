@@ -1,4 +1,6 @@
 /*<info serverAlias="DBCUST-AgencyCashService" executers="wsv_CashService" isFunction="0" isNested="0"></info>*/
+use AgencyCashService
+GO
 ALTER PROCEDURE  [dbo].[Age_CashServiceBilling_AgentSel]
 AS
 /*

@@ -3,6 +3,7 @@ ALTER PROCEDURE  [dbo].[Age_CashServiceBilling_DailyTransFee_Ins]
 	@CustId         INT, -- Customer ID of the agent
     @ChargeDate     SMALLDATETIME, -- Date for the charge
     @IP             VARCHAR(15) = '127.0.0.1',
+    @LogData        VARCHAR(MAX) = '' OUTPUT,
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS
@@ -35,6 +36,7 @@ BEGIN
         , @ErrMsg = ''
         , @ChargeDate = ISNULL(@ChargeDate, @Today) -- Default to today if not provided
         , @PreviousDay = DATEADD(DAY, -1, @ChargeDate) -- Previous day date
+        , @LogData = ''
     ;
 
     -- Check if the agent already has a daily fee record for charge date
@@ -305,28 +307,15 @@ BEGIN
     END
 
     -- Log the successful insertion
-    BEGIN TRY	
-        DECLARE @LogData NVARCHAR(4000);
-        DECLARE @FromCustID INT = 0; -- Initialize FromCustID
-        SELECT @FromCustID = @HouseId
-            , @LogData = 'Insert Daily Cash Transaction Fee for Agent: custid=' + CAST(@agentId AS NVARCHAR(10)) + ', username: ' + CAST(@agUser AS NVARCHAR(20))+ ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd');
-        EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                             @UserID		= @Creator, 
-                             @FromCustID    = @FromCustID, 
-                             @ToCustID	    = @custID, 
-                             @IP			= @IP, 
-                             @Doing		    = @LogData 
-    END TRY
-    BEGIN CATCH
-        SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
-
-        EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                         @UserID		= @Creator, 
-                         @FromCustID    = @FromCustID, 
-                         @ToCustID	    = @custID, 
-                         @IP			= @IP, 
-                         @Doing		    = @LogData
-    END CATCH
-
+    SELECT @LogData = (
+        SELECT 1 AS LogTypeId,
+            @Creator AS UserID, @HouseId AS FromCustID, @AgentId AS ToCustID,
+            @AgentId AS CustID, @IP AS IP,
+            Doing = CONCAT('Insert Daily Cash Transaction Fee for Agent: custid=', @agentId,
+                ', username=', @agUser,
+                ', winlostdate=', FORMAT(@winlostdate, 'yyyy-MM-dd'),
+                ', refno=', @RefNo_FEE_1)
+        FOR JSON PATH
+    );
 END
 GO

@@ -3,6 +3,7 @@ ALTER PROCEDURE  [dbo].[Age_CashServiceBilling_DailyFee_Ins]
 	@CustId         INT, -- Customer ID of the agent
     @TrialEndTime   SMALLDATETIME, -- Trial end time for the agent 
     @IP             VARCHAR(15) = '127.0.0.1',
+    @LogData        NVARCHAR(MAX) = '' OUTPUT, -- Log data for the operation
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS
@@ -31,6 +32,7 @@ BEGIN
         , @ErrMsg = ''
         , @bettype_FEE      = 31003
         , @bettype_PERIOD   = 31004
+        , @LogData = ''
     ;
 
     -- Check if the agent already has a daily fee record for today
@@ -43,7 +45,7 @@ BEGIN
     )
     BEGIN
         SET @ErrCode = 101;
-        SET @ErrMsg = 'Daily fee record already exists for today.';
+        SET @ErrMsg = CONCAT('Daily fee record already exists for today. CustId = ', @CustId, ', Today = ', FORMAT(@Today, 'yyyy-MM-dd'));
         RETURN;
     END
 
@@ -272,28 +274,16 @@ BEGIN
     END CATCH
 
     -- Log the successful insertion
-    BEGIN TRY	
-        DECLARE @LogData NVARCHAR(4000);
-        DECLARE @FromCustID INT = 0; -- Initialize FromCustID
-        SELECT @FromCustID = @HouseId
-            , @LogData = 'Insert Daily Fee and Period Records for Agent: custid' + CAST(@custid AS NVARCHAR(10)) + ', username: ' + CAST(@agUser AS NVARCHAR(20))+ ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd') + ', Trial End Time: ' + FORMAT(@TrialEndTime, 'yyyy-MM-dd');
-        EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                               @UserID		= @Creator, 
-                               @FromCustID  = @FromCustID, 
-                               @ToCustID	= @custID, 
-                               @IP			= @IP, 
-                               @Doing		= @LogData 
-    END TRY
-    BEGIN CATCH
-        SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
-
-        EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                           @UserID		= @Creator, 
-                           @FromCustID  = @FromCustID, 
-                           @ToCustID	= @custID, 
-                           @IP			= @IP, 
-                           @Doing		= @LogData
-    END CATCH
-
+    SELECT @LogData = (
+        SELECT 1 AS LogTypeId,
+            @Creator AS UserID, @HouseId AS FromCustID, @AgentId AS ToCustID,
+            @AgentId AS CustID, @IP AS IP,
+            Doing = CONCAT('Insert Daily Fee and Period Records for Agent: custid=', @custid,
+                ', username=', @agUser,
+                ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd'),
+                ', Trial End Time: ' + FORMAT(@TrialEndTime, 'yyyy-MM-dd'),
+                ', refno=', @RefNo_FEE_1)
+        FOR JSON PATH
+    );
 END
 GO
