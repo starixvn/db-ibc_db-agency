@@ -273,23 +273,23 @@ BEGIN
 
     -- Log the successful insertion
     BEGIN TRY	
-       DECLARE @LogData NVARCHAR(4000);
-       DECLARE @FromCustID INT = 0; -- Initialize FromCustID
-       SELECT @FromCustID = @HouseId
-           , @LogData = 'Insert Daily Fee and Period Records for Agent: custid' + CAST(@custid AS NVARCHAR(10)) + ', username: ' + CAST(@agUser AS NVARCHAR(20))+ ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd') + ', Trial End Time: ' + FORMAT(@TrialEndTime, 'yyyy-MM-dd');
-       EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+        DECLARE @LogData NVARCHAR(4000);
+        DECLARE @FromCustID INT = 0; -- Initialize FromCustID
+        SELECT @FromCustID = @HouseId
+            , @LogData = 'Insert Daily Fee and Period Records for Agent: custid' + CAST(@custid AS NVARCHAR(10)) + ', username: ' + CAST(@agUser AS NVARCHAR(20))+ ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd') + ', Trial End Time: ' + FORMAT(@TrialEndTime, 'yyyy-MM-dd');
+        EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
                                @UserID		= @Creator, 
-                               @FromCustID = @FromCustID, 
+                               @FromCustID  = @FromCustID, 
                                @ToCustID	= @custID, 
                                @IP			= @IP, 
                                @Doing		= @LogData 
     END TRY
     BEGIN CATCH
-       SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
-    
-       EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
+        SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
+
+        EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
                            @UserID		= @Creator, 
-                           @FromCustID = @FromCustID, 
+                           @FromCustID  = @FromCustID, 
                            @ToCustID	= @custID, 
                            @IP			= @IP, 
                            @Doing		= @LogData

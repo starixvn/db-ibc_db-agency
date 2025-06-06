@@ -10,16 +10,35 @@ AS
     - 20250526@Bobby: Initial [RedmineID: #227215]
 */
 BEGIN
-	SET NOCOUNT ON;
+    SET NOCOUNT ON;
+
+    ;WITH AgentInfo AS (
+        SELECT 
+            ca.AgentId,
+            StartTime = FORMAT(ISNULL(ca.StartTime, ''), 'yyyy-MM-dd'),
+            TrialEndTime = FORMAT(ISNULL(ca.TrialEndTime, ''), 'yyyy-MM-dd'),
+            cs.ServiceType,
+            si2.SiteDBGroupId
+        FROM dbo.CashAgentManagement ca WITH(NOLOCK)
+        INNER JOIN [CustDB].[dbo].[vw_CashService_Customer] ci WITH(NOLOCK) ON ca.AgentId = ci.CustID
+        INNER JOIN [CustDB].[dbo].[Site] si2 WITH(NOLOCK) ON si2.[site] = ci.[site]
+        LEFT JOIN [CustDB].[dbo].[vw_CustInfoExtra] cs WITH(NOLOCK) ON ca.AgentId = cs.CustID
+        WHERE ca.TrialEndTime IS NOT NULL
+            AND ci.RoleID = 2
+            AND cs.ServiceType = 1
+    )
     SELECT 
-        ca.AgentId,
-        StartTime = FORMAT(ISNULL(ca.StartTime, ''), 'yyyy-MM-dd'),
-        TrialEndTime = FORMAT(ISNULL(ca.TrialEndTime, ''), 'yyyy-MM-dd'),
-        ServiceType = ISNULL(cs.ServiceType, 0)
-    FROM dbo.CashAgentManagement ca WITH(NOLOCK)
-    INNER JOIN [CustDB].[dbo].[vw_Customer] ci WITH(NOLOCK) ON ca.AgentId = ci.CustID
-    LEFT JOIN [CustDB].[dbo].[vw_CustInfoExtra] cs WITH(NOLOCK) ON ca.AgentId = cs.CustID
-    WHERE ca.TrialEndTime IS NOT NULL
-        AND ci.RoleID = 2 -- Assuming 2 is the role ID for agents
-        --AND cs.[ServiceType] IN (1) -- Assuming 1 is valid service types for agents
+        SiteDBGroupId,
+        AgentList = (
+            SELECT 
+                AgentId,
+                StartTime,
+                TrialEndTime,
+                ServiceType
+            FROM AgentInfo ai
+            WHERE ai.SiteDBGroupId = cte.SiteDBGroupId
+            FOR JSON PATH
+        )
+    FROM AgentInfo cte
+    GROUP BY SiteDBGroupId
 END
