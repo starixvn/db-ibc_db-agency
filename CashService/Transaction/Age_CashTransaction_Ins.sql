@@ -17,7 +17,7 @@ ALTER PROCEDURE dbo.Age_CashTransaction_Ins
 	@PaymentFrom VARCHAR(100) = NULL,
     @PaymentTo VARCHAR(100) = NULL,
     @PaySlip VARBINARY(MAX) = NULL,
-    @ExtraInfo	NVARCHAR(100) = NULL,
+    @ExtraInfo	NVARCHAR(1000) = NULL,
 	@AdjustCreditAmt MONEY = NULL,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
@@ -31,6 +31,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 
 	Parameter's Explanation:
 		@TransactionTypeID:  

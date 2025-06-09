@@ -1,13 +1,13 @@
-/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService,wsv_nap,wsv_alp,wsv_alpv,wsv_xnap" selecters="" viewers="" isFunction="0" isNested=""></info>*/
+/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService" selecters="" viewers="" isFunction="0" isNested=""></info>*/
 ALTER PROCEDURE [dbo].[Age_CashTransaction_RevertDeposit_Upd]  
 	@TransId BIGINT,
 	@SiteDBGroupID	SMALLINT,
 	@Remark NVARCHAR(2000) = NULL,
-	@IsForce BIT = 0,
 	@UserId INT = 0, 
 	@IP VARCHAR(50) = '',
 	@ErrCode	INT = 0 OUTPUT,
-	@ErrMsg	VARCHAR(2000) = NULL OUTPUT
+	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
+	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT
 AS  
 /*
 	Created: 20250502@Max		
@@ -16,6 +16,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
@@ -24,11 +25,12 @@ BEGIN
 
 	DECLARE @StatusId_before TINYINT
 		,@AdjustAmount MONEY
-		,@Transfer_RefNo BIGINT
+		,@RevertRefNo BIGINT
 		,@CustId INT
 		,@LogData VARCHAR(MAX)
 		,@LogDataMask VARCHAR(MAX)
 		,@TransactionTypeId TINYINT
+		,@TransferRefNo BIGINT
 
 	IF @SiteDBGroupID <> dbo.f_Get_SiteDBGroupID() OR @SiteDBGroupID IS NULL
 	BEGIN
@@ -53,11 +55,11 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
-	SELECT @StatusId_before = StatusId, @AdjustAmount = c.AdjustCreditAmt, @Transfer_RefNo = c.TransferRefNo, @CustId = c.CustId, @TransactionTypeId = c.TransactionTypeID
+	SELECT @StatusId_before = StatusId, @AdjustAmount = c.AdjustCreditAmt, @RevertRefNo = c.TransferRefNo, @CustId = c.CustId, @TransactionTypeId = c.TransactionTypeID
 	FROM dbo.CashTransaction c WITH (NOLOCK)
 	WHERE c.TransId = @TransId
 
-	IF @StatusId_before = 4 OR @IsForce = 1
+	IF @StatusId_before = 4
 	BEGIN
 		 -- Step 1: Validate the input data
 		BEGIN TRY
@@ -80,31 +82,27 @@ BEGIN
 			RETURN
 		END CATCH
 
+		--Revert deposit need to call SP withdrawal 
 		BEGIN TRY
-			EXEC dbo.Age_CashService_Balance_Rollback
+			EXEC dbo.Age_CashWithdrawal_ManualAdd_InsTransfer 
 				@CustID = @CustID,
 				@UplineID = @UserId,
 				@Amount = @AdjustAmount,
-				@ExchangeRate = 1,
 				@IP = @IP,
-				@TransactionTypeId = @TransactionTypeId,
+				@RevertRefNo = @RevertRefNo,
 				@ErrCode = @ErrCode OUTPUT,
-				@ErrMsg = @ErrMsg OUTPUT,
-				@TransferRefNo = @Transfer_RefNo OUTPUT
+				@ErrMsg = @ErrMsg OUTPUT
 
 			IF @ErrCode <> 0
 			BEGIN
-				GOTO Writelog;
+				RETURN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogDataMask = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
-									'UserId="'+ COALESCE(CAST(@UserId AS VARCHAR(20)), SPACE(1)) + '" ' +
-									'Transfer_RefNo ="'+ COALESCE(CAST(@Transfer_RefNo AS VARCHAR(20)), SPACE(1)) + '" ' +
-									'Amount="'+ COALESCE(CAST(@AdjustAmount AS VARCHAR(50)), SPACE(1)) + + '" />'
+				SELECT @LogData = 'Insert revert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), 31002) + ', amount = ' + CONVERT(VARCHAR(20), @AdjustAmount) + ', Ref.No: ' + CONVERT(VARCHAR(20), @RevertRefNo)
 
-				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue,TrackingValueMask)
-				SELECT 1, @UserId, @CustID, 9999991, @LogData, @LogDataMask
+				INSERT INTO @tmp_LogData (LogTypeId, UserID, FromCustID, ToCustID, IP, Doing)
+				SELECT 1, @UserId, @UserId, @CustID, @IP, @LogData
 			END
 		END TRY
 		BEGIN CATCH
@@ -112,6 +110,35 @@ BEGIN
 			,@ErrMsg = ERROR_MESSAGE()
 
 			RETURN
+		END CATCH
+
+		-- Adjust accumulated credit
+		BEGIN TRY
+			EXEC dbo.Age_CashAccumulatedCredit_Adjust 
+				@CustID = @CustID,
+				@ActionType = 4, --Revert Deposit
+				@Amount = @AdjustAmount,
+				@ErrCode = @ErrCode OUTPUT,
+				@ErrMsg	= @ErrMsg OUTPUT,
+				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
+
+			IF @ErrCode <> 0
+			BEGIN
+				RETURN
+			END
+			ELSE --Insert data for writelog
+			BEGIN
+				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'ActionType="'+ COALESCE(CAST(4 AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'Amount="'+ COALESCE(CAST(@AdjustAmount AS VARCHAR(100)), SPACE(1)) + '" ' + '" />'
+
+				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
+				SELECT 3, @UserId, @CustID, 310102, @LogData
+			END
+		END TRY
+		BEGIN CATCH
+			SELECT @ErrCode = ERROR_NUMBER()
+				,@ErrMsg = ERROR_MESSAGE()
 		END CATCH
 	END
 
@@ -136,7 +163,7 @@ BEGIN
 								'After_StatusId="'+ COALESCE(CAST(2 AS VARCHAR(3)), SPACE(1)) + '" />'
 
 			INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-			SELECT 2, @UserId, @CustID, 9999993, @LogData
+			SELECT 2, @UserId, @CustID, 310101, @LogData
 		END
 	END TRY
 	BEGIN CATCH

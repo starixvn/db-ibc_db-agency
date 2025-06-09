@@ -27,6 +27,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -37,6 +38,8 @@ BEGIN
 		,@LogData VARCHAR(MAX)
 		,@LogDataMask VARCHAR(MAX)
 		,@AdjustCreditAmt	MONEY
+		,@TransId_From	BIGINT = NULL
+		,@TransId_To	BIGINT = NULL
 
 	DECLARE @tmp_LogData AS TABLE (
 		LogTypeId TINYINT --1: Insert Transfer, 2: Insert/Update CashTransaction, 3: Insert/Update Accumulate Return Credit 
@@ -135,21 +138,31 @@ BEGIN
 			@IP = @IP,
 			@ErrCode = @ErrCode OUTPUT,
 			@ErrMsg = @ErrMsg OUTPUT,
-			@TransferRefNo = @TransferRefNo OUTPUT
+			@TransferRefNo = @TransferRefNo OUTPUT,
+			@TransId_From = @TransId_From OUTPUT,
+			@TransId_To = @TransId_To OUTPUT
 
 		IF @ErrCode <> 0
 		BEGIN
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1,
+				@TransId = @TransId
+
 			GOTO Writelog;
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogData = 'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), 31001) + ', amount = ' + CONVERT(VARCHAR(20), @amount) 
+			SELECT @LogData = 'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), 31001) + ', amount = ' + CONVERT(VARCHAR(20), @amount) + ', Ref.No: ' + CONVERT(VARCHAR(20), @TransferRefNo) 
 
 			INSERT INTO @tmp_LogData (LogTypeId, UserID, FromCustID, ToCustID, IP, Doing)
 			SELECT 1, @UplineID, @CustID, @UplineID, @IP, @LogData
 		END
 	END TRY
 	BEGIN CATCH
+		EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1,
+				@TransId = @TransId
+
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 
@@ -169,8 +182,14 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
-			--Rollback Cash Transaction ???
-			--Rollback Transfer ???
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1,
+				@TransId = @TransId,
+				@Custid = @CustID,
+				@TransId_From = @TransId_From,
+				@TransId_To = @TransId_To,
+				@Amount = @AdjustCreditAmt
+
 			GOTO Writelog;
 		END
 		ELSE --Insert data for writelog
@@ -185,6 +204,14 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
+		EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1,
+				@TransId = @TransId,
+				@Custid = @CustID,
+				@TransId_From = @TransId_From,
+				@TransId_To = @TransId_To,
+				@Amount = @AdjustCreditAmt
+
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 
@@ -203,9 +230,14 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
-			--Rollback CashAccumCredit???
-			--Rollback Cash Transaction ???
-			--Rollback Transfer ???
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1,
+				@TransId = @TransId,
+				@Custid = @CustID,
+				@TransId_From = @TransId_From,
+				@TransId_To = @TransId_To,
+				@Amount = @AdjustCreditAmt
+
 			GOTO Writelog;
 		END
 		ELSE --Insert data for writelog
@@ -221,6 +253,14 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
+		EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1,
+				@TransId = @TransId,
+				@Custid = @CustID,
+				@TransId_From = @TransId_From,
+				@TransId_To = @TransId_To,
+				@Amount = @AdjustCreditAmt
+
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 

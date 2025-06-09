@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService,wsv_nap,wsv_alp,wsv_alpv,wsv_xnap" selecters="" viewers="" isFunction="0" isNested=""></info>*/
+/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService" selecters="" viewers="" isFunction="0" isNested=""></info>*/
 ALTER PROCEDURE dbo.Age_CashWithdrawal_Validate 
 (
     @CustID INT,
@@ -17,6 +17,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -29,30 +30,18 @@ BEGIN
 		,@beforebalance MONEY
 		,@postbalance MONEY
 
-	-- #1 CHECK UM TRANSFER FUNCTION
-	EXEC DBCUST.CUSTDB.dbo.Acc_Transfer_CheckUM  
-		@CustID = @custid
-		,@Language = 'E'
-		,@ErrMsg = @ErrMsg OUTPUT 
-		,@ErrCode = @ErrCode OUTPUT
-	 
-	IF @ErrCode <> 0  -- Function Transfer is under UM 
-	BEGIN
-		RETURN		
-	END
-
 	SELECT @roleid = roleid
 	FROM CustDB.dbo.custinfo AS ci WITH(NOLOCK)
 	WHERE ci.custid = @custid
 
-	-- #2 Check roleid
+	-- #1 Check roleid
 	IF @roleid <> 1
 	BEGIN
 		SELECT @ErrMsg = 'Invalid Role ID.', @ErrCode = 102		
 		RETURN
 	END
 
-	-- #3 Check Limit Amount
+	-- #2 Check Limit Amount
 	IF @Amount NOT BETWEEN ISNULL(@MinLimitAmt,0) AND @MaxLimitAmt
 	BEGIN
 		SELECT @ErrMsg = 'Sorry, amount is invalid.', @ErrCode = 101	
