@@ -12,6 +12,7 @@ AS
 	
 	Revisions:
 		- 20250321@Helios: Agency Cash Service [Redmine: #223896]
+		- 20250604@Eden: Alpha - Agency Cash Service [redmine: #223896] 
 	
 	Sample:
 		EXEC Age_CashMemberBankInfoSel @CustID = 1176093, @BankCode = 'KKR', @BankAccountNumber = '730918204765'
@@ -24,6 +25,7 @@ BEGIN
 		INNER JOIN CashBankList a WITH(NOLOCK) 
 				ON b.BankID = a.BankID
 	WHERE b.CustId = @CustID
+		AND b.IsActive = 1
 		AND ISNULL(@BankCode, a.BankCode) = a.BankCode
 		AND ISNULL(@BankAccountNumber, b.AccountNumber) = b.AccountNumber
 END
