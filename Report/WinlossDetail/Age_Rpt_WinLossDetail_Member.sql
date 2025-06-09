@@ -55,7 +55,6 @@ Revisions:
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
-	- 20250529@Virgil: Cash Service - Billing service and Report changes [RedmineId: #227984]
 	
 	
 	Param's Explanation:
@@ -349,31 +348,6 @@ BEGIN
 			AND recommend = @CID
 			AND RoleID = 1
 		GROUP BY CustID;
-
-		-- Cash Service Billing 
-		IF @ProductIDs + ',' LIKE '%,111,%'
-		BEGIN
-			INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
-			SELECT tr.CustId,
-					0 AS TurnOver,
-					0 AS TurnoverNoDraw,
-					0 AS GrossComm,
-					0 AS MemberWinLost,
-					0 AS PlayerComm, 
-					SUM(WinLost-Actual_Stake) AS AgWinLost,
-					0 AS AgComm, 
-					0 AS NoOfTicket
-			FROM dbo.Transfer tr (NOLOCK)
-			INNER JOIN (	
-						SELECT DISTINCT ma.ProductID, ma.BetType
-						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
-						WHERE ma.ProductID = 111
-							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
-							AND ma.RefTable = 4
-						) f ON tr.Bettype = f.BetType
-			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
-				AND tr.CustId = @CID
-		END
 	END
 
 	--TODO: sum_winloss_old range
@@ -444,7 +418,7 @@ BEGIN
 		IF @IsReward = 1
 		BEGIN
 			SELECT	c.CustID AS CustId, 
-					CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+					c.UserName AS CustName,
 					c.FirstName, 
 					c.LastName,
 					ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
@@ -483,7 +457,7 @@ BEGIN
 		ELSE
 		BEGIN
 			SELECT	c.CustID AS CustId, 
-					CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+					c.UserName AS CustName,
 					c.FirstName, 
 					c.LastName,
 					ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
@@ -534,7 +508,7 @@ BEGIN
 			SELECT wl.*
 			FROM (
 				SELECT	c.CustID AS CustId,
-						CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+						c.UserName AS CustName,
 						c.FirstName, 
 						c.LastName,
 						ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
@@ -577,7 +551,7 @@ BEGIN
 			SELECT wl.*
 			FROM (
 				SELECT	c.CustID AS CustId,
-						CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+						c.UserName AS CustName,
 						c.FirstName, 
 						c.LastName,
 						ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
