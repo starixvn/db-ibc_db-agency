@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService,wsv_nap,wsv_alp,wsv_alpv,wsv_xnap" selecters="" viewers="" isFunction="0" isNested=""></info>*/
+/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService" selecters="" viewers="" isFunction="0" isNested=""></info>*/
 ALTER PROCEDURE dbo.Age_CashDeposit_ManualAdd_InsTransfer
 (
     @CustID INT,
@@ -9,7 +9,9 @@ ALTER PROCEDURE dbo.Age_CashDeposit_ManualAdd_InsTransfer
 	@IP VARCHAR(50) = '',
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
-	@TransferRefNo	BIGINT = NULL OUTPUT
+	@TransferRefNo	BIGINT = NULL OUTPUT,
+	@TransId_From	BIGINT = NULL OUTPUT,
+	@TransId_To	BIGINT = NULL OUTPUT
 )
 AS
 /*
@@ -19,6 +21,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -106,34 +109,6 @@ BEGIN
 		@winlost = @amount,
 		@actual_stake = 0,
 		@WalletType = CASE	WHEN @BonusID > 0 THEN 2 ELSE NULL END
-	
-	--TODO: get MBU days
-	SET @MoveBetsDay = NULL
-	EXEC dbo.NAP_Admin_GetMovebetDate @MovebetDate = @MoveBetsDay OUTPUT
-	EXEC dbo.NAP_Admin_GetBalanceUpDate @BalanceUpDate = @BalanceUpDate OUTPUT
-
-	WHILE (@IsDiff = 1)
-	BEGIN
-		----check MB date, BU date again to make sure it is not changed
-		SELECT @NewMoveBetsDay = NULL, @NewBalanceUpDate = NULL
-		EXEC dbo.Acc_ReCheck_MBUDate 
-			@MBDate = @moveBetsDay,
-			@BUDate = @BalanceUpDate,
-			@IsDiff = @IsDiff OUTPUT,
-			@NewMBDate = @NewMoveBetsDay OUTPUT,
-			@NewBUDate = @NewBalanceUpDate OUTPUT
-
-		IF @IsDiff = -1 
-		BEGIN
-			SELECT @ErrMsg = 'BalanceUpDate value is null. Please contact DBA for support.', @ErrCode = 109				
-			RETURN	
-		END
-
-		IF @IsDiff = 1 
-		BEGIN
-			SELECT @MoveBetsDay = @NewMoveBetsDay, @BalanceUpDate = @NewBalanceUpDate
-		END
-	END
 
 	-- PROCESS: insert transfer
 	BEGIN TRY
@@ -145,8 +120,7 @@ BEGIN
 		IF @TransferRefNo = 0
 		BEGIN
 			EXEC Get_Refno_Transid @RefNo = @TransferRefNo OUTPUT
-		END
-		
+		END	
 		----------------------------------
 		---- Checking the balance of customer before updating the amount on Credit or Debit table 
 
@@ -161,21 +135,6 @@ BEGIN
 		--Get member balance
 		EXEC dbo.Age_CashService_CashBalance_Sel @CustId = @CustId , @TotalCash = @beforebalance OUTPUT
 
-		--Update BalanceDebit 
-		IF @Cust_Balance < 0 
-		BEGIN
-			SELECT @Count = 1;
- 			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Cust_balance_ABS, @type = @BalanceType, @IsForced = @IsForced, @errCode = @ErrCode OUTPUT
-			IF @ErrCode <> 0
-			BEGIN
-				SELECT	@ErrCode = 105	
-						,@ErrMsg = 'Insert transaction failed.' + ' STEP: ' + CONVERT(NVARCHAR(1), @Count) + '. ERROR_MESSAGE: Update balance debit failed'  + ' - ERROR_NUMBER: ' + CONVERT(VARCHAR(20), @ErrCode)
-				
-				RAISERROR(@ErrMsg, 11, 1); --- will be handled in the Begin...Catch block code
-			END
-			SET @stepDone += POWER(2*1, 1); --Done BalanceDebit-2^1
-		END 
-
 		SELECT @transdate = CURRENT_TIMESTAMP
 			,@winlostdate = CAST(@transdate AS DATE);
 		
@@ -184,16 +143,18 @@ BEGIN
 		---get new @bal_transid 
 		EXEC Get_Bettrans_TransID @TransID = @bal_transid OUTPUT
 
+		SELECT @TransId_From = @TransId, @TransId_To = @bal_transid
+
 		BEGIN TRY
 			SELECT @Count = 2
 			INSERT INTO dbo.Transfer 
 				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
 				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
 			VALUES 
-				(@TransId, @CustID, @username, @TransferRefNo, @transdate, @DDEP, 'To Customer :: ' + @bal_Username,@winlost, @actual_stake, @winlostdate, ISNULL(@beforebalance, 0),
+				(@TransId, @CustID, @username, @TransferRefNo, @transdate, @DDEP, 'From Customer :: ' + @bal_Username,@winlost, @actual_stake, @winlostdate, ISNULL(@beforebalance, 0),
 				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, NULL, SYSDATETIME()),
 				 --dummy trans
-				 (@bal_transid, @UplineID, @bal_Username, @TransferRefNo, @transdate, @DDEP, 'From Customer :: ' + @username, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, NULL, 
+				 (@bal_transid, @UplineID, @bal_Username, @TransferRefNo, @transdate, @DDEP, 'To Customer :: ' + @username, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, NULL, 
 				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, '0', SYSDATETIME())
 			
 			SET @stepDone += POWER(2*1, 2); --Done transfer-2^2
@@ -259,12 +220,6 @@ BEGIN
 				RepUpdateTime = SYSDATETIME()
 			WHERE transid IN (@transid, @bal_transid) AND refno = @TransferRefNo
 				AND @stepDone & 4 = 4
-		END
-
-		--TODO: Rollback BalanceDebit 
-		IF @Cust_balance < 0 AND @stepDone & 2 = 2
-		BEGIN 
- 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Cust_Balance_ABS, @type = @BalanceType
 		END
 
 		--TODO: Manually rollback transferInfo

@@ -1,15 +1,13 @@
-/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService,wsv_nap,wsv_alp,wsv_alpv,wsv_xnap" selecters="" viewers="" isFunction="0" isNested=""></info>*/
-ALTER PROCEDURE [dbo].[Age_CashService_Balance_Rollback]  
-	@CustID INT,
-    @UplineID INT,
-    @Amount MONEY,
-	@ExchangeRate SMALLMONEY =	1,
-	@BonusID INT = NULL,
-	@IP VARCHAR(50) = '',
-	@TransactionTypeId TINYINT = 0,
+/*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService" selecters="" viewers="" isFunction="0" isNested=""></info>*/
+ALTER PROCEDURE [dbo].[Age_CashService_Balance_Rollback] 
+	@Type	TINYINT,
+	@TransId BIGINT,
+	@CustId INT = 0,
+	@TransId_From BIGINT = 0,	
+	@TransId_To BIGINT = 0,	
+	@Amount		MONEY = 0,
 	@ErrCode	INT = 0 OUTPUT,
-	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
-	@TransferRefNo	BIGINT = NULL OUTPUT
+	@ErrMsg	VARCHAR(2000) = NULL OUTPUT
 AS  
 /*
 	Created: 20250502@Max		
@@ -18,47 +16,72 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
 BEGIN  
     SET NOCOUNT ON; 
 
-	DECLARE @StatusId_before TINYINT
-		,@AdjustAmount MONEY
-		,@Transfer_RefNo BIGINT
-		,@LogData VARCHAR(MAX)
-		,@LogDataMask VARCHAR(MAX)
+	--Rollback CashTransaction --> Delete
+	IF @TransId <> 0
+	BEGIN
+		BEGIN TRY
+			DELETE t
+			FROM dbo.CashTransaction t
+			WHERE t.TransID = @TransId
+		END TRY
+		BEGIN CATCH
+			SELECT @ErrCode = ERROR_NUMBER()
+			,@ErrMsg = ERROR_MESSAGE()
 
+			RETURN
+		END CATCH
+	END
+
+	--Rollback Transfer & Balance
 	BEGIN TRY
-		IF @TransactionTypeId IN (1,2) --Revert deposit need to call SP withdrawal 
+		--TODO: Rollback BalanceCredit (deposit)
+		IF @Type = 1
 		BEGIN
-			EXEC dbo.Age_CashWithdrawal_ManualAdd_InsTransfer 
-				@CustID = @CustID,
-				@UplineID = @UplineID,
-				@Amount = @Amount,
-				@ExchangeRate = @ExchangeRate,
-				@IP = @IP,
-				@ErrCode = @ErrCode OUTPUT,
-				@ErrMsg = @ErrMsg OUTPUT,
-				@TransferRefNo = @TransferRefNo OUTPUT
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Amount, @type = 2, @IsForced = 1
 		END
 
-		IF @ErrCode <> 0
+		--TODO: Manually rollback transfer
 		BEGIN
-			RETURN
+			UPDATE dbo.Transfer WITH(ROWLOCK)
+			SET	custid = 0, 
+				Recommend = 0, 
+				MRecommend = 0, 
+				SRecommend = 0, 
+				Winlost = 0, 
+				Actual_Stake = 0, 
+				RepUpdateTime = SYSDATETIME()
+			WHERE TransId IN (@TransId_From, @TransId_To)
+		END
+
+		--TODO: Rollback BalanceDebit (Withdrawal)
+		IF @Type = 2
+		BEGIN 
+ 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Amount, @type = 2
+		END
+
+		--TODO: Manually rollback transferInfo
+		BEGIN
+			UPDATE TransferInfo WITH(ROWLOCK)
+			SET		IsDel = 1,  RepUpdateTime = SYSDATETIME()
+			WHERE TransId IN (@TransId_From, @TransId_To)
 		END
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = ERROR_NUMBER()
-		,@ErrMsg = ERROR_MESSAGE()
-
-		RETURN
+			,@ErrMsg = ERROR_MESSAGE()
 	END CATCH
+
 
 	-- Adjust accumulated credit
 	BEGIN TRY
-		IF @TransactionTypeId IN (1,2) --Deposit
+		IF @Type = 1 AND @Amount <> 0
 		BEGIN
 			EXEC dbo.Age_CashAccumulatedCredit_Adjust 
 				@CustID = @CustID,
@@ -67,8 +90,12 @@ BEGIN
 				@ErrCode = @ErrCode OUTPUT,
 				@ErrMsg	= @ErrMsg OUTPUT
 
+			IF @ErrCode <> 0
+			BEGIN
+				RETURN
+			END
 		END
-		IF @TransactionTypeId IN (3,4) --Withdraw
+		ELSE IF @Type = 2 AND @Amount <> 0
 		BEGIN
 			EXEC dbo.Age_CashAccumulatedCredit_Adjust 
 				@CustID = @CustID,
@@ -76,17 +103,16 @@ BEGIN
 				@Amount = @Amount,
 				@ErrCode = @ErrCode OUTPUT,
 				@ErrMsg	= @ErrMsg OUTPUT
-		END
 
-		IF @ErrCode <> 0
-		BEGIN
-			RETURN
+			IF @ErrCode <> 0
+			BEGIN
+				RETURN
+			END
 		END
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 	END CATCH
-
 
 END  
