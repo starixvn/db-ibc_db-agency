@@ -34,6 +34,7 @@ AS
 		- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 		- 20240314@Bobby: EC enhancement [Redmine: #202276]
 		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
+		- 20250512@Max: Performance: Modify Transfer SPs to use appropriate indexes on DBTXN/SiteDB [Redmine: #226826]
 	
 	Param's Explanation:
 		@FromCustID, @ToCustID: upline (super/master/agent) transfer dowline (master/agent/member)
@@ -154,6 +155,8 @@ BEGIN
 	/***** Calculate Upline Balance, Cash Balance and Outstanding *****/
 	CREATE TABLE #TransferCash (uplineCashBalance MONEY, CashBalance MONEY, Outstanding MONEY, PendingTransfer3rd MONEY, TableName VARCHAR(50))
 	CREATE TABLE #recommend (custid INT)
+	CREATE TABLE #DirectMemberList (custid INT)
+	DECLARE @IsExistDirect BIT = 0
 
 	-- Get bettype --
 	DECLARE @isTest BIT = 0
@@ -272,18 +275,48 @@ BEGIN
     END
     ELSE IF @roleid = 2
     BEGIN
+		INSERT INTO #recommend (custid)
+		SELECT custid
+		FROM CustDB.dbo.custInfo c WITH(NOLOCK)
+		WHERE c.roleid = 2 AND mrecommend = @FromCustID
+
+		INSERT INTO #DirectMemberList (custid)
+		SELECT custid
+		FROM CustDB.dbo.custInfo c WITH(NOLOCK)
+		WHERE c.roleid = 1 AND mrecommend = @FromCustID AND recommend = -3
+
+		IF @@ROWCOUNT > 0
+		BEGIN
+			SET @IsExistDirect = 1
+		END
+
 		-- bettransRNG
 		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
 		SELECT 
 			SUM(CASE WHEN statusID NOT IN (0,1) THEN mwinlost+acomm-comm ELSE 0 END),
 			SUM(CASE WHEN statusID NOT IN (0,1) AND recommend = @recommend THEN awinlost+comm-playercomm ELSE 0 END),
 			SUM(CASE WHEN statusID IN (0,1) AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END)
-	    FROM dbo.bettransRNG WITH(NOLOCK)
-		WHERE mrecommend = @mrecommend
-			AND (
+	    FROM #recommend r
+			INNER JOIN dbo.bettransRnG b WITH(NOLOCK, index = IX_recommend) ON b.recommend = r.CustId
+		WHERE (
 				statusID IN (0,1)
 				OR winlostdate >= @yesterday
 			)
+
+		IF @IsExistDirect = 1 
+		BEGIN
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+			SELECT 
+				SUM(CASE WHEN statusID NOT IN (0,1) THEN mwinlost+acomm-comm ELSE 0 END),
+				SUM(CASE WHEN statusID NOT IN (0,1) AND recommend = @recommend THEN awinlost+comm-playercomm ELSE 0 END),
+				SUM(CASE WHEN statusID IN (0,1) AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END)
+			FROM #DirectMemberList r
+				INNER JOIN dbo.bettransRnG b WITH(NOLOCK, index = IX_custid) ON b.custid = r.CustId
+			WHERE (
+					statusID IN (0,1)
+					OR winlostdate >= @yesterday
+				)
+		END
 
 		-- bettransLC
 		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
@@ -291,12 +324,27 @@ BEGIN
 			SUM(CASE WHEN statusID NOT IN (0,1) THEN mwinlost+acomm-comm ELSE 0 END),
 			SUM(CASE WHEN statusID NOT IN (0,1) AND recommend = @recommend THEN awinlost+comm-playercomm ELSE 0 END),
 			SUM(CASE WHEN statusID IN (0,1) AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END)
-	    FROM dbo.bettransLC WITH(NOLOCK)
-		WHERE mrecommend = @mrecommend
-			AND (
+	    FROM #recommend r
+			INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_recommend) ON b.recommend = r.CustId
+		WHERE (
 				statusID IN (0,1)
 				OR winlostdate >= @yesterday
 			)
+
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+			SELECT 
+				SUM(CASE WHEN statusID NOT IN (0,1) THEN mwinlost+acomm-comm ELSE 0 END),
+				SUM(CASE WHEN statusID NOT IN (0,1) AND recommend = @recommend THEN awinlost+comm-playercomm ELSE 0 END),
+				SUM(CASE WHEN statusID IN (0,1) AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END)
+			FROM #DirectMemberList r
+				INNER JOIN dbo.bettransLC b WITH (NOLOCK,index = IX_custid) ON b.custid = r.CustId
+			WHERE (
+					statusID IN (0,1)
+					OR winlostdate >= @yesterday
+				)
+		END
 
 		-- translog
 		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
@@ -317,9 +365,9 @@ BEGIN
 				SUM(CASE WHEN ruben = 1 AND recommend = @recommend THEN awinlost+comm-playercomm ELSE 0 END),  
 				SUM(CASE WHEN ruben = 0 AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 
 				'tblBettrans'
-			FROM dbo.bettrans WITH(NOLOCK)
-			WHERE mrecommend = @mrecommend
-				AND
+			FROM #recommend r
+				INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_recommend) ON b.recommend = r.CustId	
+			WHERE
 				(
 					ruben <> 0
 					OR (ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0))
@@ -330,20 +378,75 @@ BEGIN
 					OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
 				)
 				AND winlostdate > @moveBetsDay
+
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
+				SELECT
+					SUM(CASE WHEN ruben = 1 THEN mwinlost+acomm-comm ELSE 0 END),  
+					SUM(CASE WHEN ruben = 1 AND recommend = @recommend THEN awinlost+comm-playercomm ELSE 0 END),  
+					SUM(CASE WHEN ruben = 0 AND recommend = @recommend THEN ABS(actual_stake*apositiontaking) ELSE 0 END), 
+					'tblBettrans'
+				FROM #DirectMemberList r
+					INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_customerinfo) ON b.custid = r.CustId	
+				WHERE
+					(
+						ruben <> 0
+						OR (ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0))
+					)
+					AND
+					(
+						winlostdate < @yesterday
+						OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
+					)
+					AND winlostdate > @moveBetsDay
+			END
+
 			-- Transfer
 			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
 			SELECT
-				SUM(CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END),  
-				SUM(CASE WHEN recommend = @recommend THEN CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),  
+				SUM(CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END),  
+				SUM(CASE WHEN recommend = @recommend THEN CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),  
 				0,
 				'tblTransfer'
-			FROM dbo.Transfer WITH(NOLOCK)
-			WHERE mrecommend = @mrecommend
+			FROM #recommend r
+				INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_Recommend) ON b.recommend = r.CustId
+			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
+				AND bettype NOT IN (21008, 21009)
+
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
+			SELECT
+				SUM(CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END),  
+				SUM(CASE WHEN recommend = @recommend THEN CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),  
+				0,
+				'tblTransfer'
+			FROM dbo.Transfer b WITH(NOLOCK)
+			WHERE b.CustId = @fromCustID
 				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 						ELSE 1 END
 				AND bettype NOT IN (21008, 21009)
+
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)
+				SELECT
+					SUM(CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END),  
+					SUM(CASE WHEN recommend = @recommend THEN CASE WHEN b.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END ELSE 0 END),  
+					0,
+					'tblTransfer'
+				FROM #DirectMemberList r
+					INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_CustId) ON b.CustId = r.CustId
+				WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+								WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+								WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+							ELSE 1 END
+					AND bettype NOT IN (21008, 21009)
+			END
 				
 			----check MB date, BU date again to make sure it is not changed
 			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
@@ -367,18 +470,48 @@ BEGIN
     END
     ELSE IF @roleid = 3
     BEGIN
+		INSERT INTO #recommend (custid)
+		SELECT custid
+		FROM CustDB.dbo.custInfo c WITH(NOLOCK)
+		WHERE c.roleid = 2 AND srecommend = @FromCustID
+
+		INSERT INTO #DirectMemberList (custid)
+		SELECT custid
+		FROM CustDB.dbo.custInfo c WITH(NOLOCK)
+		WHERE c.roleid = 1 AND srecommend = @FromCustID AND recommend IN (-3,-4)
+
+		IF @@ROWCOUNT > 0
+		BEGIN
+			SET @IsExistDirect = 1
+		END
+
 		-- bettransRNG
 		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
 		SELECT 
 			SUM(CASE WHEN statusID NOT IN (0,1) THEN swinlost+scomm-acomm ELSE 0 END),
 			SUM(CASE WHEN statusID NOT IN (0,1) AND mrecommend = @mrecommend THEN mwinlost+acomm-comm ELSE 0 END),
 			SUM(CASE WHEN statusID IN (0,1) AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
-	    FROM dbo.bettransRNG WITH(NOLOCK)
-		WHERE srecommend = @srecommend
-			AND (
+	    FROM #recommend r
+			INNER JOIN dbo.bettransRnG b WITH(NOLOCK, index = IX_recommend) ON b.recommend = r.CustId
+		WHERE (
 				statusID IN (0,1)
 				OR winlostdate >= @yesterday
 			)
+
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+			SELECT 
+				SUM(CASE WHEN statusID NOT IN (0,1) THEN swinlost+scomm-acomm ELSE 0 END),
+				SUM(CASE WHEN statusID NOT IN (0,1) AND mrecommend = @mrecommend THEN mwinlost+acomm-comm ELSE 0 END),
+				SUM(CASE WHEN statusID IN (0,1) AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
+			FROM #DirectMemberList r
+				INNER JOIN dbo.bettransRnG b WITH(NOLOCK, index = IX_custid ) ON r.custid = b.custid
+			WHERE (
+					statusID IN (0,1)
+					OR winlostdate >= @yesterday
+				)
+		END
 
 		-- bettransLC
 		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
@@ -386,19 +519,43 @@ BEGIN
 			SUM(CASE WHEN statusID NOT IN (0,1) THEN swinlost+scomm-acomm ELSE 0 END),
 			SUM(CASE WHEN statusID NOT IN (0,1) AND mrecommend = @mrecommend THEN mwinlost+acomm-comm ELSE 0 END),
 			SUM(CASE WHEN statusID IN (0,1) AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
-	    FROM dbo.bettransLC WITH(NOLOCK)
-		WHERE srecommend = @srecommend
-			AND (
+	    FROM #recommend r
+			INNER JOIN dbo.bettransLC b WITH(NOLOCK, index = IX_recommend) ON b.recommend = r.CustId
+		WHERE (
 				statusID IN (0,1)
 				OR winlostdate >= @yesterday
 			)
 
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+			SELECT 
+				SUM(CASE WHEN statusID NOT IN (0,1) THEN swinlost+scomm-acomm ELSE 0 END),
+				SUM(CASE WHEN statusID NOT IN (0,1) AND mrecommend = @mrecommend THEN mwinlost+acomm-comm ELSE 0 END),
+				SUM(CASE WHEN statusID IN (0,1) AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
+			FROM #DirectMemberList r
+				INNER JOIN dbo.bettransLC b WITH (NOLOCK,index = IX_custid) ON b.custid = r.CustId
+			WHERE (
+					statusID IN (0,1)
+					OR winlostdate >= @yesterday
+				)
+		END
+
 		-- translog
 		INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
-		SELECT 0, 0, SUM(ABS(actual_stake*mpositiontaking))
-	    FROM dbo.translog t WITH(NOLOCK)
-		WHERE mrecommend = @custid
-			AND statusID IN (0,1)
+		SELECT 0, 0, SUM(CASE WHEN t.mrecommend = @CustID THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
+	    FROM #recommend r
+			INNER JOIN dbo.translog t WITH(NOLOCK, index = IX_recommend) ON t.recommend = r.CustId
+		WHERE statusID IN (0,1)
+
+		IF @IsExistDirect = 1
+		BEGIN
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding)
+			SELECT 0, 0, SUM(CASE WHEN t.mrecommend = @CustID THEN ABS(actual_stake*mpositiontaking) ELSE 0 END)
+			FROM #DirectMemberList r
+				INNER JOIN  dbo.translog t WITH(NOLOCK,index = IX_custid ) ON t.custid = r.CustId
+			WHERE statusID IN (0,1)
+		END
 
 		WHILE (@IsDiff = 1)
 		BEGIN
@@ -412,9 +569,9 @@ BEGIN
 				SUM(CASE WHEN ruben = 1 AND mrecommend = @mrecommend THEN mwinlost+acomm-comm ELSE 0 END),  
 				SUM(CASE WHEN ruben = 0 AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END),  
 				'tblBettrans'  
-			FROM dbo.bettrans WITH(NOLOCK) 
-			WHERE srecommend = @srecommend
-				AND
+			FROM #recommend r
+				INNER JOIN dbo.bettrans b WITH(NOLOCK, index = IX_recommend) ON b.recommend = r.CustId
+			WHERE 
 				(
 					ruben <> 0
 					OR (ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0))
@@ -425,20 +582,75 @@ BEGIN
 					OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
 				)
 				AND winlostdate > @moveBetsDay
+
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)  
+				SELECT  
+					SUM(CASE WHEN ruben = 1 THEN swinlost+scomm-acomm ELSE 0 END),  
+					SUM(CASE WHEN ruben = 1 AND mrecommend = @mrecommend THEN mwinlost+acomm-comm ELSE 0 END),  
+					SUM(CASE WHEN ruben = 0 AND mrecommend = @mrecommend THEN ABS(actual_stake*mpositiontaking) ELSE 0 END),  
+					'tblBettrans'  
+				FROM #DirectMemberList r
+					INNER JOIN dbo.bettrans b WITH(NOLOCK, INDEX = IX_customerinfo) ON b.custid = r.CustId
+				WHERE 
+					(
+						ruben <> 0
+						OR (ruben = 0 AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable <> 0))
+					)
+					AND
+					(
+						winlostdate < @yesterday
+						OR (winlostdate >=  @yesterday AND bettype NOT IN (SELECT bettype FROM #SportBettype WHERE RefTable IN (1,2)))
+					)
+					AND winlostdate > @moveBetsDay
+			END
+
 			-- Transfer
 			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)  
 			SELECT  
-				SUM(CASE WHEN custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END),  
-				SUM(CASE WHEN mrecommend = @mrecommend THEN CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),  
+				SUM(CASE WHEN b.custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END),  
+				SUM(CASE WHEN mrecommend = @mrecommend THEN CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),  
 				0,  
 				'tblTransfer'
-			FROM dbo.Transfer WITH(NOLOCK)
-			WHERE srecommend = @srecommend
+			FROM #recommend r
+				INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_Recommend) ON b.recommend = r.CustId
+			WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+						ELSE 1 END
+				AND bettype NOT IN (21008, 21009)
+
+			INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)  
+			SELECT  
+				SUM(CASE WHEN b.custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END),  
+				SUM(CASE WHEN mrecommend = @mrecommend THEN CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),  
+				0,  
+				'tblTransfer'
+			FROM dbo.Transfer b WITH(NOLOCK)
+			WHERE b.CustId IN (@ToCustID, @FromCustID)
 				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
 						ELSE 1 END
 				AND bettype NOT IN (21008, 21009)
+
+			IF @IsExistDirect = 1
+			BEGIN
+				INSERT INTO #TransferCash (uplineCashBalance, CashBalance, Outstanding, TableName)  
+				SELECT  
+					SUM(CASE WHEN b.custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END),  
+					SUM(CASE WHEN mrecommend = @mrecommend THEN CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END ELSE 0 END),  
+					0,  
+					'tblTransfer'
+				FROM #DirectMemberList r
+					INNER JOIN dbo.Transfer b WITH(NOLOCK, INDEX = IX_CustId) ON b.CustId = r.CustId
+				WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+								WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+								WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+							ELSE 1 END
+					AND bettype NOT IN (21008, 21009)
+			END
 
 			----check MB date, BU date again to make sure it is not changed
 			SELECT @NewMoveBetDate = NULL, @NewBalanceUpDate = NULL
