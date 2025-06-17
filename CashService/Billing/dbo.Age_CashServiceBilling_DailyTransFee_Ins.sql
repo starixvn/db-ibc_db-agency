@@ -3,6 +3,7 @@ ALTER PROCEDURE  [dbo].[Age_CashServiceBilling_DailyTransFee_Ins]
 	@CustId         INT, -- Customer ID of the agent
     @ChargeDate     SMALLDATETIME, -- Date for the charge
     @IP             VARCHAR(15) = '127.0.0.1',
+    @LogData        VARCHAR(MAX) = '' OUTPUT,
 	@ErrCode		INT = 0 OUTPUT,
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS
@@ -35,6 +36,7 @@ BEGIN
         , @ErrMsg = ''
         , @ChargeDate = ISNULL(@ChargeDate, @Today) -- Default to today if not provided
         , @PreviousDay = DATEADD(DAY, -1, @ChargeDate) -- Previous day date
+        , @LogData = ''
     ;
 
     -- Check if the agent already has a daily fee record for charge date
@@ -79,6 +81,12 @@ BEGIN
     INNER JOIN CustDB.dbo.Exchange e WITH(NOLOCK) ON ci.currency = e.exchangeId
 	WHERE ci.CustId = @CustId
     AND ci.roleId  = 2 -- Ensure the customer is an agent
+
+    IF @currency = 20 -- Ensure the currency is 20 (e.g., UUS)
+    BEGIN
+        SELECT @hUser = 'SUPERTEST10101097',
+            @actualrate = 1.0;
+    END
 
     -- Get the agent's custid based on username
     SELECT 
@@ -271,6 +279,8 @@ BEGIN
                    winlostdate, currency, actualrate, currencyName, recommend, mrecommend, srecommend, 
                    scomm, swinlost,ip,statusID, RepUpdateTime
                 FROM CTE_Transfer
+                WHERE 
+                    (winlost-actual_stake) <> 0 -- Ensure the win/lost amount is non-zero
 
 				-- UPDATE CashTransaction
 				;WITH CTE_TransID AS (
@@ -278,7 +288,8 @@ BEGIN
 					FROM STRING_SPLIT(@transIds_FEE, ',')
 				)
 				UPDATE ct
-				SET ct.ExtraInfo = JSON_MODIFY(
+				SET ct.RepUpdateTime = dbo.f_GetDateTime2()
+                    , ct.ExtraInfo = JSON_MODIFY(
 									JSON_MODIFY(
 										JSON_MODIFY(ISNULL(ct.ExtraInfo, '{}'), '$.ChargedAt', FORMAT(GETDATE(), 'yyyy-MM-dd HH:mm:ss'))
 										, '$.Fee', TRY_CAST(@chargeFEE AS VARCHAR(10))
@@ -305,28 +316,15 @@ BEGIN
     END
 
     -- Log the successful insertion
-    BEGIN TRY	
-        DECLARE @LogData NVARCHAR(4000);
-        DECLARE @FromCustID INT = 0; -- Initialize FromCustID
-        SELECT @FromCustID = @HouseId
-            , @LogData = 'Insert Daily Cash Transaction Fee for Agent: custid=' + CAST(@agentId AS NVARCHAR(10)) + ', username: ' + CAST(@agUser AS NVARCHAR(20))+ ', winlostdate: ' + FORMAT(@winlostdate, 'yyyy-MM-dd');
-        EXEC DBLOG.bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                             @UserID		= @Creator, 
-                             @FromCustID    = @FromCustID, 
-                             @ToCustID	    = @custID, 
-                             @IP			= @IP, 
-                             @Doing		    = @LogData 
-    END TRY
-    BEGIN CATCH
-        SELECT @LogData = @LogData + ' ErrMsg: ' + ERROR_MESSAGE()
-
-        EXEC bodb_customerlog.dbo.WriteLog_UserLog_Transfer 
-                         @UserID		= @Creator, 
-                         @FromCustID    = @FromCustID, 
-                         @ToCustID	    = @custID, 
-                         @IP			= @IP, 
-                         @Doing		    = @LogData
-    END CATCH
-
+    SELECT @LogData = (
+        SELECT 1 AS LogTypeId,
+            @Creator AS UserID, @HouseId AS FromCustID, @AgentId AS ToCustID,
+            @AgentId AS CustID, @IP AS IP,
+            Doing = CONCAT('Insert Daily Cash Transaction Fee for Agent: custid=', @agentId,
+                ', username=', @agUser,
+                ', winlostdate=', FORMAT(@winlostdate, 'yyyy-MM-dd'),
+                ', refno=', @RefNo_FEE_1)
+        FOR JSON PATH
+    );
 END
 GO
