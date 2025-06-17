@@ -9,6 +9,7 @@ AS
   
   Revisions:
     - 20250526@Bobby: Initial [RedmineID: #227215]
+    - 20250617@Bobby: Fix table Site - cross DB [RedmineID: #230803]
 */
 BEGIN
     SET NOCOUNT ON;
@@ -27,7 +28,7 @@ BEGIN
             si.SiteDBGroupId
         FROM dbo.CashAgentManagement ca WITH(NOLOCK)
         INNER JOIN [CustDB].[dbo].[vw_CashService_Customer] ci WITH(NOLOCK) ON ca.AgentId = ci.CustID
-        INNER JOIN [CustDB].[dbo].[Site] si WITH(NOLOCK) ON si.[site] = ci.[site]
+        INNER JOIN [GlobCustDB].[dbo].[Site] si WITH(NOLOCK) ON si.[site] = ci.[site]
         INNER JOIN CTE_SiteDBGroupIds cte ON si.SiteDBGroupId = cte.SiteDBGroupId
         LEFT JOIN [CustDB].[dbo].[vw_CustInfoExtra] cs WITH(NOLOCK) ON ca.AgentId = cs.CustID
         WHERE ca.TrialEndTime IS NOT NULL

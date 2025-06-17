@@ -14,6 +14,7 @@ AS
 
     Revisions:
         - 20250526@Bobby: Initial [RedmineID: #227215]
+        - 20250617@Bobby: Correct actualrate of UUS SMA Daily Fee [RedmineID: #230813]
 
     Description:
         - @CustId: Customer ID of the agent
@@ -63,11 +64,7 @@ BEGIN
         @houseid INT, @hUser VARCHAR(30),
         @username_StarixIT VARCHAR(50), @Creator INT; 
     
-    -- Get the creator's custid based on username
-	SELECT @username_StarixIT = 'StarixIT',
-           @hUser = 'DWLCreditCashFees',
-           @agentid = @CustId
-	;
+    
 
     -- Get the agent's custid and other details based on CustId
     SELECT 
@@ -82,11 +79,11 @@ BEGIN
 	WHERE ci.CustId = @CustId
     AND ci.roleId  = 2 -- Ensure the customer is an agent
 
-    IF @currency = 20 -- Ensure the currency is 20 (e.g., UUS)
-    BEGIN
-        SELECT @hUser = 'SUPERTEST10101097',
-            @actualrate = 1.0;
-    END
+    -- Get the creator's custid based on username
+	SELECT @username_StarixIT = 'StarixIT',
+           @hUser = IIF (@currency = 20, 'SUPERTEST10101097', 'DWLCreditCashFees'),
+           @agentid = @CustId
+	;
 
     -- Get the agent's custid based on username
     SELECT 
@@ -220,9 +217,9 @@ BEGIN
             
             -- Prepare the transaction description for fee and period records
             SELECT
-                @chargeFEE_RM   =  @chargeFEE * @actualrate
+                @chargeFEE_RM   =  @chargeFEE * IIF(@currencyHouse = @currency, 1, @actualrate)
                 , @amount       = @numTrans * @chargeFEE
-                , @amountHouse  = @amount * @actualrate
+                , @amountHouse  = @amount * IIF(@currencyHouse = @currency, 1, @actualrate)
                 , @transDesc_FEE = CONCAT('(Other fees charges: number of transaction ', @numTrans,' * ',@currName,' ',@chargeFEE,')')
                 , @transDesc_FEE_RM = CONCAT('(Other fees charges: number of transaction ', @numTrans,' * ',@currNameHouse,' ',@chargeFEE_RM,')')
             ;
