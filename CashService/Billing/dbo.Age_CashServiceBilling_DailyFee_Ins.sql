@@ -15,6 +15,8 @@ AS
   Revisions:
     - 20250526@Bobby: Initial [RedmineID: #227215]
     - 20250617@Bobby: Correct actualrate of UUS SMA Daily Fee [RedmineID: #230813]
+    - 20250618@Bobby: Correct SMA custid [RedmineID: #230937]
+    
 */
 BEGIN
     SET NOCOUNT ON;
@@ -192,7 +194,7 @@ BEGIN
                     
                     ----super -> master
                     (@transId_FEE_3, @Creator, @srecommend, @saUser, @RefNo_FEE_2, @transdate, @bettype_FEE, 'To Customer ::: ' + @maUser + @transDesc_FEE, 
-                    @amount, 0, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
+                    @amount, 0, @winlostdate, @currency, @actualrate, @currName, 0, 0, @srecommend, 
                     0, 0,@ip,131,SYSDATETIME()),
                     (@transId_FEE_4, @Creator, @mrecommend, @maUser, @RefNo_FEE_2, @transdate, @bettype_FEE, 'From Customer ::: ' + @saUser + @transDesc_FEE, 
                     0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
@@ -203,7 +205,7 @@ BEGIN
                     @amountHouse, 0, @winlostdate, @currencyHouse, @actualrateHouse, @currNameHouse, @recommendHouse, @mrecommendHouse, @srecommendHouse, 
                     0, 0,@ip,131,SYSDATETIME()),
                     (@transId_FEE_6, @Creator, @srecommend, @saUser, @RefNo_FEE_3, @transdate, @bettype_FEE, 'From Customer ::: ' + @hUser + @transDesc_FEE, 
-                    0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
+                    0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, 0, @srecommend, 
                     0, 0,@ip,131,SYSDATETIME())
 
             ) AS T (transId,creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
@@ -229,7 +231,7 @@ BEGIN
                     
                     ----super -> master
                     (@transId_PERIOD_3, @Creator, @srecommend, @saUser, @RefNo_PERIOD_2, @transdate, @bettype_PERIOD, 'To Customer ::: ' + @maUser + @transDesc_PERIOD, 
-                    0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
+                    0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, 0, @srecommend, 
                     0, 0,@ip,131,SYSDATETIME()),
                     (@transId_PERIOD_4, @Creator, @mrecommend, @maUser, @RefNo_PERIOD_2, @transdate, @bettype_PERIOD, 'From Customer ::: ' + @saUser + @transDesc_PERIOD, 
                     @amount, 0, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
@@ -240,7 +242,7 @@ BEGIN
                     0, @amountHouse, @winlostdate, @currencyHouse, @actualrateHouse, @currNameHouse, @recommendHouse, @mrecommendHouse, @srecommendHouse, 
                     0, 0,@ip,131,SYSDATETIME()),
                     (@transId_PERIOD_6, @Creator, @srecommend, @saUser, @RefNo_PERIOD_3, @transdate, @bettype_PERIOD, 'From Customer ::: ' + @hUser + @transDesc_PERIOD, 
-                    @amount, 0, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
+                    @amount, 0, @winlostdate, @currency, @actualrate, @currName, 0, 0, @srecommend, 
                     0, 0,@ip,131,SYSDATETIME())
 
             ) AS T (transId, creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
