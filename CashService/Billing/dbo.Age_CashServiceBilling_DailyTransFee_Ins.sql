@@ -15,7 +15,8 @@ AS
     Revisions:
         - 20250526@Bobby: Initial [RedmineID: #227215]
         - 20250617@Bobby: Correct actualrate of UUS SMA Daily Fee [RedmineID: #230813]
-
+        - 20250618@Bobby: Correct SMA custid [RedmineID: #230937]
+        
     Description:
         - @CustId: Customer ID of the agent
         - @ChargeDate: Date for the charge
@@ -246,7 +247,7 @@ BEGIN
                             
                             ----super -> master
                             (@transId_FEE_3, @Creator, @srecommend, @saUser, @RefNo_FEE_2, @transdate, @bettype_FEE, 'To Customer ::: ' + @maUser + @transDesc_FEE, 
-                            @amount, 0, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
+                            @amount, 0, @winlostdate, @currency, @actualrate, @currName, 0, 0, @srecommend, 
                             0, 0,@ip,131,SYSDATETIME()),
                             (@transId_FEE_4, @Creator, @mrecommend, @maUser, @RefNo_FEE_2, @transdate, @bettype_FEE, 'From Customer ::: ' + @saUser + @transDesc_FEE, 
                             0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
@@ -257,7 +258,7 @@ BEGIN
                             @amountHouse, 0, @winlostdate, @currencyHouse, @actualrateHouse, @currNameHouse, @recommendHouse, @mrecommendHouse, @srecommendHouse, 
                             0, 0,@ip,131,SYSDATETIME()),
                             (@transId_FEE_6, @Creator, @srecommend, @saUser, @RefNo_FEE_3, @transdate, @bettype_FEE, 'From Customer ::: ' + @hUser + @transDesc_FEE, 
-                            0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, @mrecommend, @srecommend, 
+                            0, @amount, @winlostdate, @currency, @actualrate, @currName, 0, 0, @srecommend, 
                             0, 0,@ip,131,SYSDATETIME())
 
                     ) AS T (transId,creator, custid, username, refno, transdate, bettype, transdesc, winlost, actual_stake, 
