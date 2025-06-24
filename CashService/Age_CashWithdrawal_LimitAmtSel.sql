@@ -18,6 +18,7 @@ AS
 	
 	Revisions:
 		- 20250423@Eden: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250616@Eden: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:	
 
@@ -45,11 +46,23 @@ BEGIN
 	BEGIN
 		IF @ProviderID <> 0
 		BEGIN
-			SELECT @MinAmt = MinAmountTrans, @MaxAmt = MaxAmountTrans
-			FROM CashPaymentProviderInfo p WITH(NOLOCK) 
-			WHERE ProviderID = @ProviderID
-				AND PaymentMethodID = @PaymentMethodID
-				AND TransactionType = 2 --withdrawal
+			SELECT @MinAmt = pm.MinAmount, @MaxAmt = pm.MaxAmount
+			FROM dbo.CashAgentPaymentMethod pm WITH (NOLOCK)
+				INNER JOIN dbo.CashAgentProviderConfig cp WITH (NOLOCK)
+					ON cp.AgentID = pm.AgentID
+						AND cp.ProviderID = pm.ProviderID
+						AND cp.ProviderStatus = 1 --Provider Enabled
+				INNER JOIN dbo.CashPaymentProviderAPIConfig cpa WITH (NOLOCK)
+					ON cpa.AgentID = pm.AgentID
+						AND cpa.ProviderID = pm.ProviderID
+						AND cpa.PaymentMethodID = pm.PaymentMethodID
+						AND cpa.TransactionType = pm.TransactionType
+						AND cpa.PaymentMethodStatus = 2 --Completed
+			WHERE pm.AgentID = @UplineID
+				AND pm.PaymentMethodID = @PaymentMethodID
+				AND pm.ProviderID = @ProviderID
+				AND pm.PaymentMethodEnable = 1 --Method Enabled
+				AND pm.TransactionType = 2 --withdrawal	
 		END
 	END
 	ELSE IF @IsMemberSite = 1 --Limit by agent config

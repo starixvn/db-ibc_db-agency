@@ -5,7 +5,8 @@ ALTER PROCEDURE [dbo].[Age_CashService_Balance_Rollback]
 	@CustId INT = 0,
 	@TransId_From BIGINT = 0,	
 	@TransId_To BIGINT = 0,	
-	@Amount		MONEY = 0,
+	@TransferAmount	MONEY = 0,
+	@AdjustCreditAmt MONEY = 0,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT
 AS  
@@ -17,6 +18,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
@@ -28,6 +30,8 @@ BEGIN
 	BEGIN
 		BEGIN TRY
 			DELETE t
+			OUTPUT deleted.TransId, [dbo].[f_GetDateTime2]()
+			INTO dbo.CashTransaction_Del_InHouse(TransId, RepUpdateTime)
 			FROM dbo.CashTransaction t
 			WHERE t.TransID = @TransId
 		END TRY
@@ -44,7 +48,7 @@ BEGIN
 		--TODO: Rollback BalanceCredit (deposit)
 		IF @Type = 1
 		BEGIN
-			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @Amount, @type = 2, @IsForced = 1
+			EXEC Dot_BalanceDebitUpd @CustID = @CustID, @balance = @TransferAmount, @type = 2, @IsForced = 1
 		END
 
 		--TODO: Manually rollback transfer
@@ -63,7 +67,7 @@ BEGIN
 		--TODO: Rollback BalanceDebit (Withdrawal)
 		IF @Type = 2
 		BEGIN 
- 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @Amount, @type = 2
+ 			EXEC Dot_BalanceCreditUpd @CustID = @CustID, @balance = @TransferAmount, @type = 2
 		END
 
 		--TODO: Manually rollback transferInfo
@@ -78,15 +82,14 @@ BEGIN
 			,@ErrMsg = ERROR_MESSAGE()
 	END CATCH
 
-
 	-- Adjust accumulated credit
 	BEGIN TRY
-		IF @Type = 1 AND @Amount <> 0
+		IF @Type IN (1,3) AND @AdjustCreditAmt <> 0 --Manual Deposit or Auto Deposit
 		BEGIN
 			EXEC dbo.Age_CashAccumulatedCredit_Adjust 
 				@CustID = @CustID,
 				@ActionType = 4, --Revert Deposit
-				@Amount = @Amount,
+				@Amount = @AdjustCreditAmt,
 				@ErrCode = @ErrCode OUTPUT,
 				@ErrMsg	= @ErrMsg OUTPUT
 
@@ -95,12 +98,12 @@ BEGIN
 				RETURN
 			END
 		END
-		ELSE IF @Type = 2 AND @Amount <> 0
+		ELSE IF @Type = 2 AND @AdjustCreditAmt <> 0
 		BEGIN
 			EXEC dbo.Age_CashAccumulatedCredit_Adjust 
 				@CustID = @CustID,
 				@ActionType = 5, --Revert Withdraw
-				@Amount = @Amount,
+				@Amount = @AdjustCreditAmt,
 				@ErrCode = @ErrCode OUTPUT,
 				@ErrMsg	= @ErrMsg OUTPUT
 

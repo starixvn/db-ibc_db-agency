@@ -32,6 +32,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:
 		@TransactionTypeID:  
@@ -76,7 +77,7 @@ BEGIN
 			,AdjustCreditAmt
 		)
 		SELECT @CustID, @TransactionTypeID, @StatusId, @Amount, GETDATE(), @Creator, @Remark, SYSDATETIME(), @SiteDBGroupID, @TransferRefNo
-			,@OperatedBy, GETDATE(), @SubAccID, @PaymentType, @PaymentMethod, @PaymentFrom, @PaymentTo, @PaySlip, @ExtraInfo, @AdjustCreditAmt
+			,@OperatedBy, @OperatedTime, @SubAccID, @PaymentType, @PaymentMethod, @PaymentFrom, @PaymentTo, @PaySlip, @ExtraInfo, @AdjustCreditAmt
 
 		SET @TransId = SCOPE_IDENTITY()
 	END TRY

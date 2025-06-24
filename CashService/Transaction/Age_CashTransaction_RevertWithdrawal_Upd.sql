@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
@@ -34,8 +35,7 @@ BEGIN
 
 	IF @SiteDBGroupID <> dbo.f_Get_SiteDBGroupID() OR @SiteDBGroupID IS NULL
 	BEGIN
-		SELECT @ErrCode = 101
-			,@ErrMsg = 'Wrong SiteDB'
+		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 
 		RETURN
 	END
@@ -76,6 +76,9 @@ BEGIN
 
 			IF @ErrCode <> 0
 			BEGIN
+				SELECT @ErrCode = 409
+					,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
 				RETURN
 			END
 			ELSE --Insert data for writelog
@@ -89,8 +92,8 @@ BEGIN
 			END
 		END TRY
 		BEGIN CATCH
-			SELECT @ErrCode = ERROR_NUMBER()
-				,@ErrMsg = ERROR_MESSAGE()
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 		END CATCH
 	END
 
@@ -106,6 +109,16 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
+			--Rollback CashAccumulatedCredit
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1, 
+				@TransId = 0,
+				@Custid = @CustID,
+				@AdjustCreditAmt = @AdjustAmount
+
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
 			GOTO Writelog;
 		END
 		ELSE --Insert data for writelog
@@ -120,8 +133,15 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
-		SELECT @ErrCode = ERROR_NUMBER()
-			,@ErrMsg = ERROR_MESSAGE()
+		--Rollback CashAccumulatedCredit
+		EXEC dbo.Age_CashService_Balance_Rollback
+			@Type = 1, 
+			@TransId = 0,
+			@Custid = @CustID,
+			@AdjustCreditAmt = @AdjustAmount
+
+		SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
 		RETURN
 	END CATCH

@@ -31,6 +31,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -154,6 +155,7 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
+			--Rollback CashTransaction
 			EXEC dbo.Age_CashService_Balance_Rollback
 				@Type = 2,
 				@TransId = @TransId
@@ -169,6 +171,7 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
+		--Rollback CashTransaction
 		EXEC dbo.Age_CashService_Balance_Rollback
 				@Type = 2,
 				@TransId = @TransId
@@ -192,13 +195,14 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
+			--Rollback CashTransaction & Transfer
 			EXEC dbo.Age_CashService_Balance_Rollback
 				@Type = 2,
 				@TransId = @TransId,
 				@Custid = @CustID,
 				@TransId_From = @TransId_From,
 				@TransId_To = @TransId_To,
-				@Amount = @AdjustCreditAmt
+				@TransferAmount = @Amount
 
 			GOTO Writelog;
 		END
@@ -214,13 +218,14 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
+		--Rollback CashTransaction & Transfer
 		EXEC dbo.Age_CashService_Balance_Rollback
-				@Type = 2,
-				@TransId = @TransId,
-				@Custid = @CustID,
-				@TransId_From = @TransId_From,
-				@TransId_To = @TransId_To,
-				@Amount = @AdjustCreditAmt
+			@Type = 2,
+			@TransId = @TransId,
+			@Custid = @CustID,
+			@TransId_From = @TransId_From,
+			@TransId_To = @TransId_To,
+			@TransferAmount = @Amount
 
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
@@ -240,13 +245,15 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
+			--Rollback CashTransaction & Transfer & CashAccumulatedCredit
 			EXEC dbo.Age_CashService_Balance_Rollback
 				@Type = 2,
 				@TransId = @TransId,
 				@Custid = @CustID,
 				@TransId_From = @TransId_From,
 				@TransId_To = @TransId_To,
-				@Amount = @AdjustCreditAmt
+				@TransferAmount = @Amount,
+				@AdjustCreditAmt = @AdjustCreditAmt
 
 			GOTO Writelog;
 		END
@@ -263,13 +270,15 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
+		--Rollback CashTransaction & Transfer & CashAccumulatedCredit
 		EXEC dbo.Age_CashService_Balance_Rollback
-				@Type = 2,
-				@TransId = @TransId,
-				@Custid = @CustID,
-				@TransId_From = @TransId_From,
-				@TransId_To = @TransId_To,
-				@Amount = @AdjustCreditAmt
+			@Type = 2,
+			@TransId = @TransId,
+			@Custid = @CustID,
+			@TransId_From = @TransId_From,
+			@TransId_To = @TransId_To,
+			@TransferAmount = @Amount,
+			@AdjustCreditAmt = @AdjustCreditAmt
 
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()

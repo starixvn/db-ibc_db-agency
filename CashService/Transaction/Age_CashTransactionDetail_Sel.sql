@@ -10,6 +10,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
@@ -37,7 +38,7 @@ BEGIN
 		END AS TransactionType
 		,tr.TransferRefNo
 		,tr.CreatedTime
-		,co.username AS OperatedBy 
+		,co.username AS CreatedBy 
 		,tr.OperatedTime
 		,tr.Remark
 		,Payslip
@@ -46,7 +47,7 @@ BEGIN
 		,tr.TransId
 	FROM dbo.CashTransaction tr WITH (NOLOCK)
 		INNER JOIN CustDB.dbo.vw_CashService_Customer c WITH (NOLOCK) ON c.custid = tr.CustID
-		INNER JOIN CustDB.dbo.vw_CashService_Customer co WITH (NOLOCK) ON co.custid = tr.OperatedBy
+		INNER JOIN CustDB.dbo.vw_CashService_Customer co WITH (NOLOCK) ON co.custid = tr.Creator
 		INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON e.ExchangeId = c.currency
 	WHERE tr.TransId = @TransId
 	ORDER BY tr.TransId DESC
