@@ -12,11 +12,11 @@ ALTER PROCEDURE dbo.API_CashDeposit_AddTransaction
 	@TransactionTypeID TINYINT = 1,
 	@PaymentType TINYINT = 2,
 	@PaymentMethodID SMALLINT = 0,
-    @PaymentFrom VARCHAR(100),
+    @PaymentFrom VARCHAR(100) = NULL,
     @PaymentTo VARCHAR(100),
     @Amount MONEY,
 	@UserInput_Amount MONEY = NULL,
-	@MachingMode TINYINT = NULL,
+	@MatchingMode TINYINT = NULL,
     @PaySlip VARBINARY(MAX) = NULL,
     @IP VARCHAR(50) = '',
 	@ExchangeRate SMALLMONEY =	1,
@@ -24,7 +24,8 @@ ALTER PROCEDURE dbo.API_CashDeposit_AddTransaction
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
 	@TransId	BIGINT = NULL OUTPUT,
-	@ErrExtraInfo	VARCHAR(MAX) = NULL OUTPUT
+	@ErrExtraInfo	VARCHAR(MAX) = NULL OUTPUT,
+	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT
 )
 AS
 /*
@@ -34,6 +35,7 @@ AS
 		
 	Revisions:
 		- 20250530@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250610@Eden: API Cash Service Deposit - Lock Agent Credit for Payment Gateway method [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -69,7 +71,7 @@ BEGIN
 			@AgentGivenCredit = @AgentGivenCredit,
 			@CreditMembers_GivenCredit = @CreditMembers_GivenCredit,
 			@UserInput_Amount = @UserInput_Amount,
-			@MachingMode = @MachingMode,
+			@MatchingMode = @MatchingMode,
 			@MinLimitAmt  = @MinAmt,
 			@MaxLimitAmt  = @MaxAmt,
 			@Amount = @Amount,
@@ -99,7 +101,7 @@ BEGIN
 		--Generate extrainfo in case auto deposit via bank
 		IF @TransactionTypeID = 2 AND @PaymentType = 2
 		BEGIN
-			SET @ExtraInfo = (SELECT @UserInput_Amount AS UserInputAmt, @MachingMode AS MatchingMode FOR JSON PATH)
+			SET @ExtraInfo = (SELECT @UserInput_Amount AS UserInputAmt, @MatchingMode AS MatchingMode FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
 		END
 
 		EXEC dbo.Age_CashTransaction_Ins 
@@ -109,8 +111,8 @@ BEGIN
 			@SiteDBGroupID = @SiteDBGroupID,
 			@TransactionTypeID = @TransactionTypeID,
 			@StatusId = 2, --Pending
+			@PaymentMethod = @PaymentMethodID,
 			@PaymentType = @PaymentType, 
-			@OperatedBy = @AgentID,
 			@PaymentFrom = @PaymentFrom,
 			@PaymentTo = @PaymentTo,
 			@Amount = @Amount,
@@ -135,8 +137,8 @@ BEGIN
 			SELECT @LogDataMask = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'UplineID="'+ COALESCE(CAST(@AgentId AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'SubAccID="'+ COALESCE(CAST(@SubAccID AS VARCHAR(20)), SPACE(1)) + '" ' +
-								'TransactionTypeID="'+ COALESCE(CAST(1 AS VARCHAR(20)), SPACE(1)) + '" ' +
-								'PaymentType="'+ COALESCE(CAST(2 AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'TransactionTypeID="'+ COALESCE(CAST(@TransactionTypeID AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'PaymentType="'+ COALESCE(CAST(@PaymentType AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'PaymentFrom="'+ COALESCE(CAST(@PaymentFrom AS VARCHAR(100)), SPACE(1)) + '" ' +
 								'PaymentTo="'+ COALESCE(CAST(@PaymentTo AS VARCHAR(100)), SPACE(1)) + '" ' +
 								'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(50)), SPACE(1)) + '" ' +
@@ -152,6 +154,60 @@ BEGIN
 		SELECT @ErrCode = 409
 			,@ErrExtraInfo = ERROR_MESSAGE()
 			,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+		GOTO Writelog;
+	END CATCH
+
+	-- Step 3: Adjust accumulated credit
+	BEGIN TRY
+		-- Auto Deposit via Payment Gateway
+		IF @TransactionTypeID = 2 AND @PaymentType = 1
+		BEGIN
+			EXEC dbo.Age_CashAccumulatedCredit_Adjust 
+				@CustID = @CustID,
+				@ActionType = 1, --Deposit
+				@Amount = @Amount,
+				@ErrCode = @ErrCode OUTPUT,
+				@ErrMsg	= @ErrMsg OUTPUT,
+				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT,
+				@AdjustCreditAmt = @AdjustCreditAmt OUTPUT
+
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrCode = 409
+					,@ErrExtraInfo = @ErrMsg
+					,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+				EXEC dbo.Age_CashService_Balance_Rollback
+					@Type = 3,
+					@TransId = @TransId,
+					@Custid = @CustID,
+					@AdjustCreditAmt = @AdjustCreditAmt
+
+				GOTO Writelog;
+			END
+			ELSE --Insert data for writelog
+			BEGIN
+				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'ActionType="'+ COALESCE(CAST(1 AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
+									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
+
+				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
+				SELECT 3, @CustID, @CustID, 310002, @LogData
+			END
+		END
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrCode = 409
+			,@ErrExtraInfo = ERROR_MESSAGE()
+			,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+		EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 3,
+				@TransId = @TransId,
+				@Custid = @CustID,
+				@AdjustCreditAmt = @AdjustCreditAmt
 
 		GOTO Writelog;
 	END CATCH

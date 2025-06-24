@@ -17,6 +17,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
@@ -31,11 +32,12 @@ BEGIN
 		,@LogDataMask VARCHAR(MAX)
 		,@TransactionTypeId TINYINT
 		,@TransferRefNo BIGINT
+		,@TransId_From BIGINT = 0
+		,@TransId_To BIGINT = 0
 
 	IF @SiteDBGroupID <> dbo.f_Get_SiteDBGroupID() OR @SiteDBGroupID IS NULL
 	BEGIN
-		SELECT @ErrCode = 101
-			,@ErrMsg = 'Wrong SiteDB'
+		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 
 		RETURN
 	END
@@ -76,8 +78,8 @@ BEGIN
 			END
 		END TRY
 		BEGIN CATCH
-			SELECT @ErrCode = ERROR_NUMBER()
-				,@ErrMsg = ERROR_MESSAGE()
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
 			RETURN
 		END CATCH
@@ -91,10 +93,14 @@ BEGIN
 				@IP = @IP,
 				@RevertRefNo = @RevertRefNo,
 				@ErrCode = @ErrCode OUTPUT,
-				@ErrMsg = @ErrMsg OUTPUT
+				@ErrMsg = @ErrMsg OUTPUT,
+				@TransId_From = @TransId_From OUTPUT,
+				@TransId_To = @TransId_To OUTPUT
 
 			IF @ErrCode <> 0
 			BEGIN
+				SELECT @ErrCode = 409
+					,@ErrMsg = 'The transaction inserted failed. Please try again.'
 				RETURN
 			END
 			ELSE --Insert data for writelog
@@ -106,8 +112,8 @@ BEGIN
 			END
 		END TRY
 		BEGIN CATCH
-			SELECT @ErrCode = ERROR_NUMBER()
-			,@ErrMsg = ERROR_MESSAGE()
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
 			RETURN
 		END CATCH
@@ -124,6 +130,18 @@ BEGIN
 
 			IF @ErrCode <> 0
 			BEGIN
+				--Rollback transaction transfer withdrawal when revert deposit
+				EXEC dbo.Age_CashService_Balance_Rollback
+					@Type = 2, 
+					@TransId = 0,
+					@Custid = @CustID,
+					@TransId_From = @TransId_From,
+					@TransId_To = @TransId_To,
+					@TransferAmount = @AdjustAmount
+
+				SELECT @ErrCode = 409
+					,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
 				RETURN
 			END
 			ELSE --Insert data for writelog
@@ -137,8 +155,17 @@ BEGIN
 			END
 		END TRY
 		BEGIN CATCH
-			SELECT @ErrCode = ERROR_NUMBER()
-				,@ErrMsg = ERROR_MESSAGE()
+			--Rollback transaction transfer withdrawal when revert deposit
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 2, 
+				@TransId = 0,
+				@Custid = @CustID,
+				@TransId_From = @TransId_From,
+				@TransId_To = @TransId_To,
+				@TransferAmount = @AdjustAmount
+
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 		END CATCH
 	END
 
@@ -153,6 +180,16 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
+			--Rollback transfer & CashAccumulatedCredit
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 2, 
+				@TransId = 0,
+				@Custid = @CustID,
+				@TransId_From = @TransId_From,
+				@TransId_To = @TransId_To,
+				@TransferAmount = @AdjustAmount,
+				@AdjustCreditAmt = @AdjustAmount
+
 			GOTO Writelog;
 		END
 		ELSE --Insert data for writelog
@@ -167,8 +204,18 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
-		SELECT @ErrCode = ERROR_NUMBER()
-			,@ErrMsg = ERROR_MESSAGE()
+		--Rollback transfer & CashAccumulatedCredit
+		EXEC dbo.Age_CashService_Balance_Rollback
+			@Type = 2, 
+			@TransId = 0,
+			@Custid = @CustID,
+			@TransId_From = @TransId_From,
+			@TransId_To = @TransId_To,
+			@TransferAmount = @AdjustAmount,
+			@AdjustCreditAmt = @AdjustAmount
+
+		SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
 		RETURN
 	END CATCH

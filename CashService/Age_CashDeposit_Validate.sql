@@ -10,7 +10,7 @@ ALTER PROCEDURE dbo.Age_CashDeposit_Validate
     @Amount MONEY,
 	@UserInput_Amount MONEY = NULL,
 	@PaymentType TINYINT = NULL,
-	@MachingMode TINYINT = NULL,
+	@MatchingMode TINYINT = NULL,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT
 )
@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -33,15 +34,16 @@ BEGIN
 		,@AccumCreditReturn MONEY
 		,@AgentAvailableCredit MONEY
 		,@IsInValidAmount BIT = 0
+		,@_AgentID INT
 
-	SELECT @roleid = roleid
+	SELECT @roleid = roleid, @_AgentID = recommend
 	FROM CustDB.dbo.custinfo AS ci WITH(NOLOCK)
 	WHERE ci.custid = @custid
 
 	-- #1 Check roleid
-	IF @roleid <> 1
+	IF @roleid <> 1 OR @_AgentID <> @UplineId OR  @_AgentID IS NULL
 	BEGIN
-		SELECT @ErrMsg = 'Invalid Role ID.', @ErrCode = 102		
+		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 		RETURN
 	END
 
@@ -50,7 +52,7 @@ BEGIN
 	SET @AgentAvailableCredit = @AgentGivenCredit - @CreditMembers_GivenCredit - @AccumCreditReturn
 	SELECT @MaxLimitAmt = CASE WHEN @AgentAvailableCredit < @MaxLimitAmt OR @MaxLimitAmt IS NULL THEN @AgentAvailableCredit ELSE @MaxLimitAmt END
 	
-	IF @PaymentType = 2 AND @MachingMode = 1
+	IF @PaymentType = 2 AND @MatchingMode = 1
 	BEGIN
 		IF (@UserInput_Amount BETWEEN ISNULL(@MinLimitAmt,0) AND @MaxLimitAmt) AND @Amount <= @MaxLimitAmt
 		BEGIN
@@ -71,7 +73,7 @@ BEGIN
 
 	IF @IsInValidAmount = 1
 	BEGIN
-		SELECT @ErrMsg = 'Sorry, amount is invalid.', @ErrCode = 101	
+		SELECT @ErrMsg = 'The amount exceeds the allowed minimum or maximum value.', @ErrCode = 407	
 		RETURN
 	END
 

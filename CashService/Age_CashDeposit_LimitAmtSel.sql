@@ -20,6 +20,7 @@ AS
 	
 	Revisions:
 		- 20250423@Eden: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250612@Max: Change the way to get min/max limit when deposit via payment gateway [Redmine: #223896]
 
 	Parameter's Explanation:	
 		@PaymentType: 1-Gateway | 2-Bank account
@@ -81,11 +82,23 @@ BEGIN
 		END
 		ELSE IF @PaymentType = 1 AND @ProviderID <> 0 --Limit by Payment Gateway method, Available Agent Credit
 		BEGIN
-			SELECT @MinAmt = MinAmountTrans, @MaxAmt = MaxAmountTrans
-			FROM AgencyCashService.dbo.CashPaymentProviderInfo p WITH(NOLOCK) 
-			WHERE ProviderID = @ProviderID
-				AND PaymentMethodID = @PaymentMethodID
-				AND TransactionType = 1 --deposit
+			SELECT @MinAmt = pm.MinAmount, @MaxAmt = pm.MaxAmount
+			FROM AgencyCashService.dbo.CashAgentPaymentMethod pm WITH (NOLOCK)
+				INNER JOIN AgencyCashService.dbo.CashAgentProviderConfig cp WITH (NOLOCK)
+					ON cp.AgentID = pm.AgentID
+						AND cp.ProviderID = pm.ProviderID
+						AND cp.ProviderStatus = 1 --Provider Enabled
+				INNER JOIN AgencyCashService.dbo.CashPaymentProviderAPIConfig cpa WITH (NOLOCK)
+					ON cpa.AgentID = pm.AgentID
+						AND cpa.ProviderID = pm.ProviderID
+						AND cpa.PaymentMethodID = pm.PaymentMethodID
+						AND cpa.TransactionType = pm.TransactionType
+						AND cpa.PaymentMethodStatus = 2 --Completed
+			WHERE pm.AgentID = @AgentID
+				AND pm.PaymentMethodID = @PaymentMethodID
+				AND pm.ProviderID = @ProviderID
+				AND pm.PaymentMethodEnable = 1 --Method Enabled
+				AND pm.TransactionType = 1 --deposit	
 		END
 		ELSE -- Invalid
 		BEGIN

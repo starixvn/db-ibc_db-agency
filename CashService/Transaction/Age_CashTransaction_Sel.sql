@@ -18,6 +18,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 
 	Parameter's Explanation:
 		@TransactionType:  
@@ -66,7 +67,8 @@ BEGIN
 		TransferRefNo BIGINT,
 		CreatedTime DATETIME,
 		Remark VARCHAR(1000),
-		PaymentType TINYINT
+		PaymentType TINYINT,
+		IsHadPayslip BIT
 	)
 
 	CREATE TABLE #CashMember (CustId INT PRIMARY KEY)
@@ -87,7 +89,8 @@ BEGIN
 		TransactionType,
 		TransferRefNo,
 		CreatedTime,
-		Remark
+		Remark,
+		IsHadPayslip
 	)
 	SELECT c.TransId,
 		c.CustId,
@@ -103,7 +106,8 @@ BEGIN
 		END AS TransactionType,
 		TransferRefNo,
 		CreatedTime,
-		Remark
+		Remark,
+		IIF(c.PaySlip IS NOT NULL, 1, 0)
 	FROM dbo.CashTransaction c WITH (NOLOCK)
 		INNER JOIN #CashMember ci ON ci.CustId = c.CustId
 	WHERE ((@FDate = '' AND @TDate = '') OR c.CreatedTime BETWEEN @FDate AND @TDate)
@@ -130,6 +134,7 @@ BEGIN
 			,tr.CreatedTime
 			,tr.Remark
 			,c.username2 AS nickname
+			,tr.IsHadPayslip
 		FROM #TransactionHistory tr
 			INNER JOIN CustDB.dbo.vw_CashService_Customer c WITH (NOLOCK) ON c.custid = tr.CustID
 			INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON e.ExchangeId = c.currency
@@ -158,6 +163,7 @@ BEGIN
 			,CreatedTime
 			,Remark
 			,nickname
+			,IsHadPayslip
 		FROM (
 				SELECT tr.CustId
 					,c.username
@@ -173,6 +179,7 @@ BEGIN
 					,tr.CreatedTime
 					,tr.Remark
 					,c.username2 AS nickname
+					,tr.IsHadPayslip
 					,ROW_NUMBER() OVER (ORDER BY tr.transid DESC) AS Rownum
 				FROM #TransactionHistory tr
 					INNER JOIN CustDB.dbo.vw_CashService_Customer c WITH (NOLOCK) ON c.custid = tr.CustID
