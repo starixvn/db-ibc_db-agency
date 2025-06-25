@@ -36,7 +36,8 @@ AS
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 		- 20241205@Lewis: Change data source bettrans_compact [Redmine: #214836]
-		- 20241119@Lewis: Direct Member [RedmineId: #211969]  
+		- 20241119@Lewis: Direct Member [RedmineId: #211969] 
+		- 20250529@Dave: Add Reward column [RedmineId: #228972] 
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -80,7 +81,8 @@ BEGIN
 		GrossComm		MONEY,
 		DownlineTotal	MONEY,
 		SAgWinlost		MONEY,
-		Comm			MONEY
+		Comm			MONEY,
+		RewardAmount	MONEY DEFAULT 0
 	);
 
 	CREATE TABLE #GrossComm (CustId INT, GrossComm MONEY)
@@ -169,7 +171,15 @@ BEGIN
 		FROM Customer c WITH(NOLOCK)
 		WHERE  c.custid = @DownlineID
 	END
-	
+
+	/*GET RewardCurrency*/
+	DECLARE @CurrencyCode VARCHAR(12);
+
+	SELECT @CurrencyCode = e.Code
+	FROM dbo.CustInfo c WITH (NOLOCK)
+	INNER JOIN dbo.Exchange e WITH (NOLOCK)
+		ON c.currency = e.ExchangeId
+	WHERE c.CustID = @CustID;
 
 	--TODO: range bettrans
 	SELECT @FDate = FromDate , @TDate = ToDate
@@ -339,6 +349,27 @@ BEGIN
 		OPTION (MAXRECURSION 0);
 	END
 
+	SELECT @FDate = @FromDate, @TDate = @ToDate;
+	WITH CTE_TransId AS (
+		SELECT TransId 
+		FROM SabaWalletTicket WITH (NOLOCK) 
+		WHERE Srecommend = @CID 
+			AND WinlostDate BETWEEN @FDate AND @TDate
+	), CTE_Downline AS (
+		SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+		FROM STRING_SPLIT(@downlineIds, ',') AS c
+	)
+	INSERT INTO #SAgWinLoss(CustID,RewardAmount)
+	SELECT CustID,RewardAmount 
+	FROM (
+			SELECT CASE WHEN swt.Mrecommend = - 4 THEN swt.CustID ELSE swt.Mrecommend END AS CustID ,SUM(Amount) AS RewardAmount
+			FROM SabaWalletTicket swt WITH (NOLOCK) 
+			INNER JOIN CTE_TransId cte ON swt.TransId = cte.TransId
+			WHERE WalletID = 2
+			GROUP BY CASE WHEN swt.Mrecommend = - 4 THEN swt.CustID ELSE swt.Mrecommend END 
+		) a
+	WHERE EXISTS (SELECT TOP 1 1 FROM CTE_Downline cte WHERE cte.custid = a.CustID)
+
 	--TODO: Result
 	SELECT	c.CustID AS CustId,
 			c.UserName AS CustName,
@@ -349,7 +380,9 @@ BEGIN
 			SUM(GrossComm) AS GrossComm,
 			SUM(DownlineTotal) AS DownlineTotal,
 			SUM(SAgWinlost) AS SAgWinLoss,
-			SUM(Comm) AS SAgComm  
+			SUM(Comm) AS SAgComm,
+			SUM(RewardAmount) AS RewardAmount,
+			@CurrencyCode AS RewardCurrency
 	FROM #SAgWinLoss w 
 		LEFT JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID   
 	GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, CASE WHEN c.mrecommend = -4 THEN 1 ELSE 0 END

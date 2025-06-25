@@ -36,6 +36,7 @@ AS
 		- 20240424@Lewis: Change old sql account [Redmine: #204021]
 		- 20241205@Lewis: Change data source bettrans_compact [Redmine: #214836]
 		- 20241119@Lewis: Direct Member ==> Clean un-used code [RedmineId: #211969]  
+		- 20250529@Dave: Add Reward column [RedmineId: #228972]
 	
 	Param's Explanation:
 	  @ProductDetails:		
@@ -77,7 +78,8 @@ BEGIN
 		MemberWinLost	MONEY,
 		AgWinLost		MONEY,
 		PlayerComm		MONEY,
-		AgComm			MONEY
+		AgComm			MONEY,
+		RewardAmount	MONEY DEFAULT 0
 	);
 
 	CREATE TABLE #GrossComm (CustId INT, GrossComm MONEY)
@@ -111,11 +113,15 @@ BEGIN
 
 	------Get @Srecommend
 	DECLARE @Srecommend int, @mrecommend int;
+	DECLARE @CurrencyCode VARCHAR(12);
 
-	SELECT	@Srecommend =  Srecommend,
-			@Mrecommend =  Mrecommend 
-	FROM dbo.CustInfo WITH (NOLOCK)
-	WHERE CustID = @CustID;
+	SELECT	@Srecommend =  c.Srecommend,
+			@Mrecommend =  c.Mrecommend,
+			@CurrencyCode = e.Code
+	FROM dbo.CustInfo c WITH (NOLOCK)
+	INNER JOIN dbo.Exchange e WITH (NOLOCK)
+		ON c.currency = e.ExchangeId
+	WHERE c.CustID = @CustID;
 
 	--Avoid Parameter Sniffing
 	DECLARE @FDate	SMALLDATETIME,
@@ -282,6 +288,16 @@ BEGIN
 		OPTION (MAXRECURSION 0)
 	END
 
+	SELECT @FDate = @FromDate, @TDate = @ToDate;
+	INSERT INTO #AgWinLoss(CustID,RewardAmount)
+	SELECT CustID, SUM(Amount) AS RewardAmount
+	FROM SabaWalletTicket WITH (NOLOCK) 
+	WHERE recommend = @CustID 
+		AND WinlostDate BETWEEN @FDate AND @TDate
+		AND WalletID = 2
+	GROUP BY CustID;
+
+
 	SELECT	c.CustID AS CustId,
 			c.UserName AS CustName,
 			c.FirstName,
@@ -291,7 +307,9 @@ BEGIN
 			SUM(MemberWinLost) AS MemberWinLoss,
 			SUM(playercomm) AS MemberComm,
 			SUM(AgWinLost) AS AgWinLoss,
-			SUM(AgComm) AS AgComm
+			SUM(AgComm) AS AgComm,
+			SUM(RewardAmount) AS RewardAmount,
+			@CurrencyCode AS RewardCurrency
 	FROM #AgWinLoss w 
 		LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 	GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
