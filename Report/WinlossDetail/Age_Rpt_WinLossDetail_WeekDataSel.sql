@@ -23,6 +23,7 @@ Revisions:
     - 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
+	- 20250613@Virgil: Cash Service - Billing service and Report changes - Sprint 4 [RedmineId: #229883]
 	
 	Param's Explanation:
 	- @LevelType : 0: All; 1: Master Agent/ Agent; 2: Direct Member
@@ -96,7 +97,73 @@ BEGIN
 	--TODO: Check OUTPUT
 	IF @CID IS NULL GOTO RS_OUTPUT;
 	
-	
+		--// Start get Downlinelist //--
+	DECLARE @totalDownline INT, @Downlinelist VARCHAR(MAX);
+
+	IF @roleid = 4
+	BEGIN
+		;WITH cte_Downline AS(
+			SELECT ci.custid
+			FROM dbo.custinfo ci WITH(NOLOCK)
+			WHERE srecommend = @srecommend
+				AND ci.RoleId = 3
+				AND @LevelType IN (0,1)
+
+			UNION ALL
+
+			SELECT ci.custid
+			FROM dbo.custinfo ci WITH(NOLOCK)
+			WHERE srecommend = @srecommend
+				AND ci.RoleId = 1
+				AND mrecommend = -4
+				AND @LevelType IN (0,2)
+		)
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@Downlinelist	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
+		FROM cte_Downline cte
+	END
+	ELSE IF @roleid = 3
+	BEGIN
+		;WITH cte_Downline AS(
+			SELECT ci.custid
+			FROM dbo.custinfo ci WITH(NOLOCK)
+			WHERE mrecommend = @mrecommend
+				AND ci.RoleId = 2
+				AND @LevelType IN (0,1)
+
+			UNION ALL
+
+			SELECT ci.custid
+			FROM dbo.custinfo ci WITH(NOLOCK)
+			WHERE mrecommend = @mrecommend
+				AND ci.RoleId = 1
+				AND recommend = -3
+				AND @LevelType IN (0,2)
+		)
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@Downlinelist	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
+		FROM cte_Downline cte 
+	END
+	ELSE IF @roleid = 2
+	BEGIN
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@Downlinelist	= STRING_AGG(CAST(ci.custid AS VARCHAR(MAX)), ',')
+		FROM dbo.custinfo ci WITH (NOLOCK) 
+		WHERE recommend = @recommend
+			AND RoleId = 1
+	END
+	ELSE IF @roleid = 1
+	BEGIN
+		SELECT 
+			@totalDownline	= COUNT(1), 
+			@Downlinelist	= STRING_AGG(CAST(ci.custid AS VARCHAR(MAX)), ',')
+		FROM dbo.custinfo ci WITH (NOLOCK) 
+		WHERE custid = @CID
+	END
+	--// End get Downlinelist //--
 	
 	--TODO: Sports, Bettypes
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
@@ -121,77 +188,7 @@ BEGIN
 	WHERE RangeType = 1
 
 	IF @FDate IS NOT NULL
-	BEGIN 	
-
-		DECLARE @totalDownline INT, @Downlinelist VARCHAR(MAX)
-
-		IF @roleid = 4
-		BEGIN
-			;WITH cte_Downline AS(
-				SELECT ci.custid
-				FROM dbo.custinfo ci WITH(NOLOCK)
-				WHERE srecommend = @srecommend
-					AND ci.RoleId = 3
-					AND @LevelType IN (0,1)
-
-				UNION ALL
-
-				SELECT ci.custid
-				FROM dbo.custinfo ci WITH(NOLOCK)
-				WHERE srecommend = @srecommend
-					AND ci.RoleId = 1
-					AND mrecommend = -4
-					AND @LevelType IN (0,2)
-			)
-			SELECT 
-				@totalDownline	= COUNT(1), 
-				@Downlinelist	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
-			FROM cte_Downline cte
-		END
-
-		IF @roleid = 3
-		BEGIN
-			;WITH cte_Downline AS(
-				SELECT ci.custid
-				FROM dbo.custinfo ci WITH(NOLOCK)
-				WHERE mrecommend = @mrecommend
-					AND ci.RoleId = 2
-					AND @LevelType IN (0,1)
-
-				UNION ALL
-
-				SELECT ci.custid
-				FROM dbo.custinfo ci WITH(NOLOCK)
-				WHERE mrecommend = @mrecommend
-					AND ci.RoleId = 1
-					AND recommend = -3
-					AND @LevelType IN (0,2)
-			)
-			SELECT 
-				@totalDownline	= COUNT(1), 
-				@Downlinelist	= STRING_AGG(CAST(cte.custid AS VARCHAR(MAX)), ',')
-			FROM cte_Downline cte 
-		END
-
-		IF @roleid = 2
-		BEGIN
-			SELECT 
-				@totalDownline	= COUNT(1), 
-				@Downlinelist	= STRING_AGG(CAST(ci.custid AS VARCHAR(MAX)), ',')
-			FROM dbo.custinfo ci WITH (NOLOCK) 
-			WHERE recommend = @recommend
-				AND RoleId = 1
-		END
-
-		IF @roleid = 1
-		BEGIN
-			SELECT 
-				@totalDownline	= COUNT(1), 
-				@Downlinelist	= STRING_AGG(CAST(ci.custid AS VARCHAR(MAX)), ',')
-			FROM dbo.custinfo ci WITH (NOLOCK) 
-			WHERE custid = @CID
-		END
-
+	BEGIN
 		-- TODO: get data from bettrans_compact
 		;WITH cte_Downline AS (
 			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
@@ -276,6 +273,22 @@ BEGIN
 				AND b.roleId = 1
 				--AND b.custid = @CID
 		END
+	END
+
+	-- TODO: get data from Transfer (CashServiceBilling)
+	IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+	BEGIN
+		SELECT @FDate = NULL, @TDate = NULL
+		SELECT @FDate = MIN(FromDate) , @TDate = MAX(ToDate)
+		FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+		WHERE RangeType IN (1,2)
+
+		INSERT INTO #WeekRange(winlostdate)
+		SELECT DISTINCT tr.winlostdate
+		FROM dbo.Transfer tr (NOLOCK)
+		INNER JOIN SportBettypeMatrix f ON tr.Bettype = f.BetType
+		WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+			AND tr.CustId = @CID
 	END
 
 	--TODO: sum_winloss_old range
@@ -376,7 +389,6 @@ BEGIN
 			OPTION (MAXRECURSION 0);
 		END
 	END	
-	
 
 	--TODO: SabaWalletTicket
 	IF @IsReward = 1

@@ -55,7 +55,7 @@ Revisions:
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
-	
+	- 20250529@Virgil: Cash Service - Billing service and Report changes [RedmineId: #227984]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -232,6 +232,33 @@ BEGIN
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 		GROUP BY b.custid;
 
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
+			SELECT tr.CustId,
+					0 AS TurnOver,
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinLost,
+					0 AS PlayerComm, 
+					SUM(WinLost-Actual_Stake) AS AgWinLost,
+					0 AS AgComm, 
+					0 AS NoOfTicket
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+				AND tr.CustId = @CID
+			GROUP BY tr.CustId;
+		END
+
 		-- bettransRnG
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 		SELECT b.CustId
@@ -348,6 +375,33 @@ BEGIN
 			AND recommend = @CID
 			AND RoleID = 1
 		GROUP BY CustID;
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
+			SELECT tr.CustId,
+					0 AS TurnOver,
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinLost,
+					0 AS PlayerComm, 
+					SUM(WinLost-Actual_Stake) AS AgWinLost,
+					0 AS AgComm, 
+					0 AS NoOfTicket
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+				AND tr.CustId = @CID
+			GROUP BY tr.CustId;
+		END
 	END
 
 	--TODO: sum_winloss_old range
@@ -391,6 +445,37 @@ BEGIN
 			AND ISNULL(b.ticketType,0) = w.ticketType
 		GROUP BY CustID
 		OPTION (MAXRECURSION 0);
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
+			SELECT b.CustId,
+					0 AS TurnOver,
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinLost,
+					0 AS PlayerComm, 
+					SUM(WinLost) AS AgWinLost,
+					0 AS AgComm, 
+					0 AS NoOfTicket
+			FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK)
+			INNER JOIN (	
+					SELECT DISTINCT ma.ProductID, ma.BetType, ma.SportType
+					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+					WHERE ma.ProductID = 111
+						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+						AND ma.RefTable = 4
+						AND ma.BetType NOT IN (31001,31002)
+					) f ON b.Bettype = f.BetType
+					AND b.SportType = f.SportType
+			WHERE b.winlostdate BETWEEN @FDate AND @TDate
+				AND srecommend = @srecommend
+				AND mrecommend = @mrecommend
+				AND recommend = @custid
+				AND RoleID = 2
+			GROUP BY b.CustID
+		END
 	END
 
 	--TODO: SabaWalletTicket
@@ -418,9 +503,9 @@ BEGIN
 		IF @IsReward = 1
 		BEGIN
 			SELECT	c.CustID AS CustId, 
-					c.UserName AS CustName,
-					c.FirstName, 
-					c.LastName,
+					CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+					CASE WHEN c.CustID != @CID THEN c.FirstName ELSE '' END AS FirstName, 
+					CASE WHEN c.CustID != @CID THEN c.LastName ELSE '' END AS LastName,
 					ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
 					SUM(TurnOver) AS Turnover,
 					SUM(TurnoverNoDraw) AS NetTurnover,
@@ -431,13 +516,14 @@ BEGIN
 					SUM(AgComm) AS AgComm,
 					SUM(NoOfTicket) AS NumberOfTickets,
 					SUM(w.RewardAmount) AS RewardAmount,
-					@CurrencyCode AS RewardCurrency
+					@CurrencyCode AS RewardCurrency,
+					CASE WHEN c.CustID = @CID THEN 1 ELSE 0 END AS IsCashServiceBilling
 			FROM #AgWinLossDetails w 
 				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 				OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl	
 			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
 			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName,ISNULL(wl.IsExistedWatchList,0)
-			ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
+			ORDER BY IsCashServiceBilling, IIF(c.Username IS NULL,1,0),c.Username;
 
 			SELECT	NULL AS CustId,
 				'Total' AS CustName,
@@ -457,9 +543,9 @@ BEGIN
 		ELSE
 		BEGIN
 			SELECT	c.CustID AS CustId, 
-					c.UserName AS CustName,
-					c.FirstName, 
-					c.LastName,
+					CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+					CASE WHEN c.CustID != @CID THEN c.FirstName ELSE '' END AS FirstName, 
+					CASE WHEN c.CustID != @CID THEN c.LastName ELSE '' END AS LastName,
 					ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
 					SUM(TurnOver) AS Turnover,
 					SUM(TurnoverNoDraw) AS NetTurnover,
@@ -468,13 +554,14 @@ BEGIN
 					SUM(PlayerComm) AS MemberComm,
 					SUM(AgWinlost) AS AgWinLoss,
 					SUM(AgComm) AS AgComm,
-					SUM(NoOfTicket) AS NumberOfTickets
+					SUM(NoOfTicket) AS NumberOfTickets,
+					CASE WHEN c.CustID = @CID THEN 1 ELSE 0 END AS IsCashServiceBilling
 			FROM #AgWinLossDetails w 
 				LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 				OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl	
 			WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
 			GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName,ISNULL(wl.IsExistedWatchList,0)
-			ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
+			ORDER BY IsCashServiceBilling, IIF(c.Username IS NULL,1,0),c.Username;
 
 			SELECT	NULL AS CustId,
 				'Total' AS CustName,
@@ -508,9 +595,9 @@ BEGIN
 			SELECT wl.*
 			FROM (
 				SELECT	c.CustID AS CustId,
-						c.UserName AS CustName,
-						c.FirstName, 
-						c.LastName,
+						CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+						CASE WHEN c.CustID != @CID THEN c.FirstName ELSE '' END AS FirstName, 
+						CASE WHEN c.CustID != @CID THEN c.LastName ELSE '' END AS LastName,
 						ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
 						SUM(TurnOver) AS Turnover,
 						SUM(TurnoverNoDraw) AS NetTurnover,
@@ -522,14 +609,16 @@ BEGIN
 						SUM(NoOfTicket) AS NumberOfTickets,
 						SUM(w.RewardAmount) AS RewardAmount,
 						@CurrencyCode AS RewardCurrency,
-						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum	
+						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum,
+						CASE WHEN c.CustID = @CID THEN 1 ELSE 0 END AS IsCashServiceBilling
 				FROM #AgWinLossDetails w 
 					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 					OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl
 				WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
 				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, ISNULL(wl.IsExistedWatchList,0)
 			) wl
-			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd
+			ORDER BY wl.IsCashServiceBilling, wl.RowNum;
 
 			SELECT	NULL AS CustId,
 				'Total' AS CustName,
@@ -551,9 +640,9 @@ BEGIN
 			SELECT wl.*
 			FROM (
 				SELECT	c.CustID AS CustId,
-						c.UserName AS CustName,
-						c.FirstName, 
-						c.LastName,
+						CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName,
+						CASE WHEN c.CustID != @CID THEN c.FirstName ELSE '' END AS FirstName, 
+						CASE WHEN c.CustID != @CID THEN c.LastName ELSE '' END AS LastName,
 						ISNULL(wl.IsExistedWatchList,0) IsExistedWatchList,
 						SUM(TurnOver) AS Turnover,
 						SUM(TurnoverNoDraw) AS NetTurnover,
@@ -563,14 +652,16 @@ BEGIN
 						SUM(AgWinlost) AS AgWinLoss,
 						SUM(AgComm) AS AgComm,
 						SUM(NoOfTicket) AS NumberOfTickets,
-						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum	
+						ROW_NUMBER() OVER (ORDER BY IIF(c.Username IS NULL,1,0),c.UserName) AS RowNum,
+						CASE WHEN c.CustID = @CID THEN 1 ELSE 0 END AS IsCashServiceBilling
 				FROM #AgWinLossDetails w 
 					LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 					OUTER APPLY (SELECT 1 AS IsExistedWatchList FROM WLMonitored_Player wl WITH (NOLOCK) WHERE wl.CustID = w.custid AND wl.Sporttype = 0) AS wl
 				WHERE @UserName_CustId = 0 OR w.custid = @UserName_CustId
 				GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, ISNULL(wl.IsExistedWatchList,0)
 			) wl
-			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd;
+			WHERE wl.RowNum BETWEEN @RowStart AND @RowEnd
+			ORDER BY wl.IsCashServiceBilling, wl.RowNum;
 
 				SELECT	NULL AS CustId,
 					'Total' AS CustName,

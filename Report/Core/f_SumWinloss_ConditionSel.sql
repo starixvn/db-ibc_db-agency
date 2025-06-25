@@ -86,6 +86,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250506@Dave: Remove sportType (126, 127) of VS7 (106) [RedmineID: #221188]
 		- 20250513@Dave: Add Saba Soccer Marble Spinner & W Casino [RedmineID: #223130]
 		- 20250528@Dave: Add AI Gaming & ClotPlay [RedmineID: #228967]
+		- 20250623@Virgil: Add Cash Service Billing [RedmineId: #229883]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -200,6 +201,9 @@ RETURN
 				,(98, 136, 0, 0, 0) -- W Casino (WLC)
 				,(110, 121, 0, 0, 0) -- AI Gaming (AIG)
 				,(109, 122, 0, 0, 0) -- ClotPlay (CPRNG)
+				,(111, 0, 31003, 0, 0) -- Cash Service Billing
+				,(111, 0, 31004, 0, 0) -- Cash Service Billing
+				,(111, 0, 31005, 0, 0) -- Cash Service Billing
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO

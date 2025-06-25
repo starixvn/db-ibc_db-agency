@@ -55,6 +55,7 @@ Revisions:
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
+	- 20250605@Virgil: Cash Service - Billing service and Report changes [RedmineId: #227984]
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -268,6 +269,39 @@ BEGIN
 		WHERE	b.winlostdate BETWEEN @FDate AND @TDate
 		GROUP BY b.custid;
 
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
+			SELECT tr.CustId,
+					0 AS TurnOver, 
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinlost,
+					0 AS PlayerComm,
+					SUM(WinLost-Actual_Stake) AS AgWinlost,
+					0 AS AgComm,
+					0 AS MAgWinlost,
+					0 AS MAgComm,
+					0 AS NoOfTicket
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN CTE_Downline m ON m.custid = tr.custid
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+			GROUP BY tr.CustId;
+		END
+
 		-- bettransRnG
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 		SELECT CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END AS CustId
@@ -414,6 +448,39 @@ BEGIN
 			AND ISNULL(b.ticketType,0) = t.TicketType
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
+			SELECT tr.CustId,
+					0 AS TurnOver, 
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinlost,
+					0 AS PlayerComm,
+					SUM(WinLost-Actual_Stake) AS AgWinlost,
+					0 AS AgComm,
+					0 AS MAgWinlost,
+					0 AS MAgComm,
+					0 AS NoOfTicket
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN CTE_Downline m ON m.custid = tr.custid
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+			GROUP BY tr.CustId;
+		END
 	END
 
 	--TODO: sum_winloss_old range
@@ -471,6 +538,43 @@ BEGIN
 			AND ISNULL(b.TicketType,0) = bt.TicketType
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
+			SELECT b.CustId,
+					0 AS TurnOver, 
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinlost,
+					0 AS PlayerComm,
+					SUM(WinLost) AS AgWinlost,
+					0 AS AgComm,
+					0 AS MAgWinlost,
+					0 AS MAgComm,
+					0 AS NoOfTicket
+			FROM bodb_Summary.dbo.Sum_WinLoss_Old b (NOLOCK)
+			INNER JOIN CTE_Downline m ON m.custid = b.recommend
+			INNER JOIN (	
+					SELECT DISTINCT ma.ProductID, ma.BetType, ma.SportType
+					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+					WHERE ma.ProductID = 111
+						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+						AND ma.RefTable = 4
+						AND ma.BetType NOT IN (31001,31002)
+					) f ON b.Bettype = f.BetType
+					AND b.SportType = f.SportType
+			WHERE b.winlostdate BETWEEN @FDate AND @TDate
+				AND srecommend = @srecommend
+				AND mrecommend = @custid
+				AND RoleID = 2
+			GROUP BY b.CustID
+		END
 	END	
 
 	--TODO: SabaWalletTicket
