@@ -52,6 +52,7 @@ Revisions:
 	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - Move SP from DBAGE to DBSIC [Redmine: #211969]
+	- 20250625@Bobby: Transfer changes for Cash Service [Redmine: #231494]
 
 Param's Explanation:
 	• @CustID: SAgentID
@@ -151,36 +152,46 @@ BEGIN
 	--Filter user
 	
 	;WITH cte AS
-		(
-			SELECT 
-				c.mrecommend AS custid,
-				ISNULL(SUM(CASE WHEN roleid = 3 THEN credit ELSE 0 END), 0) AS magentCredit,
-				ISNULL(SUM(CASE WHEN roleid = 2 OR recommend = -3 THEN credit ELSE 0 END), 0) AS magentUsedCredit,
-				0 AS IsDirectMember
-			FROM CustDB.dbo.custinfo as c (nolock)
-			WHERE srecommend = @SAgID AND roleid < 4 AND mrecommend > 0
-				AND @Leveltype IN (0,1)
-			GROUP BY c.mrecommend
-			UNION ALL
-			SELECT 
-				c.custid,
-				isnull(credit,0) AS magentCredit,
-				0 magentUsedCredit,
-				1 AS IsDirectMember
-			FROM CustDB.dbo.custinfo as c (nolock)
-			WHERE srecommend = @SAgID 
-				AND roleid = 1
-				AND mrecommend = -4			
-				AND @Leveltype IN (0,2)
-		)
+	(
+		SELECT 
+			c.mrecommend AS custid,
+			ISNULL(SUM(CASE WHEN roleid = 3 THEN credit ELSE 0 END), 0) AS magentCredit,
+			ISNULL(SUM(CASE WHEN roleid = 2 OR recommend = -3 THEN credit ELSE 0 END), 0) AS magentUsedCredit,
+			0 AS IsDirectMember
+		FROM CustDB.dbo.custinfo as c (nolock)
+		WHERE srecommend = @SAgID AND roleid < 4 AND mrecommend > 0
+			AND @Leveltype IN (0,1)
+		GROUP BY c.mrecommend
+		UNION ALL
+		SELECT 
+			c.custid,
+			isnull(credit,0) AS magentCredit,
+			0 magentUsedCredit,
+			1 AS IsDirectMember
+		FROM CustDB.dbo.custinfo as c (nolock)
+		WHERE srecommend = @SAgID 
+			AND roleid = 1
+			AND mrecommend = -4			
+			AND @Leveltype IN (0,2)
+	),
+	CTE_CashAccumCredit AS (
+		-- CashAccumCredit
+		SELECT cac.mrecommend AS CustId
+			, SUM(ISNULL(cac.AccumCreditReturn,0)) AS cashUsedCredit
+		FROM dbo.CashAccumCredit cac WITH(NOLOCK)
+		WHERE cac.srecommend = @SAgID
+		GROUP BY cac.mrecommend
+	)
 	INSERT INTO #CustomerList (custid , Credit, UsedCredit,enabled, username, closed, suspended, firstname, lastname, Locked, IsDirectMember)
-	SELECT tmp.custid, tmp.magentCredit, tmp.magentUsedCredit, ci.Enabled,ci.username, CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END IsClosed
-			, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END IsSuspended
-			, c.firstname, c.lastname, ISNULL(cs.Locked, 0) Locked, tmp.IsDirectMember
+	SELECT tmp.custid, tmp.magentCredit, (tmp.magentUsedCredit + ISNULL(cac.cashUsedCredit, 0))
+		, ci.Enabled,ci.username, CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END IsClosed
+		, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END IsSuspended
+		, c.firstname, c.lastname, ISNULL(cs.Locked, 0) Locked, tmp.IsDirectMember
 	FROM cte tmp	
 		INNER JOIN CustDB.dbo.CustInfo ci with (NOLOCK) ON tmp.custid = ci.custid 
 		INNER JOIN CustDB.dbo.Customer c with (NOLOCK) on ci.custid = c.custid 
 		INNER JOIN CustDB.dbo.CustProductStatus cs WITH(NOLOCK) ON cs.CustID = ci.custid
+		LEFT JOIN CTE_CashAccumCredit cac ON cac.CustId = ci.custid
 	WHERE  (ci.username like '%' + @Username + '%' OR ISNULL(@username,'') = '')
 					AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
 							else	case @CustStatus  
@@ -462,6 +473,7 @@ BEGIN
 	WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 				WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 				WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+				WHEN winlostdate > @yesterday AND bettype IN (31003,31004,31005) THEN 0 --> Cash service billing fees today
 			ELSE 1 END
 	GROUP BY mrecommend
 
@@ -480,6 +492,7 @@ BEGIN
 	WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 				WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 				WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+				WHEN winlostdate > @yesterday AND bettype IN (31003,31004,31005) THEN 0 --> Cash service billing fees today
 			ELSE 1 END
 	GROUP BY mrecommend
 

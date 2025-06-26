@@ -73,6 +73,7 @@ Revisions:
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20240314@Bobby: EC enhancement [Redmine: #202276]
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - remove @SuperIDsTransferTotal [Redmine: #211969]
+	- 20250625@Bobby: Alpha - Transfer changes for Cash Service [Redmine: #231494]
 
 Param's Explanation:
 	• @FromCustID: list from custid
@@ -275,16 +276,20 @@ BEGIN
 							WHEN @AutoTransfer = 1 AND cbs.ToCustID > 0 THEN 1
 							ELSE 0
 						END
+				AND cs.ServiceType <> 1 -- exclude Cash members
 	END
 	ELSE
 	BEGIN
+		WITH CTE_CustId AS (
+			SELECT TRY_CONVERT(INT, [value]) AS CustId
+			FROM STRING_SPLIT(@ToCustIDs, ',') AS f
+		)
 		INSERT INTO #custid (CustId)
-		SELECT CONVERT(INT, value) AS CustId
-		FROM STRING_SPLIT(@ToCustIDs, ',')
+		SELECT f.CustId
+		FROM CTE_CustId AS f
+		INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on f.custid=cs.CustID
+		WHERE cs.ServiceType <> 1 -- exclude Cash members
 	END
-
-	
-	
 
 	/* *********** Calculating balance *********** */
 	/* Note: using recommend = @AgentId on bettrans, bettransRnG, bettransLC, translog to using index on recommend column */

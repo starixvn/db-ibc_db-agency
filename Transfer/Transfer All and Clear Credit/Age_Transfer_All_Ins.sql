@@ -35,6 +35,7 @@ AS
 		- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 		- 20240314@Bobby: EC enhancement [Redmine: #202276]
 		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
+		- 20250625@Bobby: Transfer changes for Cash Service [Redmine: #231494]
 */
 
 BEGIN
@@ -351,6 +352,7 @@ BEGIN
 				WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 								WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 								WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+								WHEN winlostdate > @yesterday AND bettype IN (31003,31004,31005) THEN 0 --> Cash service billing fees today
 							ELSE 1 END
 					AND bettype NOT IN (21008, 21009)
 				GROUP BY
@@ -615,6 +617,7 @@ BEGIN
 
 	IF @IsErr = 0
 	BEGIN
+
 		-- Member
 		;WITH cte_member AS
 		(
@@ -630,7 +633,9 @@ BEGIN
 		FROM cte_member m
 			INNER JOIN CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId
 			INNER JOIN @tblrecommend r ON c.recommend = r.recommend
+			INNER JOIN CustDB.dbo.CustProductStatus cs WITH (NOLOCK) ON cs.custId = c.custId
 		WHERE c.roleId = 1
+			AND ISNULL(cs.ServiceType, 0) = 0 -- Only credit members
 
 		--DirectMember
 		;WITH cte_directmember AS

@@ -66,6 +66,7 @@ Revisions:
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20240314@Bobby: EC enhancement [Redmine: #202276]
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
+	- 20250625@Bobby: Transfer changes for Cash Service [Redmine: #231494]
 	
 Param's Explanation:
 	• @AmtTrans: amount of money
@@ -366,6 +367,7 @@ BEGIN
 		WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 										WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 										WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+										WHEN winlostdate > @yesterday AND bettype IN (31003,31004,31005) THEN 0 --> Cash service billing fees today
 								ELSE 1 END
 					AND bettype NOT IN (21008, 21009)
 		GROUP BY mrecommend

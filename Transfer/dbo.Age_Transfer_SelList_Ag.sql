@@ -55,6 +55,7 @@ Revisions:
 	- 20230227@Bobby: AutoJob clear balance downlines [RedmineID: #182071]
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20250425@Elodie: Enhance SP [Redmine: #225506]
+	- 20250625@Bobby: Transfer changes for Cash Service [Redmine: #231494]
 
 Param's Explanation:
 	• @CustID: AgentID
@@ -174,7 +175,7 @@ BEGIN
 	GROUP BY custid
 
 	-- bettrans
-		-- running ticket
+	-- running ticket
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding)
 	SELECT
 		custid,
@@ -187,7 +188,7 @@ BEGIN
 		AND NOT EXISTS (SELECT 1 FROM #SportBettype s WHERE b.bettype = s.bettype AND s.RefTable <> 0)
 	GROUP BY custid
 
-		-- settle ticket
+	-- settle ticket
 	INSERT INTO #balance (custid, YesterdayBalance, TotalBalance, Outstanding, PendingTransfer3rd)
 	SELECT
 		custid,
@@ -214,10 +215,11 @@ BEGIN
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 	FROM dbo.Transfer b WITH(NOLOCK)
 	WHERE recommend = @CustID
-	AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+		AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 				WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 				WHEN winlostdate < @balanceUpDay THEN 0 --> old data
-			ELSE 1 END
+				WHEN winlostdate > @yesterday AND bettype IN (31003,31004,31005) THEN 0 --> Cash service billing fees
+				ELSE 1 END
 	GROUP BY custid
 	/* End Balance Info */
 
@@ -228,6 +230,7 @@ BEGIN
 
 	--Filter user
 	IF @Username = ''
+	BEGIN
 		INSERT INTO #tmp_customer
 		(
 			[custid],
@@ -256,6 +259,7 @@ BEGIN
 					, Locked
 				FROM dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
+					AND cs.ServiceType <> 1 -- exclude cash members
 			) AS cs	
 		WHERE	@CustID = ci.recommend AND ci.roleid = 1   
 				AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
@@ -268,8 +272,10 @@ BEGIN
 									when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
 									when @CustStatus = 'Disabled' then 1
 									when @CustStatus = 'All' then 1
-									else 0 end		
+									else 0 end	
+	END
 	ELSE
+	BEGIN
 		INSERT INTO #tmp_customer
 		(
 			[custid],
@@ -298,6 +304,7 @@ BEGIN
 					, Locked
 				FROM dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
+					AND cs.ServiceType <> 1 -- exclude cash members
 			) AS cs	
 		WHERE	@CustID = ci.recommend AND ci.roleid = 1  AND ci.username like '%' + @Username + '%'  
 				AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
@@ -310,7 +317,8 @@ BEGIN
 									when @CustStatus = 'Closed'	and cs.CloseInfo > 0  then 1
 									when @CustStatus = 'Disabled' then 1
 									when @CustStatus = 'All' then 1
-									else 0 end				
+									else 0 end
+	END
 
 	IF @TotalPages = 0
 	BEGIN

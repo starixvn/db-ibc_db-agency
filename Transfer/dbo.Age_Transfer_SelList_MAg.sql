@@ -152,24 +152,34 @@ BEGIN
 		GROUP BY c.recommend
 		UNION ALL
 		SELECT
-				c.custid,
-				isnull(credit,0) AS magentCredit,
-				0 magentUsedCredit,
-				1 AS IsDirectMember
-			FROM CustDB.dbo.custinfo as c (nolock)
-			WHERE mrecommend = @masterid 
-				AND roleid = 1
-				AND recommend = -3			
-				AND @Leveltype IN (0,2)
+			c.custid,
+			isnull(credit,0) AS magentCredit,
+			0 magentUsedCredit,
+			1 AS IsDirectMember
+		FROM CustDB.dbo.custinfo as c (nolock)
+		WHERE mrecommend = @masterid 
+			AND roleid = 1
+			AND recommend = -3			
+			AND @Leveltype IN (0,2)
+	),
+	CTE_CashAccumCredit AS (
+		-- CashAccumCredit
+		SELECT cac.recommend AS CustId
+			, SUM(ISNULL(cac.AccumCreditReturn,0)) AS cashUsedCredit
+		FROM dbo.CashAccumCredit cac WITH(NOLOCK)
+		WHERE cac.mrecommend = @masterid
+		GROUP BY cac.recommend
 	)
 	INSERT INTO #tmp_customer (custid , agentCredit, agentUsedCredit,enabled, username, closed, suspended, firstname, lastname, Locked, IsDirectMember)
-	SELECT tmp.custid, tmp.agentCredit, tmp.agentUsedCredit, ci.Enabled,ci.username, CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END IsClosed
+	SELECT tmp.custid, tmp.agentCredit, (tmp.agentUsedCredit + ISNULL(cac.cashUsedCredit, 0))
+		, ci.Enabled,ci.username, CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END IsClosed
 			, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END IsSuspended
 			, c.firstname, c.lastname, ISNULL(cs.Locked, 0) Locked, tmp.IsDirectMember
 	FROM cte tmp	
 		INNER JOIN CustDB.dbo.CustInfo ci with (NOLOCK) ON tmp.custid = ci.custid 
 		INNER JOIN CustDB.dbo.Customer c with (NOLOCK) on ci.custid = c.custid 
 		INNER JOIN CustDB.dbo.CustProductStatus cs WITH(NOLOCK) ON cs.CustID = ci.custid
+		LEFT JOIN CTE_CashAccumCredit cac ON cac.CustId = ci.custid
 	WHERE  (ci.username like '%' + @Username + '%' OR ISNULL(@username,'') = '')
 					AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
 							else	case @CustStatus  
@@ -391,6 +401,7 @@ BEGIN
 	WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 				WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 				WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+				WHEN winlostdate > @yesterday AND bettype IN (31003,31004,31005) THEN 0 --> Cash service billing fees today
 			ELSE 1 END
 	GROUP BY recommend
 
