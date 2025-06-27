@@ -28,6 +28,7 @@ AS
 		- 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
 		- 20240523@Lewis: Potential Winning [RedmineId: #202427]  
 		- 20241119@Lewis: Direct Member [RedmineId: #211969]  
+		- 20250626@Bobby: Tuning Perf [RedmineId: #231590]  
 
 	Param Explanation:
 		- @LevelType:	0: All; 1: Master Agent/ Agent; 2: Direct Member
@@ -45,15 +46,7 @@ BEGIN
 
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
-
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
-
-	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, ProductId INT, PRIMARY KEY CLUSTERED (RefTable, bettype));
-
-	INSERT INTO #SportBettype (bettype, RefTable, ProductId)
-	SELECT bettype, RefTable, ProductId
-	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest)
-	;
 
 	-- #OutStanding
 	CREATE TABLE #OutStanding (mrecommend INT, MemberOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, SuperRisk MONEY);
@@ -67,8 +60,14 @@ BEGIN
 		SUM(pa.PayoutAdjust - actual_stake),
 		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
 	FROM dbo.bettrans b WITH (NOLOCK)  
-		INNER JOIN #SportBettype s
-			ON s.RefTable = 0 AND s.bettype = b.bettype
+		INNER JOIN (
+            SELECT DISTINCT sbm.ProductID, sbm.BetType
+            FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+            WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+                AND IsTest <= @IsTest
+                AND RefTable = 0
+        
+        ) s ON s.bettype = b.bettype
 		OUTER APPLY (
 			SELECT CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]','MONEY') AS PayoutAdjust
 			WHERE s.ProductId = 1
@@ -89,13 +88,16 @@ BEGIN
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.translog t WITH (NOLOCK)
+		CROSS APPLY (
+			SELECT TOP 1 productID
+			FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+				AND IsTest <= @IsTest
+				AND RefTable = 3
+				AND sbm.bettype = t.gameID
+		) s
 	WHERE t.statusID IN (0, 1)
 		AND t.srecommend = @CustID
-		AND EXISTS (
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 3 AND s.bettype = t.gameID
-		)
 		AND (
 				(@LevelType IN (0,2) AND mrecommend = -4)
 			 OR (@LevelType IN (0,1) AND mrecommend <> -4)
@@ -109,13 +111,16 @@ BEGIN
 		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
-	FROM dbo.bettransRnG b WITH (NOLOCK)  
+	FROM dbo.bettransRnG b WITH (NOLOCK) 
+		CROSS APPLY (
+			SELECT TOP 1 productID
+			FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+				AND IsTest <= @IsTest
+				AND RefTable = 1
+				AND sbm.bettype = b.gameID
+		) s 
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS (
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 1 AND s.bettype = b.gameID
-		)
 		AND srecommend =  @CustID
 		AND (
 				(@LevelType IN (0,2) AND mrecommend = -4)
@@ -130,13 +135,16 @@ BEGIN
 		CASE WHEN mrecommend = -4 THEN custid ELSE mrecommend END,
 		SUM(ABS(actual_stake)) AS MemberOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
-	FROM dbo.bettransLC b WITH (NOLOCK)  
+	FROM dbo.bettransLC b WITH (NOLOCK)
+		CROSS APPLY (
+			SELECT TOP 1 productID
+			FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+				AND IsTest <= @IsTest
+				AND RefTable = 2
+				AND sbm.bettype = b.gameID
+		) s  
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS (
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 2 AND s.bettype = b.gameID
-		)
 		AND srecommend =  @CustID
 		AND (
 				(@LevelType IN (0,2) AND mrecommend = -4)
@@ -210,7 +218,6 @@ BEGIN
 			@TotalSuperRiskAmount 	= SUM(SuperRisk) 
 	FROM #OutStanding
 
-	DROP TABLE #SportBettype;
 	DROP TABLE #OutStanding;
 
 	SET NOCOUNT OFF;

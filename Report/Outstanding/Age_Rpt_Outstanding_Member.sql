@@ -29,6 +29,7 @@ AS
 		- 20201005@Danny: Change to use alias DBBOF alternative to DB042 [RedmineID: #139516]
 		- 20220520@Evan: Add parameters for telegram bot service [RedmineId: #167819]  
 		- 20240523@Lewis: Potential Winning [RedmineId: #202427]  
+		- 20250626@Bobby: Tuning Perf [RedmineId: #231590]  
 */
 
 BEGIN
@@ -43,15 +44,7 @@ BEGIN
 
 	DECLARE @isTest BIT;
 	SELECT  @isTest = dbo.f_CheckSPVersion(@@PROCID);
-
 	SELECT @ProductIds = dbo.f_AddRelatedProducts(@ProductIds);
-
-	CREATE TABLE #SportBettype (bettype SMALLINT, RefTable TINYINT, ProductId INT, PRIMARY KEY CLUSTERED (RefTable, bettype));
-
-	INSERT INTO #SportBettype (bettype, RefTable, ProductId)
-	SELECT bettype, RefTable, ProductId
-	FROM dbo.f_SportBettypeMatrixByProduct(@ProductIds, @isTest)
-	;
 
 	-- #OutStanding
 	CREATE TABLE #OutStanding (custid INT, MemberOutstanding MONEY, AgentOutstanding MONEY, MasterOutstanding MONEY, SuperOutstanding MONEY, ToWin MONEY, AgentRisk MONEY, MasterRisk MONEY, SuperRisk MONEY);
@@ -69,8 +62,14 @@ BEGIN
 		SUM((pa.PayoutAdjust - actual_stake) * mpositiontaking),
 		SUM((pa.PayoutAdjust- actual_stake) * spositiontaking)
 	FROM dbo.bettrans b WITH (NOLOCK)	
-		INNER JOIN #SportBettype s
-			ON s.RefTable = 0 AND s.bettype = b.bettype
+		INNER JOIN (
+            SELECT DISTINCT sbm.ProductID, sbm.BetType
+            FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+            WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+                AND IsTest <= @IsTest
+                AND RefTable = 0
+        
+        ) s ON s.bettype = b.bettype
 		OUTER APPLY (
 			SELECT 
 				CAST(('<xml>' + b.ExtraInfo + '</xml>') AS XML).value('data(/xml/p1/@pa)[1]', 'MONEY') AS PayoutAdjust
@@ -89,14 +88,16 @@ BEGIN
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.translog t WITH (NOLOCK)
+		CROSS APPLY (
+			SELECT TOP 1 productID
+			FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+				AND IsTest <= @IsTest
+				AND RefTable = 3
+				AND sbm.bettype = t.gameID
+		) s
 	WHERE t.statusID IN (0, 1)
 		AND recommend =  @CustID
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 3 AND s.bettype = t.gameID
-		)
 	GROUP BY custid;
 
 	-- bettransRnG
@@ -107,14 +108,16 @@ BEGIN
 		SUM(actual_stake * apositiontaking) AS AgentOutstanding,
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
-	FROM dbo.bettransRnG b WITH (NOLOCK)  
+	FROM dbo.bettransRnG b WITH (NOLOCK) 
+		CROSS APPLY (
+			SELECT TOP 1 productID
+			FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+				AND IsTest <= @IsTest
+				AND RefTable = 1
+				AND sbm.bettype = b.gameID
+		) s 
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 1 AND s.bettype = b.gameID
-		)
 		AND recommend =  @CustID		
 	GROUP BY custid;
 
@@ -127,13 +130,15 @@ BEGIN
 		SUM(actual_stake * mpositiontaking) AS MasterOutstanding,
 		SUM(actual_stake * spositiontaking) AS SuperOutstanding
 	FROM dbo.bettransLC b WITH (NOLOCK)  
+		CROSS APPLY (
+			SELECT TOP 1 productID
+			FROM dbo.SportBettypeMatrix sbm WITH (NOLOCK)
+			WHERE ',' + @ProductIds + ',' LIKE '%,' + CONVERT(VARCHAR(3), sbm.ProductID) + ',%'
+				AND IsTest <= @IsTest
+				AND RefTable = 2
+				AND sbm.bettype = b.gameID
+		) s
 	WHERE b.statusID IN (0, 1)
-		AND EXISTS 
-		(
-			SELECT 1
-			FROM #SportBettype s
-			WHERE s.RefTable = 2 AND s.bettype = b.gameID
-		)
 		AND recommend =  @CustID		
 	GROUP BY custid;
 
@@ -216,7 +221,6 @@ BEGIN
 	FROM #OutStanding
 
 	DROP TABLE #OutStanding;
-	DROP TABLE #SportBettype;
 
 	SET NOCOUNT OFF;
 END
