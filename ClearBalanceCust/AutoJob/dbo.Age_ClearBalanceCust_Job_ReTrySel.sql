@@ -1,4 +1,4 @@
-/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="bodbDownlineNet" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBSIC-bodb02,DBCTG-bodb02" executers="wsv_alp" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_ReTrySel]
 	@Environment VARCHAR(10)
 	,@NumOfThread	INT = 4
@@ -14,6 +14,7 @@ AS
 	Revisions:
 		- 20230227@bobby: INIT [RedmineID: #182071]
 		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
+		- 20250701@Bobby: HF - Can not retry due to conflict time [RedmineID: #231942]
 
 	Param's Explanation:
 		• @NumOfBatch: Number of thread(s) are being run by WEB
@@ -23,14 +24,16 @@ BEGIN
 	SET NOCOUNT ON;
 
 	DECLARE @RunningMode	VARCHAR(15),
-		@TotalThread		INT
+		@TotalThread		INT,
+		@SessionDate		SMALLDATETIME
 	;
 
 	SELECT @TotalThread = ISNULL(@NumOfThread, 2),
 		@RunningMode	= 'ReTry',
 		@ErrCode		= 0,
 		@ErrMsg			= '',
-		@IsCompleted	= 1
+		@IsCompleted	= 1,
+		@SessionDate	= CAST(GETDATE() AS DATE)
 		;
 
 	DROP TABLE IF EXISTS #tmpClearBalanceCust_BatchLog;
@@ -58,6 +61,7 @@ BEGIN
 						ELSE 0
 					END
 			AND p.Environment = @Environment
+			AND p.SessionDate = @SessionDate
 	),
 	CTE_RetryBatch AS (
 		SELECT TOP(@NumOfThread) SuperId, BatchNo
@@ -102,11 +106,13 @@ BEGIN
 	FROM (
 		SELECT TOP(1) IsCompletedCheck = 0
 		FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
+		INNER JOIN dbo.f_Age_ClearBalanceCust_ErrorSel() err ON err.ErrType = JSON_VALUE(p.Result, '$.ErrType')
 		WHERE p.Environment = @Environment 
+			AND p.SessionDate = @SessionDate
 			AND (
 				p.Status IN ('New', 'Waiting', 'Processing') --> Main Thread running
-				OR (p.Status IN ('Failed') AND p.TryCount BETWEEN 1 AND 4) --> ReTry Thread running
-				OR (p.Status IN ('Pending') AND p.TryCount BETWEEN 1 AND 59) --> TransferUM Pending
+				OR (p.Status IN ('Failed') AND err.AllowReTry = 1 AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 4) --> ReTry Thread running
+				OR (p.Status IN ('Pending') AND err.AllowReTry = 1 AND ISNULL(p.TryCount, 1) BETWEEN 1 AND 59) --> TransferUM Pending
 			)
 		UNION ALL -- CHECK: Today snapshot COMPLETED OR NOT
 		SELECT 0
@@ -114,6 +120,7 @@ BEGIN
 			SELECT TOP 1 1
 			FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK) 
 			WHERE p.Environment = @Environment
+				AND p.SessionDate = @SessionDate
 		)
 	) AS ck;
 
