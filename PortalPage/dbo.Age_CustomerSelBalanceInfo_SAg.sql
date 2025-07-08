@@ -17,6 +17,7 @@ AS
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
         - 20240918@Lewis: Rebate Retention - RewardReceivable RewardPayable [RedmineId: #208503]
 		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
+		- 20250707@Dave: Add AccumCredit_AllCashMember to memberCredit [Redmine: #231524]
 */
 
 BEGIN
@@ -36,6 +37,10 @@ BEGIN
 	WHERE srecommend = @custid 
 		AND 1 = CASE WHEN roleid = 3 THEN 1
 					WHEN roleid = 1 AND recommend = -4 THEN 1 ELSE 0 END
+	
+	SELECT @memberCredit = ISNULL(SUM(AccumCreditReturn),0) + @memberCredit
+	FROM dbo.CashAccumCredit WITH (NOLOCK)
+	WHERE srecommend = @custid;
 
 	CREATE TABLE #BalanceInfo
 	(
