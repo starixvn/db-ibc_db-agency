@@ -591,8 +591,11 @@ BEGIN
 	SELECT m.custid
 	FROM cte_member m
 		INNER JOIN DBCUST.CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId -- get credit amount real time
+		INNER JOIN CustDB.dbo.CustProductStatus cs WITH (NOLOCK) ON cs.custId = c.custId
 		LEFT JOIN #NetPosition np ON m.custid = np.custid
-	WHERE c.roleId = 1 AND ISNULL(c.credit, 0) + m.amountAfterTransfer + ISNULL(np.netPosition, 0) < 0
+	WHERE c.roleId = 1 
+		AND ISNULL(c.credit, 0) + m.amountAfterTransfer + ISNULL(np.netPosition, 0) < 0
+		AND ISNULL(cs.ServiceType, 0) = 0 -- Only credit members
 
 	IF @@ROWCOUNT <> 0
 	BEGIN
