@@ -4,7 +4,7 @@ ALTER PROCEDURE dbo.Age_CashAgentBankInfoSel
 	@TransType		TINYINT,
 	@IsManual		BIT = 1,
 	@BankCode		VARCHAR(10) = NULL,
-	@BankAccountNumber	VARCHAR(50) = NULL
+	@BankAccountNumber	VARCHAR(100) = NULL
 AS 
 /*  
 	Created By: Helios
@@ -14,6 +14,7 @@ AS
 	
 	Revisions:
 		- 20250321@Helios: Agency Cash Service [Redmine: #223896]
+		- 20250623@Helios: Offer CashService - Get Bank Account Member [RedmineID: #231204]
 
 	@TransType:
         1  : Deposit
@@ -25,24 +26,41 @@ AS
 */  
 BEGIN
 	SET NOCOUNT ON;
-	DECLARE @TransactionTypeID TINYINT 
-	SELECT @TransactionTypeID = CASE WHEN @TransType = 1 AND @IsManual = 1 THEN 1 --Manual Deposit
-									 WHEN @TransType = 1 AND @IsManual = 0 THEN 2 --Auto Deposit
-									 WHEN @TransType = 2 AND @IsManual = 1 THEN 3 --Manual Withdrawal
-									 WHEN @TransType = 2 AND @IsManual = 0 THEN 4 --Auto Withdrawal
-								END
+	DECLARE @TransactionTypeID TINYINT;
 
+	-- Determine TransactionTypeID, support both Manual & Auto Deposit if @TransType = 1 AND @IsManual IS NULL
+	IF @TransType = 1 AND @IsManual IS NULL
+	BEGIN
+		SET @TransactionTypeID = NULL;
+	END
+	ELSE
+	BEGIN
+		SELECT @TransactionTypeID = CASE
+							WHEN @TransType = 1 AND @IsManual = 1 THEN 1 -- Manual Deposit
+							WHEN @TransType = 1 AND @IsManual = 0 THEN 2 -- Auto Deposit
+							WHEN @TransType = 2 AND @IsManual = 1 THEN 3 -- Manual Withdrawal
+							WHEN @TransType = 2 AND @IsManual = 0 THEN 4 -- Auto Withdrawal
+						END;
+	END
 
-	SELECT b.BankAccountNumber,b.BankID, a.BankCode
-	FROM CashAgentBankAccount b WITH (NOLOCK)
+	-- Query bank account info for agent
+	-- If @TransType = 1 AND @IsManual IS NULL, return both Manual & Auto Deposit (TransTypeList contains 1 or 2)
+	SELECT
+		b.BankAccountNumber    AS BankAccountNumber,
+		b.BankID               AS BankID,
+		a.BankCode             AS BankCode
+	FROM dbo.CashAgentBankAccount b WITH (NOLOCK)
 		CROSS APPLY STRING_SPLIT(b.TransTypeList, ',') AS ts
-		INNER JOIN CashBankList a WITH(NOLOCK) 
-			ON b.BankID = a.BankID
+		INNER JOIN dbo.CashBankList a WITH (NOLOCK)
+		ON b.BankID = a.BankID
 	WHERE b.AgentID = @AgentID
-		AND b.BankAccountStatus =  1 -- Enabled
+		AND b.BankAccountStatus = 1      -- Only enabled accounts
 		AND b.IsActive = 1
-		AND ts.value = @TransactionTypeID
+		AND (
+			(@TransType = 1 AND @IsManual IS NULL AND ts.value IN ('1', '2')) -- Get BankAcc Agent: Just get Deposit (Manual & Auto)
+			OR
+			(@TransactionTypeID IS NOT NULL AND ts.value = @TransactionTypeID)	
+		)
 		AND ISNULL(@BankCode, a.BankCode) = a.BankCode
-		AND ISNULL(@BankAccountNumber, b.BankAccountNumber) = b.BankAccountNumber
+		AND ISNULL(@BankAccountNumber, b.BankAccountNumber) = b.BankAccountNumber;
 END
-GO
