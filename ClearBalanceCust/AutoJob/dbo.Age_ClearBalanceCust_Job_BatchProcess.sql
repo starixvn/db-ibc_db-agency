@@ -5,6 +5,7 @@ ALTER PROCEDURE  [dbo].[Age_ClearBalanceCust_Job_BatchProcess]
 	@FromCustID		INT, 
 	@ToCustIDs		VARCHAR(4000),
 	@RunningMode	VARCHAR(15) = 'Normal',
+	@SuccessCustIDs	VARCHAR(4000) = '' OUTPUT,
 	@ErrCode		INT = 0 OUTPUT,  
 	@ErrMsg			NVARCHAR(4000) = '' OUTPUT
 AS  
@@ -17,7 +18,7 @@ AS
 		- 20230227@bobby: INIT [RedmineID: #182071]
 		- 20231027@Bobby: AutoJob transfer - Environment testing [RedmineID: #195135]
 		- 20241206@Helen: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
-
+		- 20250611@Johnson: output SuccessCustIDs to reset accum winloss for member [Redmine: #226060]
 	Param's Explanation:
 		• @FromCustID: S/M/A's custid
 		• @ToCustIDs: list M/A/Player custid
@@ -164,6 +165,19 @@ BEGIN
 			AND p.[Status] <> 'Completed'
 			AND p.Environment = @Environment
 		; 
+
+		IF @roleid =2 
+		BEGIN
+			SELECT @SuccessCustIDs = @SuccessCustIDs + CONVERT(VARCHAR(20),ToCustId)+','
+			FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
+			INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
+			WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
+				AND p.[Status] = 'Completed'
+				AND p.Environment = @Environment
+			; 
+			IF @SuccessCustIDs <> ''
+				SELECT @SuccessCustIDs= LEFT(@SuccessCustIDs, LEN(@SuccessCustIDs) - 1)
+		END
 
 		-- UPDATE Log:
 		UPDATE bl WITH(ROWLOCK, UPDLOCK)
