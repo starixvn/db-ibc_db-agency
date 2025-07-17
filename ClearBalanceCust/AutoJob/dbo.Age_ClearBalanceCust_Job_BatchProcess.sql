@@ -168,7 +168,7 @@ BEGIN
 
 		IF @roleid =2 
 		BEGIN
-			SELECT @SuccessCustIDs = @SuccessCustIDs + CONVERT(VARCHAR(20),ToCustId)+','
+			SELECT @SuccessCustIDs = @SuccessCustIDs + CONVERT(VARCHAR(20),ck.ToCustId)+','
 			FROM dbo.Age_ClearBalanceCust_Process p WITH(NOLOCK)
 			INNER JOIN #tmpProcessCust ck ON ck.FromCustId = p.FromCustId AND ck.ToCustId = p.ToCustId
 			WHERE p.BatchNo = @BatchNo AND p.SuperId = @SuperId
