@@ -10,6 +10,7 @@ AS
 		
 	Revisions:
 		- 20250617@Eden: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:	
 			[{"CustID":1,"YesterdayWL":0.25}, 
@@ -171,10 +172,10 @@ BEGIN
 	SELECT UserID = @UserID
 		,w.CustID
 		,ActionID = 310105
-		,TrackingValue = '<Amount="'+ COALESCE(CAST(w.Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
+		,TrackingValue = '<R Amount="'+ COALESCE(CAST(w.Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
 						 'AdjustCreditAmt="'+ COALESCE(CAST(w.AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
 		,TrackingValue2 = CASE WHEN w.Old_Amount IS NOT NULL THEN
-						'<Amount="'+ COALESCE(CAST(w.Old_Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
+						'<R Amount="'+ COALESCE(CAST(w.Old_Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
 						 'AdjustCreditAmt="'+ COALESCE(CAST(w.Old_AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
 				END
 	FROM @CashTransactionLog w
@@ -184,8 +185,8 @@ BEGIN
 		c.ActionID,
 		c.TrackingValue,
 		c.TrackingValue2,
-		c.TrackingValue AS TrackingValueMask,
-		c.TrackingValue2 AS TrackingValueMask2,
+		NULL AS TrackingValueMask,
+		NULL AS TrackingValueMask2,
 		t.CustDBGroupID
 	FROM @tmp_LogData c
 		INNER JOIN @TempLossTbl t ON c.CustID = t.CustID

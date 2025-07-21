@@ -33,6 +33,7 @@ AS
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
 
 	Parameter's Explanation:
 		@TransactionTypeID:  
@@ -54,6 +55,8 @@ BEGIN
 	END
 
 	BEGIN TRY
+		DECLARE @CashTransaction TABLE (Transid BIGINT)
+
 		INSERT INTO dbo.CashTransaction (
 			 CustId
 			,TransactionTypeID
@@ -76,10 +79,11 @@ BEGIN
 			,ExtraInfo
 			,AdjustCreditAmt
 		)
+		OUTPUT inserted.TransID INTO @CashTransaction(Transid)
 		SELECT @CustID, @TransactionTypeID, @StatusId, @Amount, GETDATE(), @Creator, @Remark, SYSDATETIME(), @SiteDBGroupID, @TransferRefNo
 			,@OperatedBy, @OperatedTime, @SubAccID, @PaymentType, @PaymentMethod, @PaymentFrom, @PaymentTo, @PaySlip, @ExtraInfo, @AdjustCreditAmt
 
-		SET @TransId = SCOPE_IDENTITY()
+		SELECT TOP (1) @TransId = Transid FROM @CashTransaction
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = ERROR_NUMBER()

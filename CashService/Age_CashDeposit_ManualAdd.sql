@@ -29,6 +29,7 @@ AS
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -106,7 +107,7 @@ BEGIN
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogDataMask = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogDataMask = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'UplineID="'+ COALESCE(CAST(@UplineID AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'SubAccID="'+ COALESCE(CAST(@SubAccID AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransactionTypeID="'+ COALESCE(CAST(1 AS VARCHAR(20)), SPACE(1)) + '" ' +
@@ -198,7 +199,7 @@ BEGIN
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'ActionType="'+ COALESCE(CAST(1 AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
 								'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
@@ -243,13 +244,14 @@ BEGIN
 				@TransId_From = @TransId_From,
 				@TransId_To = @TransId_To,
 				@TransferAmount = @Amount,
-				@AdjustCreditAmt = @AdjustCreditAmt
+				@AdjustCreditAmt = @AdjustCreditAmt,
+				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 			GOTO Writelog;
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
 								'StatusId="'+ COALESCE(CAST(4 AS VARCHAR(3)), SPACE(1)) + '" ' +
@@ -268,7 +270,8 @@ BEGIN
 			@TransId_From = @TransId_From,
 			@TransId_To = @TransId_To,
 			@TransferAmount = @Amount,
-			@AdjustCreditAmt = @AdjustCreditAmt
+			@AdjustCreditAmt = @AdjustCreditAmt,
+			@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()

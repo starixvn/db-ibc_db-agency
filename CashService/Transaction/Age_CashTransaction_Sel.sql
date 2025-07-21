@@ -19,6 +19,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:
 		@TransactionType:  
@@ -34,6 +35,8 @@ AS
 			4: Completed
 			5: Rejected
 			6. Provider Rejected
+	Sample:
+		EXEC [Age_CashTransaction_Sel] @CustID = 1176086, @TransactionType = 1
 */ 
 BEGIN  
     SET NOCOUNT ON; 
@@ -63,7 +66,7 @@ BEGIN
 		PaymentFrom VARCHAR(100),
 		PaymentTo VARCHAR(100),
 		StatusId TINYINT,
-		TransactionType VARCHAR(50),
+		TransactionTypeID TINYINT,
 		TransferRefNo BIGINT,
 		CreatedTime DATETIME,
 		Remark VARCHAR(1000),
@@ -86,11 +89,12 @@ BEGIN
 		PaymentFrom,
 		PaymentTo,
 		StatusId,
-		TransactionType,
+		TransactionTypeID,
 		TransferRefNo,
 		CreatedTime,
 		Remark,
-		IsHadPayslip
+		IsHadPayslip,
+		PaymentType
 	)
 	SELECT c.TransId,
 		c.CustId,
@@ -98,16 +102,12 @@ BEGIN
 		PaymentFrom,
 		PaymentTo,
 		StatusId,
-		CASE c.TransactionTypeID
-			WHEN 1  THEN 'Manual Deposit'
-			WHEN 2  THEN 'Auto Deposit'
-			WHEN 3  THEN 'Manual Withdraw'
-			WHEN 4  THEN 'Auto Withdraw'
-		END AS TransactionType,
+		c.TransactionTypeID,
 		TransferRefNo,
 		CreatedTime,
 		Remark,
-		IIF(c.PaySlip IS NOT NULL, 1, 0)
+		IIF(c.PaySlip IS NOT NULL, 1, 0),
+		PaymentType
 	FROM dbo.CashTransaction c WITH (NOLOCK)
 		INNER JOIN #CashMember ci ON ci.CustId = c.CustId
 	WHERE ((@FDate = '' AND @TDate = '') OR c.CreatedTime BETWEEN @FDate AND @TDate)
@@ -129,12 +129,13 @@ BEGIN
 			,tr.PaymentFrom
 			,tr.PaymentTo
 			,tr.StatusId
-			,tr.TransactionType
+			,tr.TransactionTypeID
 			,tr.TransId
 			,tr.CreatedTime
 			,tr.Remark
 			,c.username2 AS nickname
 			,tr.IsHadPayslip
+			,tr.PaymentType
 		FROM #TransactionHistory tr
 			INNER JOIN CustDB.dbo.vw_CashService_Customer c WITH (NOLOCK) ON c.custid = tr.CustID
 			INNER JOIN CustDB.dbo.exchange e WITH (NOLOCK) ON e.ExchangeId = c.currency
@@ -158,12 +159,13 @@ BEGIN
 			,PaymentFrom
 			,PaymentTo
 			,StatusId
-			,TransactionType
+			,TransactionTypeID
 			,TransId
 			,CreatedTime
 			,Remark
 			,nickname
 			,IsHadPayslip
+			,PaymentType
 		FROM (
 				SELECT tr.CustId
 					,c.username
@@ -174,12 +176,13 @@ BEGIN
 					,tr.PaymentFrom
 					,tr.PaymentTo
 					,tr.StatusId
-					,tr.TransactionType
+					,tr.TransactionTypeID
 					,tr.TransId
 					,tr.CreatedTime
 					,tr.Remark
 					,c.username2 AS nickname
 					,tr.IsHadPayslip
+					,tr.PaymentType
 					,ROW_NUMBER() OVER (ORDER BY tr.transid DESC) AS Rownum
 				FROM #TransactionHistory tr
 					INNER JOIN CustDB.dbo.vw_CashService_Customer c WITH (NOLOCK) ON c.custid = tr.CustID

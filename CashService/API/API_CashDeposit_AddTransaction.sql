@@ -11,6 +11,7 @@ ALTER PROCEDURE dbo.API_CashDeposit_AddTransaction
 	@MaxAmt MONEY = NULL,
 	@TransactionTypeID TINYINT = 1,
 	@PaymentType TINYINT = 2,
+	@ProviderID	SMALLINT = NULL,
 	@PaymentMethodID SMALLINT = 0,
     @PaymentFrom VARCHAR(100) = NULL,
     @PaymentTo VARCHAR(100),
@@ -36,6 +37,7 @@ AS
 	Revisions:
 		- 20250530@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250610@Eden: API Cash Service Deposit - Lock Agent Credit for Payment Gateway method [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -81,7 +83,7 @@ BEGIN
 		IF @ErrCode <> 0
 		BEGIN
 			SELECT @ErrExtraInfo = @ErrMsg
-				,@ErrCode = CASE WHEN @ErrCode = 101 THEN 407 ELSE 409 END
+				,@ErrCode = CASE WHEN @ErrCode = 407 THEN 407 ELSE 409 END
 				,@ErrMsg = CASE WHEN @ErrCode = 407 THEN 'The amount exceeds the allowed minimum or maximum value.'
 								ELSE 'The transaction inserted failed. Please try again.' END
 
@@ -102,6 +104,10 @@ BEGIN
 		IF @TransactionTypeID = 2 AND @PaymentType = 2
 		BEGIN
 			SET @ExtraInfo = (SELECT @UserInput_Amount AS UserInputAmt, @MatchingMode AS MatchingMode FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)
+		END
+		ELSE IF @TransactionTypeID = 2 AND @PaymentType = 1 --Generate extrainfo in case auto deposit via paymentGateway
+		BEGIN
+			SELECT @ExtraInfo = JSON_MODIFY(ISNULL(@ExtraInfo,'{}'), '$.ProviderId',@ProviderID)
 		END
 
 		EXEC dbo.Age_CashTransaction_Ins 
@@ -134,7 +140,7 @@ BEGIN
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogDataMask = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogDataMask = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'UplineID="'+ COALESCE(CAST(@AgentId AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'SubAccID="'+ COALESCE(CAST(@SubAccID AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransactionTypeID="'+ COALESCE(CAST(@TransactionTypeID AS VARCHAR(20)), SPACE(1)) + '" ' +
@@ -182,13 +188,14 @@ BEGIN
 					@Type = 3,
 					@TransId = @TransId,
 					@Custid = @CustID,
-					@AdjustCreditAmt = @AdjustCreditAmt
+					@AdjustCreditAmt = @AdjustCreditAmt,
+					@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 				GOTO Writelog;
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'ActionType="'+ COALESCE(CAST(1 AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
 									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
@@ -207,7 +214,8 @@ BEGIN
 				@Type = 3,
 				@TransId = @TransId,
 				@Custid = @CustID,
-				@AdjustCreditAmt = @AdjustCreditAmt
+				@AdjustCreditAmt = @AdjustCreditAmt,
+				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 		GOTO Writelog;
 	END CATCH

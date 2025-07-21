@@ -18,6 +18,7 @@ AS
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
@@ -25,13 +26,18 @@ BEGIN
     SET NOCOUNT ON; 
 
 	DECLARE @StatusId_before TINYINT
-		,@AdjustAmount MONEY
-		,@Transfer_RefNo BIGINT
+		,@AdjustCreditAmt MONEY
 		,@CustId INT
 		,@LogData VARCHAR(MAX)
 		,@LogDataMask VARCHAR(MAX)
 		,@TransactionTypeId TINYINT
 		,@Amount MONEY
+		,@AgentID INT
+		--Transfer
+		,@TransferRefNo BIGINT
+		,@TransId_From	BIGINT 
+		,@TransId_To	BIGINT
+		,@PaymentType	tinyint
 
 	IF @SiteDBGroupID <> dbo.f_Get_SiteDBGroupID() OR @SiteDBGroupID IS NULL
 	BEGIN
@@ -55,21 +61,34 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
-	SELECT @StatusId_before = StatusId, @AdjustAmount = c.AdjustCreditAmt
-		, @Transfer_RefNo = c.TransferRefNo, @CustId = c.CustId
+	SELECT @StatusId_before = c.StatusId, @AdjustCreditAmt = c.AdjustCreditAmt
+		, @TransferRefNo = c.TransferRefNo, @CustId = c.CustId
 		, @TransactionTypeId = c.TransactionTypeID, @Amount = c.Amount
+		, @AgentID = ci.recommend, @PaymentType = c.PaymentType
 	FROM dbo.CashTransaction c WITH (NOLOCK)
+		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
+			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
 
+	IF ISNULL(@TransactionTypeId,0) <> 3  -- Withdrawal
+		OR ISNULL(@Amount,0) = 0 
+		OR @PaymentType = 1 -- Payment Gateway do not revert
+		OR @StatusId_before NOT IN (3,4,5) -- only revert expired/completed/rejected
+	BEGIN
+		SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
+		RETURN
+	END
+
 	--Step 1: Adjust accumulated credit
-	IF @StatusId_before = 4 AND @AdjustAmount <> 0
+	IF @StatusId_before = 4 AND @AdjustCreditAmt <> 0 -- completed--> pending
 	BEGIN
 		-- Adjust accumulated credit
 		BEGIN TRY
 			EXEC dbo.Age_CashAccumulatedCredit_Adjust 
 				@CustID = @CustID,
 				@ActionType = 5, --Revert Withdraw
-				@Amount = @AdjustAmount,
+				@Amount = @AdjustCreditAmt,
 				@ErrCode = @ErrCode OUTPUT,
 				@ErrMsg	= @ErrMsg OUTPUT,
 				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
@@ -83,9 +102,9 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'ActionType="'+ COALESCE(CAST(5 AS VARCHAR(20)), SPACE(1)) + '" ' +
-									'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' + '" />'
+									'Amount="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' + '" />'
 
 				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
 				SELECT 3, @UserId, @CustID, 310104, @LogData
@@ -94,27 +113,98 @@ BEGIN
 		BEGIN CATCH
 			SELECT @ErrCode = 409
 				,@ErrMsg = 'The transaction inserted failed. Please try again.'
+			RETURN
+		END CATCH
+	END
+	ELSE IF @StatusId_before <> 4 -- Reject/expired --> pending
+	BEGIN
+		BEGIN TRY
+			-- Step 1: Validate cash balance
+			EXEC dbo.Age_CashWithdrawal_Validate 
+				@CustID = @CustID,
+				@UplineID = @AgentID,
+				@Amount = @Amount,
+				@ErrCode = @ErrCode OUTPUT,
+				@ErrMsg = @ErrMsg OUTPUT
+
+			IF @ErrCode <> 0
+			BEGIN
+				RETURN
+			END
+		
+			-- Step 2: Insert transfer details
+			EXEC dbo.Age_CashWithdrawal_ManualAdd_InsTransfer 
+				@CustID = @CustID,
+				@UplineID = @AgentID,
+				@Amount = @Amount,
+				@IP = @IP,
+				@ErrCode = @ErrCode OUTPUT,
+				@ErrMsg = @ErrMsg OUTPUT,
+				@TransferRefNo = @TransferRefNo OUTPUT,
+				@TransId_From = @TransId_From OUTPUT,
+				@TransId_To = @TransId_To OUTPUT
+
+			IF @ErrCode <> 0
+			BEGIN
+				IF @ErrCode <> 406
+				BEGIN
+					SELECT @ErrCode = 409
+						,@ErrMsg = 'The transaction inserted failed. Please try again.'
+				END
+
+				GOTO Writelog;
+			END
+			ELSE --Insert data for writelog
+			BEGIN
+				SELECT @LogData = 'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), 31002) + ', amount = ' + CONVERT(VARCHAR(20), @amount) + ', Ref.No: ' + CONVERT(VARCHAR(20), @TransferRefNo)
+
+				INSERT INTO @tmp_LogData (LogTypeId, UserID, FromCustID, ToCustID, IP, Doing)
+				SELECT 1, @CustID, @AgentID, @CustID, @IP, @LogData
+			END
+		END TRY
+		BEGIN CATCH
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+			GOTO Writelog;
 		END CATCH
 	END
 
-	--Step 2: Update transaction status
+	--Step: Update transaction status
 	BEGIN TRY
 		EXEC dbo.Age_CashTransaction_Upd 
 			@TransId = @TransId,
 			@StatusId = 2, --Pending
 			@AdjustCreditAmt = 0,
+			@TransferRefNo = @TransferRefNo,
+			@OperatedBy = @AgentID,
 			@Remark = @Remark,
 			@ErrCode = @ErrCode OUTPUT,
 			@ErrMsg = @ErrMsg OUTPUT
 
 		IF @ErrCode <> 0
 		BEGIN
-			--Rollback CashAccumulatedCredit
-			EXEC dbo.Age_CashService_Balance_Rollback
-				@Type = 1, 
-				@TransId = 0,
-				@Custid = @CustID,
-				@AdjustCreditAmt = @AdjustAmount
+			IF @StatusId_before = 4
+			BEGIN
+				--Rollback CashAccumulatedCredit
+				EXEC dbo.Age_CashService_Balance_Rollback
+					@Type = 1, 
+					@TransId = 0,
+					@Custid = @CustID,
+					@AdjustCreditAmt = @AdjustCreditAmt,
+					@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
+			END
+			IF @StatusId_before <> 4
+			BEGIN
+				--Rollback Transfer
+				EXEC dbo.Age_CashService_Balance_Rollback
+					@Type = 2,
+					@TransId = 0,
+					@Custid = @CustID,
+					@TransId_From = @TransId_From,
+					@TransId_To = @TransId_To,
+					@TransferAmount = @Amount
+			END
 
 			SELECT @ErrCode = 409
 				,@ErrMsg = 'The transaction inserted failed. Please try again.'
@@ -123,7 +213,7 @@ BEGIN
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'Before_StatusId="'+ COALESCE(CAST(@StatusId_before AS VARCHAR(3)), SPACE(1)) + '" ' +
 								'After_StatusId="'+ COALESCE(CAST(2 AS VARCHAR(3)), SPACE(1)) + '" />'
@@ -133,12 +223,27 @@ BEGIN
 		END
 	END TRY
 	BEGIN CATCH
-		--Rollback CashAccumulatedCredit
-		EXEC dbo.Age_CashService_Balance_Rollback
-			@Type = 1, 
-			@TransId = 0,
-			@Custid = @CustID,
-			@AdjustCreditAmt = @AdjustAmount
+		IF @StatusId_before = 4
+		BEGIN
+			--Rollback CashAccumulatedCredit
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 1, 
+				@TransId = 0,
+				@Custid = @CustID,
+				@AdjustCreditAmt = @AdjustCreditAmt,
+				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
+		END
+		IF @StatusId_before <> 4
+		BEGIN
+			--Rollback Transfer
+			EXEC dbo.Age_CashService_Balance_Rollback
+				@Type = 2,
+				@TransId = 0,
+				@Custid = @CustID,
+				@TransId_From = @TransId_From,
+				@TransId_To = @TransId_To,
+				@TransferAmount = @Amount
+		END
 
 		SELECT @ErrCode = 409
 				,@ErrMsg = 'The transaction inserted failed. Please try again.'

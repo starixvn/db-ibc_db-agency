@@ -15,6 +15,7 @@ AS
 		
 	Revisions:
 		- 20250423@Eden: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
 
 	Parameter's Explanation:			
 		@ActionType: 
@@ -23,6 +24,7 @@ AS
 				3 - AdjustLoss (Schedule Job)
 				4 - Revert Deposit
 				5 - Revert Withdrawal
+				6 - Bonus
 		@Amount : Action amount ( ex: Deposit 100, Withdrawal 100...)
 		@AdjustCreditAmt: Real adjusted amount on AccumCreditReturn column
 	*/ 
@@ -38,7 +40,7 @@ BEGIN
 		RETURN
 	END
 
-	IF @ActionType IN (1,5) --Increase AccumCreditReturn --> Positive Value
+	IF @ActionType IN (1,5,6) --Increase AccumCreditReturn --> Positive Value
 		SELECT @Amount = ABS(@Amount)
 	ELSE IF @ActionType IN (2,3,4) --Decrease AccumCreditReturn --> negavtive Value
 		SELECT @Amount = - ABS(@Amount)

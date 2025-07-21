@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -135,7 +136,15 @@ BEGIN
 			, @stepDone				= 0;
 
 		--Get member balance
-		EXEC dbo.Age_CashService_CashBalance_Sel @CustId = @CustId , @TotalCash = @beforebalance OUTPUT
+		EXEC dbo.Acc_CustomerSelCash_CaptureBalance @CustId = @CustId, @TotalCash = @beforebalance OUTPUT
+		
+		--Check enough balance for withdrawing
+		IF @beforebalance - @actual_stake < 0
+		BEGIN
+			SELECT @ErrMsg = 'Member' + '''' + 's cash balance is insufficient.'
+				, @ErrCode = 406
+			RETURN
+		END
 
 		--Update BalanceDebit 
 		IF @Cust_Balance < 0 
