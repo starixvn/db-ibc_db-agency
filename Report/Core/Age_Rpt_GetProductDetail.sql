@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv,wsv_xnap" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv,wsv_xnap,wsv_CashService" isFunction="0" isNested="0"></info>*/
 CREATE PROC dbo.Age_Rpt_GetProductDetail
 AS
 /*  
