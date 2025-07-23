@@ -7,8 +7,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Master]
 	@ProductDetails NVARCHAR(MAX) = 'All',
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
-	@LevelType TINYINT = 0,
-	@DownlineID	INT = NULL -- for chatbot
+	@LevelType		TINYINT = 0,
+	@DownlineID		INT = NULL -- for chatbot
 AS  
 
 /*  
@@ -38,6 +38,7 @@ AS
 		- 20241205@Lewis: Change data source bettrans_compact [Redmine: #214836]
 		- 20241119@Lewis: Direct Member [RedmineId: #211969] 
 		- 20250529@Dave: Add Reward column [RedmineId: #228972] 
+		- 20250619@Virgil: Agency Cash Service - Billing service and Report changes - Sprint 4 [RedmineId: #229883]  
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -88,6 +89,7 @@ BEGIN
 	CREATE TABLE #GrossComm (CustId INT, GrossComm MONEY)
   
 	CREATE TABLE #TmpCondSumWL(
+		ProductID		TINYINT,
 		SportType		INT,
 		BetType			INT,
 		LeagueGroupID	SMALLINT,
@@ -107,8 +109,8 @@ BEGIN
 
 	IF (@FromDate <= @MoveBetsDay)
 	BEGIN
-		INSERT INTO #TmpCondSumWL(SportType, BetType, LeagueGroupID, TicketType) 
-		SELECT f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
+		INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
+		SELECT f.ProductID, f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
 		FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
 			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
 		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
@@ -208,6 +210,36 @@ BEGIN
 			b.winlostdate BETWEEN @FDate AND @TDate
 		GROUP BY b.custid;
 
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #SAgWinLoss(CustID, TurnOver, GrossComm, DownlineTotal, SAgWinlost, Comm)
+			SELECT m.custid,
+				0 AS TurnOver,
+                0 AS GrossComm,
+                SUM(WinLost-Actual_Stake) AS DownlineTotal,
+                0 AS SAgWinlost,
+                0 AS Comm
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN CTE_Downline m 
+				ON tr.mrecommend = m.custid
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+				AND tr.CustId = tr.Recommend
+			GROUP BY m.custid;
+		END
+
 		-- bettransRnG
 		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1)
 		BEGIN
@@ -295,6 +327,36 @@ BEGIN
 			AND ISNULL(b.ticketType,0) = t.TicketType
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0); 
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #SAgWinLoss(CustID, TurnOver, GrossComm, DownlineTotal, SAgWinlost, Comm)
+			SELECT m.custid,
+				0 AS TurnOver,
+                0 AS GrossComm,
+                SUM(WinLost-Actual_Stake) AS DownlineTotal,
+                0 AS SAgWinlost,
+                0 AS Comm
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN CTE_Downline m 
+				ON tr.mrecommend = m.custid
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+				AND tr.CustId = tr.Recommend
+			GROUP BY m.custid;
+		END
 	END  
 
 	--TODO: range bk
@@ -345,8 +407,35 @@ BEGIN
 			AND b.bettype = bt.bettype
 			AND ISNULL(b.LeagueGroupID,0) = bt.LeagueGroupID
 			AND ISNULL(b.TicketType,0) = bt.TicketType
+			AND bt.ProductID <> 111
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #SAgWinLoss(CustID, TurnOver, GrossComm, DownlineTotal, SAgWinlost, Comm)
+			SELECT m.custid,
+				0 AS TurnOver,
+				0 AS GrossComm,
+				SUM(WinLost) AS DownlineTotal,
+				0 AS SAgWinlost,
+				0 AS Comm
+			FROM bodb_Summary.dbo.Sum_WinLoss_Old b (NOLOCK)
+			INNER JOIN CTE_Downline m 
+				ON b.mrecommend = m.custid
+			INNER JOIN #TmpCondSumWL bt 
+				ON b.sporttype = bt.sporttype
+				AND b.bettype = bt.bettype
+				AND bt.ProductID = 111
+			WHERE b.winlostdate BETWEEN @FDate AND @TDate
+				AND b.custid = b.recommend
+			GROUP BY m.CustID
+		END
 	END
 
 	SELECT @FDate = @FromDate, @TDate = @ToDate;
