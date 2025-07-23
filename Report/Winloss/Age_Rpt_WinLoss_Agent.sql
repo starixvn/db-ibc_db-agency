@@ -7,8 +7,8 @@ ALTER PROCEDURE [dbo].[Age_Rpt_WinLoss_Agent]
 	@ProductDetails NVARCHAR(MAX) = 'All',
 	@MoveBetsDay	SMALLDATETIME,
 	@BalanceUpDay	SMALLDATETIME,
-	@LevelType TINYINT = 0,
-	@DownlineID	INT = NULL -- for chatbot
+	@LevelType		TINYINT = 0,
+	@DownlineID		INT = NULL -- for chatbot
 AS
 
 /*
@@ -39,6 +39,7 @@ AS
 		- 20241205@Lewis: Change data source bettrans_compact [Redmine: #214836]
 		- 20241119@Lewis: Direct Member [RedmineId: #211969]   
 		- 20250529@Dave: Add Reward column [RedmineId: #228972]
+		- 20250619@Virgil: Agency Cash Service - Billing service and Report changes - Sprint 4 [RedmineId: #229883]  
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -209,6 +210,34 @@ BEGIN
 			b.winlostdate BETWEEN @FDate AND @TDate
 		GROUP BY b.custid;
 
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #MAgWinLoss(CustID, TurnOver, GrossComm, DownlineTotal, MAgWinlost, Comm)
+			SELECT tr.CustID,
+					0 AS TurnOver,
+					0 AS GrossComm,
+					SUM(WinLost-Actual_Stake) AS DownlineTotal,
+					0 AS MAgWinlost,
+					0 AS Comm
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN CTE_Downline m ON m.custid = tr.custid
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+			GROUP BY tr.CustId;
+		END
+
 		 -- bettransRnG
 		IF EXISTS (SELECT 1 FROM @SportBettypeMatrix WHERE RefTable = 1)
 		BEGIN
@@ -296,6 +325,34 @@ BEGIN
 			AND ISNULL(b.ticketType,0) = t.TicketType
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			;WITH CTE_Downline AS (
+				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
+				FROM STRING_SPLIT(@downlineIds, ',') AS c
+			)
+			INSERT INTO #MAgWinLoss(CustID, TurnOver, GrossComm, DownlineTotal, MAgWinlost, Comm)
+			SELECT tr.CustID,
+					0 AS TurnOver,
+					0 AS GrossComm,
+					SUM(WinLost-Actual_Stake) AS DownlineTotal,
+					0 AS MAgWinlost,
+					0 AS Comm
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN CTE_Downline m ON m.custid = tr.custid
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+			GROUP BY tr.CustId;
+		END
 	END
 	
 	--TODO: range Sum_WinLoss_Old
@@ -348,6 +405,7 @@ BEGIN
 			AND ISNULL(b.TicketType,0) = bt.TicketType
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
+
 	END
 
 	SELECT @FDate = @FromDate, @TDate = @ToDate;
