@@ -23,6 +23,8 @@ AS
 		- 20230510@Eden: Scale out DBTRANS for Credit [Redmine: #181595]
 		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 		- 20241206@Johnson: Apply In-house replication for Credit Setting [RedmineID: #212684]
+		- 20250625@Bobby: Transfer changes for Cash Service [Redmine: #231494]
+		
 	Param's Explanation:`
 		@MemberAmountXML = '<ROOT>
 					  <R ID="1290" AM="2483.0000" />
@@ -163,8 +165,10 @@ BEGIN
 				ISNULL(c.credit, 0) + ISNULL(m.amount, 0),
 				CASE WHEN ISNULL(m.amount, 0) >= 0 THEN 0 ELSE ABS(ISNULL(m.amount, 0)) END
 			FROM dbo.custInfo c WITH (NOLOCK)
+				INNER JOIN dbo.CustProductStatus cs WITH (NOLOCK) ON cs.custId = c.custId
 				LEFT JOIN #MemberAmount m ON c.custid = m.custId
 			WHERE c.mrecommend = @DownlineCustId AND c.roleId = 1
+				AND ISNULL(cs.ServiceType, 0) = 0 -- Only credit members
 		END
 		ELSE
 		BEGIN
@@ -174,8 +178,10 @@ BEGIN
 				ISNULL(c.credit, 0) + ISNULL(m.amount, 0),
 				CASE WHEN ISNULL(m.amount, 0) >= 0 THEN 0 ELSE ABS(ISNULL(m.amount, 0)) END
 			FROM dbo.custInfo c WITH (NOLOCK)
+				INNER JOIN dbo.CustProductStatus cs WITH (NOLOCK) ON cs.custId = c.custId
 				LEFT JOIN #MemberAmount m ON c.custid = m.custId
 			WHERE c.recommend = @DownlineCustId AND c.roleId = 1
+				AND ISNULL(cs.ServiceType, 0) = 0 -- Only credit members
 		END
 
 		DROP TABLE #MemberAmount
@@ -289,7 +295,7 @@ BEGIN
 
 			IF @RoleId = 4
 				INSERT INTO #tblrecommend (custid, credit, updCredit)
-				SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
+				SELECT a.custid, a.credit, (ISNULL(m.usedCredit, 0) + ISNULL(cac.cashCredit, 0)) AS updCredit
 				FROM dbo.custInfo a WITH (NOLOCK)
 					LEFT JOIN (
 						SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
@@ -297,10 +303,16 @@ BEGIN
 						WHERE mrecommend = @DownlineCustId AND roleId = 1
 						GROUP BY recommend
 					) m ON a.custid = m.recommend
+					LEFT JOIN (
+						SELECT recommend, SUM(ISNULL(AccumCreditReturn, 0)) AS cashCredit
+						FROM dbo.CashAccumCredit WITH (NOLOCK)
+						WHERE mrecommend = @DownlineCustId
+						GROUP BY recommend
+					) cac ON a.custid = cac.recommend
 				WHERE a.mrecommend = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
 			ELSE
 				INSERT INTO #tblrecommend (custid, credit, updCredit)
-				SELECT a.custid, a.credit, ISNULL(m.usedCredit, 0)
+				SELECT a.custid, a.credit, (ISNULL(m.usedCredit, 0) + ISNULL(cac.cashCredit, 0)) AS updCredit
 				FROM dbo.custInfo a WITH (NOLOCK)
 					LEFT JOIN (
 						SELECT recommend, SUM(ISNULL(credit, 0)) AS usedCredit
@@ -308,6 +320,12 @@ BEGIN
 						WHERE recommend = @DownlineCustId AND roleId = 1
 						GROUP BY recommend
 					) m ON a.custid = m.recommend
+					LEFT JOIN (
+						SELECT recommend, SUM(ISNULL(AccumCreditReturn, 0)) AS cashCredit
+						FROM dbo.CashAccumCredit WITH (NOLOCK)
+						WHERE recommend = @DownlineCustId
+						GROUP BY recommend
+					) cac ON a.custid = cac.recommend
 				WHERE a.custid = @DownlineCustId AND a.roleId = 2 AND ISNULL(a.credit, 0) <> 0
 			
 			UPDATE c WITH (ROWLOCK, UPDLOCK)
