@@ -68,6 +68,7 @@ Revisions:
 	- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 	- 20240314@Bobby: EC enhancement [Redmine: #202276]
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - remove @SuperIDsTransferTotal [Redmine: #211969]
+	- 20250625@Bobby: Alpha - Transfer changes for Cash Service [Redmine: #231494]
 	
 Param's Explanation:
 • @FromCustID: from customer
@@ -142,7 +143,13 @@ BEGIN
 
 	IF @ErrCode <> 0  return
 
-	IF NOT EXISTS (SELECT 1 FROM CustDB.dbo.customer WITH (NOLOCK) WHERE custid = @FromCustID and recommend = @ToCustID)
+	IF NOT EXISTS (
+		SELECT TOP 1 1 
+		FROM CustDB.dbo.customer c WITH (NOLOCK)
+		INNER JOIN CustDB.dbo.CustProductStatus cs with(nolock) on c.custid=cs.CustID
+		WHERE c.custid = @FromCustID and c.recommend = @ToCustID
+			AND cs.ServiceType <> 1 -- NOT support Cash members
+	)
 	BEGIN
 		SELECT @ErrMsg = CASE @Language 
 			WHEN 'E' THEN 'Customer does not exist.'
@@ -280,6 +287,7 @@ BEGIN
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 										WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 										WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+										WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
 								ELSE 1 END
 
 		----check MB date, BU date again to make sure it is not changed

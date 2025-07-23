@@ -35,6 +35,7 @@ AS
 		- 20230227@Bobby: Auto Clear Balance/ Multiple Transfer	 [RedmineID: #182071]
 		- 20240314@Bobby: EC enhancement [Redmine: #202276]
 		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
+		- 20250625@Bobby: Transfer changes for Cash Service [Redmine: #231494]
 */
 
 BEGIN
@@ -351,6 +352,7 @@ BEGIN
 				WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 								WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 								WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+								WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
 							ELSE 1 END
 					AND bettype NOT IN (21008, 21009)
 				GROUP BY
@@ -404,6 +406,7 @@ BEGIN
 					WHERE custId = @DownlineCustId AND Bettype >= 20000
 						AND 1 = CASE WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 									WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+									WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
 								ELSE 1 END
 					GROUP BY
 						winlostdate, bettype
@@ -589,8 +592,11 @@ BEGIN
 	SELECT m.custid
 	FROM cte_member m
 		INNER JOIN DBCUST.CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId -- get credit amount real time
+		INNER JOIN CustDB.dbo.CustProductStatus cs WITH (NOLOCK) ON cs.custId = c.custId
 		LEFT JOIN #NetPosition np ON m.custid = np.custid
-	WHERE c.roleId = 1 AND ISNULL(c.credit, 0) + m.amountAfterTransfer + ISNULL(np.netPosition, 0) < 0
+	WHERE c.roleId = 1 
+		AND ISNULL(c.credit, 0) + m.amountAfterTransfer + ISNULL(np.netPosition, 0) < 0
+		AND ISNULL(cs.ServiceType, 0) = 0 -- Only credit members
 
 	IF @@ROWCOUNT <> 0
 	BEGIN
@@ -615,6 +621,7 @@ BEGIN
 
 	IF @IsErr = 0
 	BEGIN
+
 		-- Member
 		;WITH cte_member AS
 		(
@@ -630,7 +637,9 @@ BEGIN
 		FROM cte_member m
 			INNER JOIN CustDB.dbo.custInfo c WITH (NOLOCK) ON m.custId = c.custId
 			INNER JOIN @tblrecommend r ON c.recommend = r.recommend
+			INNER JOIN CustDB.dbo.CustProductStatus cs WITH (NOLOCK) ON cs.custId = c.custId
 		WHERE c.roleId = 1
+			AND ISNULL(cs.ServiceType, 0) = 0 -- Only credit members
 
 		--DirectMember
 		;WITH cte_directmember AS
@@ -689,9 +698,11 @@ BEGIN
 	END
 
 	DECLARE @memberOutStanding MONEY, @DirectmemberOutStanding MONEY
-	SELECT  @memberOutStanding = SUM(CASE WHEN t.recommend > 0 THEN actual_stake ELSE 0 END),
-			@DirectmemberOutStanding = SUM(CASE WHEN t.recommend = -3 THEN actual_stake ELSE 0 END)
+	SELECT  @memberOutStanding = SUM(CASE WHEN m.custid > 0 AND t.recommend > 0 THEN t.actual_stake ELSE 0 END),
+			@DirectmemberOutStanding = SUM(CASE WHEN dm.custid > 0 AND t.recommend = -3 THEN t.actual_stake ELSE 0 END)
 	FROM #tempData t
+		LEFT JOIN #Member m ON m.CustID = t.CustId -- credit members
+		LEFT JOIN #DirectMember dm ON dm.CustID = t.CustId -- direct members
 	WHERE statusId IN (0,1)
 
 	DROP TABLE #tempData

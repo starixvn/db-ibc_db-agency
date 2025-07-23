@@ -26,10 +26,11 @@ AS
 		- 20231101@Luke: Alpha - Enhance auto transfer function (phase 2) [Redmine: #195135]
 		- 20240326@Luke: Alpha - Enhance auto transfer function (phase 3) [Redmine: #195551]
 		- 20241125@Helen: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
+		- 20250625@Bobby: Transfer changes for Cash Service [Redmine: #231494]
 
 	Param's Explanation:
-		• @FromCustID: The direct UplineID
-		• @ToCustID: The CustID is to add auto transfer
+		ï¿½ @FromCustID: The direct UplineID
+		ï¿½ @ToCustID: The CustID is to add auto transfer
 
 */
 BEGIN
@@ -97,6 +98,7 @@ BEGIN
 		DECLARE @New_TransferOption				TINYINT
 				,@Old_TransferOption_numeric	TINYINT
 				,@IsAllDayBalanceTransfer		BIT = 0
+				,@IsCashMember					BIT = 0;
 	
 		IF @roleid = 4
 		BEGIN
@@ -124,15 +126,29 @@ BEGIN
 			FROM CustMaster cm WITH (NOLOCK)
 				INNER JOIN custinfo c WITH (NOLOCK) ON cm.custid = c.mrecommend
 			WHERE c.custid = @FromCustId
+
+			--TODO: Check cash member
+			SELECT TOP(1) @IsCashMember = 1
+			FROM dbo.CustProductStatus cps WITH (NOLOCK)
+			WHERE cps.custid = @ToCustId
+				AND cps.ServiceType = 1 -- Cash Member
 		END
 
 		--Check if upline is on ADBT
 		IF @IsAllDayBalanceTransfer = 1
+			OR @IsCashMember = 1
 		BEGIN
 			SELECT @ErrCode = 108,
 					@ErrMsg = CASE WHEN @Language = 'E' THEN 'Your account has been enabled for All Day Balance Transfer. The page will be automatically refreshed.' 
 									ELSE [dbo].[f_Get_MsgNamebyMsgID](50037,@Language) 
 									END
+			WHERE @IsAllowAutoTransfer = 1
+
+			SELECT @ErrCode = 109,
+					@ErrMsg	= CASE WHEN @Language = 'E' THEN 'This account does not allow.'  
+									ELSE [dbo].[f_Get_MsgNamebyMsgID](40065,@Language)
+								END    
+			WHERE @IsCashMember = 1
 			RETURN
 		END
 

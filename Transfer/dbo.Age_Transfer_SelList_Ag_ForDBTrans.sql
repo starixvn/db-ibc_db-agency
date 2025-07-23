@@ -62,6 +62,7 @@ Revisions:
 	- 20231027@Bobby: AutoJob transfer - schedule option [RedmineID: #195135]
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - Replace account [Redmine: #211969]
 	- 20250425@Elodie: Enhance SP [Redmine: #225506]
+	- 20250625@Bobby: Alpha - Transfer changes for Cash Service [Redmine: #231494]
 	
 Param's Explanation:
 	• @CustID: AgentID
@@ -209,6 +210,7 @@ BEGIN
 		AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 					WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 					WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
 				ELSE 1 END
 	GROUP BY custid,winlostdate,bettype
 	OPTION (MAXDOP 1)
@@ -288,6 +290,7 @@ BEGIN
 					, Locked
 				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
+					AND cs.ServiceType <> 1 -- exclude cash members
 			) AS cs	
 		WHERE	@CustID = ci.recommend AND ci.roleid = 1 
 				AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
@@ -330,6 +333,7 @@ BEGIN
 					, Locked
 				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
+					AND cs.ServiceType <> 1 -- exclude cash members
 			) AS cs	
 		WHERE	@CustID = ci.recommend AND ci.roleid = 1 AND ci.username like '%' + @Username + '%'    
 				AND ci.Enabled = case @CustStatus when 'All' then ci.Enabled 
