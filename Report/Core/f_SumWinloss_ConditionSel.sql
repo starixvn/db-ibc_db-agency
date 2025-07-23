@@ -87,6 +87,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250513@Dave: Add Saba Soccer Marble Spinner & W Casino [RedmineID: #223130]
 		- 20250528@Dave: Add AI Gaming & ClotPlay [RedmineID: #228967]
 		- 20250623@Virgil: Add Cash Service Billing [RedmineId: #229883]
+		- 20250702@Virgil: Add GPI Lottery [RedmineId: #231961]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -191,7 +192,7 @@ RETURN
 				,(105, 128, 15499, 0, 0) -- ODIN GAMING (Promotion)
 				,(107, 124, 0, 0, 0) -- Microgaming Live (MGLC)
 				,(107, 124, 13995, 0, 0) -- Microgaming Live (Promotion)
-				/*,(84, 132, 0, 0, 0) -- GPI Lottery Live (GPILT)*/
+				,(84, 132, 0, 0, 0) -- GPI Lottery (GPILT)
 				,(101, 129, 0, 0, 0) -- Playtech Live Casino (PTLC)
 				,(101, 129, 15798, 0, 0) -- Playtech Live Casino (Jackpot Contribution)
 				,(101, 129, 15799, 0, 0) -- Playtech Live Casino (Jackpot Prize)
