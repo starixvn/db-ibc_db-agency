@@ -52,6 +52,7 @@ AS
 		- 20250512@Dave: Change datatype for ExchangeID [RedmineID: #226762]
 		- 20250513@Andy: Add Reward & Reward Currency columns [RedmineId: #226209]
 		- 20250514@Dave: Add Saba Soccer Marble Spinner - leaguegroupid = 252 [RedmineID: #223130]
+		- 20250701@Virgil: Cash Service - Billing service and Report changes [RedmineId: #231222]
 	
 	Param's Explanation:
 		. @ReportType:  2: Report by Daily
@@ -89,7 +90,6 @@ BEGIN
 	IF @ReportType NOT IN (2, 3) RETURN;
 	
 	DECLARE @fdate SMALLDATETIME, @tdate SMALLDATETIME
-	SELECT @fdate = @FromDate, @tdate = @ToDate
 
 	DECLARE @SeparateSabaSport_Cutoff SMALLDATETIME 
 
@@ -164,7 +164,7 @@ BEGIN
 	DECLARE @GrossComm TABLE (winlostdate DATETIME, custid INT, ProductId TINYINT, GrossComm MONEY)
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype SMALLINT,Bettype INT, LeagueGroupID SMALLINT, TicketType TINYINT)
 	CREATE TABLE #TmpCondSumWL (ProductID TINYINT, sporttype SMALLINT, bettype SMALLINT, LeagueGroupID SMALLINT, TicketType TINYINT)
-	CREATE TABLE #TmpCust (CustID INT, RoleID INT, username VARCHAR(30), currency SMALLINT)
+	CREATE TABLE #TmpCust (CustID INT, RoleID INT, username VARCHAR(30), currency SMALLINT, srecommend INT, mrecommend INT, recommend INT)
 
 	DECLARE	@isSAg	INT,
 			@isMAg	INT,
@@ -184,8 +184,8 @@ BEGIN
 		INNER JOIN custInfo c WITH (NOLOCK) ON c.custid = custAccount.custid
 	WHERE	GroupID = @GroupID 
 
-	INSERT INTO #TmpCust (CustID, RoleID, username, currency)
-	SELECT c.custid, c.roleid, c.username, c.currency
+	INSERT INTO #TmpCust (CustID, RoleID, username, currency, srecommend, mrecommend, recommend)
+	SELECT c.custid, c.roleid, c.username, c.currency, c.srecommend, c.mrecommend, c.recommend
 	FROM custAccount WITH (NOLOCK)
 		INNER JOIN Customer c WITH (NOLOCK) ON c.custid = custAccount.custid
 	WHERE groupID = @GroupID
@@ -232,13 +232,13 @@ BEGIN
 		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
 	END
 		
-	IF @ToDate >= @BalanceUpDay
-	BEGIN
-		IF @FromDate <= @MoveBetsDay
-		BEGIN
-			SET @fdate = DATEADD(DD, 1, @MoveBetsDay)
-		END
+	--get data from bettrans
+	SELECT @fdate = FromDate , @tdate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 1
 
+	IF @fdate IS NOT NULL
+	BEGIN
 		IF @isSAg = 1 
 		BEGIN 
 			---Super agent 
@@ -302,7 +302,6 @@ BEGIN
 						AND c.roleID = 4
 				GROUP BY  b.srecommend, b.winlostdate, c.username, c.currency, s.ProductID
 			)
-
 			INSERT INTO @AgencyWinloss
 			(
 				winlostdate,
@@ -435,10 +434,8 @@ BEGIN
 				WHERE	b.winlostdate BETWEEN @fdate AND @tdate
 						AND b.StatusID IN (111, 112, 113) 
 						AND c.roleID = 3
-				GROUP BY  b.mrecommend, b.winlostdate, c.username, c.currency, s.ProductID
-					
+				GROUP BY  b.mrecommend, b.winlostdate, c.username, c.currency, s.ProductID			
 			)
-
 			INSERT INTO @AgencyWinloss
 			(
 				winlostdate,
@@ -575,7 +572,6 @@ BEGIN
 						AND c.roleID = 2
 				GROUP BY  b.recommend, b.winlostdate, c.username, c.currency, s.ProductID
 			)
-
 			INSERT INTO @AgencyWinloss
 			(
 				winlostdate,
@@ -710,7 +706,6 @@ BEGIN
 						AND c.roleID = 1
 				GROUP BY  b.CustID, b.winlostdate, c.username, c.currency, s.ProductID
 			)
-
 			INSERT INTO @AgencyWinloss
 			(
 				winlostdate,
@@ -782,23 +777,16 @@ BEGIN
 					INNER JOIN @GrossComm c ON a.custid = c.custid AND a.winlostdate = c.winlostdate AND a.ProductID = c.ProductID
 			END
 		END
+	END
 
+	--**** get data from sum_winloss
+	SELECT @fdate = NULL, @tdate = NULL
+	SELECT @fdate = FromDate , @tdate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 2
 
-		--**** get data from sum_winloss
-		IF @BalanceUpDay < @FromDate --if this case occurs then there is no data from sum_winloss_old
-		BEGIN
-			SET @fdate = @FromDate
-		END
-		ELSE
-		BEGIN
-			SET @fdate = @BalanceUpDay
-		END
-
-		IF @ToDate > @MoveBetsDay
-		BEGIN
-			SET @tdate = @MoveBetsDay
-		END
-
+	IF @fdate IS NOT NULL
+	BEGIN
 		---Insert tmptable
 		CREATE TABLE #Tmpsum_winloss ( winlostdate Datetime, custid int, recommend INT, mrecommend INT, srecommend INT, 
 		                          username VARCHAR(30), currency SMALLINT, RoleID int, 								  
@@ -846,7 +834,7 @@ BEGIN
 							(t.RoleID = 4 AND s.srecommend = t.custid AND s.mrecommend < 0 AND s.roleid = 1)
 							)
 						) s
-		
+		---Super 
 		IF @isSAg = 1
 		BEGIN
 			INSERT INTO @AgencyWinloss
@@ -919,6 +907,7 @@ BEGIN
 			FROM #Tmpsum_winloss b WITH(NOLOCK) 							 
 			WHERE b.roleid = 3
 		END	 
+
 		---Agent  
 		IF @isAg = 1 
 		BEGIN
@@ -996,17 +985,175 @@ BEGIN
 		DROP TABLE #TmpSum_WinLoss
 	END
 
-	SELECT	@fdate = @FromDate,
-			@tdate = @ToDate;
-
-	IF @FromDate < @BalanceUpDay
+	-- get data from Transfer (CashServiceBilling)
+	IF ',' + @ProductIDs + ',' LIKE '%,111,%'
 	BEGIN
-		IF @ToDate >= DATEADD(DD, -1, @BalanceUpDay)
+		SELECT @fdate = NULL, @tdate = NULL
+		SELECT @fdate = MIN(FromDate) , @tdate = MAX(ToDate)
+		FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+		WHERE RangeType IN (1,2)
+
+		-- Super
+		IF @isSAg = 1 
 		BEGIN
-			SELECT @tdate = DATEADD(DD, -1, @BalanceUpDay)
+			INSERT INTO @AgencyWinloss
+			(
+				winlostdate,
+				custid,	
+				username,		
+				currency,							
+				ProductID,
+				RoleID,
+				turnover,
+				winlost,
+				playercomm,
+				ownerturnover,
+				ownerwinlost,
+				ownercomm,
+				precomm,
+				company,
+				betcount,
+				GrossComm
+			)
+			SELECT tr.winlostdate,
+					c.CustId,
+					c.username, 
+					c.currency,
+					s.ProductID,
+					4 AS RoleID,
+					0 AS turnover,
+					0 AS winlost,
+					0 AS playercomm,
+					0 AS ownerturnover,
+					0 AS ownerwinlost,
+					0 AS ownercomm,
+					0 AS precomm,
+					SUM(WinLost-Actual_Stake) AS company,
+					0 AS betcount,
+					0 AS GrossComm
+			FROM #TmpCust c
+			INNER JOIN dbo.Transfer tr (NOLOCK) ON tr.SRecommend = c.CustID 
+			INNER JOIN #SportBettype s ON tr.bettype = s.bettype AND s.Bettype IN (31003,31004,31005)
+			WHERE tr.winlostdate BETWEEN @fdate AND @tdate
+				AND c.RoleID = 4
+				AND tr.CustId = tr.Recommend
+			GROUP BY tr.winlostdate,
+					c.CustId,
+					c.username, 
+					c.currency,
+					s.ProductID;
 		END
 
+		-- Master
+		IF @isMAg = 1 
+		BEGIN
+			INSERT INTO @AgencyWinloss
+			(
+				winlostdate,
+				custid,	
+				username,		
+				currency,							
+				ProductID,
+				RoleID,
+				turnover,
+				winlost,
+				playercomm,
+				ownerturnover,
+				ownerwinlost,
+				ownercomm,
+				precomm,
+				company,
+				betcount,
+				GrossComm
+			)
+			SELECT tr.winlostdate,
+					c.CustId,
+					c.username, 
+					c.currency,
+					s.ProductID,
+					3 AS RoleID,
+					0 AS turnover,
+					0 AS winlost,
+					0 AS playercomm,
+					0 AS ownerturnover,
+					0 AS ownerwinlost,
+					0 AS ownercomm,
+					0 AS precomm,
+					SUM(WinLost-Actual_Stake) AS company,
+					0 AS betcount,
+					0 AS GrossComm
+			FROM #TmpCust c  
+			INNER JOIN dbo.Transfer tr (NOLOCK) ON tr.mrecommend = c.CustID 
+			INNER JOIN #SportBettype s ON tr.bettype = s.bettype AND s.Bettype IN (31003,31004,31005)
+			WHERE tr.winlostdate BETWEEN @fdate AND @tdate
+				AND c.RoleID = 3
+				AND tr.CustId = tr.Recommend
+			GROUP BY tr.winlostdate,
+					c.CustId,
+					c.username, 
+					c.currency,
+					s.ProductID;
+		END
 
+		-- Agent
+		IF @isAg = 1
+		BEGIN
+			INSERT INTO @AgencyWinloss
+			(
+				winlostdate,
+				custid,	
+				username,		
+				currency,							
+				ProductID,
+				RoleID,
+				turnover,
+				winlost,
+				playercomm,
+				ownerturnover,
+				ownerwinlost,
+				ownercomm,
+				precomm,
+				company,
+				betcount,
+				GrossComm
+			)
+			SELECT tr.winlostdate,
+					c.CustId,
+					c.username, 
+					c.currency,
+					s.ProductID,
+					2 AS RoleID,
+					0 AS turnover,
+					0 AS winlost,
+					0 AS playercomm,
+					0 AS ownerturnover,
+					SUM(WinLost-Actual_Stake) AS ownerwinlost,
+					0 AS ownercomm,
+					0 AS precomm,
+					SUM(WinLost-Actual_Stake) AS company,
+					0 AS betcount,
+					0 AS GrossComm
+			FROM #TmpCust c  
+			INNER JOIN dbo.Transfer tr (NOLOCK) ON tr.CustId = c.CustID 
+			INNER JOIN #SportBettype s ON tr.bettype = s.bettype AND s.Bettype IN (31003,31004,31005)
+			WHERE tr.winlostdate BETWEEN @fdate AND @tdate
+				AND c.RoleID = 2
+			GROUP BY tr.winlostdate,
+					c.CustId,
+					c.username, 
+					c.currency,
+					s.ProductID;
+		END
+	END
+
+	-- get data from sum_winloss_old 
+	SELECT @fdate = NULL, @tdate = NULL
+	SELECT @fdate = FromDate , @tdate = ToDate
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType = 3
+
+	IF @fdate IS NOT NULL
+	BEGIN
 		---Insert tmptable
 		CREATE TABLE #TmpSum_WinLoss_Old ( winlostdate Datetime, custid int,recommend INT, mrecommend INT, srecommend INT,username VARCHAR(30), currency SMALLINT, RoleID int, 
 									  ProductID TINYINT, sporttype smallint,bettype smallint, BetCount int,
@@ -1026,9 +1173,62 @@ BEGIN
 					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
 					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm, ISNULL(b.leagueGroupID,0), ISNULL(b.ticketType,0)
 		FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
-			INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype  AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
+			INNER JOIN #TmpCondSumWL t 
+				ON b.sporttype = t.sporttype 
+				AND b.bettype = t.bettype  
+				AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID 
+				AND ISNULL(b.ticketType,0) = t.TicketType
+				AND t.ProductID <> 111 
 			INNER JOIN #TmpCust c ON b.custid = c.CustID
 		WHERE	winlostdate BETWEEN @fdate AND @tdate
+		UNION
+		-- Agent Cash Service data of Super
+		SELECT      b.winlostdate, b.srecommend as custid, b.recommend, b.mrecommend, b.srecommend ,c.username, c.currency, c.RoleID, 
+					t.ProductID, b.sporttype, b.bettype, b.betCount,
+					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
+					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm, ISNULL(b.leagueGroupID,0), ISNULL(b.ticketType,0)
+		FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
+			INNER JOIN #TmpCondSumWL t 
+				ON b.sporttype = t.sporttype 
+				AND b.bettype = t.bettype  
+				AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID 
+				AND ISNULL(b.ticketType,0) = t.TicketType
+				AND t.ProductID = 111 
+			INNER JOIN #TmpCust c ON b.srecommend = c.CustID AND c.RoleID = 4
+		WHERE	winlostdate BETWEEN @fdate AND @tdate
+				AND b.roleid = 2			
+		UNION
+		-- Agent Cash Service data of Master
+		SELECT      b.winlostdate, b.mrecommend as custid, b.recommend, b.mrecommend, b.srecommend ,c.username, c.currency, c.RoleID, 
+					t.ProductID, b.sporttype, b.bettype, b.betCount,
+					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
+					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm, ISNULL(b.leagueGroupID,0), ISNULL(b.ticketType,0)
+		FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
+			INNER JOIN #TmpCondSumWL t 
+				ON b.sporttype = t.sporttype 
+				AND b.bettype = t.bettype  
+				AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID 
+				AND ISNULL(b.ticketType,0) = t.TicketType
+				AND t.ProductID = 111 
+			INNER JOIN #TmpCust c ON b.mrecommend = c.CustID AND c.RoleID = 3
+		WHERE	winlostdate BETWEEN @fdate AND @tdate
+				AND b.roleid = 2
+		UNION
+		-- Agent Cash Service data
+		SELECT      b.winlostdate, b.custid, b.recommend, b.mrecommend, b.srecommend ,c.username, c.currency, c.RoleID, 
+					t.ProductID, b.sporttype, b.bettype, b.betCount,
+					ABS(b.turnover) as turnover, b.playercomm, b.scomm, b.acomm, b.Comm,
+					b.awinlost, b.mwinlost, b.swinlost, b.winlost, ABS(b.netTurnover) as netTurnover, b.grosscomm, ISNULL(b.leagueGroupID,0), ISNULL(b.ticketType,0)
+		FROM	bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 		
+			INNER JOIN #TmpCondSumWL t 
+				ON b.sporttype = t.sporttype 
+				AND b.bettype = t.bettype  
+				AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID 
+				AND ISNULL(b.ticketType,0) = t.TicketType
+				AND t.ProductID = 111 
+			INNER JOIN #TmpCust c ON b.custid = c.CustID 
+		WHERE	winlostdate BETWEEN @fdate AND @tdate
+				AND c.RoleID = 2
 
 		UPDATE t
 		SET  t.grosscomm = CASE WHEN t.RoleID = 1 THEN  t.playercomm 
@@ -1051,7 +1251,7 @@ BEGIN
 							(t.RoleID = 4 AND s.srecommend = t.custid AND s.mrecommend < 0 AND s.roleid = 1)
 							)
 						) s
-	--Super	
+		--Super	
 		IF @isSAg = 1
 		BEGIN
 			INSERT INTO @AgencyWinloss
@@ -1075,10 +1275,10 @@ BEGIN
 			)
 			SELECT b.winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
-				,winlost
+				,IIF(b.ProductID = 111, 0, winlost) as winlost
 				,playercomm
 				,isnull(netTurnover,0) as ownerturnover
-				,swinlost as ownerwinlost 
+				,swinlost as ownerwinlost
 				,scomm as ownercomm
 				,acomm as precomm
 				,awinlost + mwinlost + swinlost + scomm + winlost
@@ -1088,7 +1288,7 @@ BEGIN
 			WHERE	b.roleid = 4
 		END
 		 
-	--Master
+		--Master
 		IF @isMAg = 1	
 		BEGIN
 			INSERT INTO @AgencyWinloss
@@ -1112,7 +1312,7 @@ BEGIN
 			)
 			SELECT winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
-				,winlost
+				,IIF(b.ProductID = 111, 0, winlost) as winlost
 				,playercomm
 				,isnull(netTurnover,0) as ownerturnover
 				,mwinlost as ownerwinlost 
@@ -1124,7 +1324,8 @@ BEGIN
 			FROM	#TmpSum_WinLoss_Old b WITH(NOLOCK) 
 			WHERE	b.roleid = 3
 		END
-	--Agent	
+
+		--Agent	
 		IF @isAg = 1
 		BEGIN 
 			INSERT INTO @AgencyWinloss
@@ -1148,10 +1349,10 @@ BEGIN
 			)
 			SELECT winlostdate, b.custid, b.username, b.currency, b.ProductID, b.RoleID
 				,b.turnover
-				,winlost
+				,IIF(b.ProductID = 111, 0, winlost) as winlost
 				,playercomm
 				,isnull(netTurnover,0) as ownerturnover
-				,awinlost as ownerwinlost 
+				,IIF(b.ProductID = 111, winlost, awinlost) as ownerwinlost 
 				,comm as ownercomm
 				,playercomm as precomm
 				,awinlost + comm + winlost
@@ -1160,7 +1361,8 @@ BEGIN
 			FROM	#TmpSum_WinLoss_Old b WITH(NOLOCK) 
 			WHERE	b.roleid = 2
 		END 
-	--Member	
+		
+		--Member	
 		IF @isMem = 1
 		BEGIN
 			INSERT INTO @AgencyWinloss

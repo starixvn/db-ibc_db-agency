@@ -56,6 +56,7 @@ Revisions:
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
 	- 20250605@Virgil: Cash Service - Billing service and Report changes [RedmineId: #227984]
+	- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -117,6 +118,7 @@ BEGIN
 	CREATE TABLE #GrossComm (CustId INT, TurnoverNoDraw MONEY, GrossComm MONEY)
 
 	CREATE TABLE #TmpCondSumWL(
+		ProductID		TINYINT,
 		SportType		INT,
 		BetType			INT,
 		LeagueGroupID	SMALLINT, 
@@ -136,8 +138,8 @@ BEGIN
 
 	IF @FromDate <= @MoveBetsDay
 	BEGIN
-		INSERT INTO #TmpCondSumWL(SportType, BetType, LeagueGroupID, TicketType) 
-		SELECT f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
+		INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
+		SELECT f.ProductID, f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
 		FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
 			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
 		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
@@ -516,9 +518,9 @@ BEGIN
 				SUM(ABS(TurnOver)) AS TurnOver,
 				SUM(ABS(TunroverNoDraw)) as TurnoverNoDraw,
 				SUM(grosscomm) AS GrossComm,
-				SUM(winlost) AS MemberWinlost,
+				SUM(IIF(bt.ProductID = 111, 0, winlost)) AS MemberWinlost,
 				SUM(playercomm) AS PlayerComm,
-				SUM(awinlost) AS AgWinlost,
+				SUM(IIF(bt.ProductID = 111, winlost, awinlost)) AS AgWinlost,
 				ISNULL(SUM(comm - playercomm), 0) AS AgComm,
 				SUM(mwinlost) AS MAgWinlost,
 				SUM(acomm) - SUM(comm) AS MAgComm,
@@ -539,42 +541,6 @@ BEGIN
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
 
-		-- Cash Service Billing 
-		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
-		BEGIN
-			;WITH CTE_Downline AS (
-				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
-				FROM STRING_SPLIT(@downlineIds, ',') AS c
-			)
-			INSERT INTO #MAgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, MAgWinLost, MAgComm, NoOfTicket)
-			SELECT b.CustId,
-					0 AS TurnOver, 
-					0 AS TurnoverNoDraw,
-					0 AS GrossComm,
-					0 AS MemberWinlost,
-					0 AS PlayerComm,
-					SUM(WinLost) AS AgWinlost,
-					0 AS AgComm,
-					0 AS MAgWinlost,
-					0 AS MAgComm,
-					0 AS NoOfTicket
-			FROM bodb_Summary.dbo.Sum_WinLoss_Old b (NOLOCK)
-			INNER JOIN CTE_Downline m ON m.custid = b.recommend
-			INNER JOIN (	
-					SELECT DISTINCT ma.ProductID, ma.BetType, ma.SportType
-					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
-					WHERE ma.ProductID = 111
-						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
-						AND ma.RefTable = 4
-						AND ma.BetType NOT IN (31001,31002)
-					) f ON b.Bettype = f.BetType
-					AND b.SportType = f.SportType
-			WHERE b.winlostdate BETWEEN @FDate AND @TDate
-				AND srecommend = @srecommend
-				AND mrecommend = @custid
-				AND RoleID = 2
-			GROUP BY b.CustID
-		END
 	END	
 
 	--TODO: SabaWalletTicket

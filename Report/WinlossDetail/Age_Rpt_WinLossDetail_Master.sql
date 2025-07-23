@@ -58,6 +58,7 @@ Revisions:
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
 	- 20250605@Virgil: Cash Service - Billing service and Report changes [RedmineId: #227984]
+	- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
 
 	Param's Explanation:
 		- @ProductDetails:		
@@ -121,6 +122,7 @@ BEGIN
 	CREATE TABLE #GrossComm (CustId INT, TurnoverNoDraw MONEY, GrossComm MONEY)
 
 	CREATE TABLE #TmpCondSumWL(
+		ProductID		TINYINT,
 		SportType		INT,
 		BetType			INT,
 		LeagueGroupID	SMALLINT,
@@ -141,8 +143,8 @@ BEGIN
 	
 	IF (@FromDate <= @MoveBetsDay)
 	BEGIN
-		INSERT INTO #TmpCondSumWL(SportType, BetType, LeagueGroupID, TicketType) 
-		SELECT f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
+		INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
+		SELECT f.ProductID, f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
 		FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
 			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
 		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
@@ -292,8 +294,7 @@ BEGIN
 					0 AS SAgComm,
 					0 AS NoOfTicket
 			FROM dbo.Transfer tr (NOLOCK)
-			INNER JOIN dbo.Customer c (NOLOCK) ON c.custid = tr.custid AND c.roleid = 2
-			INNER JOIN CTE_Downline m ON c.mrecommend = m.custid
+			INNER JOIN CTE_Downline m ON tr.mrecommend = m.custid
 			INNER JOIN (	
 						SELECT DISTINCT ma.ProductID, ma.BetType
 						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
@@ -303,6 +304,7 @@ BEGIN
 							AND ma.BetType IN (31003,31004,31005)
 						) f ON tr.Bettype = f.BetType
 			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+				AND tr.CustId = tr.Recommend
 			GROUP BY m.custid;
 		END
 		
@@ -475,8 +477,7 @@ BEGIN
 					0 AS SAgComm,
 					0 AS NoOfTicket
 			FROM dbo.Transfer tr (NOLOCK)
-			INNER JOIN dbo.Customer c (NOLOCK) ON c.custid = tr.custid AND c.roleid = 2
-			INNER JOIN CTE_Downline m ON c.mrecommend = m.custid
+			INNER JOIN CTE_Downline m ON tr.mrecommend = m.custid
 			INNER JOIN (	
 						SELECT DISTINCT ma.ProductID, ma.BetType
 						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
@@ -486,7 +487,8 @@ BEGIN
 							AND ma.BetType IN (31003,31004,31005)
 						) f ON tr.Bettype = f.BetType
 			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
-			GROUP BY m.CustId;
+				AND tr.CustId = tr.Recommend
+			GROUP BY m.custid;
 		END
 	END
 
@@ -545,6 +547,7 @@ BEGIN
 			AND b.bettype = bt.bettype
 			AND ISNULL(b.LeagueGroupID,0) = bt.LeagueGroupID
 			AND ISNULL(b.TicketType,0) = bt.TicketType
+			AND bt.ProductID <> 111
 		GROUP BY b.CustID
 		OPTION (MAXRECURSION 0);
 
@@ -570,25 +573,15 @@ BEGIN
 					0 AS SAgComm,
 					0 AS NoOfTicket
 			FROM bodb_Summary.dbo.Sum_WinLoss_Old b (NOLOCK)
-			INNER JOIN dbo.Customer c (NOLOCK)
-				ON c.custid = b.recommend
-				AND c.srecommend = b.srecommend
-				AND c.mrecommend = b.mrecommend
-				AND c.roleid = b.RoleID
 			INNER JOIN CTE_Downline m 
-				ON c.mrecommend = m.custid
-			INNER JOIN (	
-					SELECT DISTINCT ma.ProductID, ma.BetType, ma.SportType
-					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
-					WHERE ma.ProductID = 111
-						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
-						AND ma.RefTable = 4
-						AND ma.BetType NOT IN (31001,31002)
-					) f ON b.Bettype = f.BetType
-					AND b.SportType = f.SportType
+				ON b.mrecommend = m.custid
+			INNER JOIN #TmpCondSumWL bt 
+				ON b.sporttype = bt.sporttype
+				AND b.bettype = bt.bettype
+				AND bt.BetType IN (31003,31004,31005)
 			WHERE b.winlostdate BETWEEN @FDate AND @TDate
-				AND b.RoleID = 2
-			GROUP BY m.CustID;
+				AND b.custid = b.recommend
+			GROUP BY m.CustID
 		END
 	END	
 
