@@ -56,6 +56,7 @@ Revisions:
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250506@Bobby: Tuning perf IO on custinfo [RedmineId: #226284]
 	- 20250529@Virgil: Cash Service - Billing service and Report changes [RedmineId: #227984]
+	- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -466,7 +467,7 @@ BEGIN
 					WHERE ma.ProductID = 111
 						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
 						AND ma.RefTable = 4
-						AND ma.BetType NOT IN (31001,31002)
+						AND ma.BetType IN (31003,31004,31005)
 					) f ON b.Bettype = f.BetType
 					AND b.SportType = f.SportType
 			WHERE b.winlostdate BETWEEN @FDate AND @TDate

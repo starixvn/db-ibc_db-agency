@@ -24,6 +24,7 @@ Revisions:
 	- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250613@Virgil: Cash Service - Billing service and Report changes - Sprint 4 [RedmineId: #229883]
+	- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
 	
 	Param's Explanation:
 	- @LevelType : 0: All; 1: Master Agent/ Agent; 2: Direct Member
@@ -286,7 +287,7 @@ BEGIN
 		INSERT INTO #WeekRange(winlostdate)
 		SELECT DISTINCT tr.winlostdate
 		FROM dbo.Transfer tr (NOLOCK)
-		INNER JOIN SportBettypeMatrix f ON tr.Bettype = f.BetType
+		INNER JOIN SportBettypeMatrix f ON tr.Bettype = f.BetType AND f.BetType IN (31003,31004,31005)
 		WHERE tr.winlostdate BETWEEN @FDate AND @TDate
 			AND tr.CustId = @CID
 	END

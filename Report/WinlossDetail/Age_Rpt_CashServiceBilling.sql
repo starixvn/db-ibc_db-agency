@@ -13,6 +13,7 @@ AS
 
 	Revisions:
 		- 20250602@Virgil: Init SP [RedmineID: #227984]
+		- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -37,7 +38,9 @@ BEGIN
 			@TDate	SMALLDATETIME;
 	
 	-- RangeType 1 & 2 
-	SELECT @FDate = @FromDate, @TDate = DATEADD(DD, 1, @ToDate)
+	SELECT @FDate = MIN(FromDate) , @TDate = DATEADD(DD, 1, MAX(ToDate))
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType IN (1,2)
 	
 	IF @FDate IS NOT NULL
 	BEGIN
