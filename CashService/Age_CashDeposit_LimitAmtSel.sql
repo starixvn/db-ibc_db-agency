@@ -2,7 +2,7 @@
 ALTER PROCEDURE dbo.Age_CashDeposit_LimitAmtSel
 	@CustID	INT,
 	@AgentID INT = NULL,
-	@AccumCreditReturn MONEY,
+	@AccumCreditReturn MONEY = NULL,
 	@IsMemberSite BIT = 0,
 	@PaymentType TINYINT = 2,-- default bank 
 	@ProviderID SMALLINT = 0,
@@ -21,6 +21,7 @@ AS
 	Revisions:
 		- 20250423@Eden: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250612@Max: Change the way to get min/max limit when deposit via payment gateway [Redmine: #223896]
+		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
 
 	Parameter's Explanation:	
 		@PaymentType: 1-Gateway | 2-Bank account

@@ -11,8 +11,12 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:
+
+	Sample:
+		EXEC [Age_CashTransactionDetail_Sel] @TransID = 1 , @CustID = 1
 */ 
 BEGIN  
     SET NOCOUNT ON; 
@@ -30,12 +34,7 @@ BEGIN
 		,tr.PaymentFrom
 		,tr.PaymentTo
 		,tr.StatusId
-		,CASE tr.TransactionTypeID
-			WHEN 1  THEN 'Manual Deposit'
-			WHEN 2  THEN 'Auto Deposit'
-			WHEN 3  THEN 'Manual Withdraw'
-			WHEN 4  THEN 'Auto Withdraw'
-		END AS TransactionType
+		,tr.TransactionTypeID
 		,tr.TransferRefNo
 		,tr.CreatedTime
 		,co.username AS CreatedBy 
@@ -45,6 +44,7 @@ BEGIN
 		,@CashMemberBetCredit AS BetCredit 
 		,IIF(tr.PaymentType = 1, 0 , 1) AS IsAllowRevert
 		,tr.TransId
+		,tr.PaymentType
 	FROM dbo.CashTransaction tr WITH (NOLOCK)
 		INNER JOIN CustDB.dbo.vw_CashService_Customer c WITH (NOLOCK) ON c.custid = tr.CustID
 		INNER JOIN CustDB.dbo.vw_CashService_Customer co WITH (NOLOCK) ON co.custid = tr.Creator

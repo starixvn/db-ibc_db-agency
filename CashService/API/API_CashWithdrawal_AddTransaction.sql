@@ -25,6 +25,7 @@ AS
 	Revisions:
 		- 20250530@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:	
 */ 
@@ -67,6 +68,11 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
+			SELECT @ErrExtraInfo = @ErrMsg
+				,@ErrCode = CASE WHEN @ErrCode IN(406, 407, 408) THEN @ErrCode ELSE 409 END
+				,@ErrMsg = CASE WHEN @ErrCode IN(406, 407, 408) THEN @ErrMsg
+								ELSE 'The transaction inserted failed. Please try again.' END
+
 			RETURN
 		END
 	END TRY
@@ -150,7 +156,7 @@ BEGIN
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogDataMask = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogDataMask = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'UplineID="'+ COALESCE(CAST(@AgentId AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransactionTypeID="'+ COALESCE(CAST(@TransactionTypeID AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'PaymentTo="'+ COALESCE(CAST(@PaymentTo AS VARCHAR(100)), SPACE(1)) + '" ' +

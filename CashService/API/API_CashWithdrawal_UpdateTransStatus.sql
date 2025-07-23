@@ -6,6 +6,7 @@ ALTER PROCEDURE dbo.API_CashWithdrawal_UpdateTransStatus
 	@TransId BIGINT,
 	@StatusId TINYINT,
 	@SiteDBGroupID SMALLINT = 3,
+	@ProviderTransId VARCHAR(100) = NULL,
     @IP VARCHAR(50) = '',
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,	
@@ -20,8 +21,13 @@ AS
 		
 	Revisions:
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
-
-	Parameter's Explanation:		
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
+	Parameter's Explanation:	
+		@StatusId =
+			3: Expired
+			4: Completed
+			6: Provider Reject
+			0: Revert Transaction (Web cannot connect with API)
 */ 
 BEGIN
     SET NOCOUNT ON;
@@ -34,9 +40,10 @@ BEGIN
 		,@TransId_From	BIGINT = NULL
 		,@TransId_To	BIGINT = NULL
 		,@Amount MONEY = NULL
-		,@_CustId INT = NULL
 		,@_statusId TINYINT
+		,@_ProviderTransId VARCHAR(100)
 		,@TransactionTypeID TINYINT
+		,@ExtraInfo NVARCHAR(1000)
 
 	DECLARE @tmp_LogData AS TABLE (
 		 LogTypeId TINYINT --1: Insert Transfer, 2: Insert/Update CashTransaction, 3: Insert/Update Accumulate Return Credit 
@@ -53,44 +60,66 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
+	SELECT @StatusId = ISNULL(@StatusId,0)
+
 	SELECT @Amount = c.Amount
 		, @TransferRefNo = c.TransferRefNo
-		, @_CustId = c.CustId
 		, @_statusId = c.StatusId
 		, @TransactionTypeID = c.TransactionTypeID
+		, @PaymentType = c.PaymentType
+		, @_ProviderTransId = JSON_VALUE(c.ExtraInfo, '$.ProviderTransId') 
 	FROM dbo.CashTransaction c WITH (NOLOCK)
+		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
+			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
-
-	IF @CustID <> @_CustId OR @_CustId IS NULL OR @_statusId <> 2 OR @TransactionTypeID NOT IN (3,4) --Withdrawal
+		AND c.CustId = @CustID
+		AND ci.recommend = @AgentID
+	
+	IF @TransactionTypeID IS NULL
 	BEGIN
 		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 		RETURN
 	END
 
-	--Validate the input data
+	IF @_statusId <> 2 
+		OR @TransactionTypeID NOT IN (3,4) --Withdrawal
+		OR @StatusId NOT IN (0,3,4,5,6)
+	BEGIN
+		SELECT @ErrCode = 409, @ErrMsg = 'The transaction inserted failed. Please try again.'
+			,@ErrExtraInfo = 'Wrong TransactionType or StatusId'
+		RETURN
+	END
+
+	IF ISNULL(@ProviderTransId,'') <> ISNULL(@_ProviderTransId,'') AND @PaymentType = 1 AND @StatusId <> 0-- Payment Gateway validate ProviderTransId
+	BEGIN  
+		SELECT @ErrCode = 409
+			,@ErrMsg = 'The transaction inserted failed. Please try again.'  
+			,@ErrExtraInfo = 'Wrong ProviderTransId'
+		RETURN  
+	END
+
+	--Locking transaction for process
 	BEGIN TRY
-		EXEC dbo.Age_CashWithdrawal_Validate 
-			@CustID = @CustID,
-			@UplineID = @AgentID,
-			@Amount = @Amount,
+		EXEC dbo.Age_CashDeposit_CheckingProcess
+			@TransId = @TransId,
 			@ErrCode = @ErrCode OUTPUT,
 			@ErrMsg = @ErrMsg OUTPUT
 
 		IF @ErrCode <> 0
 		BEGIN
-			SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 				,@ErrExtraInfo = @ErrMsg
 
 			RETURN
 		END
 	END TRY
 	BEGIN CATCH
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 				,@ErrExtraInfo = ERROR_MESSAGE()
-
 		RETURN
 	END CATCH
-
 
 	IF @StatusId = 4 --Completed
 	BEGIN
@@ -115,7 +144,7 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'ActionType="'+ COALESCE(CAST(2 AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
 									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
@@ -138,7 +167,7 @@ BEGIN
 				@TransId = @TransId,
 				@AdjustCreditAmt = @AdjustCreditAmt,
 				@StatusId = @StatusId,
-				@TransferRefNo = @TransferRefNo,
+				@ExtraInfo = @ExtraInfo,
 				@ErrCode = @ErrCode OUTPUT,
 				@ErrMsg = @ErrMsg OUTPUT
 
@@ -149,7 +178,8 @@ BEGIN
 					@Type = 2,
 					@TransId = 0,
 					@Custid = @CustID,
-					@AdjustCreditAmt = @AdjustCreditAmt
+					@AdjustCreditAmt = @AdjustCreditAmt,
+					@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 				SELECT @ErrCode = 409
 						,@ErrExtraInfo = @ErrMsg
@@ -159,10 +189,10 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
-									'StatusId="'+ COALESCE(CAST(4 AS VARCHAR(3)), SPACE(1)) + '" ' +
+									'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
 									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
 
 				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
@@ -175,7 +205,8 @@ BEGIN
 				@Type = 2,
 				@TransId = 0,
 				@Custid = @CustID,
-				@AdjustCreditAmt = @AdjustCreditAmt
+				@AdjustCreditAmt = @AdjustCreditAmt,
+				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 			SELECT @ErrCode = 409
 				,@ErrExtraInfo = ERROR_MESSAGE()
@@ -229,6 +260,7 @@ BEGIN
 				@TransId = @TransId,
 				@AdjustCreditAmt = @AdjustCreditAmt,
 				@StatusId = @StatusId,
+				@ExtraInfo = @ExtraInfo,
 				@TransferRefNo = @TransferRefNo,
 				@ErrCode = @ErrCode OUTPUT,
 				@ErrMsg = @ErrMsg OUTPUT
@@ -252,10 +284,10 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
-									'StatusId="'+ COALESCE(CAST(4 AS VARCHAR(3)), SPACE(1)) + '" ' +
+									'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
 									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
 
 				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
@@ -279,8 +311,59 @@ BEGIN
 			GOTO Writelog;
 		END CATCH
 	END
+	ELSE IF @StatusId = 0 -- Revert Transaction
+	BEGIN
+		BEGIN TRY
+			SELECT @ExtraInfo = JSON_MODIFY(ISNULL(c.ExtraInfo,'{}'), '$.ProviderId',NULL)
+			FROM dbo.CashTransaction c WITH (NOLOCK)
+			WHERE c.TransId = @TransId
+
+			EXEC dbo.Age_CashTransaction_Upd 
+				@TransId = @TransId,
+				@PaymentType = 0,
+				@PaymentFrom = '',
+				@Remark = '',
+				@PaySlip = 0x,
+				@IsClearPaymentMethod = 1,
+				@ExtraInfo = @ExtraInfo,
+				@ErrCode = @ErrCode OUTPUT,
+				@ErrMsg = @ErrMsg OUTPUT
+
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrCode = 409
+						,@ErrExtraInfo = @ErrMsg
+						,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+				GOTO Writelog;
+			END
+			ELSE --Insert data for writelog
+			BEGIN
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'PaymentType="'+ COALESCE(CAST(0 AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'PaymentFrom="'+ COALESCE(CAST('' AS VARCHAR(100)), SPACE(1)) + '" />'
+
+				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
+				SELECT 3, @AgentID, @CustID, 310006, @LogData
+			END
+		END TRY
+		BEGIN CATCH
+			SELECT @ErrCode = 409
+				,@ErrExtraInfo = ERROR_MESSAGE()
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+			GOTO Writelog;
+		END CATCH
+	END
 
 	Writelog:
+
+	--Unlock transaction
+	EXEC dbo.Age_CashDeposit_CheckingProcess
+		@TransId = @TransId,
+		@IsRelease = 1
+
 	SELECT *
 	FROM @tmp_LogData t
 

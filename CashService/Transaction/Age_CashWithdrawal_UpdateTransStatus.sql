@@ -5,7 +5,7 @@ ALTER PROCEDURE dbo.Age_CashWithdrawal_UpdateTransStatus
     @AgentID INT,
 	@SubAccID INT = 0,
 	@TransId BIGINT,
-	@StatusId TINYINT,
+	@StatusId TINYINT = NULL,
 	@SiteDBGroupID SMALLINT = 3,
 	@ProviderID SMALLINT = 0,
 	@PaymentMethodID SMALLINT = NULL,
@@ -25,6 +25,7 @@ AS
 		
 	Revisions:
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:		
 */ 
@@ -39,9 +40,10 @@ BEGIN
 		,@TransId_From	BIGINT = NULL
 		,@TransId_To	BIGINT = NULL
 		,@Amount MONEY = NULL
-		,@_CustId INT = NULL
 		,@_statusId TINYINT
 		,@TransactionTypeID TINYINT
+		,@ExtraInfo NVARCHAR(1000) = NULL
+		,@_PaymentType TINYINT 
 
 	DECLARE @tmp_LogData AS TABLE (
 		 LogTypeId TINYINT --1: Insert Transfer, 2: Insert/Update CashTransaction, 3: Insert/Update Accumulate Return Credit 
@@ -58,6 +60,8 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
+	SET @StatusId = ISNULL(@StatusId,0)
+
 	IF @ProviderID <> 0 
 		SET @PaymentType = 1 -- Payment Gateway
 	ELSE
@@ -65,37 +69,32 @@ BEGIN
 
 	SELECT @Amount = c.Amount
 		, @TransferRefNo = c.TransferRefNo
-		, @_CustId = c.CustId
 		, @_statusId = c.StatusId
 		, @TransactionTypeID = c.TransactionTypeID
+		, @_PaymentType = c.PaymentType
 	FROM dbo.CashTransaction c WITH (NOLOCK)
+		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
+			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
-
-	IF @CustID <> @_CustId OR @_CustId IS NULL OR @_statusId <> 2 OR @TransactionTypeID NOT IN (3,4) --Withdrawal
+		AND c.CustId = @CustID
+		AND ci.recommend = @AgentID
+	
+	IF @TransactionTypeID IS NULL
 	BEGIN
 		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 		RETURN
 	END
 
-	--Validate the input data
-	BEGIN TRY
-		EXEC dbo.Age_CashWithdrawal_Validate 
-			@CustID = @CustID,
-			@UplineID = @AgentID,
-			@Amount = @Amount,
-			@ErrCode = @ErrCode OUTPUT,
-			@ErrMsg = @ErrMsg OUTPUT
-
-		IF @ErrCode <> 0
-		BEGIN
-			RETURN
-		END
-	END TRY
-	BEGIN CATCH
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
-
+	IF @_statusId <> 2 
+		OR @TransactionTypeID NOT IN (3,4) --Withdrawal
+		OR @StatusId NOT IN (0,3,4,5,6) -- 0 : Update info for Payment Gateway, not update status
+		OR (@StatusId = 0 AND @PaymentType = 2) --Bank transfer 
+		OR (@StatusId IN (0,4) AND ISNULL(@PaymentFrom,'') = '') -- Approve or Update Payment Gateway info need this Info
+		OR @_PaymentType = 1 -- Provider in-progess
+	BEGIN
+		SELECT @ErrCode = 409, @ErrMsg = 'The transaction inserted failed. Please try again.'
 		RETURN
-	END CATCH
+	END
 
 	--Locking transaction for process
 	BEGIN TRY
@@ -134,10 +133,6 @@ BEGIN
 
 			IF @ErrCode <> 0
 			BEGIN
-				EXEC dbo.Age_CashDeposit_CheckingProcess
-					@TransId = @TransId,
-					@IsRelease = 1
-
 				SELECT @ErrCode = 409
 					,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
@@ -145,7 +140,7 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'ActionType="'+ COALESCE(CAST(2 AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
 									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
@@ -155,10 +150,6 @@ BEGIN
 			END
 		END TRY
 		BEGIN CATCH
-			EXEC dbo.Age_CashDeposit_CheckingProcess
-					@TransId = @TransId,
-					@IsRelease = 1
-
 			SELECT @ErrCode = 409
 					,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
@@ -171,7 +162,8 @@ BEGIN
 				@TransId = @TransId,
 				@AdjustCreditAmt = @AdjustCreditAmt,
 				@StatusId = @StatusId,
-				@TransferRefNo = @TransferRefNo,
+				@OperatedBy = @AgentID,
+				--@TransferRefNo = @TransferRefNo,
 				@PaymentMethod = @PaymentMethodID,
 				@PaymentType = @PaymentType,
 				@PaymentFrom = @PaymentFrom,
@@ -187,11 +179,8 @@ BEGIN
 					@Type = 2,
 					@TransId = 0,
 					@Custid = @CustID,
-					@AdjustCreditAmt = @AdjustCreditAmt
-
-				EXEC dbo.Age_CashDeposit_CheckingProcess
-						@TransId = @TransId,
-						@IsRelease = 1
+					@AdjustCreditAmt = @AdjustCreditAmt,
+					@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 				SELECT @ErrCode = 409
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
@@ -200,18 +189,18 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				EXEC dbo.Age_CashDeposit_CheckingProcess
-						@TransId = @TransId,
-						@IsRelease = 1
-
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogDataMask = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
-									'StatusId="'+ COALESCE(CAST(4 AS VARCHAR(3)), SPACE(1)) + '" ' +
+									'PaymentType="'+ COALESCE(CAST(@PaymentType AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'PaymentFrom="'+ COALESCE(CAST(@PaymentFrom AS VARCHAR(100)), SPACE(1)) + '" ' +
+									'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
 									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
 
-				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-				SELECT 3, @AgentID, @CustID, 310006, @LogData
+				SELECT @LogData = REPLACE (@LogDataMask, ISNULL(@PaymentFrom,''),'')
+
+				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue,TrackingValueMask)
+				SELECT 3, @CustID, @CustID, 310006, @LogData, @LogDataMask
 			END
 		END TRY
 		BEGIN CATCH
@@ -220,7 +209,8 @@ BEGIN
 				@Type = 2,
 				@TransId = 0,
 				@Custid = @CustID,
-				@AdjustCreditAmt = @AdjustCreditAmt
+				@AdjustCreditAmt = @AdjustCreditAmt,
+				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
 			SELECT @ErrCode = 409
 				,@ErrMsg = 'The transaction inserted failed. Please try again.'
@@ -244,11 +234,7 @@ BEGIN
 				@TransId_To = @TransId_To OUTPUT
 
 			IF @ErrCode <> 0
-			BEGIN
-				EXEC dbo.Age_CashDeposit_CheckingProcess
-					@TransId = @TransId,
-					@IsRelease = 1
-				
+			BEGIN	
 				SELECT @ErrCode = 409
 					,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
@@ -263,10 +249,6 @@ BEGIN
 			END
 		END TRY
 		BEGIN CATCH
-			EXEC dbo.Age_CashDeposit_CheckingProcess
-					@TransId = @TransId,
-					@IsRelease = 1
-
 			SELECT @ErrCode = 409
 					,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
@@ -279,6 +261,7 @@ BEGIN
 				@TransId = @TransId,
 				@AdjustCreditAmt = @AdjustCreditAmt,
 				@StatusId = @StatusId,
+				@OperatedBy = @AgentID,
 				@TransferRefNo = @TransferRefNo,
 				@PaymentMethod = @PaymentMethodID,
 				@PaymentType = @PaymentType,
@@ -306,10 +289,10 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '< custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
-									'StatusId="'+ COALESCE(CAST(4 AS VARCHAR(3)), SPACE(1)) + '" ' +
+									'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
 									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
 
 				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
@@ -332,8 +315,61 @@ BEGIN
 			GOTO Writelog;
 		END CATCH
 	END
+	ELSE IF @StatusId = 0 AND @PaymentType = 1
+	BEGIN
+		--Update cash transaction, payment information only, not update status
+		BEGIN TRY
+			SELECT @ExtraInfo = JSON_MODIFY(ISNULL(c.ExtraInfo,'{}'), '$.ProviderId',@ProviderID)
+			FROM dbo.CashTransaction c WITH (NOLOCK)
+			WHERE c.TransId = @TransId
+
+			EXEC dbo.Age_CashTransaction_Upd 
+				@TransId = @TransId,
+				@PaymentMethod = @PaymentMethodID,
+				@PaymentType = @PaymentType,
+				@PaymentFrom = @PaymentFrom,
+				@ExtraInfo = @ExtraInfo,
+				@PaySlip = @PaySlip,
+				@Remark = @Remark,
+				@ErrCode = @ErrCode OUTPUT,
+				@ErrMsg = @ErrMsg OUTPUT
+
+			IF @ErrCode <> 0
+			BEGIN
+				SELECT @ErrCode = 409
+					,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+				GOTO Writelog;
+			END
+			ELSE --Insert data for writelog
+			BEGIN
+				SELECT @LogDataMask = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'UplineID="'+ COALESCE(CAST(@AgentId AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'SubAccID="'+ COALESCE(CAST(@SubAccID AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'PaymentType="'+ COALESCE(CAST(@PaymentType AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'PaymentFrom="'+ COALESCE(CAST(@PaymentFrom AS VARCHAR(100)), SPACE(1)) + '" />'
+
+				SELECT @LogData = REPLACE (@LogDataMask, ISNULL(@PaymentFrom,''),'')
+
+				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue,TrackingValueMask)
+				SELECT 3, @CustID, @CustID, 310006, @LogData, @LogDataMask
+			END
+		END TRY
+		BEGIN CATCH
+			SELECT @ErrCode = 409
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
+			GOTO Writelog;
+		END CATCH
+	END
 
 	Writelog:
+	--Unlock Transaction
+	EXEC dbo.Age_CashDeposit_CheckingProcess
+		@TransId = @TransId,
+		@IsRelease = 1
+
 	SELECT *
 	FROM @tmp_LogData t
 

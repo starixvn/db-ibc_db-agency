@@ -15,6 +15,8 @@ ALTER PROCEDURE dbo.Age_CashTransaction_Upd
 	@PaymentTo varchar(100) = NULL,
 	@PaySlip VARBINARY(MAX) = NULL,
 	@ExtraInfo nvarchar(1000) = NULL,
+	@IsUpdateOperatedTime BIT = 1,
+	@IsClearPaymentMethod BIT = 0,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT
 )
@@ -26,6 +28,7 @@ AS
 		
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 
 	Parameter's Explanation:
 */ 
@@ -33,19 +36,20 @@ BEGIN
     SET NOCOUNT ON;
 
 	BEGIN TRY
+
 		UPDATE c WITH (ROWLOCK, UPDLOCK)
 		SET c.StatusId = ISNULL(@StatusId,c.StatusId),
 			c.Amount = ISNULL(@Amount,c.Amount),
 			c.Remark = ISNULL(@Remark,c.Remark),
 			c.TransferRefNo = ISNULL(@TransferRefNo,c.TransferRefNo),
 			c.OperatedBy = ISNULL(@OperatedBy,c.OperatedBy),
-			c.OperatedTime = GETDATE(),
+			c.OperatedTime = IIF(@IsUpdateOperatedTime = 1,GETDATE(),c.OperatedTime),
 			c.SubAccID = ISNULL(@SubAccID,c.SubAccID),
-			c.PaymentType = ISNULL(@PaymentType,c.PaymentType),
-			c.PaymentMethod = ISNULL(@PaymentMethod,c.PaymentMethod),
-			c.PaymentFrom = ISNULL(@PaymentFrom,c.PaymentFrom),
-			c.PaymentTo = ISNULL(@PaymentTo,c.PaymentTo),
-			c.PaySlip = ISNULL(@PaySlip,c.PaySlip),
+			c.PaymentType = IIF(@PaymentType = 0,NULL,ISNULL(@PaymentType,c.PaymentType)),
+			c.PaymentMethod = IIF(@IsClearPaymentMethod = 1,NULL,ISNULL(@PaymentMethod,c.PaymentMethod)),
+			c.PaymentFrom = IIF(@PaymentFrom = '',NULL,ISNULL(@PaymentFrom,c.PaymentFrom)),
+			c.PaymentTo = IIF(@PaymentTo = '',NULL,ISNULL(@PaymentTo,c.PaymentTo)),
+			c.PaySlip = IIF(@PaySlip = 0x,NULL,ISNULL(@PaySlip,c.PaySlip)),
 			c.ExtraInfo = ISNULL(@ExtraInfo,c.ExtraInfo),
 			c.AdjustCreditAmt = ISNULL(@AdjustCreditAmt,c.AdjustCreditAmt),
 			c.RepUpdateTime = dbo.f_GetDateTime2()
