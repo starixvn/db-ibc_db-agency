@@ -11,6 +11,7 @@ AS
   
   Revisions:
     - 20250526@Bobby: Initial [RedmineID: #227215]
+	- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
 
   Description:
     - @AgentList: JSON([{"AgentId":1176086,"StartTime":"2025-05-22","TrialEndTime":"2025-06-04","ServiceType":0}])
@@ -203,9 +204,12 @@ BEGIN
 	WHERE 
 		ct.OperatedTime >= @Yesterday AND ct.OperatedTime < @Today
 		AND ct.statusID = 4 -- Only consider successful transactions
-		AND ct.PaymentType = 2 -- Only consider bank transactions
-		AND ct.TransactionTypeID IN (1, 2, 3) -- Only consider deposits and withdrawals
-		AND TRY_CAST(JSON_VALUE(ct.ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) IS NULL
+        AND TRY_CAST(JSON_VALUE(ct.ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) IS NULL
+        AND (
+			(ct.PaymentType = 2 -- Only consider bank transactions
+			AND ct.TransactionTypeID IN (1, 2, 3)) -- Only consider deposits and withdrawals
+			OR ct.TransactionTypeID = 11 -- Only consider Promotion transaction (without PaymentType)
+			)
 	GROUP BY ci.recommend
 	HAVING COUNT(1) > 0
 	;SET @FeeRowCount = @@ROWCOUNT;
