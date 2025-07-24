@@ -13,7 +13,7 @@ AS
 
 	Revisions:
 		- 20250602@Virgil: Init SP [RedmineID: #227984]
-		- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
+		- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -38,9 +38,7 @@ BEGIN
 			@TDate	SMALLDATETIME;
 	
 	-- RangeType 1 & 2 
-	SELECT @FDate = MIN(FromDate) , @TDate = DATEADD(DD, 1, MAX(ToDate))
-	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
-	WHERE RangeType IN (1,2)
+	SELECT @FDate = @FromDate, @TDate = DATEADD(DD, 1, @ToDate)
 	
 	IF @FDate IS NOT NULL
 	BEGIN
@@ -57,7 +55,7 @@ BEGIN
 					AND cus.recommend = @CustID
 				WHERE CAST(JSON_VALUE(ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) >= @FDate 
 					AND CAST(JSON_VALUE(ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) < @TDate
-					AND TransactionTypeID IN (1,2,3,4)
+					AND TransactionTypeID IN (1,2,3,11)
 			)
 		INSERT INTO #OutputResult([FeeType], [Type], [Fee], [Count])
 		SELECT  0					AS [FeeType],

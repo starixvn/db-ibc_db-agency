@@ -16,6 +16,7 @@ AS
         - 20250526@Bobby: Initial [RedmineID: #227215]
         - 20250617@Bobby: Correct actualrate of UUS SMA Daily Fee [RedmineID: #230813]
         - 20250618@Bobby: Correct SMA custid [RedmineID: #230937]
+		- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
         
     Description:
         - @CustId: Customer ID of the agent
@@ -150,12 +151,16 @@ BEGIN
         ci.recommend = @CustId
         AND ct.OperatedTime >= @PreviousDay AND ct.OperatedTime < @ChargeDate
         AND ct.statusID = 4 -- Only consider successful transactions
-        AND ct.PaymentType = 2 -- Only consider bank transactions
-        AND ct.TransactionTypeID IN (1, 2, 3) -- Only consider deposits and withdrawals
         AND TRY_CAST(JSON_VALUE(ct.ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) IS NULL
+        AND (
+			(ct.PaymentType = 2 -- Only consider bank transactions 
+			AND ct.TransactionTypeID IN (1, 2, 3)) -- Only consider deposits and withdrawals
+			OR ct.TransactionTypeID = 11 -- Only consider Promotion transaction (without PaymentType)
+			)
     GROUP BY ci.recommend
         , TRY_CAST(ct.OperatedTime AS DATE)
     HAVING COUNT(1) > 0
+
     ;SET @FeeRowCount = @@ROWCOUNT;
     
     -- Check if there are any transactions in @transactionFee
