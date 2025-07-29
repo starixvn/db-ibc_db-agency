@@ -29,6 +29,7 @@ AS
 		- 20250326@Bobby: 3rdProduct Integration [RedmineID: #221188]
 		- 20250421@Dave: Add Rich Gaming [Redmine: #224863]
 		- 20250509@Dave:  Add Saba Soccer Marble Spinner [Redmine: #223130]
+		- 20250724@Virgil: Remove ODIN GAMING - Promotion Prize [Redmine: #234058]
 		
 */
 RETURN
@@ -130,12 +131,6 @@ RETURN
 	UNION ALL 
 	SELECT 'ProductDetail' AS RefId, '37' AS ResourceId, 107 AS ProductId, 124 AS Sporttype, 13995 AS Bettype, 37 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
 
-	--- ODG
-	UNION ALL
-	SELECT 'ProductDetail' AS RefId, '38' AS ResourceId, 105 AS ProductId, 128 AS Sporttype, 0 AS Bettype, 38 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
-	UNION ALL 
-	SELECT 'ProductDetail' AS RefId, '39' AS ResourceId, 105 AS ProductId, 128 AS Sporttype, 15499 AS Bettype, 39 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId -- Promotion Bets
-	
 	--- PTLC
 	UNION ALL
 	SELECT 'ProductDetail' AS RefId, '40' AS ResourceId, 101 AS ProductId, 129 AS Sporttype, 0 AS Bettype, 40 AS [Order], 0 AS LeagueGroupID, 0 AS TicketType, NULL AS ChildResourceId-- Normal Bets
