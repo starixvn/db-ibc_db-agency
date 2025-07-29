@@ -88,6 +88,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250528@Dave: Add AI Gaming & ClotPlay [RedmineID: #228967]
 		- 20250623@Virgil: Add Cash Service Billing [RedmineId: #229883]
 		- 20250702@Virgil: Add GPI Lottery [RedmineId: #231961]
+		- 20250724@Virgil: Remove ODIN GAMING - Promotion Prize [Redmine: #234058]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -189,7 +190,6 @@ RETURN
 				,(95, 139, 0, 0, 0) -- HOTDOG (HOT)
 				,(95, 139, 11999, 0, 0) -- HOTDOG (Promotion)
 				,(105, 128, 0, 0, 0) -- ODIN GAMING (ODG)
-				,(105, 128, 15499, 0, 0) -- ODIN GAMING (Promotion)
 				,(107, 124, 0, 0, 0) -- Microgaming Live (MGLC)
 				,(107, 124, 13995, 0, 0) -- Microgaming Live (Promotion)
 				,(84, 132, 0, 0, 0) -- GPI Lottery (GPILT)
