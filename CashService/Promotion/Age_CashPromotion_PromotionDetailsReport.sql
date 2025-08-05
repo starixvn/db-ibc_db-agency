@@ -54,6 +54,22 @@ BEGIN
 		INNER JOIN Customer c WITH (NOLOCK) ON s.CustID = c.custid AND s.ServiceType = 1
 	WHERE c.recommend = @CustId AND c.roleid = 1
 
+	CREATE TABLE #PromotionDetails
+	(
+		username VARCHAR(30),
+		nickname VARCHAR(50),
+		firstname NVARCHAR(50),
+		lastname NVARCHAR(50),
+		FromDate VARCHAR(10),
+		ToDate VARCHAR(10),
+		Amount MONEY,
+		OperatedBy VARCHAR(30),
+		OperatedTime DATETIME,
+		SubAccName VARCHAR(30),
+		StatusId TINYINT
+	)
+	INSERT INTO #PromotionDetails
+		(username, nickname, firstname, lastname, FromDate, ToDate, Amount, OperatedBy, OperatedTime, SubAccName, StatusId)
 	SELECT
 		cm.username,
 		cm.nickname,
@@ -68,7 +84,7 @@ BEGIN
 		t.StatusId
 	FROM CashTransaction t WITH (NOLOCK)
 		INNER JOIN #CashMember cm ON cm.custid = t.CustId
-		INNER JOIN Customer c WITH (NOLOCK) ON t.OperatedBy = c.custid
+		LEFT JOIN Customer c WITH (NOLOCK) ON t.OperatedBy = c.custid
 		LEFT JOIN custSub cs WITH (NOLOCK) ON cs.subaccid = t.SubAccId
 	WHERE t.TransactionTypeID = 11 -- Promotion
 		AND ISNULL(JSON_VALUE(t.ExtraInfo, '$.PromotionID'), 0) = @PromotionID
@@ -78,5 +94,16 @@ BEGIN
 		AND JSON_VALUE(t.ExtraInfo, '$.ToDate') >= @FDate
 		AND JSON_VALUE(t.ExtraInfo, '$.FromDate') <= JSON_VALUE(t.ExtraInfo, '$.ToDate')
 
+	SELECT *
+	FROM #PromotionDetails
+	SELECT
+		ISNULL(SUM(CASE WHEN StatusId = 4 THEN 1 ELSE 0 END), 0) AS TotalApproved,
+		ISNULL(SUM(CASE WHEN StatusId = 5 THEN 1 ELSE 0 END), 0) AS TotalRejected,
+		ISNULL(SUM(CASE WHEN StatusId = 4 THEN Amount ELSE 0 END), 0) AS TotalAmount
+	FROM #PromotionDetails
+	WHERE StatusId <> 2
+	-- Pending
+
 	DROP TABLE #CashMember
+	DROP TABLE #PromotionDetails
 END

@@ -11,6 +11,7 @@ AS
 	Revisions:
 		- 20250617@Eden: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 
 	Parameter's Explanation:	
 			[{"CustID":1,"YesterdayWL":0.25}, 
@@ -19,8 +20,8 @@ AS
 		DECLARE @CashAccumCreditTbl VARCHAR(MAX)
 		EXEC Task_CashService_AccumCreditReturn_YesterdayLoss_Adjust
 			@CustIDList = '[
-				{"CustID":187909799,"YesterdayWL": -207}, 
-				{"CustID":236672808,"YesterdayWL":-210}]',
+				{"CustID":187909799,"YesterdayWL": -208}, 
+				{"CustID":236672808,"YesterdayWL":-211}]',
 			@CashAccumCreditTbl = @CashAccumCreditTbl OUTPUT
 		SELECT @CashAccumCreditTbl
 		
@@ -33,7 +34,7 @@ BEGIN
 	DECLARE @SiteDBGroupID SMALLINT
 	SELECT @SiteDBGroupID = dbo.f_Get_SiteDBGroupID()
 	DECLARE @CurrentDate DATE = GETDATE()
-	DECLARE @UserID INT = 0
+	DECLARE @UserID INT = 10278938 --starixIT
 
 	DECLARE @tmp_LogData AS TABLE (
 		 UserID	INT
@@ -50,6 +51,7 @@ BEGIN
 		,AdjustCreditAmt MONEY
 		,Old_Amount MONEY
 		,Old_AdjustCreditAmt MONEY
+		,TransID BIGINT
 	)
 
     --Parse JSON input to temp table
@@ -127,8 +129,8 @@ BEGIN
         CreatedTime = @CurrentDate,
 		ExtraInfo = JSON_MODIFY(ISNULL(ExtraInfo,'{}'),'append $.adjhistory',JSON_QUERY('{"Amt":'+ CONVERT(VARCHAR(30),c.Amount)+',"AdjustAmt":'+ CONVERT(VARCHAR(30),c.AdjustCreditAmt)+'}')),
         RepUpdateTime = dbo.f_getdatetime2()
-	OUTPUT inserted.CustID, inserted.Amount, inserted.AdjustCreditAmt, deleted.Amount, deleted.AdjustCreditAmt
-	INTO @CashTransactionLog(CustID,Amount,AdjustCreditAmt,Old_Amount,Old_AdjustCreditAmt)
+	OUTPUT inserted.CustID, inserted.Amount, inserted.AdjustCreditAmt, deleted.Amount, deleted.AdjustCreditAmt,inserted.TransId
+	INTO @CashTransactionLog(CustID,Amount,AdjustCreditAmt,Old_Amount,Old_AdjustCreditAmt,TransID)
     FROM @TempLossTbl w
 		INNER JOIN CashTransaction c WITH(UPDLOCK,ROWLOCK)
 			ON w.CustID = c.CustID 
@@ -138,8 +140,8 @@ BEGIN
 
     -- Insert new CashTransaction if not exists
     INSERT INTO CashTransaction (CustID, TransactionTypeID, CreatedTime, RepUpdateTime, Amount, AdjustCreditAmt, StatusId, Creator, SiteDBGroupID, ExtraInfo)
-	OUTPUT inserted.CustID, inserted.Amount, inserted.AdjustCreditAmt
-	INTO @CashTransactionLog(CustID,Amount,AdjustCreditAmt)
+	OUTPUT inserted.CustID, inserted.Amount, inserted.AdjustCreditAmt,inserted.TransId
+	INTO @CashTransactionLog(CustID,Amount,AdjustCreditAmt,TransID)
     SELECT 
         w.CustID, 
         10							AS TransactionTypeID, 
@@ -168,16 +170,26 @@ BEGIN
 		FOR JSON PATH
 	)
 
+	DECLARE @TrackingValue	VARCHAR(MAX)
+
+	SELECT @TrackingValue =
+								'<R custid="<CustID>" ' +
+								'UserID="'+ COALESCE(CAST(@UserID AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'Amount="<Amount>" ' +
+								'AdjustCreditAmt="<AdjustCreditAmt>" ' +
+								'TransId="<TransID>" />'
+
+
 	INSERT INTO @tmp_LogData(UserID,CustID,ActionID,TrackingValue,TrackingValue2)
 	SELECT UserID = @UserID
 		,w.CustID
-		,ActionID = 310105
-		,TrackingValue = '<R Amount="'+ COALESCE(CAST(w.Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
-						 'AdjustCreditAmt="'+ COALESCE(CAST(w.AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
-		,TrackingValue2 = CASE WHEN w.Old_Amount IS NOT NULL THEN
-						'<R Amount="'+ COALESCE(CAST(w.Old_Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
-						 'AdjustCreditAmt="'+ COALESCE(CAST(w.Old_AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
-				END
+		,ActionID = 310017
+		,TrackingValue = REPLACE(REPLACE(REPLACE(REPLACE(@TrackingValue,'<CustID>',w.CustID),'<TransID>',w.TransID)
+							,'<Amount>',w.Amount),'<AdjustCreditAmt>',w.AdjustCreditAmt)
+		,TrackingValue2 = CASE WHEN w.Old_Amount IS NOT NULL THEN 
+							REPLACE(REPLACE(REPLACE(REPLACE(@TrackingValue,'<CustID>',w.CustID),'<TransID>',w.TransID)
+								,'<Amount>',w.Old_Amount),'<AdjustCreditAmt>',w.Old_AdjustCreditAmt)
+						   END
 	FROM @CashTransactionLog w
 
 	SELECT UserID,

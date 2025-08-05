@@ -19,6 +19,8 @@ AS
 		
 	Revisions:
 		- 20250708@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 
 	Parameter's Explanation:		
 */ 
@@ -99,7 +101,7 @@ BEGIN
 	END
 	ELSE
 	BEGIN
-		GOTO Writelog;
+		GOTO ReturnLog;
 	END
 
 	--Update cash transaction, payment information only, not update status
@@ -116,17 +118,18 @@ BEGIN
 				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 				,@ErrExtraInfo = @ErrMsg
 
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogDataMask = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransType="'+ COALESCE(CAST(@TransType AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
-								'ProviderTransId="'+ COALESCE(CAST(@ProviderTransId AS VARCHAR(100)), SPACE(1)) + '" />'
+								'ProviderTransId="'+ COALESCE(CAST(@ProviderTransId AS VARCHAR(100)), SPACE(1)) + '" ' +
+								'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 			INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-			SELECT 3, @CustID, @CustID, 310006, @LogData
+			SELECT 3, @CustID, @CustID, 310011, @LogData
 		END
 	END TRY
 	BEGIN CATCH
@@ -134,10 +137,10 @@ BEGIN
 			,@ErrMsg = 'The transaction inserted failed. Please try again.'
 			,@ErrExtraInfo = ERROR_MESSAGE();
 
-		GOTO Writelog;
+		GOTO ReturnLog;
 	END CATCH
 
-	Writelog:
+	ReturnLog:
 	--Unlock Transaction
 	EXEC dbo.Age_CashDeposit_CheckingProcess
 		@TransId = @TransId,
