@@ -9,6 +9,7 @@ ALTER PROCEDURE	dbo.Age_CustomerSelWinlimitInfo
 				,	@PageIndex		INT				= 1
 				,	@isDirectDownline BIT
 				,	@TotalRows		INT				= 0			OUTPUT
+				,   @AccountType	TINYINT 		= 2
 AS
 /*
 	Create:		20150715@Patrick
@@ -27,6 +28,7 @@ AS
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
 		- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
 		- 20241107@Helios: Offer Direct Member for Super/Master [redmine: #211969]
+		- 20250724@Helios: Agency Cash Service -Customer Setting Sprint 7 [redmine: #233474] 
 	Param's Explanation:
 		- @CustID: SAgentID
 */
@@ -56,7 +58,7 @@ BEGIN
 	
 	CREATE TABLE #Cust_tmp (CustID INT PRIMARY KEY,rownumber INT)
 	
-	CREATE TABLE #Cust_Downline (CustID INT PRIMARY KEY,enabled BIT, closed BIT,reject BIT, username NVARCHAR(50))
+	CREATE TABLE #Cust_Downline (CustID INT PRIMARY KEY,enabled BIT, closed BIT,reject BIT, username NVARCHAR(50), ServiceType TINYINT)
 
 	-- get move bet date
 	DECLARE @balanceUpDay SMALLDATETIME, @moveBetsDay SMALLDATETIME
@@ -72,27 +74,30 @@ BEGIN
 	BEGIN
 		IF @isDirectDownline = 0			-- Get Normal Member 
 		BEGIN
-			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username,ServiceType)
 			SELECT c.custid,c.enabled, 
 				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
 				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
-				c.username
+				c.username,
+				ISNULL(cs.ServiceType, 0) AS ServiceType
 			FROM dbo.CustInfo c WITH(NOLOCK)
 				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
 			WHERE c.srecommend = @CustId
 				AND roleid = 1
 				AND c.mrecommend = @mrecommend
 				AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
-				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
+				AND c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 				AND c.Enabled = 1
+				AND cs.ServiceType = CASE WHEN  @AccountType  = 2 THEN cs.ServiceType ELSE @AccountType END
 		END
 		ELSE							-- Get Super Direct Member
 		BEGIN
-			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username,ServiceType)
 			SELECT c.custid,c.enabled, 
 				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
 				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
-				c.username
+				c.username,
+				ISNULL(cs.ServiceType, 0) AS ServiceType
 			FROM dbo.CustInfo c WITH(NOLOCK)
 				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
 			WHERE c.srecommend = @CustId
@@ -101,6 +106,7 @@ BEGIN
 				AND (@recommend = 0 OR (@recommend <> 0 AND c.recommend = @recommend))
 				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 				AND c.Enabled = 1
+				AND cs.ServiceType = CASE WHEN  @AccountType  = 2 THEN cs.ServiceType ELSE @AccountType END
 		END
 			
 	END
@@ -108,11 +114,12 @@ BEGIN
 	BEGIN
 		IF @isDirectDownline = 0			-- Get Normal Member 
 		BEGIN
-			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username,ServiceType)
 			SELECT c.custid,c.enabled, 
 				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
 				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
-					c.username
+				c.username,
+				ISNULL(cs.ServiceType, 0) AS ServiceType
 			FROM dbo.CustInfo c WITH(NOLOCK)
 				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
 			WHERE c.mrecommend = @CustId
@@ -121,14 +128,16 @@ BEGIN
 				AND c.recommend = @recommend
 				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 				AND c.Enabled = 1
+				AND cs.ServiceType = CASE WHEN  @AccountType  = 2 THEN cs.ServiceType ELSE @AccountType END
 		END
 		ELSE							-- Get Master Direct Member
 		BEGIN
-			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+			INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username,ServiceType)
 			SELECT c.custid,c.enabled, 
 				CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
 				CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
-					c.username
+				c.username,
+				ISNULL(cs.ServiceType, 0) AS ServiceType
 			FROM dbo.CustInfo c WITH(NOLOCK)
 				INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
 			WHERE c.mrecommend = @CustId
@@ -137,16 +146,18 @@ BEGIN
 				AND c.recommend = -3
 				AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 				AND c.Enabled = 1
+				AND cs.ServiceType = CASE WHEN  @AccountType  = 2 THEN cs.ServiceType ELSE @AccountType END 
 		END
 
 	END
 	ELSE IF @RoleId = 2
 	BEGIN
-		INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username)
+		INSERT INTO #Cust_Downline(CustId,enabled,closed,reject,username,ServiceType)
 		SELECT c.custid,c.enabled, 
 			CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END,
 			CASE WHEN cs.SuspendInfo > 0 THEN 1 ELSE 0 END,
-			c.username
+			c.username,
+			ISNULL(cs.ServiceType, 0) AS ServiceType
 		FROM dbo.CustInfo c WITH(NOLOCK)
 			INNER JOIN CustProductStatus cs WITH (NOLOCK) ON c.custid = cs.custid
 		WHERE c.recommend = @CustId
@@ -154,6 +165,7 @@ BEGIN
 			AND c.srecommend = @srecommend
 			AND	c.username LIKE '%' + ISNULL(@username, c.username) + '%'
 			AND c.Enabled = 1
+			AND cs.ServiceType = CASE WHEN  @AccountType  = 2 THEN cs.ServiceType ELSE @AccountType END
 	END
 	
 	
