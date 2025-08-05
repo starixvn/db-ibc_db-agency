@@ -1,4 +1,4 @@
-/*<info serverAlias="DBMSG-bodb_Message" executers="bodbExtAccNet,bodbDownlineNet,bodbAdminNet,bodbDownlineNetView" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBMSG-bodb_Message" executers="wsv_xnap,wsv_alp,wsv_nap,wsv_alpv,asv_CashService" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE  [dbo].[Age_ToastMessage_Ins]
 	@TargetId			INT,
 	@TypeId				TINYINT,
