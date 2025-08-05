@@ -24,6 +24,7 @@ AS
 	Revisions:
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 
 	Parameter's Explanation:	
 */ 
@@ -32,15 +33,22 @@ BEGIN
 
 	DECLARE @TransferRefNo BIGINT = NULL
 		,@LogData VARCHAR(MAX)
+		,@LogData_Old VARCHAR(MAX)
 		,@LogDataMask VARCHAR(MAX)
 		,@AdjustCreditAmt	MONEY 
+		,@_AdjustCreditAmt	MONEY 
 		,@TransId_From	BIGINT = NULL
 		,@TransId_To	BIGINT = NULL
 		,@Amount MONEY = NULL
 		,@_statusId TINYINT
 		,@TransactionTypeID TINYINT
+		,@_ProviderTransId VARCHAR(100)
 		,@ExtraInfo NVARCHAR(1000)
 		,@PaymentType	TINYINT
+		,@SPNAME		VARCHAR(200)
+		,@Desc_Transtype   VARCHAR(100)
+
+	SELECT @SPNAME = OBJECT_NAME(@@PROCID)
 
 	DECLARE @tmp_LogData AS TABLE (
 		LogTypeId TINYINT --1: Insert Transfer, 2: Insert/Update CashTransaction, 3: Insert/Update Accumulate Return Credit 
@@ -61,6 +69,9 @@ BEGIN
 		, @_statusId = c.StatusId
 		, @TransactionTypeID = c.TransactionTypeID
 		, @PaymentType = c.PaymentType
+		, @_AdjustCreditAmt = c.AdjustCreditAmt
+		, @TransferRefNo = c.TransferRefNo
+		, @_ProviderTransId = JSON_VALUE(c.ExtraInfo, '$.ProviderTransId') 
 	FROM dbo.CashTransaction c WITH (NOLOCK)
 		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
 			ON c.CustId = ci.custid
@@ -80,6 +91,14 @@ BEGIN
 	BEGIN
 		SELECT @ErrCode = 409, @ErrMsg = 'The transaction inserted failed. Please try again.'
 		RETURN
+	END
+
+	IF ISNULL(@ProviderTransId,'') <> ISNULL(@_ProviderTransId,'') AND @PaymentType = 1 AND @StatusId <> 0 -- Payment Gateway validate ProviderTransId
+	BEGIN  
+		SELECT @ErrCode = 409
+			,@ErrMsg = 'The transaction inserted failed. Please try again.'  
+			,@ErrExtraInfo = 'Wrong ProviderTransId'
+		RETURN  
 	END
 
 	--Locking transaction for process
@@ -105,10 +124,17 @@ BEGIN
 		RETURN
 	END CATCH
 
-	IF ISNULL(@ProviderTransId,'') <> ''
-		SELECT @ExtraInfo = JSON_MODIFY(ISNULL(c.ExtraInfo,'{}'), '$.ProviderTransId',@ProviderTransId)
-		FROM dbo.CashTransaction c WITH (NOLOCK)
-		WHERE c.TransId = @TransId
+	--IF ISNULL(@ProviderTransId,'') <> ''
+	--	SELECT @ExtraInfo = JSON_MODIFY(ISNULL(c.ExtraInfo,'{}'), '$.ProviderTransId',@ProviderTransId)
+	--	FROM dbo.CashTransaction c WITH (NOLOCK)
+	--	WHERE c.TransId = @TransId
+
+	SELECT @LogData_Old = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+							'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
+							'StatusId="'+ COALESCE(CAST(@_statusId AS VARCHAR(3)), SPACE(1)) + '" ' +
+							'AdjustCreditAmt="'+ COALESCE(CAST(@_AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' +
+							'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+							'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 	IF @StatusId = 4 --Completed
 	BEGIN
@@ -130,19 +156,21 @@ BEGIN
 					BEGIN
 						SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 							,@ErrExtraInfo = @ErrMsg
-						GOTO Writelog;
+						GOTO ReturnLog;
 					END
 				END
 			END TRY
 			BEGIN CATCH
 				SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 						,@ErrExtraInfo = ERROR_MESSAGE()
-				GOTO Writelog;
+				GOTO ReturnLog;
 			END CATCH
 		END
 
 		--Insert transfer details
 		BEGIN TRY
+			SELECT @Desc_Transtype = 'Approve Deposit - '
+
 			EXEC dbo.Age_CashDeposit_ManualAdd_InsTransfer 
 				@CustID = @CustID,
 				@UplineID = @AgentID,
@@ -152,7 +180,9 @@ BEGIN
 				@ErrMsg = @ErrMsg OUTPUT,
 				@TransferRefNo = @TransferRefNo OUTPUT,
 				@TransId_From = @TransId_From OUTPUT,
-				@TransId_To = @TransId_To OUTPUT
+				@TransId_To = @TransId_To OUTPUT,
+				@CashTransactionID = @TransId,
+				@Desc_Transtype = @Desc_Transtype
 
 			IF @ErrCode <> 0
 			BEGIN
@@ -160,7 +190,7 @@ BEGIN
 					,@ErrExtraInfo = @ErrMsg
 					,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-				GOTO Writelog;
+				GOTO ReturnLog;
 			END
 			ELSE --Insert data for writelog
 			BEGIN
@@ -175,7 +205,7 @@ BEGIN
 				,@ErrExtraInfo = ERROR_MESSAGE()
 				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END CATCH
 
 		--Adjust accumulated credit
@@ -206,17 +236,20 @@ BEGIN
 						,@ErrExtraInfo = @ErrMsg
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-					GOTO Writelog;
+					GOTO ReturnLog;
 				END
 				ELSE --Insert data for writelog
 				BEGIN
-					SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+					SELECT @LogData = '<R SPName="'+ COALESCE(CAST(@SPName AS VARCHAR(200)), SPACE(1)) + '" ' +
+										'custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 										'ActionType="'+ COALESCE(CAST(1 AS VARCHAR(20)), SPACE(1)) + '" ' +
 										'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
-										'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
+										'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' +
+										'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+										'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 					INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-					SELECT 3, @CustID, @CustID, 310002, @LogData
+					SELECT 2, @CustID, @CustID, NULL, @LogData
 				END
 			END TRY
 			BEGIN CATCH
@@ -233,7 +266,7 @@ BEGIN
 						,@ErrExtraInfo = ERROR_MESSAGE()
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-				GOTO Writelog;
+				GOTO ReturnLog;
 			END CATCH
 		END
 
@@ -265,18 +298,20 @@ BEGIN
 						,@ErrExtraInfo = @ErrMsg
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-				GOTO Writelog;
+				GOTO ReturnLog;
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
-									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R SPName="'+ COALESCE(CAST(@SPName AS VARCHAR(200)), SPACE(1)) + '" ' +
+									'custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 									'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
 									'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
-									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
+									'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' +
+									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-				SELECT 3, @CustID, @CustID, 310003, @LogData
+				SELECT 2, @CustID, @CustID, NULL, @LogData
 			END
 		END TRY
 		BEGIN CATCH
@@ -295,8 +330,19 @@ BEGIN
 						,@ErrExtraInfo = ERROR_MESSAGE()
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END CATCH
+
+		------------------LOG-----------------------
+		SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+							'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
+							'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
+							'AdjustCreditAmt="'+ COALESCE(CAST(ISNULL(@AdjustCreditAmt,@_AdjustCreditAmt) AS VARCHAR(100)), SPACE(1)) + '" ' +
+							'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+							'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
+
+		INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue,TrackingValue2)
+		SELECT 2, @CustID, @CustID, 310007, @LogData, @LogData_Old
 	END
 	ELSE IF @StatusId IN(3,5,6)
 	BEGIN
@@ -319,17 +365,20 @@ BEGIN
 						,@ErrExtraInfo = @ErrMsg
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-					GOTO Writelog;
+					GOTO ReturnLog;
 				END
 				ELSE --Insert data for writelog
 				BEGIN
-					SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+					SELECT @LogData = '<R SPName="'+ COALESCE(CAST(@SPName AS VARCHAR(200)), SPACE(1)) + '" ' +
+										'custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 										'ActionType="'+ COALESCE(CAST(4 AS VARCHAR(20)), SPACE(1)) + '" ' +
 										'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
-										'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
+										'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' +
+										'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+										'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 					INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-					SELECT 3, @CustID, @CustID, 310002, @LogData
+					SELECT 2, @CustID, @CustID, NULL, @LogData
 				END
 			END TRY
 			BEGIN CATCH
@@ -337,7 +386,7 @@ BEGIN
 						,@ErrExtraInfo = ERROR_MESSAGE()
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-				GOTO Writelog;
+				GOTO ReturnLog;
 			END CATCH
 		END
 
@@ -365,18 +414,20 @@ BEGIN
 						,@ErrExtraInfo = @ErrMsg
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-				GOTO Writelog;
+				GOTO ReturnLog;
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
-									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
-									'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
+				SELECT @LogData = '<R SPName="'+ COALESCE(CAST(@SPName AS VARCHAR(200)), SPACE(1)) + '" ' +
+									'custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+									--'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' + 
 									'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
-									'AdjustCreditAmt="'+ COALESCE(CAST('' AS VARCHAR(100)), SPACE(1)) + '" />'
+									--'AdjustCreditAmt="'+ COALESCE(CAST('' AS VARCHAR(100)), SPACE(1)) + '" ' + 
+									'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+									'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 				INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-				SELECT 3, @CustID, @CustID, 310003, @LogData
+				SELECT 2, @CustID, @CustID, NULL, @LogData
 			END
 		END TRY
 		BEGIN CATCH
@@ -392,11 +443,23 @@ BEGIN
 						,@ErrExtraInfo = ERROR_MESSAGE()
 						,@ErrMsg = 'The transaction inserted failed. Please try again.'
 
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END CATCH
+
+		------------------LOG-----------------------
+		SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+							'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' + -- Don't change on CashTransaction
+							'StatusId="'+ COALESCE(CAST(@StatusId AS VARCHAR(3)), SPACE(1)) + '" ' +
+							'AdjustCreditAmt="'+ COALESCE(CAST(@_AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' + -- Don't change on CashTransaction
+							'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+							'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
+
+		INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue,TrackingValue2)
+		SELECT 2, @CustID, @CustID, 310007, @LogData, @LogData_Old
+
 	END
 
-	Writelog:
+	ReturnLog:
 
 	--Unlock transaction
 	EXEC dbo.Age_CashDeposit_CheckingProcess

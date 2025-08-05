@@ -9,6 +9,7 @@ AS
 		
 	Revisions:
 		- 20250626@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 
 	Parameter's Explanation:	
 			
@@ -18,14 +19,14 @@ AS
 */ 
 BEGIN
     SET NOCOUNT ON;
-	DECLARE @UserID INT = 0
+	DECLARE @UserID INT = 10278938 --starixIT
 		, @MaxLoop INT = 10
 		, @LoopCnt INT = 0
 		, @BatchNum INT = 1000
 		, @ExpriredTime INT = 60 -- Minutes
 
 	CREATE TABLE #TransID_tbl (TransId bigint)
-	DECLARE @tmp_LogData AS TABLE (CustID	INT)
+	DECLARE @tmp_LogData AS TABLE (CustID INT, TransID BIGINT)
 
 	WHILE 1 = 1 -- Loop update by Batch
 	BEGIN
@@ -55,7 +56,7 @@ BEGIN
 		SET c.StatusId = 3 --Expired
 			,c.OperatedTime = GETDATE()
 			,c.RepUpdateTime = dbo.f_getdatetime2()
-		OUTPUT inserted.CustID INTO @tmp_LogData(CustID)
+		OUTPUT inserted.CustID, inserted.TransId INTO @tmp_LogData(CustID, TransID)
 		FROM CashTransaction c WITH(ROWLOCK,UPDLOCK)
 			INNER JOIN #TransID_tbl t 
 				ON t.TransID = c.TransID
@@ -69,12 +70,27 @@ BEGIN
 			BREAK
 	END
 
+	DECLARE @TrackingValue	VARCHAR(MAX)
+		,@TrackingValue2	VARCHAR(MAX)
+
+	SELECT @TrackingValue =
+								'<R custid="<CustID>" ' +
+								'UserID="'+ COALESCE(CAST(@UserID AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'StatusId="'+ COALESCE(CAST(3 AS VARCHAR(3)), SPACE(1)) + '" ' +
+								'TransId="<TransID>" />'
+
+	SELECT @TrackingValue2 =
+								'<R custid="<CustID>" ' +
+								'UserID="'+ COALESCE(CAST(@UserID AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'StatusId="'+ COALESCE(CAST(2 AS VARCHAR(3)), SPACE(1)) + '" ' +
+								'TransId="<TransID>" />'
+
 	--Return Log
 	SELECT UserID = @UserID
 		,w.CustID
-		,ActionID = 310106
-		,TrackingValue = '<R StatusId="'+ COALESCE(CAST(3 AS VARCHAR(100)), SPACE(1)) + '" />'
-		,TrackingValue2 = '<R StatusId="'+ COALESCE(CAST(2 AS VARCHAR(100)), SPACE(1)) + '" />'
+		,ActionID = 310016
+		,TrackingValue = REPLACE(REPLACE(@TrackingValue,'<CustID>',w.CustID),'<TransID>',w.TransID)
+		,TrackingValue2 = REPLACE(REPLACE(@TrackingValue2,'<CustID>',w.CustID),'<TransID>',w.TransID)
 		,TrackingValueMask = NULL
 		,TrackingValueMask2 = NULL
 		,s.CustDBGroupID

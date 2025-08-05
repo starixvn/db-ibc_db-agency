@@ -12,7 +12,10 @@ ALTER PROCEDURE dbo.Age_CashWithdrawal_ManualAdd_InsTransfer
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
 	@TransferRefNo	BIGINT = NULL OUTPUT,
 	@TransId_From	BIGINT = NULL OUTPUT,
-	@TransId_To	BIGINT = NULL OUTPUT
+	@TransId_To	BIGINT = NULL OUTPUT,
+	@SubAccName	VARCHAR(30) = NULL,
+	@CashTransactionID BIGINT = 0,
+	@Desc_Transtype VARCHAR(100) = ''
 )
 AS
 /*
@@ -24,6 +27,7 @@ AS
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 
 	Parameter's Explanation:	
 */ 
@@ -72,7 +76,9 @@ BEGIN
 		@BalanceUpDate			SMALLDATETIME,
 		@MoveBetsDay			SMALLDATETIME,
 		@NewMoveBetsDay			SMALLDATETIME,
-		@NewBalanceUpDate		SMALLDATETIME
+		@NewBalanceUpDate		SMALLDATETIME,
+		@SubAccLog				VARCHAR(50) = '',
+		@CashTransactionLog		VARCHAR(100) = ''
 
 	SELECT	@ErrCode		= 0,
 			@ErrMsg			= '',
@@ -146,6 +152,17 @@ BEGIN
 			RETURN
 		END
 
+		--Get SubAccName
+		IF ISNULL(@SubAccName,'') <> ''
+		BEGIN
+			SELECT @SubAccLog = ISNULL(' (By ' + @SubAccName + ')', '')
+		END
+
+		IF @CashTransactionID > 0
+		BEGIN
+			SELECT @CashTransactionLog = ISNULL(' (' + @Desc_Transtype + 'TransID: ' + CAST(@CashTransactionID AS VARCHAR(20)) + ')', '')
+		END
+
 		--Update BalanceDebit 
 		IF @Cust_Balance < 0 
 		BEGIN
@@ -177,11 +194,11 @@ BEGIN
 				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
 				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
 			VALUES 
-				(@TransId, @CustID, @username, @TransferRefNo, @transdate, @DWIT, 'To Customer :: ' + @bal_Username + CASE WHEN ISNULL(@RevertRefNo,0) <> 0 THEN ' (Revert)' ELSE '' END 
+				(@TransId, @CustID, @username, @TransferRefNo, @transdate, @DWIT, 'To Customer :: ' + @bal_Username + CASE WHEN ISNULL(@RevertRefNo,0) <> 0 THEN ' (Revert)' ELSE '' END  + @SubAccLog + @CashTransactionLog
 					,@winlost, @actual_stake, @winlostdate, ISNULL(@beforebalance, 0),
 				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, NULL, SYSDATETIME()),
 				 --dummy trans
-				 (@bal_transid, @UplineID, @bal_Username, @TransferRefNo, @transdate, @DWIT, 'From Customer :: ' + @username + CASE WHEN ISNULL(@RevertRefNo,0) <> 0 THEN ' (Revert)' ELSE '' END
+				 (@bal_transid, @UplineID, @bal_Username, @TransferRefNo, @transdate, @DWIT, 'From Customer :: ' + @username + CASE WHEN ISNULL(@RevertRefNo,0) <> 0 THEN ' (Revert)' ELSE '' END + @SubAccLog + @CashTransactionLog
 					, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, NULL, 
 				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, '0', SYSDATETIME())
 			

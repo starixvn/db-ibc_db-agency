@@ -11,7 +11,8 @@ ALTER PROCEDURE dbo.API_CashService_CustPaymentValidate
     @PaymentTo VARCHAR(100) = NULL,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
-	@ErrExtraInfo VARCHAR(MAX) = NULL OUTPUT
+	@ErrExtraInfo VARCHAR(MAX) = NULL OUTPUT,
+	@username2 VARCHAR(50) OUTPUT
 )
 AS
 /*
@@ -21,6 +22,7 @@ AS
 		
 	Revisions:
 		- 20250602@Eden: Alpha - Agency Cash Service [redmine: #223896] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 
 	Parameter's Explanation:	
 
@@ -146,6 +148,9 @@ BEGIN
 		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
 		RETURN
 	END
+
+	-- Get NickName
+	SELECT @username2 = username2 FROM dbo.Customer ci WITH(NOLOCK) WHERE custid = @CustID
 
     SET NOCOUNT OFF;
 END

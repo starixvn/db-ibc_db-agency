@@ -82,9 +82,9 @@ BEGIN
         p.PromotionID,
 		p.SiteDBGroupID
 	ORDER BY
-        PromotionTitle,
+        IsSoftDeleted,
         Enabled DESC,
-		IsSoftDeleted
+		FromDate DESC
 
 	DROP TABLE #CashMember
 END

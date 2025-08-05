@@ -12,7 +12,10 @@ ALTER PROCEDURE dbo.Age_CashDeposit_ManualAdd_InsTransfer
 	@TransferRefNo	BIGINT = NULL OUTPUT,
 	@TransId_From	BIGINT = NULL OUTPUT,
 	@TransId_To	BIGINT = NULL OUTPUT,
-	@Bettype SMALLINT = 31001 -- Default Deposit
+	@Bettype SMALLINT = 31001, -- Default Deposit
+	@SubAccName	VARCHAR(30) = NULL,
+	@CashTransactionID BIGINT = 0,
+	@Desc_Transtype VARCHAR(100) = ''
 )
 AS
 /*
@@ -23,6 +26,7 @@ AS
 	Revisions:
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
+		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
 		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
 
 	Parameter's Explanation:	
@@ -71,7 +75,9 @@ BEGIN
 		@BalanceUpDate			SMALLDATETIME,
 		@MoveBetsDay			SMALLDATETIME,
 		@NewMoveBetsDay			SMALLDATETIME,
-		@NewBalanceUpDate		SMALLDATETIME
+		@NewBalanceUpDate		SMALLDATETIME,
+		@SubAccLog				VARCHAR(50) = '',
+		@CashTransactionLog		VARCHAR(100) = ''
 
 	SELECT	@ErrCode		= 0,
 			@ErrMsg			= '',
@@ -133,7 +139,7 @@ BEGIN
 			, @stepDone				= 0;
 
 		--Get member balance
-		EXEC dbo.Age_CashService_CashBalance_Sel @CustId = @CustId , @TotalCash = @beforebalance OUTPUT
+		EXEC dbo.Acc_CustomerSelCash_CaptureBalance @CustId = @CustId , @TotalCash = @beforebalance OUTPUT
 
 		SELECT @transdate = CURRENT_TIMESTAMP
 			,@winlostdate = CAST(@transdate AS DATE);
@@ -145,16 +151,27 @@ BEGIN
 
 		SELECT @TransId_From = @TransId, @TransId_To = @bal_transid
 
+		--Get SubAccName
+		IF ISNULL(@SubAccName,'') <> ''
+		BEGIN
+			SELECT @SubAccLog = ISNULL(' (By ' + @SubAccName + ')', '')
+		END
+
+		IF @CashTransactionID > 0
+		BEGIN
+			SELECT @CashTransactionLog = ISNULL(' (' + @Desc_Transtype + 'TransID: ' + CAST(@CashTransactionID AS VARCHAR(20)) + ')', '')
+		END
+
 		BEGIN TRY
 			SELECT @Count = 2
 			INSERT INTO dbo.Transfer 
 				(TransId, custid, username, refno, transdate, bettype, transdesc,winlost, actual_stake, winlostdate, balance,
 				 creator,recommend,mrecommend,srecommend,currency,actualrate, currencyName, statusID,ip, SerialNo, RepUpdateTime)
 			VALUES 
-				(@TransId, @CustID, @username, @TransferRefNo, @transdate, @Bettype, 'From Customer :: ' + @bal_Username,@winlost, @actual_stake, @winlostdate, ISNULL(@beforebalance, 0),
+				(@TransId, @CustID, @username, @TransferRefNo, @transdate, @Bettype, 'From Customer :: ' + @bal_Username + @SubAccLog + @CashTransactionLog ,@winlost, @actual_stake, @winlostdate, ISNULL(@beforebalance, 0),
 				 @CustID, @Recommend, @MRecommend, @SRecommend, @Currency,@actualrate, @currencyName, 131,@ip, NULL, SYSDATETIME()),
 				 --dummy trans
-				 (@bal_transid, @UplineID, @bal_Username, @TransferRefNo, @transdate, @Bettype, 'To Customer :: ' + @username, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, NULL, 
+				 (@bal_transid, @UplineID, @bal_Username, @TransferRefNo, @transdate, @Bettype, 'To Customer :: ' + @username + @SubAccLog + @CashTransactionLog, @actual_stake * @ExchangeRate, @winlost * @ExchangeRate, @winlostdate, NULL, 
 				 @CustID, @bal_recommend, @bal_mrecommend, @bal_srecommend, @bal_currency, @bal_actualrate, @bal_currencyName, 131, @ip, '0', SYSDATETIME())
 			
 			SET @stepDone += POWER(2*1, 2); --Done transfer-2^2

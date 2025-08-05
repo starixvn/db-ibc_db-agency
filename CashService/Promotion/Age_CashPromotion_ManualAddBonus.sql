@@ -24,6 +24,7 @@ AS
 		
 	Revisions:
 		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
+		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 
 	Parameter's Explanation:	
 */ 
@@ -32,12 +33,16 @@ BEGIN
 
 	DECLARE @TransferRefNo BIGINT
 		,@LogData VARCHAR(MAX)
-		,@LogDataMask VARCHAR(MAX)
 		,@AdjustCreditAmt	MONEY
 		,@TransId_From	BIGINT = NULL
 		,@TransId_To	BIGINT = NULL
 		,@TransactionTypeID TINYINT = 12 -- Manual bonus
 		,@Bettype SMALLINT = 31006 -- Promotion Bonus
+		,@SubAccName	VARCHAR(30) = ''
+		,@Desc_Transtype   VARCHAR(100)
+		,@SPNAME		VARCHAR(200)
+
+	SELECT @SPNAME = OBJECT_NAME(@@PROCID)
 
 	DECLARE @tmp_LogData AS TABLE (
 		LogTypeId TINYINT --1: Insert Transfer, 2: Insert/Update CashTransaction, 3: Insert/Update Accumulate Return Credit 
@@ -77,6 +82,19 @@ BEGIN
 		RETURN
 	END CATCH
 
+	BEGIN TRY
+		IF @SubAccID > 0 
+		BEGIN	
+			EXEC Age_GetSubAccName
+				@SubAccID = @SubAccID,
+				@SubAccName = @SubAccName OUTPUT
+		END
+	END TRY
+	BEGIN CATCH
+		PRINT 'Cannot get SubAccName'
+		SET @SubAccName = ''
+	END CATCH
+
 	-- Step 2: Insert cash transaction
 	BEGIN TRY
 		EXEC dbo.Age_CashTransaction_Ins 
@@ -95,30 +113,35 @@ BEGIN
 
 		IF @ErrCode <> 0
 		BEGIN
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
-								'UplineID="'+ COALESCE(CAST(@UplineID AS VARCHAR(20)), SPACE(1)) + '" ' +
-								'SubAccID="'+ COALESCE(CAST(@SubAccID AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogData = '<R SPName="'+ COALESCE(CAST(@SPName AS VARCHAR(200)), SPACE(1)) + '" ' +
+								'custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'Creator="'+ COALESCE(CAST(@UplineID AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'SubAccName="'+ COALESCE(CAST(@SubAccName AS VARCHAR(30)), SPACE(1)) + '" ' +
 								'TransactionTypeID="'+ COALESCE(CAST(@TransactionTypeID AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(50)), SPACE(1)) + '" ' +
-								'StatusId="'+ COALESCE(CAST(2 AS VARCHAR(3)), SPACE(1)) + '" />'
+								'StatusId="'+ COALESCE(CAST(2 AS VARCHAR(3)), SPACE(1)) + '" ' +
+								'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 			INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-			SELECT 2, @UplineID, @CustID, 315101, @LogData
+			SELECT 2, @UplineID, @CustID, NULL, @LogData
 		END
 	END TRY
 	BEGIN CATCH
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 
-		GOTO Writelog;
+		GOTO ReturnLog;
 	END CATCH
 
     -- Step 3: Insert transfer details
 	BEGIN TRY
+		SELECT @Desc_Transtype = 'Approve Promotion - '
+
 		EXEC dbo.Age_CashDeposit_ManualAdd_InsTransfer 
 			@CustID = @CustID,
 			@UplineID = @UplineID,
@@ -130,7 +153,10 @@ BEGIN
 			@TransferRefNo = @TransferRefNo OUTPUT,
 			@TransId_From = @TransId_From OUTPUT,
 			@TransId_To = @TransId_To OUTPUT,
-			@Bettype = @Bettype
+			@Bettype = @Bettype,
+			@CashTransactionID = @TransId,
+			@SubAccName = @SubAccName,
+			@Desc_Transtype = @Desc_Transtype
 
 		IF @ErrCode <> 0
 		BEGIN
@@ -139,7 +165,7 @@ BEGIN
 				@Type = 1,
 				@TransId = @TransId
 
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END
 		ELSE --Insert data for writelog
 		BEGIN
@@ -158,7 +184,7 @@ BEGIN
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 
-		GOTO Writelog;
+		GOTO ReturnLog;
 	END CATCH
 
     -- Step 4: Adjust accumulated credit
@@ -183,17 +209,20 @@ BEGIN
 				@TransId_To = @TransId_To,
 				@TransferAmount = @Amount
 
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogData = '<R SPName="'+ COALESCE(CAST(@SPName AS VARCHAR(200)), SPACE(1)) + '" ' +
+								'custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'ActionType="'+ COALESCE(CAST(6 AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(100)), SPACE(1)) + '" ' +
-								'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
+								'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' +
+								'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 			INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-			SELECT 3, @UplineID, @CustID, 315102, @LogData
+			SELECT 2, @UplineID, @CustID, NULL, @LogData
 		END
 	END TRY
 	BEGIN CATCH
@@ -209,7 +238,7 @@ BEGIN
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 
-		GOTO Writelog;
+		GOTO ReturnLog;
 	END CATCH
 
     -- Step 5: Update cash transaction
@@ -235,18 +264,20 @@ BEGIN
 				@AdjustCreditAmt = @AdjustCreditAmt,
 				@CashAccumCreditTbl	= @CashAccumCreditTbl OUTPUT
 
-			GOTO Writelog;
+			GOTO ReturnLog;
 		END
 		ELSE --Insert data for writelog
 		BEGIN
-			SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
-								'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+			SELECT @LogData = '<R SPName="'+ COALESCE(CAST(@SPName AS VARCHAR(200)), SPACE(1)) + '" ' +
+								'custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 								'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
 								'StatusId="'+ COALESCE(CAST(4 AS VARCHAR(3)), SPACE(1)) + '" ' +
-								'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" />'
+								'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' +
+								'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+								'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
 
 			INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
-			SELECT 3, @UplineID, @CustID, 315103, @LogData
+			SELECT 3, @UplineID, @CustID, NULL, @LogData
 		END
 	END TRY
 	BEGIN CATCH
@@ -264,10 +295,27 @@ BEGIN
 		SELECT @ErrCode = ERROR_NUMBER()
 			,@ErrMsg = ERROR_MESSAGE()
 
-		GOTO Writelog;
+		GOTO ReturnLog;
 	END CATCH
 
-	Writelog:
+	-------LOG-------------
+	--Log the transaction
+	SELECT @LogData = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'Creator="'+ COALESCE(CAST(@UplineID AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'SubAccName="'+ COALESCE(CAST(@SubAccName AS VARCHAR(30)), SPACE(1)) + '" ' +
+						'TransactionTypeID="'+ COALESCE(CAST(@TransactionTypeID AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'Amount="'+ COALESCE(CAST(@Amount AS VARCHAR(50)), SPACE(1)) + '" ' +
+						'StatusId="'+ COALESCE(CAST(4 AS VARCHAR(3)), SPACE(1)) + '" ' +
+						'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
+						'OperatedBy="'+ COALESCE(CAST(@UplineID AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'AdjustCreditAmt="'+ COALESCE(CAST(@AdjustCreditAmt AS VARCHAR(100)), SPACE(1)) + '" ' +
+						'TransId="'+ COALESCE(CAST(@TransId AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'IP="'+ COALESCE(CAST(@IP AS VARCHAR(50)), SPACE(1)) + '" />'
+
+	INSERT INTO @tmp_LogData (LogTypeId, UserID, CustID, ActionID, TrackingValue)
+	SELECT 2, @UplineID, @CustID, 315101, @LogData
+
+	ReturnLog:
 	SELECT *
 	FROM @tmp_LogData t
 
