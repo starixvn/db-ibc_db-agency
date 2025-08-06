@@ -17,6 +17,7 @@ AS
         - 20250617@Bobby: Correct actualrate of UUS SMA Daily Fee [RedmineID: #230813]
         - 20250618@Bobby: Correct SMA custid [RedmineID: #230937]
 		- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
+		- 20250804@Virgil: Add Manual Bonus TransactionType [RedmineID: #233578]
         
     Description:
         - @CustId: Customer ID of the agent
@@ -155,7 +156,7 @@ BEGIN
         AND (
 			(ct.PaymentType = 2 -- Only consider bank transactions 
 			AND ct.TransactionTypeID IN (1, 2, 3)) -- Only consider deposits and withdrawals
-			OR ct.TransactionTypeID = 11 -- Only consider Promotion transaction (without PaymentType)
+			OR ct.TransactionTypeID IN (11,12) -- Only consider Promotion transaction (without PaymentType)
 			)
     GROUP BY ci.recommend
         , TRY_CAST(ct.OperatedTime AS DATE)

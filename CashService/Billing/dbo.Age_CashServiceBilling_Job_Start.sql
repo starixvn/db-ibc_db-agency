@@ -12,6 +12,7 @@ AS
   Revisions:
     - 20250526@Bobby: Initial [RedmineID: #227215]
 	- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
+	- 20250804@Virgil: Add Manual Bonus TransactionType [RedmineID: #233578]
 
   Description:
     - @AgentList: JSON([{"AgentId":1176086,"StartTime":"2025-05-22","TrialEndTime":"2025-06-04","ServiceType":0}])
@@ -208,7 +209,7 @@ BEGIN
         AND (
 			(ct.PaymentType = 2 -- Only consider bank transactions
 			AND ct.TransactionTypeID IN (1, 2, 3)) -- Only consider deposits and withdrawals
-			OR ct.TransactionTypeID = 11 -- Only consider Promotion transaction (without PaymentType)
+			OR ct.TransactionTypeID IN (11,12) -- Only consider Promotion transaction (without PaymentType)
 			)
 	GROUP BY ci.recommend
 	HAVING COUNT(1) > 0
