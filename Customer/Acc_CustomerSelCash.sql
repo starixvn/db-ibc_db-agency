@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="1"></info>*/
 AlTER PROCEDURE [dbo].[Acc_CustomerSelCash]
 	@CustId INT,
 	@MoveBetDay SMALLDATETIME = NULL,
@@ -19,7 +19,8 @@ AS
 		- 20200602@Percy: Separate PendingTransfer3rd from Cash and Balance [RedmineID: #135200]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
-    	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
+    	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554]
+		- 20250707@Bobby: Transfer changes for Cash Service [Redmine: #232421]
 */
 
 BEGIN
@@ -108,9 +109,14 @@ BEGIN
 		INSERT INTO #BalanceInfo (memberCash, yesterdayMemberCash, PendingTransfer3rd)
 		SELECT
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END),
-			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END),
+			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake+playercomm END * ck.CalYesterday),
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END)
 		FROM dbo.Transfer b WITH (NOLOCK)
+			OUTER APPLY (
+				SELECT CASE 
+						WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
+						ELSE 1 END
+			) AS ck(CalYesterday) 
 		WHERE b.custid = @__custId
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
@@ -169,11 +175,16 @@ BEGIN
 		INSERT INTO #BalanceInfo (agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash, PendingTransfer3rd)
 		SELECT
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END) AS agentCash,
-			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END) AS yesterdayAgentCash,
+			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END * ck.CalYesterday) AS yesterdayAgentCash,
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END END) AS memberCash,
-			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END END) AS yesterdayMemberCash,
+			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> b.recommend THEN winlost-actual_stake+playercomm ELSE 0 END END * ck.CalYesterday) AS yesterdayMemberCash,
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END) AS PendingTransfer3rd
-		FROM dbo.Transfer b WITH (NOLOCK)    
+		FROM dbo.Transfer b WITH (NOLOCK)
+			OUTER APPLY (
+				SELECT CASE 
+						WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
+						ELSE 1 END
+			) AS ck(CalYesterday)    
 		WHERE b.recommend = @__custId
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
@@ -241,15 +252,20 @@ BEGIN
 		INSERT INTO #BalanceInfo (masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash, PendingTransfer3rd)
 		SELECT
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.CustID = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END END) AS masterCash,
-			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.CustID = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END END) AS yesterdayMasterCash,
+			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.CustID = b.mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END END * ck.CalYesterday) AS yesterdayMasterCash,
 			
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END) AS agentCash,		
-			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END) AS yesterdayAgentCash,
+			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = b.recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END * ck.CalYesterday) AS yesterdayAgentCash,
 			
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END END) AS memberCash,
-			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END END) AS yesterdayMemberCash,
+			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid <> b.recommend AND b.custid <> b.mrecommend THEN winlost-actual_stake+playercomm ELSE 0 END END * ck.CalYesterday) AS yesterdayMemberCash,
 			SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END) AS PendingTransfer3rd
 		FROM dbo.Transfer b WITH (NOLOCK)
+			OUTER APPLY (
+				SELECT CASE 
+						WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
+						ELSE 1 END
+			) AS ck(CalYesterday)    
 		WHERE b.mrecommend = @__custId  
 			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
@@ -324,24 +340,29 @@ BEGIN
 		-- Transfer 
 		INSERT INTO #BalanceInfo (superCash, yesterdaySuperCash, masterCash, yesterdayMasterCash, agentCash, yesterdayAgentCash, memberCash, yesterdayMemberCash, PendingTransfer3rd)
 		SELECT  SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END END) superCash,
-			    SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END END) yesterdaySuperCash,
+			    SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = srecommend THEN winlost-actual_stake ELSE swinlost+scomm-acomm END END * ck.CalYesterday) yesterdaySuperCash,
 				
 			    SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END END) masterCash,
-			    SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END END) yesterdayMasterCash,
+			    SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = mrecommend THEN winlost-actual_stake ELSE mwinlost+acomm-comm END END * ck.CalYesterday) yesterdayMasterCash,
 				
 				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END) agentCash,
-				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END ) yesterdayAgentCash,
+				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END * ck.CalYesterday) yesterdayAgentCash,
 				
 				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END ) memberCash,
-				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END ) yesterdayMemberCash,
+				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN custid <> recommend AND custid <> mrecommend AND custid <> srecommend THEN winlost-actual_stake+playercomm ELSE 0 END END * ck.CalYesterday) yesterdayMemberCash,
 				
 				SUM(CASE WHEN b.bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END) AS PendingTransfer3rd
-			FROM dbo.Transfer b WITH (NOLOCK)
-			WHERE b.srecommend = @__custId 
-				AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
-							WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
-							WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+		FROM dbo.Transfer b WITH (NOLOCK)
+			OUTER APPLY (
+				SELECT CASE 
+						WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
 						ELSE 1 END
+			) AS ck(CalYesterday)  
+		WHERE b.srecommend = @__custId 
+			AND 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
+						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
+						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+					ELSE 1 END
     END
 
 	SELECT

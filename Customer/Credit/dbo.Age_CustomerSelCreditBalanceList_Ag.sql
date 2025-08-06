@@ -48,6 +48,7 @@ Revisions:
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
+	- 20250707@Bobby: Transfer changes for Cash Service [Redmine: #232421]
 
 Param's Explanation:
 
@@ -143,6 +144,7 @@ BEGIN
 					, ISNULL(Locked, 0) AS Locked
 				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
+					AND ISNULL(cs.ServiceType, 0) = 0
 			) AS cs
 		WHERE 1 = ci.roleid 
 			AND @CustID = ci.recommend 
@@ -192,6 +194,7 @@ BEGIN
 					, ISNULL(Locked, 0) AS Locked
 				FROM CustDB.dbo.CustProductStatus cs WITH(NOLOCK)
 				WHERE cs.CustID = ci.custid
+					AND ISNULL(cs.ServiceType, 0) = 0
 			) AS cs
 		WHERE 1 = ci.roleid 
 			AND @CustID = ci.recommend 
@@ -249,6 +252,7 @@ BEGIN
 					WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 									WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 									WHEN winlostdate < @balanceUpDay THEN 0 --> old data
+									WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
 								ELSE 1 END
 					GROUP BY b.custid, Bettype
 				) a

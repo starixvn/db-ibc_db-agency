@@ -47,6 +47,7 @@ Revisions:
 	- 20230419@Danny: Return PendingTransfer3rd info [Redmine: #187059]
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
+	- 20250707@Bobby: Transfer changes for Cash Service [Redmine: #232421]
 
 Param's Explanation:
 • @CustID: MAgentID
@@ -121,26 +122,34 @@ BEGIN
 		GROUP BY c.recommend
 		UNION ALL
 		SELECT
-				c.custid,
-				isnull(credit,0) AS magentCredit,
-				0 magentUsedCredit,
-				1 AS IsDirectMember
-			FROM CustDB.dbo.custinfo as c (nolock)
-			WHERE mrecommend = @CustID 
-				AND roleid = 1
-				AND recommend = -3			
-				AND @Leveltype IN (0,2)
+			c.custid,
+			isnull(credit,0) AS magentCredit,
+			0 magentUsedCredit,
+			1 AS IsDirectMember
+		FROM CustDB.dbo.custinfo as c (nolock)
+		WHERE mrecommend = @CustID 
+			AND roleid = 1
+			AND recommend = -3			
+			AND @Leveltype IN (0,2)
+	),
+	CTE_CashAccumCredit AS (
+		SELECT cac.recommend AS CustId
+			, SUM(ISNULL(cac.AccumCreditReturn,0)) AS cashUsedCredit
+		FROM dbo.CashAccumCredit cac WITH(NOLOCK)
+		WHERE cac.mrecommend = @CustID
+		GROUP BY cac.recommend
 	)
 	INSERT INTO #tmp_customer ([custid],[enabled],[username],[iplogin],[closed],[suspended],[firstname],[lastname],[credit],[lastlogged],[usedCredit],Locked,CreatedDate,IsDirectMember)
 	SELECT t.CustId, ci.Enabled, ci.username, c.iplogin
 		, CASE WHEN cs.CloseInfo > 0 THEN 1 ELSE 0 END 
 		, CASE WHEN SuspendInfo > 0 THEN 1 ELSE 0 END 
-		, c.firstname, c.lastname, t.Credit, c.lastlogged, t.UsedCredit
+		, c.firstname, c.lastname, t.Credit, c.lastlogged, (t.UsedCredit + ISNULL(cac.cashUsedCredit, 0))
 		, ISNULL(cs.Locked, 0)
 		, c.creatdate, t.IsDirectMember
 	FROM cte t
 		INNER JOIN CustDB.dbo.CustInfo ci with (NOLOCK) ON t.custid = ci.custid 
 		INNER JOIN CustDB.dbo.Customer c with (NOLOCK) on ci.custid = c.custid 
+		LEFT JOIN CTE_CashAccumCredit cac ON t.CustId = cac.CustId
 		CROSS APPLY  
 		(
 			SELECT 
@@ -184,10 +193,15 @@ BEGIN
 		SELECT recommend AS custid,
 			0 AS outstanding,
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN t.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0) AS balance,
-			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN t.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END), 0) AS yesterdaybalance,
+			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN t.custid = recommend THEN winlost-actual_stake ELSE awinlost+comm-playercomm END END * ck.CalYesterday), 0) AS yesterdaybalance,
 			ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END),0)
 		FROM #tmp_customer c
 			INNER JOIN dbo.Transfer t WITH (NOLOCK, index = IX_recommend) ON t.Recommend = c.custid AND c.IsDirectMember = 0
+			OUTER APPLY (
+				SELECT CASE 
+						WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
+						ELSE 1 END
+			) AS ck(CalYesterday) 
 		WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 						WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 						WHEN winlostdate < @balanceUpDay THEN 0 --> old data
