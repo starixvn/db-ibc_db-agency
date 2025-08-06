@@ -48,9 +48,10 @@ Revisions:
 	- 20230227@Evan: Balance-Up support transfer 247 [Redmine: #173554] 
 	- 20241118@Max: Alpha - Offer Direct Member for Super/Master - move SP to SiteDB [Redmine: #211969]
 	- 20250402@Eden: Enhance sp [redmine: #222752]
+	- 20250707@Bobby: Transfer changes for Cash Service [Redmine: #232421]
 
 Param's Explanation:
-• @CustID: SAgentID
+ï¿½ @CustID: SAgentID
 */
 BEGIN
 	SET NOCOUNT ON
@@ -267,11 +268,16 @@ BEGIN
 	SELECT mrecommend AS custid,
 		0 AS outstanding,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END END), 0) AS balance,
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END END), 0) AS yesterdaybalance,
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE CASE WHEN b.custid = mrecommend THEN winlost-actual_stake ELSE  mwinlost+acomm-comm END END * ck.CalYesterday), 0) AS yesterdaybalance,
 
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0) PendingTransfer3rd
 	FROM  #recommend r
 		INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_Recommend) ON b.recommend = r.CustId
+		OUTER APPLY (
+			SELECT CASE 
+					WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
+					ELSE 1 END
+		) AS ck(CalYesterday) 
 	WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 					WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 					WHEN winlostdate < @balanceUpDay THEN 0 --> old data
@@ -283,10 +289,15 @@ BEGIN
 	SELECT
 		mrecommend, 0,
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0),
-		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END), 0),
+		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN 0 ELSE winlost-actual_stake END * ck.CalYesterday), 0),
 		ISNULL(SUM(CASE WHEN bettype IN (21008, 21009) THEN -(winlost-actual_stake) ELSE 0 END), 0)
 	FROM #tmp_customer r
 		INNER JOIN dbo.Transfer b WITH(NOLOCK, index = IX_custid) ON b.CustId = r.CustId AND r.IsDirectMember = 0
+		OUTER APPLY (
+			SELECT CASE 
+					WHEN winlostdate > @yesterday AND bettype >= 31000 THEN 0 --> Cash service today transfers
+					ELSE 1 END
+		) AS ck(CalYesterday) 
 	WHERE 1 = CASE WHEN bettype = 19999 AND winlostdate > @moveBetsDay THEN 0 --> new sum
 				WHEN bettype = 20000 AND winlostdate > @balanceUpDay THEN 0 --> new bal
 				WHEN winlostdate < @balanceUpDay THEN 0 --> old data

@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="bodbDownlineNet,bodbDownlineNetView" viewers="" isFunction="0" isNested="1"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" viewers="" isFunction="0" isNested="1"></info>*/
 ALTER PROCEDURE [dbo].[Acc_CustomerSelWinLoss]
 	@CustId INT,
 	@MoveBetDay SMALLDATETIME = NULL
@@ -17,6 +17,7 @@ AS
 		20181105@Paul: Enhance perf [RedmineID: #103443]
 		- 20210505@Sol: NAP - Alpha - Allow more time for transfer - [Redmine: #149927]
 		- 20211111@Evan: Split transfer tickets out of bettrans - [Redmine: #164196]
+		- 20250722@Bobby: Transfer changes for Cash Service [Redmine: #231494]
 */
 
 BEGIN
@@ -110,6 +111,13 @@ BEGIN
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
 				AND winlostdate > @moveBetsDay
+
+			UNION ALL --transfer - Cash Service Billing
+			SELECT winlostdate, winlost - actual_stake as agentWL
+			FROM dbo.transfer b WITH (NOLOCK)		
+			WHERE custid = @__custId
+				AND winlostdate >= @yesterday
+				AND b.bettype IN (31003, 31004, 31005)
 		) x		
     END
     ELSE IF @roleid = 3
@@ -140,6 +148,13 @@ BEGIN
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
 				AND winlostdate > @moveBetsDay
+
+			UNION ALL --transfer - Cash Service Billing
+			SELECT winlostdate, winlost - actual_stake as masterWL
+			FROM dbo.transfer b WITH (NOLOCK)		
+			WHERE custid = @__custId
+				AND winlostdate >= @yesterday
+				AND b.bettype IN (31003, 31004, 31005)
 		) x
 			
     END
@@ -171,8 +186,14 @@ BEGIN
 				AND b.winlostdate >= @yesterday
 				AND bettype IN (SELECT bettype FROM dbo.SportBettypeMatrix WITH(NOLOCK) WHERE RefTable IN (0,3) AND IsTest <= @isTest)
 				AND winlostdate > @moveBetsDay
-		) x
 
+			UNION ALL --transfer - Cash Service Billing
+			SELECT winlostdate, winlost - actual_stake as superWL
+			FROM dbo.transfer b WITH (NOLOCK)		
+			WHERE custid = @__custId
+				AND winlostdate >= @yesterday
+				AND b.bettype IN (31003, 31004, 31005)
+		) x
     END
 END
 GO

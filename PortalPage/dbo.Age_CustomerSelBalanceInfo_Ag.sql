@@ -18,12 +18,13 @@ AS
         - 20240918@Lewis: Rebate Retention - RewardReceivable RewardPayable [RedmineId: #208503]
 		- 20241118@Max: Alpha - Offer Direct Member for Super/Master [Redmine: #211969]
 		- 20250707@Dave: Add AccumCredit_AllCashMember to memberCredit [Redmine: #231524]
+		- 20250707@Bobby: Transfer changes for Cash Service [Redmine: #232421]
 */
 
 BEGIN
 	SET NOCOUNT ON
 
-	DECLARE @username NVARCHAR(50), @givenCredit MONEY, @memberCredit MONEY, @Currency INT, @CurrencyName NVARCHAR(50)
+	DECLARE @username NVARCHAR(50), @givenCredit MONEY, @memberCredit MONEY, @Currency INT, @CurrencyName NVARCHAR(50);
 
 	SELECT @username = username, @givenCredit = ISNULL(Credit, 0), @Currency = currency
 	FROM dbo.custInfo WITH (NOLOCK)
@@ -33,7 +34,7 @@ BEGIN
 
 	SELECT @memberCredit = ISNULL(SUM(credit), 0)
 	FROM dbo.custInfo WITH (NOLOCK)
-	WHERE recommend = @custid AND roleid = 1
+	WHERE recommend = @custid AND roleid = 1;
 
 	SELECT @memberCredit = ISNULL(SUM(AccumCreditReturn),0) + @memberCredit
 	FROM dbo.CashAccumCredit WITH (NOLOCK)
