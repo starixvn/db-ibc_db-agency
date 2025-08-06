@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv,wsv_xnap" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Rpt_CashServiceBilling]
 	@CustID			INT = NULL, --recommend
 	@FromDate		SMALLDATETIME,
@@ -14,6 +14,7 @@ AS
 	Revisions:
 		- 20250602@Virgil: Init SP [RedmineID: #227984]
 		- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
+		- 20250721@Virgil: Grant permission wsv_xnap and enhance code [RedmineID: #233052]
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -37,15 +38,15 @@ BEGIN
 	DECLARE @FDate	SMALLDATETIME,
 			@TDate	SMALLDATETIME;
 	
-	-- RangeType 1 & 2 
+	--/* TRANSACTION FEE */--
+	-- Full range data for CashTransaction
 	SELECT @FDate = @FromDate, @TDate = DATEADD(DD, 1, @ToDate)
-	
+
 	IF @FDate IS NOT NULL
 	BEGIN
-		-- Transaction Fee
 		WITH CashServiceBilling AS (
 				SELECT
-					TransactionTypeID,
+					CASE WHEN TransactionTypeID = 12 THEN 11 ELSE TransactionTypeID END AS TransactionTypeID,
 					JSON_VALUE(ExtraInfo, '$.Fee') AS Fee,
 					TransId,
 					Amount
@@ -55,7 +56,7 @@ BEGIN
 					AND cus.recommend = @CustID
 				WHERE CAST(JSON_VALUE(ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) >= @FDate 
 					AND CAST(JSON_VALUE(ExtraInfo, '$.ChargedAt') AS SMALLDATETIME) < @TDate
-					AND TransactionTypeID IN (1,2,3,11)
+					AND TransactionTypeID IN (1,2,3,11,12)
 			)
 		INSERT INTO #OutputResult([FeeType], [Type], [Fee], [Count])
 		SELECT  0					AS [FeeType],
@@ -64,8 +65,17 @@ BEGIN
 				COUNT(TransId)		AS [Count]
 		FROM CashServiceBilling WITH (NOLOCK) 
 		GROUP BY [TransactionTypeID], [Fee];
+	END
+	
+	--/* CASH SERVICE FEE */--
+	-- RangeType 1 & 2 for Transfer
+	SELECT @FDate = NULL, @TDate = NULL
+	SELECT @FDate = MIN(FromDate) , @TDate = DATEADD(DD, 1, MAX(ToDate))
+	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
+	WHERE RangeType IN (1,2)
 
-		-- Cash Service Fee
+	IF @FDate IS NOT NULL
+	BEGIN
 		INSERT INTO #OutputResult([FeeType], [Type], [Fee], [Count])
 		SELECT 31000						AS [FeeType],
 				tr.Bettype 					AS [Type],
@@ -79,12 +89,12 @@ BEGIN
 						AND ma.RefTable = 4
 						AND ma.BetType IN (31003,31004)
 					) f ON tr.Bettype = f.BetType
-		WHERE tr.winlostdate >= @FDate AND tr.winlostdate < @TDate
+		WHERE tr.winlostdate BETWEEN @FDate AND @TDate
 			AND tr.CustId = @CustID
 		GROUP BY tr.Bettype, ABS(WinLost-Actual_Stake)
 	END
 
-	-- Cash Service Fee for sum_winloss_old range 
+	-- RangeType 3 for sum_winloss_old range 
 	SELECT @FDate = NULL, @TDate = NULL
 	SELECT @FDate = FromDate , @TDate = ToDate
 	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
@@ -114,7 +124,7 @@ BEGIN
 		GROUP BY b.Bettype, ABS(winlost);
 	END
 	
-	--TODO: Result
+	--/* Final Result */--
 	SELECT 
 		[FeeType],
 		[Type],
