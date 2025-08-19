@@ -6,8 +6,8 @@ ALTER PROCEDURE dbo.Age_CashWithdrawal_ManualAdd
     @SubAccID INT = NULL,
 	@SiteDBGroupID SMALLINT = 3,
     @WithdrawalLimitCnt INT = NULL,
-    @MinLimitAmt MONEY,
-    @MaxLimitAmt MONEY,
+    @MinLimitAmt MONEY = NULL,
+    @MaxLimitAmt MONEY = NULL,
     @PaymentFrom VARCHAR(100),
     @PaymentTo VARCHAR(100),
     @Amount MONEY,
@@ -34,6 +34,7 @@ AS
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
+		- 20250808@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012]
 
 	Parameter's Explanation:	
 */ 
@@ -205,6 +206,8 @@ BEGIN
 		ELSE --Insert data for writelog
 		BEGIN
 			SELECT @LogData = 'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), 31002) + ', amount = ' + CONVERT(VARCHAR(20), @amount) + ', Ref.No: ' + CONVERT(VARCHAR(20), @TransferRefNo)
+			IF @SubAccID > 0 AND ISNULL(@SubAccName, '') <> ''
+				SELECT @LogData = @LogData + ' (By ' + @SubAccName + ')'
 
 			INSERT INTO @tmp_LogData (LogTypeId, UserID, FromCustID, ToCustID, IP, Doing)
 			SELECT 1, @UplineID, @UplineID, @CustID, @IP, @LogData

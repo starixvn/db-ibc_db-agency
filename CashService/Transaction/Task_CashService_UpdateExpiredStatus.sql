@@ -10,6 +10,7 @@ AS
 	Revisions:
 		- 20250626@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
+		- 20250808@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012]
 
 	Parameter's Explanation:	
 			
@@ -55,6 +56,8 @@ BEGIN
 		UPDATE c WITH(ROWLOCK,UPDLOCK)
 		SET c.StatusId = 3 --Expired
 			,c.OperatedTime = GETDATE()
+			,c.OperatedBy = @UserID
+			,c.SubAccID = 0
 			,c.RepUpdateTime = dbo.f_getdatetime2()
 		OUTPUT inserted.CustID, inserted.TransId INTO @tmp_LogData(CustID, TransID)
 		FROM CashTransaction c WITH(ROWLOCK,UPDLOCK)

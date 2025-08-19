@@ -7,11 +7,12 @@ ALTER PROCEDURE [dbo].[Age_CashPromotion_PromotionReport]
 	@StatusID BIT = NULL
 /*
     Created: 20250716@Kan
-    Task: Get Promotion Report - Exclude Pending Promotion [Redmine: #232347]
+    Task: Get Promotion Report [Redmine: #232347]
     DB: DBAGE-bodb02
 
 	Revisions:
 		- 20250716@Kan: Alpha - Agency Cash Service - Sprint 6 [Redmine: #232347]
+		- 20250807@Kan: Expired status is counted in TotalRequest - Sprint 8 [Redmine: #235012]
 
     Param's Explaination:
 		- @CustID: AgentID perform this ation
@@ -57,7 +58,7 @@ BEGIN
 		MAX(p.ToDate) AS ToDate,
 		MAX(CAST(p.Enabled AS TINYINT)) AS Enabled,
 		MAX(CAST(p.IsSoftDeleted AS TINYINT)) AS IsSoftDeleted,
-		SUM(CASE WHEN t.StatusId IN (2, 4, 5) AND cm.CustId IS NOT NULL THEN 1 ELSE 0 END) AS TotalRequest,
+		SUM(CASE WHEN cm.CustId IS NOT NULL THEN 1 ELSE 0 END) AS TotalRequest,
 		SUM(CASE WHEN t.StatusId = 4 AND cm.CustId IS NOT NULL THEN 1 ELSE 0 END) AS TotalApproved,
 		SUM(CASE WHEN t.StatusId = 5 AND cm.CustId IS NOT NULL THEN 1 ELSE 0 END) AS TotalRejected,
 		SUM(CASE WHEN t.StatusId = 4 AND cm.CustId IS NOT NULL THEN t.Amount ELSE 0 END) AS TotalAmount

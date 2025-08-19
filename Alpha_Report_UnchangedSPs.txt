@@ -1,3 +1,1 @@
-Customer\Age_BalanceAgentSel.sql
-Customer\Age_BalanceMasterSel.sql
-Customer\Age_BalanceMemberSel.sql
+CashService\API\API_CashWithdrawal_AddTransaction.sql

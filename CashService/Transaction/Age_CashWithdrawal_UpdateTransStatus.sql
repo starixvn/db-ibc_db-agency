@@ -9,6 +9,8 @@ ALTER PROCEDURE dbo.Age_CashWithdrawal_UpdateTransStatus
 	@SiteDBGroupID SMALLINT = 3,
 	@ProviderID SMALLINT = 0,
 	@PaymentMethodID SMALLINT = NULL,
+	@MinLimitAmt MONEY = NULL,
+    @MaxLimitAmt MONEY = NULL,
 	@PaymentFrom VARCHAR(100),
     @IP VARCHAR(50) = '',
 	@Remark NVARCHAR(1000) = NULL,
@@ -27,6 +29,7 @@ AS
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
+		- 20250808@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012]
 
 	Parameter's Explanation:		
 */ 
@@ -42,6 +45,9 @@ BEGIN
 		,@PaymentType TINYINT 
 		,@TransId_From	BIGINT = NULL
 		,@TransId_To	BIGINT = NULL
+		,@_PaymentFrom VARCHAR(100)
+		,@_ProviderID SMALLINT
+		,@_PaymentMethodID SMALLINT
 		,@Amount MONEY = NULL
 		,@_statusId TINYINT
 		,@TransactionTypeID TINYINT
@@ -80,6 +86,9 @@ BEGIN
 		, @_statusId = c.StatusId
 		, @TransactionTypeID = c.TransactionTypeID
 		, @_PaymentType = c.PaymentType
+		, @_PaymentFrom = c.PaymentFrom
+		, @_PaymentMethodID = c.PaymentMethod
+		, @_ProviderId = JSON_VALUE(c.ExtraInfo, '$.ProviderId') 
 	FROM dbo.CashTransaction c WITH (NOLOCK)
 		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
 			ON c.CustId = ci.custid
@@ -141,10 +150,10 @@ BEGIN
 
 	SELECT @LogDataMask_Old = '<R custid="'+ COALESCE(CAST(@custid AS VARCHAR(20)), SPACE(1)) + '" ' +
 						'SubAccName="'+ COALESCE(CAST(@SubAccName AS VARCHAR(30)), SPACE(1)) + '" ' +
-						'PaymentType="'+ COALESCE(CAST('' AS VARCHAR(20)), SPACE(1)) + '" ' +
-						'ProviderId="'+ COALESCE(CAST(@ProviderId AS VARCHAR(20)), SPACE(1)) + '" ' +
-						'PaymentFrom="'+ COALESCE(CAST('' AS VARCHAR(100)), SPACE(1)) + '" ' +
-						'PaymentMethod="'+ COALESCE(CAST('' AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'PaymentType="'+ COALESCE(CAST(@_PaymentType AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'ProviderId="'+ COALESCE(CAST(@_ProviderId AS VARCHAR(20)), SPACE(1)) + '" ' +
+						'PaymentFrom="'+ COALESCE(CAST(@_PaymentFrom AS VARCHAR(100)), SPACE(1)) + '" ' +
+						'PaymentMethod="'+ COALESCE(CAST(@_PaymentMethodID AS VARCHAR(20)), SPACE(1)) + '" ' +
 						'TransferRefNo="'+ COALESCE(CAST(@TransferRefNo AS VARCHAR(50)), SPACE(1)) + '" ' +
 						'StatusId="'+ COALESCE(CAST(@_statusId AS VARCHAR(3)), SPACE(1)) + '" ' +
 						'AdjustCreditAmt="'+ COALESCE(CAST('' AS VARCHAR(100)), SPACE(1)) + '" ' +
@@ -288,7 +297,9 @@ BEGIN
 			END
 			ELSE --Insert data for writelog
 			BEGIN
-				SELECT @LogData = 'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), 31001) + ', amount = ' + CONVERT(VARCHAR(20), @amount) + ', Ref.No: ' + CONVERT(VARCHAR(20), @TransferRefNo) 
+				SELECT @LogData = 'Insert trans custid = ' + CONVERT(VARCHAR(20), @custid) + ', bettype = ' + CONVERT(VARCHAR(20), 31001) + ', amount = ' + CONVERT(VARCHAR(20), @amount) + ', Ref.No: ' + CONVERT(VARCHAR(20), @TransferRefNo)
+				IF @SubAccID > 0 AND ISNULL(@SubAccName, '') <> ''
+					SELECT @LogData = @LogData + ' (By ' + @SubAccName + ')'
 
 				INSERT INTO @tmp_LogData (LogTypeId, UserID, FromCustID, ToCustID, IP, Doing)
 				SELECT 1, @AgentID, @CustID, @AgentID, @IP, @LogData
@@ -370,6 +381,12 @@ BEGIN
 	BEGIN
 		--Update cash transaction, payment information only, not update status
 		BEGIN TRY
+			IF @Amount NOT BETWEEN ISNULL(@MinLimitAmt,0) AND @MaxLimitAmt
+			BEGIN
+				SELECT @ErrMsg = 'The amount exceeds the allowed minimum or maximum value.', @ErrCode = 407	
+				GOTO ReturnLog;
+			END
+
 			SELECT @ExtraInfo = JSON_MODIFY(ISNULL(c.ExtraInfo,'{}'), '$.ProviderId',@ProviderID)
 			FROM dbo.CashTransaction c WITH (NOLOCK)
 			WHERE c.TransId = @TransId
