@@ -7,11 +7,12 @@ ALTER PROCEDURE [dbo].[Age_CashPromotion_PromotionDetailsReport]
 	@StatusID TINYINT = NULL
 /*
     Created: 20250716@Kan
-    Task: Get Promotion Report - Exclude Pending Promotion [Redmine: #232347]
+    Task: Get Promotion Report Details [Redmine: #232347]
     DB: DBAGE-bodb02
 
 	Revisions:
 		- 20250716@Kan: Alpha - Agency Cash Service - Sprint 6 [Redmine: #232347]
+		- 20250807@Kan: Add more Expired status, get TransId - Sprint 8 [Redmine: #235012]
 
     Param's Explaination:
 		- @CustID: AgentID perform this ation
@@ -20,6 +21,7 @@ ALTER PROCEDURE [dbo].[Age_CashPromotion_PromotionDetailsReport]
 			2: Pending
 			4: Approved
 			5: Rejected
+			3: Expired
 	Sample:
 		EXEC [Age_CashPromotion_PromotionDetailsReport]
 			@CustId = 233657343,
@@ -66,10 +68,11 @@ BEGIN
 		OperatedBy VARCHAR(30),
 		OperatedTime DATETIME,
 		SubAccName VARCHAR(30),
-		StatusId TINYINT
+		StatusId TINYINT,
+		TransId BIGINT
 	)
 	INSERT INTO #PromotionDetails
-		(username, nickname, firstname, lastname, FromDate, ToDate, Amount, OperatedBy, OperatedTime, SubAccName, StatusId)
+		(username, nickname, firstname, lastname, FromDate, ToDate, Amount, OperatedBy, OperatedTime, SubAccName, StatusId, TransId)
 	SELECT
 		cm.username,
 		cm.nickname,
@@ -78,10 +81,11 @@ BEGIN
 		JSON_VALUE(t.ExtraInfo, '$.FromDate') AS FromDate,
 		JSON_VALUE(t.ExtraInfo, '$.ToDate') AS ToDate,
 		t.Amount,
-		c.username AS OperatedBy,
+		CASE WHEN c.roleid IN (1,2,3,4) THEN c.username ELSE 'SYSTEM' END AS OperatedBy,
 		t.OperatedTime,
 		cs.username AS SubAccName,
-		t.StatusId
+		t.StatusId,
+		t.TransId
 	FROM CashTransaction t WITH (NOLOCK)
 		INNER JOIN #CashMember cm ON cm.custid = t.CustId
 		LEFT JOIN Customer c WITH (NOLOCK) ON t.OperatedBy = c.custid
@@ -101,8 +105,7 @@ BEGIN
 		ISNULL(SUM(CASE WHEN StatusId = 5 THEN 1 ELSE 0 END), 0) AS TotalRejected,
 		ISNULL(SUM(CASE WHEN StatusId = 4 THEN Amount ELSE 0 END), 0) AS TotalAmount
 	FROM #PromotionDetails
-	WHERE StatusId <> 2
-	-- Pending
+	WHERE StatusId IN (4,5)
 
 	DROP TABLE #CashMember
 	DROP TABLE #PromotionDetails

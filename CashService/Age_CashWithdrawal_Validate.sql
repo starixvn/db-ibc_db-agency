@@ -20,6 +20,7 @@ AS
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
+		- 20250805@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012] 
 
 	Parameter's Explanation:	
 */ 
@@ -39,10 +40,12 @@ BEGIN
 	WHERE ci.custid = @custid
 
 	SELECT @Act_DailyWithdrawalCnt = COUNT(1)
-	FROM CashTransaction c WITH (NOLOCK)
-	WHERE c.TransactionTypeID = 3
-		AND c.CustId = @CustID
-		AND CONVERT(DATE, c.CreatedTime) = CONVERT(DATE, GETDATE())
+	FROM CashTransaction c WITH(NOLOCK) 
+	WHERE custid = @CustID
+		AND c.StatusId IN (2,4)-- Pending and Completed
+		AND c.TransactionTypeID IN (3, 4) --3:Manual Withdraw, 4:Auto Withdraw
+		AND c.CreatedTime >= CONVERT(DATE, GETDATE()) 
+		AND c.CreatedTime < CONVERT(DATE, GETDATE() + 1)
 
 	-- #1 Check roleid
 	IF @roleid <> 1 OR @_AgentID <> @UplineId OR  @_AgentID IS NULL
