@@ -23,6 +23,7 @@ AS
 		- 20240918@Lewis: Rebate Retention - Reward [RedmineId: #208503]
 		- 20241205@Lewis: Hotfix filter range bk [RedmineId: #214813]
 		- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
+		- 20250807@Virgil: Cash Service Billing - Update API reports [RedmineId: #235256]
 	
 	Param's Explanation:
 	
@@ -166,6 +167,33 @@ BEGIN
 			b.winlostdate BETWEEN @FDate AND @TDate
 		GROUP BY b.custid;
 
+		-- Cash Service Billing
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
+			SELECT tr.CustId,
+					0 AS TurnOver,
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinLost,
+					0 AS PlayerComm, 
+					SUM(WinLost-Actual_Stake) AS AgWinLost,
+					0 AS AgComm, 
+					0 AS NoOfTicket
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+				AND tr.CustId = @CID
+			GROUP BY tr.CustId;
+		END
+
 		-- bettransRnG
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 		SELECT b.CustId
@@ -306,7 +334,34 @@ BEGIN
 			,SUM(b.NoOfTicket) 			AS NoOfTicket
 		FROM CTE_Winloss b
 		INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
-		GROUP BY custid
+		GROUP BY custid;
+
+		-- Cash Service Billing
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
+			SELECT tr.CustId,
+					0 AS TurnOver,
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinLost,
+					0 AS PlayerComm, 
+					SUM(WinLost-Actual_Stake) AS AgWinLost,
+					0 AS AgComm, 
+					0 AS NoOfTicket
+			FROM dbo.Transfer tr (NOLOCK)
+			INNER JOIN (	
+						SELECT DISTINCT ma.ProductID, ma.BetType
+						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+						WHERE ma.ProductID = 111
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+							AND ma.RefTable = 4
+							AND ma.BetType IN (31003,31004,31005)
+						) f ON tr.Bettype = f.BetType
+			WHERE tr.winlostdate BETWEEN @FDate AND @TDate
+				AND tr.CustId = @CID
+			GROUP BY tr.CustId;
+		END
 	END
 
 	--TODO: sum_winloss_old range
@@ -360,7 +415,38 @@ BEGIN
 		FROM CTE_Winloss b
 		INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 		GROUP BY custid
-		OPTION (MAXRECURSION 0)
+		OPTION (MAXRECURSION 0);
+
+		-- Cash Service Billing 
+		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		BEGIN
+			INSERT INTO #AgWinLossDetails(CustID, TurnOver, TurnoverNoDraw, GrossComm, MemberWinLost, PlayerComm, AgWinLost, AgComm, NoOfTicket)
+			SELECT b.CustId,
+					0 AS TurnOver,
+					0 AS TurnoverNoDraw,
+					0 AS GrossComm,
+					0 AS MemberWinLost,
+					0 AS PlayerComm, 
+					SUM(WinLost) AS AgWinLost,
+					0 AS AgComm, 
+					0 AS NoOfTicket
+			FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK)
+			INNER JOIN (	
+					SELECT DISTINCT ma.ProductID, ma.BetType, ma.SportType
+					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+					WHERE ma.ProductID = 111
+						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest) 
+						AND ma.RefTable = 4
+						AND ma.BetType IN (31003,31004,31005)
+					) f ON b.Bettype = f.BetType
+					AND b.SportType = f.SportType
+			WHERE b.winlostdate BETWEEN @FDate AND @TDate
+				AND srecommend = @srecommend
+				AND mrecommend = @mrecommend
+				AND recommend = @custid
+				AND RoleID = 2
+			GROUP BY b.CustID
+		END
 	END
 
 	--TODO: SabaWalletTicket
@@ -400,7 +486,7 @@ BEGIN
 		GROUP BY CustID
 	)
 	SELECT ISNULL(w.CustID,r.CustID) 				AS CustId
-		   ,c.UserName 								AS CustName
+		   ,CASE WHEN c.CustID = @CID THEN 'CASH SERVICE BILLING' ELSE c.UserName END AS CustName
 		   ,TurnOver								AS Turnover
 		   ,TurnoverNoDraw							AS TurnoverNoDraw
 		   ,GrossComm								AS GrossComm
@@ -429,6 +515,6 @@ BEGIN
 		   ,@RewardCurrency		AS RewardCurrency
 		   ,SUM(NoOfTicket) 	AS NumberOfTickets
 	FROM #AgWinLossDetails w
-	HAVING SUM(NoOfTicket) > 0 OR SUM(RewardAmount) > 0
+	HAVING SUM(NoOfTicket) > 0 OR SUM(RewardAmount) > 0 OR SUM(AgWinlost) <> 0
 END 
 GO

@@ -15,6 +15,7 @@ AS
 		- 20250602@Virgil: Init SP [RedmineID: #227984]
 		- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
 		- 20250721@Virgil: Grant permission wsv_xnap and enhance code [RedmineID: #233052]
+		- 20250814@Virgil: Fix bug get Cash Service Fee todate [RedmineId: #235515]
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -70,7 +71,7 @@ BEGIN
 	--/* CASH SERVICE FEE */--
 	-- RangeType 1 & 2 for Transfer
 	SELECT @FDate = NULL, @TDate = NULL
-	SELECT @FDate = MIN(FromDate) , @TDate = DATEADD(DD, 1, MAX(ToDate))
+	SELECT @FDate = MIN(FromDate) , @TDate = MAX(ToDate)
 	FROM dbo.f_MBU_RangeDate(@FromDate, @ToDate, @BalanceUpDay, @MoveBetsDay)
 	WHERE RangeType IN (1,2)
 
