@@ -14,6 +14,7 @@ AS
 	
 	Revisions:
 		- 20250705@Dave: Agency Cash Service - Customer Setting - Sprint 7 [Redmine: #233474]
+		- 20250827@Dave: Agency Cash Service - Customer Setting - Sprint 9 [Redmine: #236430]
 		
 	Parameter's Explanation:
 		@SettingStatus: 0: Pro, 1: UAT
@@ -69,7 +70,7 @@ BEGIN
 	SELECT CustID, Transid, AdjToWin, AdjWinLoss, SportType, Bettype, ActionType, RepUpdateTime
 	FROM @History;
 
-	SELECT TOP(1) @OldAmount = AdjWinLoss FROM @History;
+	SELECT TOP(1) @OldAmount = -AdjWinLoss FROM @History;
 
 
 	SET @TrackingValue2 = 
