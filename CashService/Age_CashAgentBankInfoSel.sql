@@ -15,14 +15,23 @@ AS
 	Revisions:
 		- 20250321@Helios: Agency Cash Service [Redmine: #223896]
 		- 20250623@Helios: Offer CashService - Get Bank Account Member [RedmineID: #231204]
+		- 20250822@Helios: Agency Cash Service -Customer Setting Sprint 9 [redmine: #236430]
 
 	@TransType:
         1  : Deposit
         2  : Withdrawal
 
 	Sample:
-		exec Age_CashAgentBankInfoSel @AgentID=  1176086 , @TransType = 1, @IsManual = 1, @BankCode = 'KKR', @BankAccountNumber = '68204931752844'
-		exec Age_CashAgentBankInfoSel @AgentID=  1176086 , @TransType = 2, @IsManual = 1, @BankCode = 'SCB', @BankAccountNumber = '1231249'
+		--call from Infor >> Member Bank Account
+		exec Age_CashAgentBankInfoSel_UAT2 @AgentID=249550999,@TransType=1,@IsManual=NULL
+		
+		--call from Add deposit Withdrawal
+		exec Age_CashAgentBankInfoSel_UAT2 @AgentID=249550999,@TransType=1
+		
+		--call from Add Manual Withdrawal
+		exec Age_CashAgentBankInfoSel_UAT2 @AgentID=249550999,@TransType=2
+		
+
 */  
 BEGIN
 	SET NOCOUNT ON;
@@ -46,6 +55,7 @@ BEGIN
 	-- Query bank account info for agent
 	-- If @TransType = 1 AND @IsManual IS NULL, return both Manual & Auto Deposit (TransTypeList contains 1 or 2)
 	SELECT
+		DISTINCT
 		b.BankAccountNumber    AS BankAccountNumber,
 		b.BankID               AS BankID,
 		a.BankCode             AS BankCode
