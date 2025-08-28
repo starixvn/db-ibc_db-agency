@@ -23,6 +23,7 @@ AS
 	Revisions:
 		- 20250602@Eden: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435]  
 
 	Parameter's Explanation:	
 
@@ -65,7 +66,9 @@ BEGIN
 
 	IF @_AgentID <> @AgentID OR  @_AgentID IS NULL OR @RoleID <> 1
 	BEGIN
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 405
+			, @ErrMsg = 'Invalid parameters.'
+			, @ErrExtraInfo = 'Invalid Member [' + ISNULL(CAST(@custid AS VARCHAR(10)),'') + ', ' + ISNULL(CAST(@AgentID AS VARCHAR(10)),'') + ']'
 		RETURN
 	END
 

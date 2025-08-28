@@ -25,6 +25,7 @@ AS
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435]   
 
 	Parameter's Explanation:	
 */ 
@@ -65,6 +66,20 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
+	EXEC Age_CashService_CheckBelonging
+			@CustID	= @CustID 
+			,@UplineID	= @AgentID
+			,@ErrCode = @ErrCode OUTPUT 
+			,@ErrMsg  = @ErrMsg OUTPUT
+
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrExtraInfo = @ErrMsg
+			, @ErrCode = 405
+			, @ErrMsg = 'Invalid parameters.'
+		RETURN
+	END
+
 	SELECT @Amount = c.Amount
 		, @_statusId = c.StatusId
 		, @TransactionTypeID = c.TransactionTypeID
@@ -73,15 +88,14 @@ BEGIN
 		, @TransferRefNo = c.TransferRefNo
 		, @_ProviderTransId = JSON_VALUE(c.ExtraInfo, '$.ProviderTransId') 
 	FROM dbo.CashTransaction c WITH (NOLOCK)
-		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
-			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
 		AND c.CustId = @CustID
-		AND ci.recommend = @AgentID
 	
 	IF @TransactionTypeID IS NULL
 	BEGIN
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 405
+			, @ErrMsg = 'Invalid parameters.'
+			, @ErrExtraInfo = 'Invalid Transaction [' + ISNULL(CAST(@TransId AS VARCHAR(20)),'') + ', ' + ISNULL(CAST(@custid AS VARCHAR(10)),'') + ']'
 		RETURN
 	END
 
@@ -111,9 +125,8 @@ BEGIN
 		IF @ErrCode <> 0
 		BEGIN
 			SELECT @ErrCode = 409
-				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 				,@ErrExtraInfo = @ErrMsg
-
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 			RETURN
 		END
 	END TRY
@@ -154,15 +167,18 @@ BEGIN
 
 					IF @ErrCode <> 0
 					BEGIN
-						SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
-							,@ErrExtraInfo = @ErrMsg
+						SELECT @ErrCode = 409
+						,@ErrExtraInfo = @ErrMsg
+						,@ErrMsg = 'The transaction inserted failed. Please try again.'
+
 						GOTO ReturnLog;
 					END
 				END
 			END TRY
 			BEGIN CATCH
-				SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
-						,@ErrExtraInfo = ERROR_MESSAGE()
+				SELECT @ErrCode = 409
+					,@ErrExtraInfo = ERROR_MESSAGE()
+					,@ErrMsg = 'The transaction inserted failed. Please try again.'
 				GOTO ReturnLog;
 			END CATCH
 		END

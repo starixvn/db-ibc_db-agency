@@ -1,6 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService" selecters="" viewers="" isFunction="0" isNested=""></info>*/
 ALTER PROCEDURE [dbo].[Age_CashTransaction_RevertDeposit_Upd]  
 	@TransId BIGINT,
+	@CustID INT,
 	@AgentID INT = NULL,
 	@SiteDBGroupID	SMALLINT = 3,
 	@SubAccID INT = 0,
@@ -9,7 +10,8 @@ ALTER PROCEDURE [dbo].[Age_CashTransaction_RevertDeposit_Upd]
 	@IP VARCHAR(50) = '',
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
-	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT
+	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT,
+	@CashBalance MONEY = NULL OUTPUT
 AS  
 /*
 	Created: 20250502@Max		
@@ -23,6 +25,7 @@ AS
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 		- 20250808@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012]
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435] 
 
 	Parameter's Explanation:
 */ 
@@ -31,7 +34,6 @@ BEGIN
 
 	DECLARE @StatusId_before TINYINT
 		,@AdjustCreditAmt MONEY
-		,@CustId INT
 		,@LogData VARCHAR(MAX)
 		,@LogData_Old VARCHAR(MAX)
 		,@TransactionTypeId TINYINT
@@ -68,21 +70,30 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
+	EXEC Age_CashService_CheckBelonging
+			@CustID	= @CustID 
+			,@UplineID	= @AgentID
+			,@ErrCode = @ErrCode OUTPUT 
+			,@ErrMsg  = @ErrMsg OUTPUT
+
+	IF @ErrCode <> 0
+	BEGIN
+		RETURN
+	END
+
 	SELECT @StatusId_before = StatusId
 		, @TransferRefNo = c.TransferRefNo
-		, @CustId = c.CustId
 		, @TransactionTypeId = c.TransactionTypeID
 		, @PaymentType = c.PaymentType
 		, @Amount = c.Amount
 	FROM dbo.CashTransaction c WITH (NOLOCK)
-		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
-			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
-		AND ci.recommend = @AgentID 
+		AND c.custid = @CustID
 
 	IF @TransactionTypeID IS NULL
 	BEGIN
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 416
+			, @ErrMsg = 'Invalid Transaction [' + ISNULL(CAST(@TransId AS VARCHAR(20)),'') + ', ' + ISNULL(CAST(@custid AS VARCHAR(10)),'') + ']'
 		RETURN
 	END
 
@@ -145,7 +156,8 @@ BEGIN
 				@UplineID = @AgentID,
 				@Amount = @Amount,
 				@ErrCode = @ErrCode OUTPUT,
-				@ErrMsg = @ErrMsg OUTPUT
+				@ErrMsg = @ErrMsg OUTPUT,
+				@CashBalance= @CashBalance OUTPUT
 
 			IF @ErrCode <> 0
 			BEGIN

@@ -23,6 +23,7 @@ AS
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435]  
 
 	Parameter's Explanation:	
 		@StatusId =
@@ -70,6 +71,20 @@ BEGIN
 
 	SELECT @StatusId = ISNULL(@StatusId,0)
 
+	EXEC Age_CashService_CheckBelonging
+			@CustID	= @CustID 
+			,@UplineID	= @AgentID
+			,@ErrCode = @ErrCode OUTPUT 
+			,@ErrMsg  = @ErrMsg OUTPUT
+
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrExtraInfo = @ErrMsg
+			, @ErrCode = 405
+			, @ErrMsg = 'Invalid parameters.'
+		RETURN
+	END
+
 	SELECT @Amount = c.Amount
 		, @TransferRefNo = c.TransferRefNo
 		, @_statusId = c.StatusId
@@ -78,15 +93,14 @@ BEGIN
 		, @_ProviderTransId = JSON_VALUE(c.ExtraInfo, '$.ProviderTransId') 
 		, @_AdjustCreditAmt = c.AdjustCreditAmt
 	FROM dbo.CashTransaction c WITH (NOLOCK)
-		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
-			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
 		AND c.CustId = @CustID
-		AND ci.recommend = @AgentID
 	
 	IF @TransactionTypeID IS NULL
 	BEGIN
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 405
+			, @ErrMsg = 'Invalid parameters.'
+			, @ErrExtraInfo = 'Invalid Transaction [' + ISNULL(CAST(@TransId AS VARCHAR(20)),'') + ', ' + ISNULL(CAST(@custid AS VARCHAR(10)),'') + ']'
 		RETURN
 	END
 
@@ -117,8 +131,9 @@ BEGIN
 		IF @ErrCode <> 0
 		BEGIN
 			SELECT @ErrCode = 409
-				,@ErrMsg = 'The transaction inserted failed. Please try again.'
 				,@ErrExtraInfo = @ErrMsg
+				,@ErrMsg = 'The transaction inserted failed. Please try again.'
+				
 
 			RETURN
 		END
