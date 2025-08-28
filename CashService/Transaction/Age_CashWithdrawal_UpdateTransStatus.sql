@@ -30,6 +30,7 @@ AS
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 		- 20250808@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012]
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435] 
 
 	Parameter's Explanation:		
 */ 
@@ -74,6 +75,17 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
+	EXEC Age_CashService_CheckBelonging
+			@CustID	= @CustID 
+			,@UplineID	= @AgentID
+			,@ErrCode = @ErrCode OUTPUT 
+			,@ErrMsg  = @ErrMsg OUTPUT
+
+	IF @ErrCode <> 0
+	BEGIN
+		RETURN
+	END
+
 	SET @StatusId = ISNULL(@StatusId,0)
 
 	IF @ProviderID <> 0 
@@ -90,15 +102,13 @@ BEGIN
 		, @_PaymentMethodID = c.PaymentMethod
 		, @_ProviderId = JSON_VALUE(c.ExtraInfo, '$.ProviderId') 
 	FROM dbo.CashTransaction c WITH (NOLOCK)
-		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
-			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
 		AND c.CustId = @CustID
-		AND ci.recommend = @AgentID
 	
 	IF @TransactionTypeID IS NULL
 	BEGIN
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 416
+			, @ErrMsg = 'Invalid Transaction [' + ISNULL(CAST(@TransId AS VARCHAR(20)),'') + ', ' + ISNULL(CAST(@custid AS VARCHAR(10)),'') + ']'
 		RETURN
 	END
 
@@ -383,7 +393,8 @@ BEGIN
 		BEGIN TRY
 			IF @Amount NOT BETWEEN ISNULL(@MinLimitAmt,0) AND @MaxLimitAmt
 			BEGIN
-				SELECT @ErrMsg = 'The amount exceeds the allowed minimum or maximum value.', @ErrCode = 407	
+				SELECT @ErrMsg = 'The amount must be between ' + CAST(ISNULL(@MinLimitAmt,0) AS VARCHAR(20)) + ' and ' + CAST(@MaxLimitAmt AS VARCHAR(20)) + ' as per provider limits.'
+					, @ErrCode = 419	
 				GOTO ReturnLog;
 			END
 

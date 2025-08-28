@@ -18,6 +18,7 @@ AS
 		
 	Revisions:
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435]   
 
 	Parameter's Explanation:	
 */ 
@@ -39,20 +40,37 @@ BEGIN
 		,TrackingValueMask2	VARCHAR(MAX)
 	)
 
+	EXEC Age_CashService_CheckBelonging
+			@CustID	= @CustID 
+			,@UplineID	= @AgentID
+			,@ErrCode = @ErrCode OUTPUT 
+			,@ErrMsg  = @ErrMsg OUTPUT
+
+	IF @ErrCode <> 0
+	BEGIN
+		SELECT @ErrExtraInfo = @ErrMsg
+			, @ErrCode = 405
+			, @ErrMsg = 'Invalid parameters.'
+		RETURN
+	END
+
     -- Validate input: Check transaction exists and belongs to customer
     SELECT @StatusId = c.StatusId
 		, @TransactionTypeID = c.TransactionTypeID
 		, @HadPaySlip = CASE WHEN c.PaySlip IS NOT NULL THEN 1 ELSE 0 END
 	FROM dbo.CashTransaction c WITH (NOLOCK)
-		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
-			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
 		AND c.CustId = @CustID
-		AND ci.recommend = @AgentID
 
 	IF @TransactionTypeID IS NULL OR @PaySlip IS NULL
 	BEGIN
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 405
+		, @ErrMsg = 'Invalid parameters.'
+
+		IF @TransactionTypeID IS NULL
+			SET @ErrExtraInfo = 'Invalid Transaction [' + ISNULL(CAST(@TransId AS VARCHAR(20)),'') + ', ' + ISNULL(CAST(@custid AS VARCHAR(10)),'') + ']'
+		ELSE
+			SET @ErrExtraInfo ='Invalid PaySlip' 
 		RETURN
 	END
 

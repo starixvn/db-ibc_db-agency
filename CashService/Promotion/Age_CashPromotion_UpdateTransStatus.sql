@@ -13,7 +13,8 @@ ALTER PROCEDURE dbo.Age_CashPromotion_UpdateTransStatus
 	@Remark NVARCHAR(1000) = NULL,
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
-	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT
+	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT,
+	@AgentAvailableCredit MONEY = 0 OUTPUT
 )
 AS
 /*
@@ -25,6 +26,7 @@ AS
 		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896]
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 		- 20250808@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012]
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435]  
 
 	Parameter's Explanation:	
 		@StatusId: 
@@ -69,21 +71,30 @@ BEGIN
 		,Doing	VARCHAR(1000)
 	)
 
+	EXEC Age_CashService_CheckBelonging
+			@CustID	= @CustID 
+			,@UplineID	= @AgentID
+			,@ErrCode = @ErrCode OUTPUT 
+			,@ErrMsg  = @ErrMsg OUTPUT
+
+	IF @ErrCode <> 0
+	BEGIN
+		RETURN
+	END
+
 	SELECT @Amount = IIF(@New_Amount <> 0, @New_Amount, c.Amount)
 		, @_statusId = c.StatusId
 		, @TransactionTypeID = c.TransactionTypeID
 		, @_AdjustCreditAmt = c.AdjustCreditAmt
 		, @_Amount = c.Amount
 	FROM dbo.CashTransaction c WITH (NOLOCK)
-		INNER JOIN custdb.dbo.vw_CashService_Customer ci WITH(NOLOCK) 
-			ON c.CustId = ci.custid
 	WHERE c.TransId = @TransId
 		AND c.CustId = @CustID
-		AND ci.recommend = @AgentID
 	
 	IF @TransactionTypeID IS NULL
 	BEGIN
-		SELECT @ErrCode = 405, @ErrMsg = 'Invalid parameters.'
+		SELECT @ErrCode = 416
+			, @ErrMsg = 'Invalid Transaction [' + ISNULL(CAST(@TransId AS VARCHAR(20)),'') + ', ' + ISNULL(CAST(@custid AS VARCHAR(10)),'') + ']'
 		RETURN
 	END
 
@@ -151,7 +162,8 @@ BEGIN
 				@CreditMembers_GivenCredit = @CreditMembers_GivenCredit,
 				@Amount = @Amount,
 				@ErrCode = @ErrCode OUTPUT,
-				@ErrMsg = @ErrMsg OUTPUT
+				@ErrMsg = @ErrMsg OUTPUT,
+				@AgentAvailableCredit= @AgentAvailableCredit OUTPUT
 
 			IF @ErrCode <> 0
 			BEGIN

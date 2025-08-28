@@ -10,6 +10,7 @@ ALTER PROCEDURE [dbo].[Age_CashPromotion_ManualBonus_Sel]
 
 	Revisions:
 		- 20250807@Kan: Get Manual Bonus - Sprint 8 [Redmine: #235012]
+		- 20250820@Kan: Fix remove CAST(t.CreatedTime AS DATE) because it's set index - Sprint 9 [Redmine: #236435]
 
     Param's Explaination:
 		- @CustID: AgentID perform this action
@@ -25,10 +26,10 @@ BEGIN
 
 	--Avoid Parameter Sniffing
 	DECLARE @FDate DATE,
-		@TDate DATE
+		@TDate DATETIME
 
 	SELECT @FDate = @Fromdate,
-		@TDate = @Todate
+		@TDate = DATEADD(MS, -3, DATEADD(DAY, 1, DATEDIFF(DAY, 0, @ToDate)));
 
 	CREATE TABLE #CashMember
 	(
@@ -63,7 +64,7 @@ BEGIN
 		LEFT JOIN custSub cs WITH (NOLOCK) ON cs.subaccid = t.SubAccId
 	WHERE t.TransactionTypeID = 12 -- Manual Bonus
 		AND t.Creator = @CustID
-		AND CAST(t.CreatedTime AS DATE) BETWEEN @FDate AND @TDate
+		AND t.CreatedTime BETWEEN @FDate AND @TDate
 	ORDER BY t.CreatedTime DESC
 
 	DROP TABLE #CashMember

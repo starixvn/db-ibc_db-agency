@@ -18,7 +18,8 @@ ALTER PROCEDURE dbo.Age_CashDeposit_ManualAdd
 	@ErrCode	INT = 0 OUTPUT,
 	@ErrMsg	VARCHAR(2000) = NULL OUTPUT,
 	@TransId	BIGINT = NULL OUTPUT,
-	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT
+	@CashAccumCreditTbl	VARCHAR(MAX) = NULL OUTPUT,
+	@AgentAvailableCredit MONEY = 0 OUTPUT
 )
 AS
 /*
@@ -33,6 +34,7 @@ AS
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250723@Eden: Alpha - Agency Cash Service - Sprint 7 [redmine: #233481] 
 		- 20250808@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012]
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435]  
 
 	Parameter's Explanation:	
 */ 
@@ -82,7 +84,8 @@ BEGIN
 			@CreditMembers_GivenCredit = @CreditMembers_GivenCredit,
 			@Amount = @Amount,
 			@ErrCode = @ErrCode OUTPUT,
-			@ErrMsg = @ErrMsg OUTPUT
+			@ErrMsg = @ErrMsg OUTPUT,
+			@AgentAvailableCredit= @AgentAvailableCredit OUTPUT
 
 		IF @ErrCode <> 0
 		BEGIN

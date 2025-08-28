@@ -13,11 +13,12 @@ AS
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 
 		- 20250624@Eden: Alpha - Agency Cash Service - Sprint 5 [redmine: #223896] 
 		- 20250805@Eden: Alpha - Agency Cash Service - Sprint 8 [redmine: #235012] 
+		- 20250821@Eden: Alpha - Agency Cash Service - Sprint 9 [redmine: #236435] 
 
 	Parameter's Explanation:
 
 	Sample:
-		EXEC [Age_CashTransactionDetail_Sel_UAT2] @TransID = 422432431828631552 , @CustID = 233657640
+		EXEC [Age_CashTransactionDetail_Sel_UAT2] @TransID = 423507333293801472 , @CustID = 233657640
 */ 
 BEGIN  
     SET NOCOUNT ON; 
@@ -51,7 +52,8 @@ BEGIN
 						   WHEN tr.SubAccID > 0 THEN sub.Username 
 						   WHEN op.roleID IN (1,2,3,4) THEN op.username 
 						   WHEN NOT (op.roleID IN (1,2,3,4)) AND tr.StatusId <> 2 THEN 'SYSTEM' 
-					   END
+					   END,
+		JSON_VALUE(tr.ExtraInfo, '$.ProviderTransId') AS ProviderTransId
 	FROM dbo.CashTransaction tr WITH (NOLOCK)
 		INNER JOIN CustDB.dbo.vw_CashService_Customer c WITH (NOLOCK) ON c.custid = tr.CustID
 		INNER JOIN CustDB.dbo.vw_CashService_Customer co WITH (NOLOCK) ON co.custid = tr.Creator
