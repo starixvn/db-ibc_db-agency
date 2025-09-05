@@ -1,7 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService" selecters="" viewers="" isFunction="0" isNested=""></info>*/
 ALTER PROCEDURE [dbo].[Age_CashTransaction_RevertWithdrawal_Upd]  
 	@TransId BIGINT,
-	@CustID INT,
+	@CustID INT = NULL,
 	@AgentID INT = NULL,
 	@SiteDBGroupID	SMALLINT = 3,
 	@AgentGivenCredit MONEY = NULL,
@@ -21,7 +21,7 @@ AS
 	Task: Alpha - Agency Cash Service [redmine: #223896] 
 	DB:  DBSIC-bodb02
 		
-	Revisions:
+	Revisions: 
 		- 20250502@Max: Alpha - Agency Cash Service [redmine: #223896] 
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 		- 20250611@Max: Alpha - Agency Cash Service - Sprint 4 [redmine: #223896] 

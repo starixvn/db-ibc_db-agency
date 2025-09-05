@@ -1,7 +1,7 @@
 /*<info serverAlias="DBSIC-bodb02" executers="asv_CashService,wsv_CashService" selecters="" viewers="" isFunction="0" isNested=""></info>*/
 ALTER PROCEDURE [dbo].[Age_CashTransaction_RevertDeposit_Upd]  
 	@TransId BIGINT,
-	@CustID INT,
+	@CustID INT = NULL,
 	@AgentID INT = NULL,
 	@SiteDBGroupID	SMALLINT = 3,
 	@SubAccID INT = 0,
@@ -14,7 +14,7 @@ ALTER PROCEDURE [dbo].[Age_CashTransaction_RevertDeposit_Upd]
 	@CashBalance MONEY = NULL OUTPUT
 AS  
 /*
-	Created: 20250502@Max		
+	Created: 20250502@Max 	
 	Task: Alpha - Agency Cash Service [redmine: #223896] 
 	DB:  DBSIC-bodb02
 		
