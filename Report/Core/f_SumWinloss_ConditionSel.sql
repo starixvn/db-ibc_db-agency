@@ -90,6 +90,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250702@Virgil: Add GPI Lottery [RedmineId: #231961]
 		- 20250724@Virgil: Remove ODIN GAMING - Promotion Prize [Redmine: #234058]
 		- 20250811@Virgil: Add Smartsoft RNG Casino [RedmineID: #210945]
+		- 20250826@Virgil: Add OFA Live Casino [RedmineID: #237037]
 		
 	Paramters Explanation:
  		@ProductID: list of products
@@ -207,6 +208,7 @@ RETURN
 				,(111, 0, 31004, 0, 0) -- Cash Service Billing
 				,(111, 0, 31005, 0, 0) -- Cash Service Billing
 				,(99, 135, 0, 0, 0) -- Smartsoft (SS)
+				,(113, 119, 0, 0, 0) -- OFA Live (OFA)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
