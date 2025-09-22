@@ -1,3 +1,5 @@
+Report/Core/f_ProductDetail_ConditionSel.sql
 Report/CommbyBettype/Age_Rpt_CommByBettype_Agent.sql
+Report/WinlossDetail/Age_Rpt_WinLossDetail_WeekDataSel.sql
 Report/CommbyBettype/Age_Rpt_CommByBettype_Master.sql
 Report/CommbyBettype/Age_Rpt_CommByBettype_Member.sql
