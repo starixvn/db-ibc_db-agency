@@ -1,6 +1,6 @@
 include:
   - project: ci/core-cicd
-    ref: sonar_sql
+    ref: main
     file: nexcel.gitlab-ci.yml
 
 variables:
