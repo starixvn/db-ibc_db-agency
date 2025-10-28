@@ -38,6 +38,8 @@ AS
 		- 20241119@Lewis: Direct Member ==> Clean un-used code [RedmineId: #211969]  
 		- 20250529@Dave: Add Reward column [RedmineId: #228972]
 		- 20250619@Virgil: Agency Cash Service - Billing service and Report changes - Sprint 4 [RedmineId: #229883]  
+		- 20251028@Bobby: Changes impact on core func f_GetProductDetail [RedmineID: #235369]
+		
 	
 	Param's Explanation:
 	  @ProductDetails:		
@@ -144,7 +146,7 @@ BEGIN
 						(
 							e.Bettype = f.BetType 
 							OR (
-										e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+										e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail_Old() g WHERE g.ProductId <> 1) )
 									)
 						)
 				 )
@@ -380,7 +382,7 @@ BEGIN
 	FROM #AgWinLoss w 
 		LEFT JOIN dbo.Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 	GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName
-	ORDER BY IsCashServiceBilling, IIF(c.Username IS NULL,1,0), c.Username;
+	ORDER BY IsCashServiceBilling ASC, IIF(c.Username IS NULL,1,0) ASC, c.Username ASC;
 
 END
 GO

@@ -53,6 +53,7 @@ AS
 		- 20250513@Andy: Add Reward & Reward Currency columns [RedmineId: #226209]
 		- 20250514@Dave: Add Saba Soccer Marble Spinner - leaguegroupid = 252 [RedmineID: #223130]
 		- 20250701@Virgil: Cash Service - Billing service and Report changes [RedmineId: #231222]
+		- 20251028@Bobby: Changes impact on core func f_GetProductDetail [RedmineID: #235369]
 	
 	Param's Explanation:
 		. @ReportType:  2: Report by Daily
@@ -217,7 +218,7 @@ BEGIN
 						(
 							e.Bettype = s.BetType 
 								OR (
-										e.Bettype = 0  AND  (e.ProductId = 1 OR  s.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+										e.Bettype = 0  AND  (e.ProductId = 1 OR  s.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail_Old() g WHERE g.ProductId <> 1) )
 									)
 						)
 				 )
@@ -1666,7 +1667,11 @@ BEGIN
 		rewardcurrency
 	FROM @AgencyWinlossWithRewardTotal
 	WHERE currency = CASE WHEN @currency = 0 THEN currency ELSE @currency END
-	ORDER BY CASE WHEN @ReportType = 2 THEN CAST(REPLACE(CONVERT(VARCHAR(10), CAST(breakdown AS SMALLDATETIME), 111), '/', '') AS INT) ELSE CAST(breakdown AS INT) END, username
+	ORDER BY 
+		CASE 
+			WHEN @ReportType = 2 THEN CAST(REPLACE(CONVERT(VARCHAR(10), CAST(breakdown AS SMALLDATETIME), 111), '/', '') AS INT) 
+			ELSE CAST(breakdown AS INT) 
+			END ASC, username ASC
 
 	DROP TABLE #TmpCondSumWL
 	DROP TABLE #TmpCust
