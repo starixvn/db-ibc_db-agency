@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 CREATE PROCEDURE [dbo].[Age_Rpt_API_WinLossDetail_Member]
 	@CustID			 INT = NULL --recommend
 	,@FromDate		 SMALLDATETIME
@@ -24,6 +24,7 @@ AS
 		- 20241205@Lewis: Hotfix filter range bk [RedmineId: #214813]
 		- 20241129@Lewis: Enhance Perf SabaWalletTicket [RedmineId: #214431]
 		- 20250807@Virgil: Cash Service Billing - Update API reports [RedmineId: #235256]
+		- 20251028@Bobby: Changes impact on core func f_GetProductDetail [RedmineID: #235369]
 	
 	Param's Explanation:
 	
@@ -216,7 +217,7 @@ BEGIN
 								(
 									e.Bettype = f.BetType 
 										OR (
-												e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+												e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail_Old() g WHERE g.ProductId <> 1) )
 											)
 								)
 						)
@@ -256,7 +257,7 @@ BEGIN
 								(
 									e.Bettype = f.BetType 
 											OR (
-												e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+												e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail_Old() g WHERE g.ProductId <> 1) )
 											)
 								)
 						)
@@ -497,7 +498,7 @@ BEGIN
 		   ,r.RewardAmount 							AS RewardAmount
 		   ,@RewardCurrency							AS RewardCurrency
 		   ,NoOfTicket								AS NumberOfTickets
-		   ,ROW_NUMBER() OVER (ORDER BY c.UserName) AS RowNum	
+		   ,ROW_NUMBER() OVER (ORDER BY c.UserName ASC) AS RowNum	
 	FROM CTE_Winloss w 
 		FULL JOIN CTE_Reward r ON w.CustID = r.CustID
 		INNER JOIN dbo.custInfo c WITH(NOLOCK) ON c.CustID = ISNULL(w.CustID,r.CustID)

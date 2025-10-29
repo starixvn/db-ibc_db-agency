@@ -40,6 +40,7 @@ AS
 		- 20241119@Lewis: Direct Member [RedmineId: #211969]   
 		- 20250529@Dave: Add Reward column [RedmineId: #228972]
 		- 20250619@Virgil: Agency Cash Service - Billing service and Report changes - Sprint 4 [RedmineId: #229883]  
+		- 20251028@Bobby: Changes impact on core func f_GetProductDetail [RedmineID: #235369]
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -144,7 +145,7 @@ BEGIN
 						(
 							e.Bettype = f.BetType 
 							OR (
-										e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
+										e.Bettype = 0  AND  (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail_Old() g WHERE g.ProductId <> 1) )
 									)
 						)
 				 )
@@ -446,7 +447,7 @@ BEGIN
 	FROM  #MAgWinLoss w 
 		LEFT JOIN Customer c WITH(NOLOCK) ON w.CustID = c.CustID 
 	GROUP BY c.CustID, c.UserName, c.FirstName, c.LastName, CASE WHEN c.recommend = -3 THEN 1 ELSE 0 END
-	ORDER BY IIF(c.Username IS NULL,1,0),c.Username;
+	ORDER BY IIF(c.Username IS NULL,1,0) ASC, c.Username ASC;
 
 	SET NOCOUNT OFF;
 END

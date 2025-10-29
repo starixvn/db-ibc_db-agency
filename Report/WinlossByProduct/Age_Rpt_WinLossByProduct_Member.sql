@@ -1,4 +1,4 @@
-/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
+﻿/*<info serverAlias="DBAGE-bodb02" executers="wsv_alp,wsv_alpv" isFunction="0" isNested="0"></info>*/
 ALTER PROCEDURE [dbo].[Age_Rpt_WinLossByProduct_Member]
 	@CustID 		INT,
 	@FromDate 		SMALLDATETIME,
@@ -36,6 +36,7 @@ AS
 		- 20240515@Lewis: Add SABA Kabaddi [RedmineID: #203763]
 		- 20240711@Lewis: Add VS5 - EventType = 5 [RedmineID: #206527]
 		- 20250514@Dave: Add Saba Soccer Marble Spinner - leaguegroupid = 252 [RedmineID: #223130]
+		- 20251028@Bobby: Changes impact on core func f_GetProductDetail [RedmineID: #235369]
 	
 	Param's Explanation:
 	  @ProductDetails:		
@@ -115,7 +116,7 @@ BEGIN
 					OR 
 						(
 							e.Bettype = f.BetType 
-							OR (e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g))
+							OR (e.Bettype = 0 AND f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail_Old() g))
 						)
 				  )
 
@@ -600,7 +601,7 @@ BEGIN
 			SUM(NumberOfTickets) AS NumberOfTickets
 	FROM #AgWinLoss t
 	GROUP BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR
-	ORDER BY t.bettype, t.ProductID, t.SportType, liveindicator, IsMMR;
+	ORDER BY t.bettype ASC, t.ProductID ASC, t.SportType ASC, liveindicator ASC, IsMMR ASC;
 
 	DROP TABLE #AgWinLoss
 	DROP TABLE #GrossComm
@@ -610,3 +611,4 @@ BEGIN
 END
 
 GO
+
