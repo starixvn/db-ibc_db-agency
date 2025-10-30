@@ -10,7 +10,8 @@ CREATE FUNCTION f_ProductDetail_ConditionSel
 	DB: DBAGE/bodb02  
   
 	Revisions:
-		- 20220208@Danny: Initialize func - [Redmine: #167177]	
+		- 20220208@Danny: Initialize func - [Redmine: #167177]
+		- 20251029@Virgil: Changes impact on core func f_GetProductDetail [RedmineID: #235369]
 */
 RETURNS TABLE 
 AS
@@ -33,7 +34,7 @@ RETURN
 				,Bettype
 				,LeagueGroupID
 				,TicketType
-			FROM dbo.f_GetProductDetail() f
+			FROM dbo.f_GetProductDetail_Old() f
 			WHERE ISNULL(@ProductDetails,'')  = 'All'
 	), cte_filter AS 
 	(
