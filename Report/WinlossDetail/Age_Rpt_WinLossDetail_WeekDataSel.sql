@@ -25,6 +25,8 @@ Revisions:
 	- 20241119@Lewis: Direct Member [RedmineId: #211969]
 	- 20250613@Virgil: Cash Service - Billing service and Report changes - Sprint 4 [RedmineId: #229883]
 	- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
+	- 20250904@Virgil: Replace Task_sum_winloss with bettrans_compact [RedmineId: #235369]
+	- 20250924@Virgil: Enhance report for f_SportBettype_SumWinloss [RedmineId: #235369]	
 	
 	Param's Explanation:
 	- @LevelType : 0: All; 1: Master Agent/ Agent; 2: Direct Member
@@ -38,7 +40,9 @@ BEGIN
 	DROP TABLE IF EXISTS #TmpCondSumWL;
 
 	CREATE TABLE #WeekRange (winlostdate SMALLDATETIME);
+
 	CREATE TABLE #TmpCondSumWL(
+		ProductID		TINYINT,
 		SportType		INT,
 		BetType			INT,
 		LeagueGroupID	SMALLINT, 
@@ -174,14 +178,22 @@ BEGIN
 	SELECT ProductId,Sporttype,Bettype,LeagueGroupID,TicketType
 	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails)
 
-	IF @FromDate <= @MoveBetsDay
-	BEGIN
-		INSERT INTO #TmpCondSumWL(SportType, BetType, LeagueGroupID, TicketType) 
-		SELECT f.SportType, f.BetType, f.LeagueGroupID, f.TicketType
-		FROM dbo.f_SumWinloss_ConditionSel(@ProductIds) f
-			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
-		WHERE e.ProductId IS NULL OR (e.Bettype = f.BetType AND e.Sporttype = f.SportType AND e.TicketType = f.TicketType AND e.LeagueGroupID = f.LeagueGroupID AND e.ProductID = f.ProductId)
-	END
+	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
+	SELECT f.ProductID,
+			ISNULL(e.SportType, f.SportTypeRef) AS SportType,
+			ISNULL(e.Bettype, f.BetTypeRef) AS BetType,
+			ISNULL(e.LeagueGroupID, f.LeagueGroupID) AS LeagueGroupID,
+			ISNULL(e.TicketType, f.TicketType) AS TicketType
+	FROM dbo.f_SportBettypeRefByProduct_Sel(@ProductIds) f
+		LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
+	WHERE e.ProductId IS NULL 
+		OR (
+			e.Bettype = f.BetTypeRef 
+			AND e.Sporttype = f.SportTypeRef 
+			AND e.TicketType = f.TicketType 
+			AND e.LeagueGroupID = f.LeagueGroupID
+		)
+
 
 	--TODO: bettrans range
 	SELECT @FDate = FromDate , @TDate = ToDate
@@ -200,24 +212,18 @@ BEGIN
 		FROM bodb_Age.dbo.bettrans_compact b WITH(NOLOCK)
 		INNER JOIN cte_Downline cte ON b.custid = cte.custid
 		INNER JOIN (
-			SELECT ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
+			SELECT ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(e.SportType,0) AS SportType
 			FROM (	
-				SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
-				FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
-				WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
-						AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
-			) f
-			LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
-			LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
-			WHERE EXISTS(SELECT 1 WHERE e.ProductId IS NULL 
-				OR (
-					e.Bettype = f.BetType 
-					OR (
-							e.Bettype = 0 AND (e.ProductId = 1 OR  f.BetType NOT IN (SELECT g.Bettype FROM f_GetProductDetail() g WHERE g.ProductId <> 1) )
-						)
-					)
-				)
-		) s ON b.bettype = s.bettype AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
+					SELECT DISTINCT ma.ProductID, ma.BetType, ma.BettypeRef
+					FROM dbo.f_SportBettype_SumWinloss_Sel(@ProductIds, @isTest, NULL) ma
+				) f
+				LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
+				LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+			WHERE e.ProductId IS NULL 
+				OR e.Bettype = f.BetType 
+				OR (e.Bettype = 0 AND (e.ProductId = 1 OR f.BettypeRef = 0))
+		) s ON b.bettype = s.bettype 
+			AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
 		WHERE b.winlostdate BETWEEN @FDate AND @TDate
 		
 	END
@@ -234,7 +240,7 @@ BEGIN
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
 			SELECT DISTINCT b.winlostdate
-			FROM dbo.SUM_winloss b WITH(NOLOCK)
+			FROM dbo.sum_winloss_compact b WITH(NOLOCK)
 				INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 			WHERE b.winlostdate BETWEEN @FDate AND @TDate			
 				AND b.srecommend = @srecommend 
@@ -248,7 +254,7 @@ BEGIN
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
 			SELECT DISTINCT b.winlostdate
-			FROM dbo.SUM_winloss b WITH(NOLOCK)
+			FROM dbo.sum_winloss_compact b WITH(NOLOCK)
 				INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 			WHERE b.winlostdate BETWEEN @FDate AND @TDate			
 				AND b.srecommend = @srecommend
@@ -265,7 +271,7 @@ BEGIN
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
 			SELECT DISTINCT b.winlostdate
-			FROM dbo.SUM_winloss b WITH(NOLOCK)
+			FROM dbo.sum_winloss_compact b WITH(NOLOCK)
 				INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
 			WHERE b.winlostdate BETWEEN @FDate AND @TDate			
 				AND b.srecommend = @srecommend 
@@ -287,7 +293,7 @@ BEGIN
 		INSERT INTO #WeekRange(winlostdate)
 		SELECT DISTINCT tr.winlostdate
 		FROM dbo.Transfer tr (NOLOCK)
-		INNER JOIN SportBettypeMatrix f ON tr.Bettype = f.BetType AND f.BetType IN (31003,31004,31005)
+		INNER JOIN #TmpCondSumWL f ON tr.Bettype = f.BetType AND f.ProductID = 111
 		WHERE tr.winlostdate BETWEEN @FDate AND @TDate
 			AND tr.CustId = @CID
 	END
