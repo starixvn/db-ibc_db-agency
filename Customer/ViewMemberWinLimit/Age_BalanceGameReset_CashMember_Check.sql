@@ -18,6 +18,7 @@ AS
 	
 	Revisions:
 		- 20250705@Dave: Agency Cash Service - Customer Setting - Sprint 7 [Redmine: #233474]
+		- 20251031@Dave: Adjust Live Casino PT & Commission [Redmine: #242260]
 		
 	Parameter's Explanation:
 		@SettingStatus: 0: Pro, 1: UAT
@@ -26,7 +27,17 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
-	DECLARE @isCashService	TINYINT;
+	DECLARE @isCashService	TINYINT
+		,@SiteID	INT
+		,@site		VARCHAR(50)
+		,@currency	SMALLINT;
+
+	SELECT @SiteID = si.siteid, @site = si.site, @currency = cus.currency
+	FROM dbo.Customer AS cus WITH (NOLOCK) 
+		INNER JOIN dbo.Site AS si WITH (NOLOCK)
+			ON cus.site = si.site
+	WHERE 
+		cus.custid = @Custid;
 
 	EXEC dbo.Age_CashService_CustServiceTypeSel @CustID =  @Custid  , @ServiceType = @isCashService OUTPUT;
 	
@@ -40,10 +51,10 @@ BEGIN
 	IF EXISTS (
 		SELECT TOP (1) 1
 		FROM dbo.f_CustSetting_SportBetTypeSettingMatrix (@SettingStatus) AS st
-			INNER JOIN dbo.f_CustSetting_ProductProfileCashSel(29, @SettingStatus, 0, 0) AS s
+			INNER JOIN dbo.f_CustSetting_ProductProfileCashSel(29, @SettingStatus, @SiteID, @currency) AS s
 				ON st.SporttypeRefWinlossLimit = s.SportType 
 				AND st.BettypeRefWinlossLimit = s.Bettype
-				AND st.isLicensee = 0 AND st.Site = 'ALL'
+				AND st.isLicensee = 0 AND st.Site IN ('ALL', @site)
 			INNER JOIN dbo.CustWinLossLimit_Member AS Cus WITH (NOLOCK)
 				ON Cus.SportType = st.SporttypeRefWinlossLimit
 				AND Cus.BetType = st.BettypeRefWinlossLimit
