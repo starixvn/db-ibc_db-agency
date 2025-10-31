@@ -12,6 +12,7 @@ ALTER FUNCTION [dbo].[f_SportBettype_SumWinloss_Sel]
 		
 	Revisions:
 		- 20240922@Bobby: Initial version [RedmineId: #235369]
+		- 20251031@Bobby: Tuning IO for ExtraInfo [RedmineId: #243155]
 
 	Paramters Explanation:
  		. @ProductIds: list of products
@@ -33,18 +34,13 @@ RETURN
 		sp.SportType,
 		sp.BetType,
 		sp.RefTable,
-		ISNULL(saba.Sporttype, ck.SportTypeRef) AS SportTypeRef,
-		ck.BettypeRef,
-		ck.BettypeGroup,
-		ISNULL(saba.LeagueGroupID, 0) AS LeagueGroupID,
-		ISNULL(saba.TicketType, 0) AS TicketType
+		ISNULL(ck.BettypeRef, 0) AS BettypeRef,
+		ISNULL(ck.BettypeGroup, '') AS BettypeGroup
 	FROM dbo.SportBettypeMatrix sp WITH (NOLOCK)
-	CROSS APPLY (
-		SELECT 
-			ISNULL(TRY_CAST(JSON_VALUE(sp.ExtraInfo, '$.SportTypeRef') AS INT), 0) AS SportTypeRef,
-			ISNULL(TRY_CAST(JSON_VALUE(sp.ExtraInfo, '$.BettypeRef') AS INT), 0) AS BettypeRef,
-			ISNULL(TRY_CAST(JSON_VALUE(sp.ExtraInfo, '$.BettypeGroup') AS VARCHAR(50)), '') AS BettypeGroup
-	) AS ck
+	LEFT JOIN (
+		SELECT DISTINCT BettypeRef, BettypeGroup
+		FROM [dbo].[vw_SportBettype_ExtraInfo] ck WITH (NOLOCK) 
+	) AS ck ON sp.bettype = ck.BettypeRef
 	LEFT JOIN dbo.f_GetSabaSportTypeRef() saba
 		ON saba.ProductId = sp.ProductID 
 		AND saba.Bettype = ISNULL(ck.BettypeRef, 0)
