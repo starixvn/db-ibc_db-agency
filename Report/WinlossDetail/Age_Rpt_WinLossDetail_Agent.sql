@@ -59,6 +59,8 @@ Revisions:
 	- 20250718@Virgil: Cash Service Billing - Sprint 6 - Enhance code [RedmineId: #231700]
 	- 20250904@Virgil: Replace Task_sum_winloss with bettrans_compact [RedmineId: #235369]	
 	- 20250924@Bobby: Enhance report for f_SportBettype_SumWinloss [RedmineId: #235369]	
+	- 20251031@Bobby: Tuning IO for ExtraInfo [RedmineId: #243155]
+	
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -138,23 +140,24 @@ BEGIN
 	SELECT ProductId,Sporttype,Bettype,LeagueGroupID,TicketType
 	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails)
 
-
-	INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
-	SELECT sp.ProductID,
-			ISNULL(e.SportType, sp.SportTypeRef) AS SportType,
-			ISNULL(e.Bettype, sp.BetTypeRef) AS BetType,
-			ISNULL(e.LeagueGroupID, sp.LeagueGroupID) AS LeagueGroupID,
-			ISNULL(e.TicketType, sp.TicketType) AS TicketType
-	FROM dbo.f_SportBettypeRefByProduct_Sel(@ProductIds) sp
-		LEFT JOIN @ExistingProductDetails e ON e.ProductId = sp.ProductID
-	WHERE e.ProductId IS NULL 
-		OR (
-			e.Bettype = sp.BetTypeRef 
-			AND e.Sporttype = sp.SportTypeRef 
-			AND e.TicketType = sp.TicketType 
-			AND e.LeagueGroupID = sp.LeagueGroupID 
-		)
-
+	IF (@FromDate <= @MoveBetsDay OR CHARINDEX('111', @ProductIds) > 0)
+	BEGIN
+		INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
+		SELECT sp.ProductID,
+				ISNULL(e.SportType, sp.SportTypeRef) AS SportType,
+				ISNULL(e.Bettype, sp.BetTypeRef) AS BetType,
+				ISNULL(e.LeagueGroupID, sp.LeagueGroupID) AS LeagueGroupID,
+				ISNULL(e.TicketType, sp.TicketType) AS TicketType
+		FROM dbo.f_SportBettypeRefByProduct_Sel(@ProductIds) sp
+			LEFT JOIN @ExistingProductDetails e ON e.ProductId = sp.ProductID
+		WHERE e.ProductId IS NULL 
+			OR (
+				e.Bettype = sp.BetTypeRef 
+				AND e.Sporttype = sp.SportTypeRef 
+				AND e.TicketType = sp.TicketType 
+				AND e.LeagueGroupID = sp.LeagueGroupID 
+			)
+	END
 
 	------Get @Srecommend
 	DECLARE @Srecommend int;
