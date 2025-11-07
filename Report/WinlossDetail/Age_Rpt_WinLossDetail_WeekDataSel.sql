@@ -28,12 +28,12 @@ Revisions:
 	- 20250904@Virgil: Replace Task_sum_winloss with bettrans_compact [RedmineId: #235369]
 	- 20250924@Virgil: Enhance report for f_SportBettype_SumWinloss [RedmineId: #235369]	
 	- 20251031@Bobby: Tuning IO for ExtraInfo [RedmineId: #243155]
+	- 20251105@Bobby: Minimize IO for ExtraInfo [RedmineId: #243476]
 	
 	Param's Explanation:
 	- @LevelType : 0: All; 1: Master Agent/ Agent; 2: Direct Member
 
 */
-
 BEGIN
 	SET NOCOUNT ON;
 
@@ -41,13 +41,13 @@ BEGIN
 	DROP TABLE IF EXISTS #TmpCondSumWL;
 
 	CREATE TABLE #WeekRange (winlostdate SMALLDATETIME);
-
 	CREATE TABLE #TmpCondSumWL(
-		ProductID		TINYINT,
+		ProductId		TINYINT,
 		SportType		INT,
 		BetType			INT,
 		LeagueGroupID	SMALLINT, 
-		TicketType		TINYINT
+		TicketType		TINYINT,
+		PRIMARY KEY CLUSTERED (BetType, SportType, LeagueGroupID, TicketType)
 	);
 
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT, LeagueGroupID SMALLINT, TicketType TINYINT)
@@ -177,26 +177,31 @@ BEGIN
 
 	INSERT INTO @ExistingProductDetails(ProductId,Sporttype,Bettype,LeagueGroupID,TicketType)
 	SELECT ProductId,Sporttype,Bettype,LeagueGroupID,TicketType
-	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails)
-
-	IF (@FromDate <= @MoveBetsDay OR CHARINDEX('111', @ProductIds) > 0)
-	BEGIN
-		INSERT INTO #TmpCondSumWL(ProductID, SportType, BetType, LeagueGroupID, TicketType) 
-		SELECT f.ProductID,
-				ISNULL(e.SportType, f.SportTypeRef) AS SportType,
-				ISNULL(e.Bettype, f.BetTypeRef) AS BetType,
-				ISNULL(e.LeagueGroupID, f.LeagueGroupID) AS LeagueGroupID,
-				ISNULL(e.TicketType, f.TicketType) AS TicketType
-		FROM dbo.f_SportBettypeRefByProduct_Sel(@ProductIds) f
-			LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
-		WHERE e.ProductId IS NULL 
-			OR (
-				e.Bettype = f.BetTypeRef 
-				AND e.Sporttype = f.SportTypeRef 
-				AND e.TicketType = f.TicketType 
-				AND e.LeagueGroupID = f.LeagueGroupID
-			)
-	END
+	FROM dbo.f_ProductDetail_ConditionSel(@ProductDetails, @__ProductDetails);
+	
+	-- Get TmpCondSumWL from ExtraInfo
+	WITH CTE_SportRef AS (
+		SELECT DISTINCT ProductID, SportTypeRef AS SportType, BettypeRef AS BetType, 0 AS LeagueGroupID, 0 AS TicketType
+		FROM [dbo].[vw_SportBettype_ExtraInfo] ck WITH (NOLOCK)
+		WHERE ',' + @ProductIDs + ',' LIKE '%,' + CAST(ck.ProductID AS VARCHAR(3)) + ',%'
+		UNION ALL 
+		SELECT ProductID, SportType, Bettype, LeagueGroupID, TicketType
+		FROM dbo.f_GetSabaSportTypeRef() saba
+		WHERE ',' + @ProductIDs + ',' LIKE '%,' + CAST(saba.ProductID AS VARCHAR(3)) + ',%'
+	)
+    INSERT INTO #TmpCondSumWL(ProductId, SportType, BetType, LeagueGroupID, TicketType) 
+	SELECT DISTINCT f.ProductID, f.SportType, f.BetType, ISNULL(e.LeagueGroupID, 0), ISNULL(e.TicketType, 0)
+	FROM CTE_SportRef f
+		LEFT JOIN @ExistingProductDetails e ON f.ProductID = e.ProductId 
+	WHERE 
+		e.ProductId IS NULL 
+		OR (
+			e.Bettype = f.BetType 
+			AND e.Sporttype = f.SportType 
+			AND e.TicketType = f.TicketType 
+			AND e.LeagueGroupID = f.LeagueGroupID 
+			AND e.ProductID = f.ProductId
+		)
 
 	--TODO: bettrans range
 	SELECT @FDate = FromDate , @TDate = ToDate
@@ -209,26 +214,32 @@ BEGIN
 		;WITH cte_Downline AS (
 			SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
 			FROM STRING_SPLIT(@Downlinelist, ',') AS c
+		),
+		CTE_BettypeRef AS (
+			SELECT DISTINCT Bettype
+			FROM #TmpCondSumWL AS ref
+			WHERE ref.Bettype > 0 AND ProductId <> 1
 		)
 		INSERT INTO #WeekRange(winlostdate)
 		SELECT DISTINCT b.winlostdate
 		FROM bodb_Age.dbo.bettrans_compact b WITH(NOLOCK)
 		INNER JOIN cte_Downline cte ON b.custid = cte.custid
 		INNER JOIN (
-			SELECT ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(e.SportType,0) AS SportType
+			SELECT ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType, f.RefTable, ISNULL(e.LeagueGroupID,0) AS LeagueGroupID, ISNULL(e.TicketType,0) AS TicketType, ISNULL(SportType,0) AS SportType
 			FROM (	
-					SELECT DISTINCT ma.ProductID, ma.BetType, ma.BettypeRef
-					FROM dbo.f_SportBettype_SumWinloss_Sel(@ProductIds, @isTest, NULL) ma
-				) f
+					SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
+					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
+					WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
+							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
+			) f
 				LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 				LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
 			WHERE e.ProductId IS NULL 
 				OR e.Bettype = f.BetType 
-				OR (e.Bettype = 0 AND (e.ProductId = 1 OR f.BettypeRef = 0))
+				OR (e.Bettype = 0 AND (e.ProductId = 1 OR f.BetType NOT IN (SELECT Bettype FROM CTE_BettypeRef)))
 		) s ON b.bettype = s.bettype 
 			AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
-		WHERE b.winlostdate BETWEEN @FDate AND @TDate
-		
+		WHERE b.winlostdate BETWEEN @FDate AND @TDate	
 	END
 
 	--TODO: sum_winloss range
@@ -241,47 +252,55 @@ BEGIN
 	BEGIN
 		IF @LevelType = 0
 		BEGIN
+			;WITH CTE_Winlostdate (winlostdate, srecommend, mrecommend, recommend, custid, roleid) AS
+            (
+                SELECT @FDate AS winlostdate, @srecommend, @mrecommend, @recommend, @CID, @roleid
+                UNION ALL
+                SELECT DATEADD(DAY, 1, winlostdate), srecommend, mrecommend, recommend, custid, roleid
+                FROM CTE_Winlostdate
+                WHERE winlostdate < @TDate
+            )
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM dbo.sum_winloss_compact b WITH(NOLOCK)
-				INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
-			WHERE b.winlostdate BETWEEN @FDate AND @TDate			
-				AND b.srecommend = @srecommend 
-				AND b.mrecommend = @mrecommend 
-				AND b.recommend = @recommend 
-				AND b.roleId = @roleId 
-				AND b.custid = @CID
+			SELECT DISTINCT b0.winlostdate
+			FROM dbo.sum_winloss_compact b0 WITH(NOLOCK)
+				INNER JOIN #TmpCondSumWL t ON b0.sporttype = t.sporttype AND b0.bettype = t.bettype AND ISNULL(b0.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b0.ticketType,0) = t.TicketType
+				INNER JOIN CTE_Winlostdate cte ON b0.winlostdate = cte.winlostdate		
+					AND b0.srecommend = cte.srecommend 
+					AND b0.mrecommend = cte.mrecommend 
+					AND b0.recommend =  cte.recommend 
+					AND b0.custid = cte.custid
+					AND b0.roleId = cte.roleId
 		END
 
 		IF @LevelType = 1
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM dbo.sum_winloss_compact b WITH(NOLOCK)
-				INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
-			WHERE b.winlostdate BETWEEN @FDate AND @TDate			
-				AND b.srecommend = @srecommend
+			SELECT DISTINCT b1.winlostdate
+			FROM dbo.sum_winloss_compact b1 WITH(NOLOCK)
+				INNER JOIN #TmpCondSumWL t ON b1.sporttype = t.sporttype AND b1.bettype = t.bettype AND ISNULL(b1.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b1.ticketType,0) = t.TicketType
+			WHERE b1.winlostdate BETWEEN @FDate AND @TDate			
+				AND b1.srecommend = @srecommend
 				AND 1 = CASE 
-							WHEN @roleId = 4 AND b.mrecommend > 0 AND b.recommend = 0 THEN 1
-							WHEN @roleId = 3 AND b.mrecommend = @mrecommend AND b.recommend > 0 THEN 1
+							WHEN @roleId = 4 AND b1.mrecommend > 0 AND b1.recommend = 0 THEN 1
+							WHEN @roleId = 3 AND b1.mrecommend = @mrecommend AND b1.recommend > 0 THEN 1
 							ELSE 0
 						END
-				AND b.roleId = @roleid - 1
-				--AND b.custid = @CID
+				AND b1.roleId = @roleid - 1
+				--AND b1.custid = @CID
 		END
 
 		IF @LevelType = 2
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM dbo.sum_winloss_compact b WITH(NOLOCK)
-				INNER JOIN #TmpCondSumWL t ON b.sporttype = t.sporttype AND b.bettype = t.bettype AND ISNULL(b.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b.ticketType,0) = t.TicketType
-			WHERE b.winlostdate BETWEEN @FDate AND @TDate			
-				AND b.srecommend = @srecommend 
-				AND b.mrecommend = IIF(@roleId = 4, -4, @mrecommend) 
-				AND b.recommend = IIF(@roleId = 4, -4, -3)
-				AND b.roleId = 1
-				--AND b.custid = @CID
+			SELECT DISTINCT b2.winlostdate
+			FROM dbo.sum_winloss_compact b2 WITH(NOLOCK)
+				INNER JOIN #TmpCondSumWL t ON b2.sporttype = t.sporttype AND b2.bettype = t.bettype AND ISNULL(b2.leagueGroupID,0) = t.LeagueGroupID AND ISNULL(b2.ticketType,0) = t.TicketType
+			WHERE b2.winlostdate BETWEEN @FDate AND @TDate			
+				AND b2.srecommend = @srecommend 
+				AND b2.mrecommend = IIF(@roleId = 4, -4, @mrecommend) 
+				AND b2.recommend = IIF(@roleId = 4, -4, -3)
+				AND b2.roleId = 1
+				--AND b2.custid = @CID
 		END
 	END
 
@@ -322,19 +341,19 @@ BEGIN
 				WHERE winlostdate < @TDate
 			)
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
+			SELECT DISTINCT old.winlostdate
+			FROM bodb_Summary.dbo.Sum_WinLoss_Old old WITH(NOLOCK) 
 				CROSS APPLY CTE_Winlostdate w
-			WHERE b.winlostdate	= w.winlostdate
-				AND b.srecommend = @srecommend 
-				AND b.mrecommend = @mrecommend 
-				AND b.recommend = @recommend 
-				AND b.roleId = @roleId 
-				AND b.custid = @CID 
-				AND b.sporttype	= w.sporttype
-				AND b.bettype = w.bettype
-				AND ISNULL(b.leagueGroupID,0) = w.leagueGroupID
-				AND ISNULL(b.ticketType,0) = w.ticketType
+			WHERE old.winlostdate	= w.winlostdate
+				AND old.srecommend = @srecommend 
+				AND old.mrecommend = @mrecommend 
+				AND old.recommend = @recommend 
+				AND old.roleId = @roleId 
+				AND old.custid = @CID 
+				AND old.sporttype	= w.sporttype
+				AND old.bettype = w.bettype
+				AND ISNULL(old.leagueGroupID,0) = w.leagueGroupID
+				AND ISNULL(old.ticketType,0) = w.ticketType
 			OPTION (MAXRECURSION 0);
 		END
 
@@ -351,22 +370,22 @@ BEGIN
 				WHERE winlostdate < @TDate
 			)
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
+			SELECT DISTINCT old.winlostdate
+			FROM bodb_Summary.dbo.Sum_WinLoss_Old old WITH(NOLOCK) 
 				CROSS APPLY CTE_Winlostdate w
-			WHERE b.winlostdate	= w.winlostdate
-				AND b.srecommend = @srecommend 
+			WHERE old.winlostdate	= w.winlostdate
+				AND old.srecommend = @srecommend 
 				AND 1 = CASE 
-							WHEN @roleId = 4 AND b.mrecommend > 0 AND b.recommend = 0 THEN 1
-							WHEN @roleId = 3 AND b.mrecommend = @mrecommend AND b.recommend > 0 THEN 1
+							WHEN @roleId = 4 AND old.mrecommend > 0 AND old.recommend = 0 THEN 1
+							WHEN @roleId = 3 AND old.mrecommend = @mrecommend AND old.recommend > 0 THEN 1
 							ELSE 0
 						END
-				AND b.roleId = @roleid - 1
-				--AND b.custid = @CID
-				AND b.sporttype	= w.sporttype
-				AND b.bettype = w.bettype
-				AND ISNULL(b.leagueGroupID,0) = w.leagueGroupID
-				AND ISNULL(b.ticketType,0) = w.ticketType
+				AND old.roleId = @roleid - 1
+				--AND old.custid = @CID
+				AND old.sporttype	= w.sporttype
+				AND old.bettype = w.bettype
+				AND ISNULL(old.leagueGroupID,0) = w.leagueGroupID
+				AND ISNULL(old.ticketType,0) = w.ticketType
 			OPTION (MAXRECURSION 0);
 		END
 
@@ -383,19 +402,19 @@ BEGIN
 				WHERE winlostdate < @TDate
 			)
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM bodb_Summary.dbo.Sum_WinLoss_Old b WITH(NOLOCK) 
+			SELECT DISTINCT old.winlostdate
+			FROM bodb_Summary.dbo.Sum_WinLoss_Old old WITH(NOLOCK) 
 				CROSS APPLY CTE_Winlostdate w
-			WHERE b.winlostdate	= w.winlostdate
-				AND b.srecommend = @srecommend 
-				AND b.mrecommend = IIF(@roleId = 4, -4, @mrecommend) 
-				AND b.recommend = IIF(@roleId = 4, -4, -3)
-				AND b.roleId = 1
-				--AND b.custid = @CID		
-				AND b.sporttype	= w.sporttype
-				AND b.bettype = w.bettype
-				AND ISNULL(b.leagueGroupID,0) = w.leagueGroupID
-				AND ISNULL(b.ticketType,0) = w.ticketType
+			WHERE old.winlostdate	= w.winlostdate
+				AND old.srecommend = @srecommend 
+				AND old.mrecommend = IIF(@roleId = 4, -4, @mrecommend) 
+				AND old.recommend = IIF(@roleId = 4, -4, -3)
+				AND old.roleId = 1
+				--AND old.custid = @CID		
+				AND old.sporttype	= w.sporttype
+				AND old.bettype = w.bettype
+				AND ISNULL(old.leagueGroupID,0) = w.leagueGroupID
+				AND ISNULL(old.ticketType,0) = w.ticketType
 			OPTION (MAXRECURSION 0);
 		END
 	END	
@@ -410,58 +429,58 @@ BEGIN
 		IF @roleId = 1
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM SabaWalletTicket b WITH (NOLOCK)
-			WHERE b.CustID = @CID
-				AND b.winlostdate BETWEEN @FDate AND @TDate
-				AND WalletID = 2
+			SELECT DISTINCT s1.winlostdate
+			FROM dbo.SabaWalletTicket s1 WITH (NOLOCK)
+			WHERE s1.CustID = @CID
+				AND s1.winlostdate BETWEEN @FDate AND @TDate
+				AND s1.WalletID = 2
 		END
 		ELSE IF @roleId = 2
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM SabaWalletTicket b WITH (NOLOCK)
-			WHERE b.Recommend = @CID
-				AND b.winlostdate BETWEEN @FDate AND @TDate
-				AND WalletID = 2
+			SELECT DISTINCT s2.winlostdate
+			FROM SabaWalletTicket s2 WITH (NOLOCK)
+			WHERE s2.Recommend = @CID
+				AND s2.winlostdate BETWEEN @FDate AND @TDate
+				AND s2.WalletID = 2
 		END
 		ELSE IF @roleId = 3
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM SabaWalletTicket b WITH (NOLOCK)
-			WHERE b.Mrecommend = @CID
-				AND b.winlostdate BETWEEN @FDate AND @TDate
-				AND WalletID = 2
+			SELECT DISTINCT s3.winlostdate
+			FROM SabaWalletTicket s3 WITH (NOLOCK)
+			WHERE s3.Mrecommend = @CID
+				AND s3.winlostdate BETWEEN @FDate AND @TDate
+				AND s3.WalletID = 2
 				AND @LevelType IN (0,1) 
-				AND b.Recommend <> -3
+				AND s3.Recommend <> -3
 			UNION ALL
-			SELECT DISTINCT b.winlostdate
-			FROM SabaWalletTicket b WITH (NOLOCK)
-			WHERE b.Mrecommend = @CID
-				AND b.winlostdate BETWEEN @FDate AND @TDate
-				AND WalletID = 2
+			SELECT DISTINCT s3.winlostdate
+			FROM SabaWalletTicket s3 WITH (NOLOCK)
+			WHERE s3.Mrecommend = @CID
+				AND s3.winlostdate BETWEEN @FDate AND @TDate
+				AND s3.WalletID = 2
 				AND @LevelType IN (0,2) 
-				AND b.Recommend = -3 
+				AND s3.Recommend = -3 
 		END
 		ELSE IF @roleId = 4
 		BEGIN
 			INSERT INTO #WeekRange(winlostdate)
-			SELECT DISTINCT b.winlostdate
-			FROM SabaWalletTicket b WITH (NOLOCK)
-			WHERE b.Srecommend = @CID
-				AND b.winlostdate BETWEEN @FDate AND @TDate
-				AND WalletID = 2
+			SELECT DISTINCT s4.winlostdate
+			FROM SabaWalletTicket s4 WITH (NOLOCK)
+			WHERE s4.Srecommend = @CID
+				AND s4.winlostdate BETWEEN @FDate AND @TDate
+				AND s4.WalletID = 2
 				AND @LevelType IN (0,1) 
-				AND b.Recommend <> -4
+				AND s4.Recommend <> -4
 			UNION ALL
-			SELECT DISTINCT b.winlostdate
-			FROM SabaWalletTicket b WITH (NOLOCK)
-			WHERE b.Srecommend = @CID
-				AND b.winlostdate BETWEEN @FDate AND @TDate
-				AND WalletID = 2
+			SELECT DISTINCT s4.winlostdate
+			FROM SabaWalletTicket s4 WITH (NOLOCK)
+			WHERE s4.Srecommend = @CID
+				AND s4.winlostdate BETWEEN @FDate AND @TDate
+				AND s4.WalletID = 2
 				AND @LevelType IN (0,2) 
-				AND b.Recommend = -4
+				AND s4.Recommend = -4
 		END
 	END
 	
