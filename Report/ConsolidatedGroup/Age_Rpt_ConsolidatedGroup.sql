@@ -54,7 +54,7 @@ AS
 		- 20250514@Dave: Add Saba Soccer Marble Spinner - leaguegroupid = 252 [RedmineID: #223130]
 		- 20250701@Virgil: Cash Service - Billing service and Report changes [RedmineId: #231222]
 		- 20251028@Bobby: Changes impact on core func f_GetProductDetail [RedmineID: #235369]
-	
+		- 20251010@Helios: Upgrade ExchangeID DataType [Redmine:#242140]
 	Param's Explanation:
 		. @ReportType:  2: Report by Daily
 						3: Report by Product or Username
@@ -123,7 +123,7 @@ BEGIN
 		breakdown     VARCHAR(50),
 		custid		    INT,	
 		username		VARCHAR(30),	
-		currency		TINYINT,
+		currency		SMALLINT,
 		RoleID		    INT,
 		turnover	    MONEY DEFAULT(0),
 		winlost		    MONEY DEFAULT(0),
@@ -145,7 +145,7 @@ BEGIN
 		breakdown     VARCHAR(50),
 		custid		    INT,	
 		username		VARCHAR(30),	
-		currency		TINYINT,
+		currency		SMALLINT,
 		RoleID		    INT,
 		turnover	    MONEY DEFAULT(0),
 		winlost		    MONEY DEFAULT(0),

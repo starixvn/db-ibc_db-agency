@@ -18,7 +18,7 @@ AS
         - 20250618@Bobby: Correct SMA custid [RedmineID: #230937]
 		- 20250715@Virgil: Add Promotion TransactionType [RedmineID: #232880]
 		- 20250804@Virgil: Add Manual Bonus TransactionType [RedmineID: #233578]
-        
+        - 20251010@Helios: Upgrade ExchangeID DataType [Redmine:#242140]
     Description:
         - @CustId: Customer ID of the agent
         - @ChargeDate: Date for the charge
@@ -63,7 +63,7 @@ BEGIN
         @transDesc_FEE VARCHAR(1000),
         @mrecommend INT, @maUser VARCHAR(50),
         @srecommend INT, @saUser VARCHAR(50),
-        @actualrate FLOAT, @currency TINYINT, @currName VARCHAR(10),
+        @actualrate FLOAT, @currency SMALLINT, @currName VARCHAR(10),
         @houseid INT, @hUser VARCHAR(30),
         @username_StarixIT VARCHAR(50), @Creator INT; 
     
@@ -99,7 +99,7 @@ BEGIN
     -- House level variables for transfer records
     DECLARE
         @amountHouse        MONEY,
-        @currencyHouse      TINYINT,
+        @currencyHouse      SMALLINT,
         @actualrateHouse    FLOAT,
         @currNameHouse      VARCHAR(10),
         @recommendHouse     INT,

@@ -16,7 +16,7 @@ AS
     - 20250526@Bobby: Initial [RedmineID: #227215]
     - 20250617@Bobby: Correct actualrate of UUS SMA Daily Fee [RedmineID: #230813]
     - 20250618@Bobby: Correct SMA custid [RedmineID: #230937]
-    
+    - 20251010@Helios: Upgrade ExchangeID DataType [Redmine:#242140]
 */
 BEGIN
     SET NOCOUNT ON;
@@ -58,7 +58,7 @@ BEGIN
 
     DECLARE @mrecommend INT, @maUser VARCHAR(50);
     DECLARE @srecommend INT, @saUser VARCHAR(50);
-    DECLARE @actualrate FLOAT, @currency TINYINT = 20, @currName VARCHAR(10);
+    DECLARE @actualrate FLOAT, @currency SMALLINT = 20, @currName VARCHAR(10);
     DECLARE @houseid INT, @hUser VARCHAR(30);
     DECLARE @username_StarixIT VARCHAR(50), @Creator INT; 
     -- Get the agent's custid and other details based on CustId
@@ -91,7 +91,7 @@ BEGIN
     -- House level variables for transfer records
     DECLARE
         @amountHouse        MONEY,
-        @currencyHouse      TINYINT,
+        @currencyHouse      SMALLINT,
         @actualrateHouse    FLOAT,
         @currNameHouse      VARCHAR(10),
         @recommendHouse     INT,
