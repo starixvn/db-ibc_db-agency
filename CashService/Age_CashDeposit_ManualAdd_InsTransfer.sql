@@ -28,14 +28,14 @@ AS
 		- 20250603@Max: Alpha - Agency Cash Service - Sprint 3 [redmine: #223896] 
 		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
 		- 20250709@Eden: Alpha - Agency Cash Service - Sprint 6 [redmine: #223896] 
-
+		- 20251010@Helios: Upgrade ExchangeID DataType [Redmine:#242140]
 	Parameter's Explanation:	
 */ 
 BEGIN
     SET NOCOUNT ON;
 	
 	DECLARE @username			VARCHAR(50),
-		@currency				TINYINT,
+		@currency				SMALLINT,
 		@currencyName			VARCHAR(5),
 		@winlostdate			SMALLDATETIME,
 		@beforebalance			MONEY,
@@ -57,7 +57,7 @@ BEGIN
 		@bal_recommend			INT,
 		@bal_srecommend			INT,
 		@bal_Username			VARCHAR(50),
-		@bal_currency			TINYINT,
+		@bal_currency			SMALLINT,
 		@bal_actualrate			FLOAT,
 		@bal_currencyName		NVARCHAR(5),
 		@translogCredit 		MONEY,
