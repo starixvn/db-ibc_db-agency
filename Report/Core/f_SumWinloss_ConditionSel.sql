@@ -94,6 +94,7 @@ ALTER FUNCTION [dbo].[f_SumWinloss_ConditionSel]
 		- 20250922@Virgil: Add BGaming RNG Casino [RedmineID: #239087]
 		- 20251007@Virgil: Add GEMINI RNG Casino [RedmineID: #239526]
 		- 20251023@Virgil: Add Vertex Play RNG Casino [RedmineID: #241752]
+		- 20251105@Virgil: Add WOW Gaming RNG Casino [RedmineID: #241779]
 
 	Paramters Explanation:
  		@ProductID: list of products
@@ -215,6 +216,7 @@ RETURN
 				,(114, 118, 0, 0, 0) -- BGaming (BGRNG)
 				,(115, 117, 0, 0, 0) -- GEMINI (GEM)
 				,(116, 115, 0, 0, 0) -- Vertex Play (VP)
+				,(117, 113, 0, 0, 0) -- WOW Gaming (WOW)
 		) d(ProductID, SportType, BetType, LeagueGroupID, TicketType)
 	WHERE ',' + @ProductID + ',' LIKE '%,' + CAST(ProductID as varchar(3)) + ',%'
 GO
