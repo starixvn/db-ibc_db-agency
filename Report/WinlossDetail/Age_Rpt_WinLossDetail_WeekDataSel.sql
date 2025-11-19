@@ -28,7 +28,7 @@ Revisions:
 	- 20250904@Virgil: Replace Task_sum_winloss with bettrans_compact [RedmineId: #235369]
 	- 20250924@Virgil: Enhance report for f_SportBettype_SumWinloss [RedmineId: #235369]	
 	- 20251031@Bobby: Tuning IO for ExtraInfo [RedmineId: #243155]
-	- 20251105@Bobby: Minimize IO for ExtraInfo [RedmineId: #243476]
+	- 20251105@Bobby: Minimize CPU/IO for ExtraInfo [RedmineId: #243476]
 	
 	Param's Explanation:
 	- @LevelType : 0: All; 1: Master Agent/ Agent; 2: Direct Member
@@ -47,7 +47,7 @@ BEGIN
 		BetType			INT,
 		LeagueGroupID	SMALLINT, 
 		TicketType		TINYINT,
-		PRIMARY KEY CLUSTERED (BetType, SportType, LeagueGroupID, TicketType)
+		PRIMARY KEY CLUSTERED (BetType, SportType, ProductId, LeagueGroupID, TicketType)
 	);
 
 	DECLARE @ExistingProductDetails TABLE (ProductId INT,Sporttype INT,Bettype INT, LeagueGroupID SMALLINT, TicketType TINYINT)
@@ -231,12 +231,13 @@ BEGIN
 					FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
 					WHERE ',' + @ProductIDs + ',' LIKE '%,' + cast(ma.ProductID as varchar(3)) + ',%'
 							AND (ma.IsTest = 0 OR ma.IsTest = @IsTest)
-			) f
+				) f
 				LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 				LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+				LEFT JOIN CTE_BettypeRef ck ON ck.Bettype = f.BetType
 			WHERE e.ProductId IS NULL 
 				OR e.Bettype = f.BetType 
-				OR (e.Bettype = 0 AND (e.ProductId = 1 OR f.BetType NOT IN (SELECT Bettype FROM CTE_BettypeRef)))
+				OR (e.Bettype = 0 AND (e.ProductId = 1 OR ck.BetType IS NULL))
 		) s ON b.bettype = s.bettype 
 			AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
 		WHERE b.winlostdate BETWEEN @FDate AND @TDate	
@@ -305,7 +306,7 @@ BEGIN
 	END
 
 	-- TODO: get data from Transfer (CashServiceBilling)
-	IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+	IF EXISTS(SELECT TOP 1 1 FROM #TmpCondSumWL WHERE ProductID = 111)
 	BEGIN
 		SELECT @FDate = NULL, @TDate = NULL
 		SELECT @FDate = MIN(FromDate) , @TDate = MAX(ToDate)
