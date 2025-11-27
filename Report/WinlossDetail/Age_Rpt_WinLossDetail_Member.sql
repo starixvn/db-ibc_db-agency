@@ -61,6 +61,7 @@ Revisions:
 	- 20250924@Virgil: Enhance report for f_SportBettype_SumWinloss [RedmineId: #235369]	
 	- 20251031@Bobby: Tuning IO for ExtraInfo [RedmineId: #243155]
 	- 20251105@Bobby: Minimize CPU/IO for ExtraInfo [RedmineId: #243476]
+	- 20251127@Bobby: HF recursion reach limit [RedmineId: #244807]
 	
 	Param's Explanation:
 	 @ProductDetails:		
@@ -496,6 +497,7 @@ BEGIN
 				AND old.sporttype = w.sporttype
 				AND old.bettype = w.bettype
 			GROUP BY old.CustID
+			OPTION (MAXRECURSION 0);
 		END
 	END
 
