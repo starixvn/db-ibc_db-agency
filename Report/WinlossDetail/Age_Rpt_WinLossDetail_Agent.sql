@@ -60,7 +60,7 @@ Revisions:
 	- 20250904@Virgil: Replace Task_sum_winloss with bettrans_compact [RedmineId: #235369]	
 	- 20250924@Bobby: Enhance report for f_SportBettype_SumWinloss [RedmineId: #235369]	
 	- 20251031@Bobby: Tuning IO for ExtraInfo [RedmineId: #243155]
-	- 20251105@Bobby: Minimize IO for ExtraInfo [RedmineId: #243476]
+	- 20251105@Bobby: Minimize CPU/IO for ExtraInfo [RedmineId: #243476]
 	
 	Param's Explanation:
 		- @ProductDetails:		
@@ -254,7 +254,7 @@ BEGIN
 			FROM STRING_SPLIT(@downlineIds, ',') AS c
 		),
 		CTE_BettypeRef AS (
-			SELECT DISTINCT Bettype, BettypeGroup
+			SELECT DISTINCT Bettype
 			FROM #TmpCondSumWL AS ref
 			WHERE ref.Bettype > 0 AND ProductId <> 1
 		)
@@ -282,16 +282,17 @@ BEGIN
 					) f
 				LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 				LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID
+				LEFT JOIN CTE_BettypeRef ck ON ck.Bettype = f.BetType
 			WHERE e.ProductId IS NULL 
 				OR e.Bettype = f.BetType 
-				OR (e.Bettype = 0 AND (e.ProductId = 1 OR f.Bettype NOT IN (SELECT Bettype FROM CTE_BettypeRef)))
+				OR (e.Bettype = 0 AND (e.ProductId = 1 OR ck.Bettype IS NULL))
 		) s ON b.bettype = s.bettype 
 			AND (s.ProductID <> 1 OR (s.ProductID = 1 AND b.sporttype = s.SportType AND b.LeagueGroupID = s.LeagueGroupID AND b.TicketType = s.TicketType))
 		WHERE	b.winlostdate BETWEEN @FDate AND @TDate
 		GROUP BY b.custid;
 
 		-- Cash Service Billing 
-		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		IF EXISTS (SELECT 1 FROM #TmpCondSumWL WHERE ProductID = 111)
 		BEGIN
 			;WITH CTE_Downline AS (
 				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
@@ -324,11 +325,12 @@ BEGIN
 		)
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 		SELECT CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END AS CustId
-			,SUM(CASE WHEN cont.ContributionBettype IS NULL THEN b.BetStake ELSE 0 END) AS TurnoverNoDraw
+			,SUM(CASE WHEN s.ContributionBettype IS NULL THEN b.BetStake ELSE 0 END) AS TurnoverNoDraw
 			,SUM(b.BetStake * b.adiscount) AS GrossComm
 		FROM dbo.bettransRnG b WITH(NOLOCK)
 			INNER JOIN (
 				SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType
+					, IIF(ck.BettypeGroup = 'Contribution', ck.Bettype, NULL) AS ContributionBettype
 				FROM (	
 						SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
 						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
@@ -337,18 +339,12 @@ BEGIN
 						) f
 					LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 					LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+					LEFT JOIN CTE_BettypeRef ck ON ck.Bettype = f.BetType
 				WHERE e.ProductId IS NULL 
 					OR e.Bettype = f.BetType 
-					OR (e.Bettype = 0 AND (e.ProductId = 1 OR f.Bettype NOT IN (SELECT Bettype FROM CTE_BettypeRef)))
+					OR (e.Bettype = 0 AND (e.ProductId = 1 OR ck.Bettype IS NULL))
 				
 			) s ON b.gameID = s.Bettype
-			OUTER APPLY 
-			(
-				SELECT ck.Bettype AS ContributionBettype
-				FROM CTE_BettypeRef ck
-				WHERE ck.BettypeGroup = 'Contribution'
-					AND ck.Bettype = b.gameID
-			) cont
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND statusID IN (111, 112, 113) 
 			AND mrecommend = @CID
@@ -362,11 +358,12 @@ BEGIN
 		)
 		INSERT INTO #GrossComm (CustId, TurnoverNoDraw, GrossComm)
 		SELECT CASE WHEN b.recommend = -3 THEN b.custid ELSE b.recommend END AS CustId
-			,SUM(CASE WHEN cont.ContributionBettype IS NULL THEN b.NetStake ELSE 0 END) AS TurnoverNoDraw
+			,SUM(CASE WHEN s.ContributionBettype IS NULL THEN b.NetStake ELSE 0 END) AS TurnoverNoDraw
 			,SUM(b.NetStake * b.adiscount) AS GrossComm
 		FROM dbo.bettransLC b WITH(NOLOCK)
 			INNER JOIN (
 				SELECT	ISNULL(p.GroupProductId, f.ProductID) AS ProductID, f.BetType
+					, IIF(ck.BettypeGroup = 'Contribution', ck.Bettype, NULL) AS ContributionBettype
 				FROM (	
 						SELECT DISTINCT ma.ProductID, ma.BetType, ma.RefTable
 						FROM  dbo.SportBettypeMatrix ma WITH(NOLOCK)
@@ -375,18 +372,12 @@ BEGIN
 					) f
 					LEFT JOIN dbo.f_GroupProduct() p ON f.ProductID = p.ProductId
 					LEFT JOIN @ExistingProductDetails e ON e.ProductId = f.ProductID 
+					LEFT JOIN CTE_BettypeRef ck ON ck.Bettype = f.BetType
 				WHERE e.ProductId IS NULL 
 					OR e.Bettype = f.BetType 
-					OR (e.Bettype = 0 AND (e.ProductId = 1 OR f.Bettype NOT IN (SELECT Bettype FROM CTE_BettypeRef)))
+					OR (e.Bettype = 0 AND (e.ProductId = 1 OR ck.Bettype IS NULL))
 				
 			) s ON b.gameID = s.Bettype
-			OUTER APPLY 
-			(
-				SELECT ck.Bettype AS ContributionBettype
-				FROM CTE_BettypeRef ck
-				WHERE ck.BettypeGroup = 'Contribution'
-					AND ck.Bettype = b.gameID
-			) cont
 		WHERE winlostdate BETWEEN @FDate AND @TDate
 			AND statusID IN (111, 112, 113) 
 			AND mrecommend = @CID
@@ -463,7 +454,7 @@ BEGIN
 		OPTION (MAXRECURSION 0);
 
 		-- Cash Service Billing 
-		IF ',' + @ProductIDs + ',' LIKE '%,111,%'
+		IF EXISTS (SELECT 1 FROM #TmpCondSumWL WHERE ProductID = 111)
 		BEGIN
 			;WITH CTE_Downline AS (
 				SELECT TOP(@totalDownline) CAST([value] AS INT) AS custid
