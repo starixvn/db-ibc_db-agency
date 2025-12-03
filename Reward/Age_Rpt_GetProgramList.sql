@@ -8,6 +8,7 @@ AS
   
     Revisions:  
         - 20240918@Lewis: Initialize SP [RedmineId: #208503]
+        - 20251124@Dave: Pioneers - Apply Inhouse for 'RefResource' table - Check isdeleted [Redmine: #245025]
   
     Param's Explanation:  
   
@@ -20,6 +21,7 @@ BEGIN
 		,Resource_en 
 	FROM RefResource WITH (NOLOCK) 
 	WHERE RefId = 'RewardProgram'
-	ORDER BY ResourceId
+      AND IsDeleted = 0
+	ORDER BY ResourceId ASC
 
 END  
